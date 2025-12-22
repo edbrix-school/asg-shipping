@@ -1,0 +1,75 @@
+package com.asg.shipping.remuneration.entity;
+
+import jakarta.persistence.*;
+
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Getter
+@Setter
+@Table(name = "SHIP_REMUNERATION_MASTER")
+public class ShipRemunerationMaster {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ship_remun_seq")
+    @SequenceGenerator(
+            name = "ship_remun_seq",
+            sequenceName = "SHIP_REMUNERATION_MASTER_SEQ",
+            allocationSize = 1
+    )
+    @Column(name = "REMUNERATION_POID", nullable = false)
+    private Long remunerationPoid;
+
+//    @Id
+//    @Column(name = "REMUNERATION_POID", updatable = false, insertable = false)
+//    @org.hibernate.annotations.Generated(
+//            org.hibernate.annotations.GenerationTime.INSERT
+//    )
+//    private Long remunerationPoid;
+
+    @Column(name = "REMUN_CODE", length = 20)
+    private String remunCode;
+
+    @Column(name = "REMUN_DESCRIPTION", length = 100)
+    private String remunDescription;
+
+    @Column(name = "IMP_EXP_TYPE", length = 20)
+    private String impExpType;
+
+    @Column(name = "ACTIVE", length = 1)
+    private String active;
+
+    @Column(name = "SEQNO", precision = 5)
+    private Integer seqNo;
+
+    @Column(name = "CREATED_BY", length = 20)
+    private String createdBy;
+
+    @Column(name = "CREATED_DATE")
+    private LocalDateTime createdDate;
+
+    @Column(name = "LASTMODIFIED_BY", length = 20)
+    private String lastModifiedBy;
+
+    @Column(name = "LASTMODIFIED_DATE")
+    private LocalDateTime lastModifiedDate;
+
+    @Column(name = "REMUN_BASED_ON", length = 20)
+    private String remunBasedOn;
+
+    @Column(name = "REMUN_CHARGE_CODE_POID", length = 20)
+    private String remunChargeCodePoid;
+
+    @Column(name = "GL_POID")
+    private Long glPoid;
+
+    @Column(name = "DELETED", length = 1)
+    private String deleted;
+
+    @Column(name = "REMUN_BOOKED_BY_USED", length = 1)
+    private String remunBookedByUsed;
+}
+
