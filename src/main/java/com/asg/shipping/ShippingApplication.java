@@ -6,6 +6,9 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
+@ComponentScan(basePackages = {"com.asg"})
+@EnableJpaRepositories(basePackages = {"com.asg.common.lib.repository", "com.asg.shipping"})
+@EntityScan(basePackages = {"com.asg.common.lib.entity", "com.asg.shipping"})
 @SpringBootApplication
 @ComponentScan(basePackages = { "com.asg" })
 @EnableJpaRepositories(basePackages = { "com.asg.common.lib.repository", "com.asg.shipping" })
