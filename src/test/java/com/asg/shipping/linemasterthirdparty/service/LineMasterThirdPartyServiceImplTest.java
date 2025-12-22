@@ -158,8 +158,8 @@ class LineMasterThirdPartyServiceImplTest {
 
             when(lineRepository.findByLinePoidAndGroupPoidAndThirdParty(1L, 1L)).thenReturn(Optional.of(testLine));
             when(mapper.mapToDto(testLine)).thenReturn(testDto);
-            when(lovService.getLovItemByPoid(anyLong(), anyString(), anyLong(), anyLong(), anyLong())).thenReturn(new LovGetListDto());
-            lenient().when(lovService.getLovItemByCode(anyString(), anyString(), anyLong(), anyLong(), anyLong())).thenReturn(new LovGetListDto());
+            when(lovService.getDetailsByPoidAndLovName(anyLong(), anyString())).thenReturn(new LovGetListDto());
+            lenient().when(lovService.getLovItemByCodeFast(anyString(), anyString())).thenReturn(new LovGetListDto());
 
             LineMasterThirdPartyDto result = service.getThirdPartyLine(1L);
 
@@ -246,7 +246,7 @@ class LineMasterThirdPartyServiceImplTest {
             createDto.setCountryPoid(100L);
             when(lineRepository.existsByLineCodeAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
             when(lineRepository.existsByLineNameAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lovService.getLovItemByPoid(anyLong(), eq("COUNTRY"), anyLong(), anyLong(), anyLong())).thenReturn(null);
+            when(lovService.getDetailsByPoidAndLovName(anyLong(), eq("COUNTRY"))).thenReturn(null);
 
             assertThrows(ValidationException.class, () -> service.createThirdPartyLine(createDto));
         }
@@ -262,7 +262,7 @@ class LineMasterThirdPartyServiceImplTest {
             createDto.setCurrencyPoid(200L);
             when(lineRepository.existsByLineCodeAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
             when(lineRepository.existsByLineNameAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lovService.getLovItemByPoid(anyLong(), eq("CURRENCY"), anyLong(), anyLong(), anyLong())).thenReturn(null);
+            when(lovService.getDetailsByPoidAndLovName(anyLong(), eq("CURRENCY"))).thenReturn(null);
 
             assertThrows(ValidationException.class, () -> service.createThirdPartyLine(createDto));
         }

@@ -251,13 +251,13 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
 
         try {
             if (line.getCountryPoid() != null) {
-                dto.setCountryDet(lovService.getLovItemByPoid(line.getCountryPoid(), "COUNTRY", groupPoid, companyPoid, userPoid));
+                dto.setCountryDet(lovService.getDetailsByPoidAndLovName(line.getCountryPoid(), "COUNTRY"));
             }
             if (line.getCurrencyPoid() != null) {
-                dto.setCurrencyDet(lovService.getLovItemByPoid(line.getCurrencyPoid(), "CURRENCY", groupPoid, companyPoid, userPoid));
+                dto.setCurrencyDet(lovService.getDetailsByPoidAndLovName(line.getCurrencyPoid(), "CURRENCY"));
             }
             if (line.getBillTo() != null) {
-                dto.setBillToDet(lovService.getLovItemByCodeFast(line.getBillTo(), "CUSTOMER_MASTER", groupPoid, companyPoid, userPoid));
+                dto.setBillToDet(lovService.getLovItemByCodeFast(line.getBillTo(), "CUSTOMER_MASTER"));
             }
         } catch (Exception e) {
             log.warn("Failed to fetch some LOV data", e);
@@ -296,7 +296,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
 
     private void validateCountry(Long countryPoid) {
         if (countryPoid != null) {
-            LovGetListDto lovGetListDto = lovService.getLovItemByPoid(countryPoid, "COUNTRY", UserContext.getGroupPoid(), UserContext.getCompanyPoid(), UserContext.getUserPoid());
+            LovGetListDto lovGetListDto = lovService.getDetailsByPoidAndLovName(countryPoid, "COUNTRY");
             if (lovGetListDto == null || lovGetListDto.getPoid() == null)
                 throw new ValidationException("Country is not active");
         }
@@ -304,7 +304,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
 
     private void validateCurrency(Long currencyPoid) {
         if (currencyPoid != null) {
-            LovGetListDto lovGetListDto = lovService.getLovItemByPoid(currencyPoid, "CURRENCY", UserContext.getGroupPoid(), UserContext.getCompanyPoid(), UserContext.getUserPoid());
+            LovGetListDto lovGetListDto = lovService.getDetailsByPoidAndLovName(currencyPoid, "CURRENCY");
             if (lovGetListDto == null || lovGetListDto.getPoid() == null)
                 throw new ValidationException("Currency is not active");
         }
@@ -312,7 +312,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
 
     private void validateBillTo(String billToCode) {
         if (billToCode != null) {
-            LovGetListDto lovGetListDto = lovService.getLovItemByCodeFast(billToCode, "CUSTOMER_MASTER", UserContext.getGroupPoid(), UserContext.getCompanyPoid(), UserContext.getUserPoid());
+            LovGetListDto lovGetListDto = lovService.getLovItemByCodeFast(billToCode, "CUSTOMER_MASTER");
             if (lovGetListDto == null || lovGetListDto.getPoid() == null)
                 throw new ValidationException("Bill to is not active");
         }
