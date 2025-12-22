@@ -95,14 +95,16 @@ public class ContainerTerminalTypeController {
             @RequestHeader("X-Document-Id") String docId) {
 
         try {
-            log.info("Searching container terminal types with page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+            log.info("List ContainerTerminalTypes request | page={}, size={}, docId={}",
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    docId);
             Map<String, Object> result =
                     containerTerminalTypeService.listContainerTerminalTypes(
                             docId,
                             filters,
                             pageable
                     );
-            log.info("Successfully retrieved container terminal types");
             return success("Container Terminal Type list fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Unable to fetch container terminal types: " + e.getMessage());
@@ -120,11 +122,12 @@ public class ContainerTerminalTypeController {
             @PathVariable @NotNull @Positive Long containerTerminalTypePoid,
             @RequestHeader("X-Group-Poid") Long groupPoid
     ) {
-        log.info("Getting container terminal type with id: {}", containerTerminalTypePoid);
+        log.info("Get ContainerTerminalType request | poid={}, groupPoid={}",
+                containerTerminalTypePoid,
+                groupPoid);
         ContainerTerminalTypeResponse response =
                 containerTerminalTypeService.getById(containerTerminalTypePoid, groupPoid);
 
-        log.info("Successfully retrieved container terminal type with id: {}", containerTerminalTypePoid);
         return success(
                 "Container terminal type retrieved successfully",
                 response
@@ -144,12 +147,13 @@ public class ContainerTerminalTypeController {
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-Document-Id") String docId
     ) {
-        log.info("Creating container terminal type with code: {}, groupId: {}, userId: {}",
-                request.getContainerTerminalTypeCode(), groupPoid, userId);
+        log.info("Create ContainerTerminalType request | code={}, groupPoid={}, userId={}",
+                request.getContainerTerminalTypeCode(),
+                groupPoid,
+                userId);
         ContainerTerminalTypeResponse response =
                 containerTerminalTypeService.create(request, groupPoid, userId, docId);
 
-        log.info("Successfully created container terminal type with id: {}", response.getContainerTerminalTypePoid());
         return success(
                 "Container terminal type created successfully",
                 response
@@ -170,12 +174,15 @@ public class ContainerTerminalTypeController {
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-Document-Id") String docId
     ) {
-        log.info("Updating container terminal type with id: {}, groupId: {}, userId: {}",
-                containerTerminalTypePoid, groupPoid, userId);
+        log.info("Update ContainerTerminalType request | poid={}, code={}, groupPoid={}, userId={}",
+                containerTerminalTypePoid,
+                request.getContainerTerminalTypeCode(),
+                groupPoid,
+                userId);
+
         ContainerTerminalTypeResponse response =
                 containerTerminalTypeService.update(containerTerminalTypePoid, request, groupPoid, userId, docId);
 
-        log.info("Successfully updated container terminal type with id: {}", containerTerminalTypePoid);
         return success(
                 "Container terminal type updated successfully",
                 response
@@ -194,9 +201,11 @@ public class ContainerTerminalTypeController {
             @RequestHeader("X-Group-Poid") Long groupPoid,
             @RequestHeader("X-User-Id") String userId
     ) {
-        log.info("Deleting container terminal type with id: {}", containerTerminalTypePoid);
+        log.info("Delete ContainerTerminalType request | poid={}, groupPoid={}, userId={}",
+                containerTerminalTypePoid,
+                groupPoid,
+                userId);
         containerTerminalTypeService.delete(containerTerminalTypePoid, groupPoid, userId);
-        log.info("Successfully deleted container terminal type with id: {}", containerTerminalTypePoid);
         return success("Container terminal type deleted successfully");
     }
 }

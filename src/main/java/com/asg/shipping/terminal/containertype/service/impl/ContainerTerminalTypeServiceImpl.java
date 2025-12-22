@@ -60,6 +60,7 @@ public class ContainerTerminalTypeServiceImpl implements ContainerTerminalTypeSe
 
         Page<Map<String, Object>> page =
                 new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+        log.info("Successfully retrieved container terminal types");
 
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
