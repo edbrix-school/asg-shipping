@@ -134,8 +134,15 @@ public class GlobalExceptionHandler {
         return ApiResponse.notFound(ex.getMessage());
     }
 
-    @ExceptionHandler(com.asg.common.lib.exception.ValidationException.class)
-    public ResponseEntity<?> handleValidationException(com.asg.common.lib.exception.ValidationException ex) {
+    @ExceptionHandler(com.asg.shipping.exceptions.ValidationException.class)
+    public ResponseEntity<?> handleShippingValidationException(com.asg.shipping.exceptions.ValidationException ex) {
+        Map<String, Object> errors = new HashMap<>();
+        if (ex.getFieldErrors() != null && !ex.getFieldErrors().isEmpty()) {
+            ex.getFieldErrors().forEach(error -> 
+                errors.put(error.getField() != null ? error.getField() : "general", error.getMessage())
+            );
+            return ApiResponse.error(ex.getMessage(), HttpStatus.BAD_REQUEST.value(), errors);
+        }
         return ApiResponse.badRequest(ex.getMessage());
     }
 }

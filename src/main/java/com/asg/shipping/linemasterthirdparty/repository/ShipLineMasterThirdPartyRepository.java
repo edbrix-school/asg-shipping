@@ -44,5 +44,7 @@ public interface ShipLineMasterThirdPartyRepository extends JpaRepository<ShipLi
      */
     @Query("SELECT COUNT(l) > 0 FROM ShipLineMaster l WHERE l.lineName = :lineName AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.linePoid != :excludeLinePoid AND l.deleted = 'N'")
     boolean existsByLineNameAndGroupPoidAndThirdPartyExcluding(@Param("lineName") String lineName, @Param("groupPoid") Long groupPoid, @Param("excludeLinePoid") Long excludeLinePoid);
+
+    boolean existsByLinePoid(Long linePoid);
 }
 
