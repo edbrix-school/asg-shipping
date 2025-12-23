@@ -70,7 +70,6 @@ public class ShippingFFChargeMasterServiceTest {
         createDto = ChargeCreateDTO.builder()
                 .chargeCode("TEST001")
                 .chargeName("Test Charge")
-                .chargeName2("Test Charge 2")
                 .chargeRevenueType("REVENUE")
                 .chargeType("FIXED")
                 .divisionCode("DIV001")
@@ -83,7 +82,6 @@ public class ShippingFFChargeMasterServiceTest {
 
         updateDto = ChargeUpdateDTO.builder()
                 .chargeName("Updated Charge")
-                .chargeName2("Updated Charge 2")
                 .chargeRevenueType("REVENUE")
                 .chargeType("FIXED")
                 .divisionCode("DIV001")
@@ -142,7 +140,7 @@ public class ShippingFFChargeMasterServiceTest {
 
     @Test
     void updateCharge_NotFound() {
-        when(chargeRepository.findByChargePoidAndGroupPoid(1L, 100L)).thenReturn(Optional.empty());
+        when(chargeRepository.findByChargePoid(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, 
                 () -> service.updateCharge(1L, updateDto, 100L, 123L));
@@ -155,7 +153,7 @@ public class ShippingFFChargeMasterServiceTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC001");
 
-            when(chargeRepository.findByChargePoidAndGroupPoid(1L, 100L)).thenReturn(Optional.of(entity));
+            when(chargeRepository.findByChargePoid(1L)).thenReturn(Optional.of(entity));
             when(mapper.mapToDto(entity)).thenReturn(responseDto);
             when(shippingChargeLineViewRepository.findByChargePoid(1L)).thenReturn(List.of());
 
@@ -163,7 +161,7 @@ public class ShippingFFChargeMasterServiceTest {
 
             assertNotNull(result);
             assertEquals(1L, result.getChargePoid());
-            verify(chargeRepository).findByChargePoidAndGroupPoid(1L, 100L);
+            verify(chargeRepository).findByChargePoid(1L);
             verify(loggingService).createLogSummaryEntry(any(), eq("DOC001"), eq("1"));
         }
     }
@@ -173,7 +171,7 @@ public class ShippingFFChargeMasterServiceTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
 
-            when(chargeRepository.findByChargePoidAndGroupPoid(1L, 100L)).thenReturn(Optional.empty());
+            when(chargeRepository.findByChargePoid(1L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () -> service.getCharge(1L));
         }
@@ -185,7 +183,7 @@ public class ShippingFFChargeMasterServiceTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC001");
 
-            when(chargeRepository.findByChargePoidAndGroupPoid(1L, 100L)).thenReturn(Optional.of(entity));
+            when(chargeRepository.findByChargePoid(1L)).thenReturn(Optional.of(entity));
             when(chargeRepository.save(entity)).thenReturn(entity);
 
             service.deleteCharge(1L);
@@ -204,7 +202,7 @@ public class ShippingFFChargeMasterServiceTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
 
             entity.setDeleted("Y");
-            when(chargeRepository.findByChargePoidAndGroupPoid(1L, 100L)).thenReturn(Optional.of(entity));
+            when(chargeRepository.findByChargePoid(1L)).thenReturn(Optional.of(entity));
 
             service.deleteCharge(1L);
 

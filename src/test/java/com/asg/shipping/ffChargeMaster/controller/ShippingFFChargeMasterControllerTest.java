@@ -43,7 +43,6 @@ public class ShippingFFChargeMasterControllerTest {
         createDto = ChargeCreateDTO.builder()
                 .chargeCode("TEST001")
                 .chargeName("Test Charge")
-                .chargeName2("Test Charge 2")
                 .chargeRevenueType("REVENUE")
                 .chargeType("FIXED")
                 .divisionCode("DIV001")
@@ -53,7 +52,6 @@ public class ShippingFFChargeMasterControllerTest {
 
         updateDto = ChargeUpdateDTO.builder()
                 .chargeName("Updated Charge")
-                .chargeName2("Updated Charge 2")
                 .chargeRevenueType("REVENUE")
                 .chargeType("FIXED")
                 .divisionCode("DIV001")

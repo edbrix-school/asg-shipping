@@ -265,8 +265,8 @@ public class ShippingFFChargeMasterController {
     public ResponseEntity<?> geSearchCharges(@ParameterObject Pageable pageable,
                                             @RequestBody(required = false) FilterRequestDto filters) {
         try {
-            Map<String, Object> countries = chargeMasterService.searchCharges(UserContext.getDocumentId(), filters, pageable);
-            return success("FF Charge Master List fetched successfully", countries);
+            Map<String, Object> ffChargeData = chargeMasterService.searchCharges(UserContext.getDocumentId(), filters, pageable);
+            return success("FF Charge Master List fetched successfully", ffChargeData);
         } catch (Exception e) {
             return internalServerError("Error fetching FF Charge Master List: " + e.getMessage());
         }

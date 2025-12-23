@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface ShipChargeMasterRepository extends JpaRepository<ShipChargeMaster, Long> {
 
 
-    Optional<ShipChargeMaster> findByChargePoidAndGroupPoid(Long chargePoid, Long groupPoid);
+    Optional<ShipChargeMaster> findByChargePoid(Long chargePoid);
 
     boolean existsByChargeCodeAndDivisionCodeAndDeletedNot(
             String chargeCode,

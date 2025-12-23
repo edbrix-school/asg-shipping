@@ -20,9 +20,6 @@ public class ChargeCreateDTO {
     @Size(max = 100, message = "Charge name must not exceed 100 characters")
     private String chargeName;
 
-    @Size(max = 100, message = "Charge name 2 must not exceed 100 characters")
-    private String chargeName2;
-
     @Size(max = 50, message = "Charge revenue type must not exceed 50 characters")
     private String chargeRevenueType;
 
@@ -35,7 +32,7 @@ public class ChargeCreateDTO {
     @Size(max = 25, message = "Division code must not exceed 25 characters")
     private String divisionCode;
 
-    private String visibleInFf;
+    //private String visibleInFf;
 
     private Long chargeGlRevenue;
     private Long chargeGlCost;
@@ -51,9 +48,9 @@ public class ChargeCreateDTO {
     private Long chargeGroupPoid;
     private Long shFfChargeMap;
     private Long shFfChargeGlPoid;
-    private Long shFfChargeGlPoidRev;
+   /* private Long shFfChargeGlPoidRev;
     private Long oldChargeGlRevenue;
-    private Long oldChargeGlCost;
+    private Long oldChargeGlCost;*/
 
     @Pattern(regexp = "^[YN]$", message = "Active must be Y or N")
     private String active;

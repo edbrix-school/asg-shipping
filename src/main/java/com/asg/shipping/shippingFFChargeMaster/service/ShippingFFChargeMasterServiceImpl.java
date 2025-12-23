@@ -23,6 +23,7 @@ import com.asg.shipping.shippingFFChargeMaster.util.ChargeMasterMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -74,9 +75,11 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
     public ChargeDto updateCharge(Long id, ChargeUpdateDTO dto, Long groupPoid, Long userPoid) {
         log.info("Updating charge with id: {}, groupId: {}, userPoid: {}", id, groupPoid, userPoid);
 
-        ShipChargeMaster charge = chargeRepository.findByChargePoidAndGroupPoid(id, groupPoid)
+        ShipChargeMaster charge = chargeRepository.findByChargePoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Charge", "chargePoid", id.toString()));
 
+        ShipChargeMaster oldChargeMaster = new ShipChargeMaster();
+        BeanUtils.copyProperties(charge, oldChargeMaster);
 
         mapper.mapUpdateDTOToEntity(dto, charge, groupPoid, userPoid);
 
@@ -85,40 +88,13 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
         validateChargeGroupMaster(dto.getChargeGroupPoid());
         validateChargeMasterFF(dto.getShFfChargeMap());
         validateDivision(dto.getDivisionCode());
-
-        ShipChargeMaster oldLine = ShipChargeMaster.builder()
-                .chargeCode(charge.getChargeCode())
-                .chargeName(charge.getChargeName())
-                .chargeName2(charge.getChargeName2())
-                .chargeRevenueType(charge.getChargeRevenueType())
-                .chargeType(charge.getChargeType())
-                .chargeApplicableType(charge.getChargeApplicableType())
-                .divisionCode(charge.getDivisionCode())
-                .chargeGlRevenue(charge.getChargeGlRevenue())
-                .chargeGlCost(charge.getChargeGlCost())
-                .chargeGlWip(charge.getChargeGlWip())
-                .chargePayableGl(charge.getChargePayableGl())
-                .fdaGlRevenue(charge.getFdaGlRevenue())
-                .fdaGlCost(charge.getFdaGlCost())
-                .directRevenueGl(charge.getDirectRevenueGl())
-                .directCostOfSaleGl(charge.getDirectCostOfSaleGl())
-                .directPayableGl(charge.getDirectPayableGl())
-                .taxPoid(charge.getTaxPoid())
-                .inputTaxPoid(charge.getInputTaxPoid())
-                .chargeGroupPoid(charge.getChargeGroupPoid())
-                .shFfChargeMap(charge.getShFfChargeMap())
-                .shFfChargeGlPoid(charge.getShFfChargeGlPoid())
-                .shFfChargeGlPoidRev(charge.getShFfChargeGlPoidRev())
-                .visibleInFf(charge.getVisibleInFf())
-                .oldChargeGlRevenue(charge.getOldChargeGlRevenue())
-                .oldChargeGlCost(charge.getOldChargeGlCost())
-                .active(charge.getActive())
-                .seqno(charge.getSeqno())
-                .build();
-
         ShipChargeMaster saved = chargeRepository.save(charge);
 
-        loggingService.logChanges(oldLine, saved, ShipChargeMaster.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "CHARGE_POID");
+        String docId = UserContext.getDocumentId();
+        String key = saved.getChargePoid().toString();
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
+        loggingService.logChanges(oldChargeMaster, saved, ShipChargeMaster.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "CHARGE_POID");
 
         log.info("Successfully updated charge with id: {}", id);
         return mapper.mapToDto(saved);
@@ -129,9 +105,8 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
     public ChargeDto getCharge(Long id) {
         log.info("Getting charge with id: {}", id);
 
-        Long groupPoid = UserContext.getGroupPoid();
 
-        ShipChargeMaster charge = chargeRepository.findByChargePoidAndGroupPoid(id, groupPoid)
+        ShipChargeMaster charge = chargeRepository.findByChargePoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Charge", "chargePoid", id.toString()));
 
         ChargeDto dto = mapper.mapToDto(charge);
@@ -162,9 +137,7 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
     public void deleteCharge(Long id) {
         log.info("Deleting charge with id: {}", id);
 
-        Long groupPoid = UserContext.getGroupPoid();
-
-        ShipChargeMaster charge = chargeRepository.findByChargePoidAndGroupPoid(id, groupPoid)
+        ShipChargeMaster charge = chargeRepository.findByChargePoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Charge", "chargePoid", id.toString()));
 
         // Check if already deleted (idempotent)
