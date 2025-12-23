@@ -33,22 +33,31 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
             Long customerPoid,
             Long groupPoid) {
 
-        // Header validation
         CustomerInvoicePrtMasterEntity master =
                 masterRepo.findById(customerPoid)
-                        .filter(m -> "N".equals(m.getDeleted()))
+                        .filter(m -> !"Y".equals(m.getDeleted()))
                         .orElseThrow(() ->
-                                new RuntimeException("Customer invoice charge mapping not found"));
+                                new RuntimeException(
+                                        "Customer invoice charge mapping not found"
+                                ));
 
         List<CustomerInvoicePrtDtlEntity> details =
                 detailRepo.findByIdCustomerPoid(customerPoid);
 
+        if (details.isEmpty()) {
+            throw new RuntimeException(
+                    "Customer invoice charge mapping not found"
+            );
+        }
+
         CustomerInvoiceChargeMapMasterResponse response =
                 new CustomerInvoiceChargeMapMasterResponse();
-        response.setCustomerPoid(customerPoid);
 
+        response.setCustomerPoid(customerPoid);
         response.setDetails(
-                details.stream().map(this::mapToDetailDto).toList()
+                details.stream()
+                        .map(this::mapToDetailDto)
+                        .toList()
         );
 
         return response;
