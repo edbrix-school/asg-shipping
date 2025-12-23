@@ -12,23 +12,10 @@ import java.time.LocalDateTime;
 @Setter
 @Table(name = "SHIP_REMUNERATION_MASTER")
 public class ShipRemunerationMaster {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "ship_remun_seq")
-    @SequenceGenerator(
-            name = "ship_remun_seq",
-            sequenceName = "SHIP_REMUNERATION_MASTER_SEQ",
-            allocationSize = 1
-    )
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "REMUNERATION_POID", nullable = false)
     private Long remunerationPoid;
-
-//    @Id
-//    @Column(name = "REMUNERATION_POID", updatable = false, insertable = false)
-//    @org.hibernate.annotations.Generated(
-//            org.hibernate.annotations.GenerationTime.INSERT
-//    )
-//    private Long remunerationPoid;
 
     @Column(name = "REMUN_CODE", length = 20)
     private String remunCode;
