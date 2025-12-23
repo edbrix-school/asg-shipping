@@ -252,7 +252,6 @@ class ShipTradeLaneControllerTest {
         );
 
         when(service.list(
-                anyString(),
                 any(FilterRequestDto.class),
                 any(Pageable.class)
         )).thenReturn(listResponse);
@@ -266,7 +265,7 @@ class ShipTradeLaneControllerTest {
         Pageable pageable = PageRequest.of(0, 10);
         String documentId = "100-012";
 
-        ResponseEntity<?> result = controller.list(pageable, filters, documentId);
+        ResponseEntity<?> result = controller.list(pageable, filters);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
 
@@ -279,7 +278,6 @@ class ShipTradeLaneControllerTest {
         );
 
         verify(service).list(
-                eq(documentId),
                 any(FilterRequestDto.class),
                 eq(pageable)
         );
@@ -290,12 +288,10 @@ class ShipTradeLaneControllerTest {
     @Test
     void testListInternalError() {
         when(service.list(
-                anyString(),
                 any(FilterRequestDto.class),
                 any(Pageable.class)
         )).thenThrow(new RuntimeException("Database error"));
 
-        // ✅ Proper record instantiation
         FilterRequestDto filters = new FilterRequestDto(
                 null,
                 null,
@@ -305,7 +301,7 @@ class ShipTradeLaneControllerTest {
         Pageable pageable = PageRequest.of(0, 10);
         String documentId = "100-012";
 
-        ResponseEntity<?> result = controller.list(pageable, filters, documentId);
+        ResponseEntity<?> result = controller.list(pageable, filters);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
 
@@ -318,7 +314,6 @@ class ShipTradeLaneControllerTest {
         );
 
         verify(service).list(
-                eq(documentId),
                 any(FilterRequestDto.class),
                 eq(pageable)
         );

@@ -50,10 +50,7 @@ public class ShipTradeLaneController {
                     - **Trade Lane Name** is mandatory and must be unique
                     - **Active** status is mandatory
                     - **Sequence Number** is mandatory
-                    
-                    ### Authorization Parameters
-                    - **documentId:** Document identifier
-                    - **actionRequested:** Action being performed (CREATE)
+                   
                     """
     )
     @ApiResponses({
@@ -89,10 +86,7 @@ public class ShipTradeLaneController {
                     - Cannot update deleted records
                     - **Trade Lane Code** must be unique
                     - **Trade Lane Name** must be unique
-                    
-                    ### Authorization Parameters
-                    - **documentId:** Document identifier
-                    - **actionRequested:** Action being performed (EDIT)
+                   
                     """
     )
     @ApiResponses({
@@ -125,10 +119,6 @@ public class ShipTradeLaneController {
             summary = "Get Ship Trade Lane by ID",
             description = """
                     Retrieve a single Ship Trade Lane Master record by its POID.
-                    
-                    ### Authorization Parameters
-                    - **documentId:** Document identifier
-                    - **actionRequested:** Action being performed (VIEW)
                     """
     )
     @ApiResponses({
@@ -157,11 +147,7 @@ public class ShipTradeLaneController {
             summary = "Delete Ship Trade Lane",
             description = """
                     Soft delete a Ship Trade Lane Master record.
-                    
-                    ### Authorization Parameters
-                    - **documentId:** Document identifier
-                    - **actionRequested:** Action being performed (DELETE)
-                    """
+                """
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Ship Trade Lane deleted successfully"),
@@ -191,10 +177,6 @@ public class ShipTradeLaneController {
                     Fetch Ship Trade Lane Masters using filters and pagination.
                     
                     Valid `searchField` values: TRADELANE_CODE, TRADELANE_NAME, TRADELANE_NAME2, ACTIVE
-                    
-                    ### Authorization Parameters
-                    - **documentId:** Document identifier
-                    - **actionRequested:** Action being performed (VIEW)
                     """
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -228,13 +210,10 @@ public class ShipTradeLaneController {
     @PostMapping("/list")
     public ResponseEntity<?> list(
             @ParameterObject Pageable pageable,
-            @RequestBody(required = false) FilterRequestDto filters,
-
-            @Parameter(description = "Document identifier", required = true)
-            @RequestParam String documentId
+            @RequestBody(required = false) FilterRequestDto filters
     ) {
         try {
-            Map<String, Object> response = shipTradeLaneService.list(documentId, filters, pageable);
+            Map<String, Object> response = shipTradeLaneService.list(filters, pageable);
             return success("Ship Trade Lanes list retrieved successfully", response);
         } catch (Exception e) {
             return internalServerError("Failed to retrieve Ship Trade Lanes: " + e.getMessage());

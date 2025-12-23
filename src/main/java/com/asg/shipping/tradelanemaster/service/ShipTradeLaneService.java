@@ -18,5 +18,5 @@ public interface ShipTradeLaneService {
     
     void delete(Long tradeLanePoid);
     
-    Map<String, Object> list(String documentId, FilterRequestDto filters, Pageable pageable);
+    Map<String, Object> list(FilterRequestDto filters, Pageable pageable);
 }

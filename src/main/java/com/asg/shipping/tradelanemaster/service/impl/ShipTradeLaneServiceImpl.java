@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.tradelanemaster.dto.request.ShipTradelaneRequest;
@@ -110,13 +111,13 @@ public class ShipTradeLaneServiceImpl implements ShipTradeLaneService {
     }
 
     @Override
-    public Map<String, Object> list(String documentId, FilterRequestDto filters, Pageable pageable) {
+    public Map<String, Object> list(FilterRequestDto filters, Pageable pageable) {
         String operator = documentService.resolveOperator(filters);
         String isDeleted = documentService.resolveIsDeleted(filters);
         List<FilterDto> filterList = documentService.resolveFilters(filters);
 
         RawSearchResult raw = documentService.search(
-                documentId,
+                UserContext.getDocumentId(),
                 filterList,
                 operator,
                 pageable,
