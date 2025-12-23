@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "SHIP_LINE_MASTER", schema = "PRODUCTION")
+@Table(name = "SHIP_LINE_MASTER")
 @Data
 @Builder
 @NoArgsConstructor

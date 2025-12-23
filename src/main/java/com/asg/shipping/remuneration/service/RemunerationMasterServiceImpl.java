@@ -69,10 +69,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         }
 
         ShipRemunerationMaster entity = ShipRemunerationMasterMapper.toEntity(requestDto);
-        System.out.println(">>>>> en1 >> " + entity.getRemunerationPoid());
         ShipRemunerationMaster saved = repository.save(entity);
-        System.out.println(">>>>> en2 >> " + saved.getRemunerationPoid());
-        System.out.println(">>>>> en3 >> " + ShipRemunerationMasterMapper.toResponseDto(saved).getRemunerationPoid());
         return getRemunerationById(saved.getRemunerationPoid());
     }
 
