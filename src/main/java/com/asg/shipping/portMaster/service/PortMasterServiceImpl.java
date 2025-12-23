@@ -1,6 +1,7 @@
 package com.asg.shipping.portMaster.service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,11 +17,16 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.common.entity.GlobalCountryMaster;
+import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
+import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.portMaster.dto.PortMasterRequest;
 import com.asg.shipping.portMaster.dto.PortMasterResponse;
 import com.asg.shipping.portMaster.entity.PortMaster;
 import com.asg.shipping.portMaster.entity.PortMasterId;
 import com.asg.shipping.portMaster.repository.PortMasterRepository;
+import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
+import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,10 +36,12 @@ import lombok.RequiredArgsConstructor;
 public class PortMasterServiceImpl implements PortMasterService {
 
 	private final PortMasterRepository repository;
+	private final GlobalCountryMasterRepository countryRepository;
 	private final DocumentSearchService documentService;
+	private final ShipTradeLaneService tradeLaneService; 
 
 	@Override
-	public void createPort(Long groupPoid, PortMasterRequest request, String userId) {
+	public Map<String, Object> createPort(Long groupPoid, PortMasterRequest request, String userId) {
 
 		repository.findByGroupPoidAndPortCode(groupPoid, request.getPortCode()).ifPresent(p -> {
 			throw new RuntimeException("Port Code already exists");
@@ -59,6 +67,9 @@ public class PortMasterServiceImpl implements PortMasterService {
 		entity.setCreatedDate(LocalDateTime.now());
 
 		repository.save(entity);
+		Long portPoid = repository.findByGroupPoidAndPortCode(groupPoid, request.getPortCode())
+				.map(PortMaster::getPortPoid).orElseThrow(() -> new RuntimeException("Port not found after save"));
+		return Map.of("portPoid", portPoid);
 	}
 
 	@Transactional
@@ -99,7 +110,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 		repository.save(entity);
 
-		return mapToResponse(entity);
+		return getPortById(groupPoid, portPoid);
 	}
 
 	@Override
@@ -109,8 +120,15 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 	@Override
 	public PortMasterResponse getPortById(Long groupPoid, Long portPoid) {
-		return repository.findById(new PortMasterId(groupPoid, portPoid)).map(this::mapToResponse)
-				.orElseThrow(() -> new RuntimeException("Port not found"));
+
+		PortMaster entity=repository.findById(new PortMasterId(groupPoid, portPoid)).orElseThrow(() -> new RuntimeException("Port not found"));
+		
+		ShipTradelaneResponse tradeLaneResponse=tradeLaneService.getById(entity.getTradelanePoid());
+		
+		GlobalCountryMaster countryMaster=countryRepository.findById(entity.getCountryPoid()).orElseThrow(()-> new ResourceNotFoundException("Country Resource", "CountryPoid", null));
+		
+		return mapToResponse(entity, tradeLaneResponse, countryMaster);
+		
 	}
 
 	@Override
@@ -140,7 +158,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 		return PaginationUtil.wrapPage(page, raw.displayFields());
 	}
 
-	private PortMasterResponse mapToResponse(PortMaster entity) {
+	private PortMasterResponse mapToResponse(PortMaster entity,ShipTradelaneResponse tradeLaneResponse,GlobalCountryMaster countryMaster) {
 		PortMasterResponse dto = new PortMasterResponse();
 		dto.setPortPoid(entity.getPortPoid());
 		dto.setPortCode(entity.getPortCode());
@@ -152,6 +170,26 @@ public class PortMasterServiceImpl implements PortMasterService {
 		dto.setBerths(entity.getBerths());
 		dto.setSeqno(entity.getSeqno());
 		dto.setActive(entity.getActive());
+		dto.setCountryDetail(mapReadOnlyresponse(tradeLaneResponse));
+		dto.setTradelaneDetail(mapReadOnlyresponse(countryMaster));
+		return dto;
+	}
+	
+	private Map<String,Object> mapReadOnlyresponse(Object data){
+		Map<String,Object> dto=new HashMap<>();
+		if(data instanceof ShipTradelaneResponse) {
+			ShipTradelaneResponse entity=(ShipTradelaneResponse) data;
+			dto.put("poid", entity.getTradeLanePoid());
+			dto.put("code", entity.getTradeLaneCode());
+			dto.put("description", entity.getTradeLaneName());
+		}
+		else if(data instanceof GlobalCountryMaster) {
+			GlobalCountryMaster entity=(GlobalCountryMaster) data;
+			dto.put("poid", entity.getCountryPoid());
+			dto.put("code", entity.getCountryCode());
+			dto.put("description", entity.getCountryName());
+		}
+		
 		return dto;
 	}
 
