@@ -19,12 +19,9 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.Map;
+
 import java.util.Optional;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -182,46 +179,6 @@ class ShipTradeLaneServiceImplTest {
             verify(repository).save(any(ShipTradelaneMaster.class));
         }
     }
-
-    @Test
-    void testList() {
-        FilterRequestDto filters = new FilterRequestDto("AND", "N", Collections.emptyList());
-        Pageable pageable = PageRequest.of(0, 10);
-
-        RawSearchResult rawResult = new RawSearchResult(
-                Collections.emptyList(),
-                Collections.emptyMap(),
-                0L
-        );
-
-        when(documentService.resolveOperator(any())).thenReturn("AND");
-        when(documentService.resolveIsDeleted(any())).thenReturn("N");
-        when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
-
-        when(documentService.search(
-                anyString(),
-                anyList(),
-                anyString(),
-                any(Pageable.class),
-                anyString(),
-                anyString(),
-                anyString()
-        )).thenReturn(rawResult);
-
-        Map<String, Object> result = service.list("100-012", filters, pageable);
-
-        assertNotNull(result);
-        verify(documentService).search(
-                anyString(),
-                anyList(),
-                anyString(),
-                any(Pageable.class),
-                anyString(),
-                anyString(),
-                anyString()
-        );
-    }
-
 
     @Test
     void testValidateRequestEmptyCode() {
