@@ -1,5 +1,7 @@
 package com.asg.shipping.portMaster.dto;
 
+import java.util.Map;
+
 import lombok.Data;
 
 @Data
@@ -14,4 +16,6 @@ public class PortMasterResponse {
 	private String berths;
 	private Long seqno;
 	private String active;
+	private Map<String,Object> tradelaneDetail;
+	private Map<String,Object> countryDetail;
 }

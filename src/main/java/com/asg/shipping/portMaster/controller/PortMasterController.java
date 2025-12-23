@@ -56,8 +56,8 @@ public class PortMasterController {
 			@Parameter(description = "User ID performing the action", required = true, example = "admin") @RequestParam String userPoid,
 
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Port details to be created", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = PortMasterRequest.class))) @Valid @RequestBody PortMasterRequest request) {
-		service.createPort(groupPoid, request, userPoid);
-		return success("Port created successfully");
+		Map<String,Object >response=service.createPort(groupPoid, request, userPoid);
+		return success("Port created successfully",response);
 	}
 
 	@AllowedAction(UserRolesRightsEnum.EDIT)
@@ -83,7 +83,7 @@ public class PortMasterController {
 	@Operation(summary = "Get all Ports", description = "Fetches all Port Master records for the given group", responses = {
 			@ApiResponse(responseCode = "200", description = "Ports fetched successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PortMasterResponse.class))),
 			@ApiResponse(responseCode = "401", description = "Unauthorized") }, security = @SecurityRequirement(name = "bearerAuth"))
-	@GetMapping("/list")
+	@PostMapping("/list")
 	public ResponseEntity<?> getAll(@ParameterObject Pageable pageable,
 			@RequestBody(required = false) FilterRequestDto filters) {
 		Map<String, Object> response = service.getAllPorts(UserContext.getDocumentId(), filters, pageable);

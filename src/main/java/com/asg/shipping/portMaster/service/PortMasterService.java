@@ -10,7 +10,7 @@ import com.asg.shipping.portMaster.dto.PortMasterResponse;
 
 public interface PortMasterService {
 
-	void createPort(Long groupPoid, PortMasterRequest request, String userId);
+	Map<String, Object> createPort(Long groupPoid, PortMasterRequest request, String userId);
 
 	PortMasterResponse updatePort(Long groupPoid, Long portPoid, PortMasterRequest request, String userId);
 
