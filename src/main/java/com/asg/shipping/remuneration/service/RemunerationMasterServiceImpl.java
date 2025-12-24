@@ -9,12 +9,12 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.repository.GlMasterRepository;
-import com.asg.shipping.common.repository.ShipChargeMasterRepository;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
 import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import com.asg.shipping.remuneration.mapper.ShipRemunerationMasterMapper;
 import com.asg.shipping.remuneration.repository.ShipRemunerationMasterRepository;
+import com.asg.shipping.shippingFFChargeMaster.repository.ShipChargeMasterRepository;
 import jakarta.xml.bind.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -61,7 +61,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         if (repository.existsByRemunCodeIgnoreCase(requestDto.getRemunCode())) {
             throw new ResourceAlreadyExistsException("Remuneration Code", requestDto.getRemunCode());
         }
-        if (!shipChargeMasterRepository.existsByChargePoid(BigDecimal.valueOf(requestDto.getRemunChargeCodePoid()))) {
+        if (!shipChargeMasterRepository.existsByChargePoid(requestDto.getRemunChargeCodePoid())) {
             throw new ResourceNotFoundException("Charge Master", "Remuneration Charge Code Poid", requestDto.getRemunChargeCodePoid());
         }
         if (!glMasterRepository.existsByGlPoid(requestDto.getGlPoid())) {
@@ -78,7 +78,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         ShipRemunerationMaster entity = repository.findById(remunerationPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Remuneration", "Remuneration Poid", remunerationPoid));
 
-        if (!shipChargeMasterRepository.existsByChargePoid(BigDecimal.valueOf(requestDto.getRemunChargeCodePoid()))) {
+        if (!shipChargeMasterRepository.existsByChargePoid(requestDto.getRemunChargeCodePoid())) {
             throw new ResourceNotFoundException("Charge Master", "Remuneration Charge Code Poid", requestDto.getRemunChargeCodePoid());
         }
         if (!glMasterRepository.existsByGlPoid(requestDto.getGlPoid())) {

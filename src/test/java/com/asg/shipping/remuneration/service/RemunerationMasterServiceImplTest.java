@@ -4,11 +4,11 @@ import com.asg.common.lib.exception.ResourceAlreadyExistsException;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.shipping.common.repository.GlMasterRepository;
-import com.asg.shipping.common.repository.ShipChargeMasterRepository;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
 import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import com.asg.shipping.remuneration.repository.ShipRemunerationMasterRepository;
+import com.asg.shipping.shippingFFChargeMaster.repository.ShipChargeMasterRepository;
 import jakarta.xml.bind.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +58,7 @@ class RemunerationMasterServiceImplTest {
         entity.setRemunCode("TEST001");
 
         when(repository.existsByRemunCodeIgnoreCase(anyString())).thenReturn(false);
-        when(shipChargeMasterRepository.existsByChargePoid(any(BigDecimal.class))).thenReturn(true);
+        when(shipChargeMasterRepository.existsByChargePoid(any(Long.class))).thenReturn(true);
         when(glMasterRepository.existsByGlPoid(anyLong())).thenReturn(true);
         when(repository.save(any())).thenReturn(entity);
         when(repository.findById(anyLong())).thenReturn(Optional.of(entity));
@@ -98,7 +98,7 @@ class RemunerationMasterServiceImplTest {
         entity.setRemunerationPoid(1L);
 
         when(repository.findById(anyLong())).thenReturn(Optional.of(entity));
-        when(shipChargeMasterRepository.existsByChargePoid(any(BigDecimal.class))).thenReturn(true);
+        when(shipChargeMasterRepository.existsByChargePoid(any(Long.class))).thenReturn(true);
         when(glMasterRepository.existsByGlPoid(anyLong())).thenReturn(true);
         when(repository.save(any())).thenReturn(entity);
 
