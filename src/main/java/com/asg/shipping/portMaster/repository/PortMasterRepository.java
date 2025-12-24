@@ -20,4 +20,6 @@ public interface PortMasterRepository extends JpaRepository<PortMaster, PortMast
 
 	Optional<PortMaster> findByPortName(String portName);
 
+	boolean existsByPortPoidAndGroupPoid(Long portPoid, Long groupPoid);
+
 }

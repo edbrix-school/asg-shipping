@@ -1,0 +1,28 @@
+package com.asg.shipping.exceptions;
+
+import com.asg.shipping.common.dto.ValidationError;
+import lombok.Getter;
+
+import java.util.Collections;
+import java.util.List;
+
+
+@Getter
+public class ValidationException extends RuntimeException {
+    private final List<ValidationError> fieldErrors;
+
+    public ValidationException(String message, List<ValidationError> fieldErrors) {
+        super(message);
+        this.fieldErrors = fieldErrors;
+    }
+
+    public ValidationException(String message, List<ValidationError> fieldErrors, Throwable cause) {
+        super(message, cause);
+        this.fieldErrors = fieldErrors;
+    }
+
+    public ValidationException(String message) {
+        super(message);
+        this.fieldErrors= Collections.emptyList();
+    }
+}
