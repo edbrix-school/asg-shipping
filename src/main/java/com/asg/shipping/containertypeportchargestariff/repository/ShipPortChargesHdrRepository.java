@@ -11,7 +11,7 @@ import java.util.List;
 
 @Repository
 public interface ShipPortChargesHdrRepository extends JpaRepository<ShipPortChargesHdr, Long> {
-    boolean existsByDocRefIgnoreCaseAndDeletedNot(String docRef, String deleted);
+    boolean existsByDocRefIgnoreCase(String docRef);
 
     boolean existsByDocRefIgnoreCaseAndTransactionPoidNot(String docRef, Long transactionPoid);
 
