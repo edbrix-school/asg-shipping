@@ -33,7 +33,7 @@ import static com.asg.common.lib.security.util.UserContext.getUserPoid;
  * REST Controller for Line Tariffs (Demurrage and Detention Slabs) operations
  */
 @RestController
-@RequestMapping("/v1/line-tariffs")
+@RequestMapping("/v1/line-tariffs-demurrage-detention")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Line Tariffs Management", description = "APIs for managing line tariffs with demurrage and detention slabs")

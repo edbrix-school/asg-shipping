@@ -98,8 +98,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         LineTariffDto dto = mapper.mapToDto(tariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
 
-        // Enrich with LOV data
-        enrichLovData(dto);
+        // Enrich with LOV data - TEMPORARILY DISABLED FOR PERFORMANCE
+        // enrichLovData(dto);
 
         log.info("Successfully retrieved line tariff with id: {}", id);
         return dto;
@@ -130,7 +130,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
 
         LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
-        enrichLovData(result);
+        // enrichLovData(result); // TEMPORARILY DISABLED FOR PERFORMANCE
 
         log.info("Successfully created line tariff with id: {}", saved.getTransactionPoid());
         return result;
@@ -162,7 +162,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
         LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
-        enrichLovData(result);
+        // enrichLovData(result); // TEMPORARILY DISABLED FOR PERFORMANCE
 
         log.info("Successfully updated line tariff with id: {}", id);
         return result;
@@ -204,9 +204,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 .orElseThrow(() -> new ResourceNotFoundException("Line Tariff", "transactionPoid", id.toString()));
 
         // Validate new period does not overlap
+        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
         if (tariffHdrRepository.existsOverlappingPeriod(
                 sourceTariff.getLinePoid(),
                 groupPoid,
+                companyPoid,
                 request.getPeriodFrom(),
                 request.getPeriodTo(),
                 null)) {
@@ -265,7 +267,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
 
         LineTariffDto result = mapper.mapToDto(savedNewTariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
-        enrichLovData(result);
+        // enrichLovData(result); // TEMPORARILY DISABLED FOR PERFORMANCE
 
         log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, savedNewTariff.getTransactionPoid());
         return result;
@@ -761,9 +763,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         // Check for date overlap
         if (dto.getLinePoid() != null && dto.getPeriodFrom() != null && dto.getPeriodTo() != null) {
+            Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
             if (tariffHdrRepository.existsOverlappingPeriod(
                     dto.getLinePoid(),
                     groupPoid,
+                    companyPoid,
                     dto.getPeriodFrom(),
                     dto.getPeriodTo(),
                     null)) {
@@ -809,9 +813,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         // Check for date overlap (excluding current transaction)
         if (linePoid != null && periodFrom != null && periodTo != null) {
+            Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
             if (tariffHdrRepository.existsOverlappingPeriod(
                     linePoid,
                     groupPoid,
+                    companyPoid,
                     periodFrom,
                     periodTo,
                     excludeTransactionPoid)) {

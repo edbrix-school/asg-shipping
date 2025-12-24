@@ -41,12 +41,14 @@ public interface ShipLineTariffHdrRepository extends JpaRepository<ShipLineTarif
     @Query("SELECT COUNT(t) > 0 FROM ShipLineTariffHdr t " +
            "WHERE t.linePoid = :linePoid " +
            "AND t.groupPoid = :groupPoid " +
+           "AND t.companyPoid = :companyPoid " +
            "AND t.deleted = 'N' " +
            "AND (:periodFrom <= t.periodTo AND :periodTo >= t.periodFrom) " +
            "AND (:excludeTransactionPoid IS NULL OR t.transactionPoid != :excludeTransactionPoid)")
     boolean existsOverlappingPeriod(
             @Param("linePoid") Long linePoid,
             @Param("groupPoid") Long groupPoid,
+            @Param("companyPoid") Long companyPoid,
             @Param("periodFrom") LocalDate periodFrom,
             @Param("periodTo") LocalDate periodTo,
             @Param("excludeTransactionPoid") Long excludeTransactionPoid
