@@ -45,7 +45,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .linePoid(Long.valueOf(request.getLinePoid().toString()))
                 .portPoid(request.getPortPoid())
                 .portPoid(Long.valueOf(request.getPortPoid().toString()))
-                .email(request.getEmail())
+                .email(request.getEmail() != null && !request.getEmail().isEmpty() ? String.join(",", request.getEmail()) : null)
                 .contactNo(request.getContactNo())
                 .faxNo(request.getFaxNo())
                 .remarks(request.getRemarks())
@@ -71,7 +71,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         entity.setDetails(request.getDetails());
         entity.setLinePoid(request.getLinePoid());
         entity.setPortPoid(request.getPortPoid());
-        entity.setEmail(request.getEmail());
+        entity.setEmail(request.getEmail() != null && !request.getEmail().isEmpty() ? String.join(",", request.getEmail()) : null);
         entity.setContactNo(request.getContactNo());
         entity.setFaxNo(request.getFaxNo());
         entity.setRemarks(request.getRemarks());
