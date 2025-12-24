@@ -21,8 +21,8 @@ public class ChargeGroupMasterResponseDto {
     private Long chargeGlSale;
     private Long chargeGlCostSale;
 
-    private Boolean linewisePayablePosting;
-    private Boolean active;
+    private String linewisePayablePosting;
+    private String active;
     private Long seqNo;
     private String glPrefix;
 

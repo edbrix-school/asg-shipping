@@ -57,9 +57,8 @@ public class ChargeGroupMasterServiceTest {
                 .chargeGlPayable(1001L)
                 .chargeGlSale(1002L)
                 .chargeGlCostSale(1003L)
-                .linewisePayablePosting(true)
-                .glPrefix("TG")
-                .active(true)
+                .linewisePayablePosting("Y")
+                .active("Y")
                 .seqNo(1L)
                 .build();
 
@@ -90,9 +89,8 @@ public class ChargeGroupMasterServiceTest {
                 .chargeGlPayable(1001L)
                 .chargeGlSale(1002L)
                 .chargeGlCostSale(1003L)
-                .linewisePayablePosting(true)
-                .glPrefix("TG")
-                .active(true)
+                .linewisePayablePosting("Y")
+                .active("Y")
                 .seqNo(1L)
                 .createdBy("testUser")
                 .createdDate(LocalDateTime.now())
