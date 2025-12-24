@@ -238,37 +238,37 @@ public class ContainerTypeController {
         return ApiResponse.success("Container type status toggled successfully");
     }
 
-    @AllowedAction(UserRolesRightsEnum.DELETE)
-    @DeleteMapping("/{id}")
-    @Operation(
-            summary = "Delete container type",
-            description = "Soft delete a container type by setting DELETED flag to Y and ACTIVE to N"
-    )
-    @ApiResponses(value = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "Successfully deleted container type",
-                    content = @Content(mediaType = "application/json")
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "404",
-                    description = "Container type not found",
-                    content = @Content(mediaType = "application/json")
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "500",
-                    description = "Internal server error",
-                    content = @Content(mediaType = "application/json")
-            )
-    })
-    public ResponseEntity<?> deleteContainerType(
-            @Parameter(description = "Container Type POID", required = true, example = "12345")
-            @PathVariable Long id) {
-        log.info("Deleting container type with id: {}", id);
-        containerTypeService.deleteContainerType(id);
-        log.info("Successfully deleted container type with id: {}", id);
-        return ApiResponse.success("Container type deleted successfully");
-    }
+//    @AllowedAction(UserRolesRightsEnum.DELETE)
+//    @DeleteMapping("/{id}")
+//    @Operation(
+//            summary = "Delete container type",
+//            description = "Soft delete a container type by setting DELETED flag to Y and ACTIVE to N"
+//    )
+//    @ApiResponses(value = {
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                    responseCode = "200",
+//                    description = "Successfully deleted container type",
+//                    content = @Content(mediaType = "application/json")
+//            ),
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                    responseCode = "404",
+//                    description = "Container type not found",
+//                    content = @Content(mediaType = "application/json")
+//            ),
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+//                    responseCode = "500",
+//                    description = "Internal server error",
+//                    content = @Content(mediaType = "application/json")
+//            )
+//    })
+//    public ResponseEntity<?> deleteContainerType(
+//            @Parameter(description = "Container Type POID", required = true, example = "12345")
+//            @PathVariable Long id) {
+//        log.info("Deleting container type with id: {}", id);
+//        containerTypeService.deleteContainerType(id);
+//        log.info("Successfully deleted container type with id: {}", id);
+//        return ApiResponse.success("Container type deleted successfully");
+//    }
 
     /**
      * Create Pageable from page, size, and sort parameters

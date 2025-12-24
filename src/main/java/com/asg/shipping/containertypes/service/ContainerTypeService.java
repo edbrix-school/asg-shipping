@@ -64,7 +64,7 @@ public interface ContainerTypeService {
      *
      * @param id Container Type POID
      */
-    void deleteContainerType(Long id);
+   // void deleteContainerType(Long id);
 }
 
 
