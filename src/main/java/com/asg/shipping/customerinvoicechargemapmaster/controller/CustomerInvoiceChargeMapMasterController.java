@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Slf4j
 @Validated
-@RequestMapping("/v1/customer-invoice-charge-map")
+@RequestMapping("v1/customer-invoice-charge-map-master")
 @Tag(
         name = "Customer Invoice Charge Map Master",
         description = "APIs for managing Customer Invoice Charge Mapping"
@@ -66,7 +66,6 @@ public class CustomerInvoiceChargeMapMasterController {
                 "Customer invoice charge mapping saved successfully"
         );
     }
-
 
     /**
      * Delete a specific charge detail
