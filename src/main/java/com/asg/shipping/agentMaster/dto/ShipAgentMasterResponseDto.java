@@ -35,6 +35,7 @@ public class ShipAgentMasterResponseDto {
     private String remarks;
     private Integer seqNo;
     private String active;
+    private Long countryPoid;
 
     private String createdBy;
     private LocalDateTime createdDate;

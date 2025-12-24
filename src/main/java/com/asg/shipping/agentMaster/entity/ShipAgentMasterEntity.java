@@ -74,4 +74,7 @@ public class ShipAgentMasterEntity {
 
     @Column(name = "DELETED", length = 1)
     private String deleted;
+
+    @Column(name = "COUNTRY_POID")
+    private Long countryPoid;
 }
