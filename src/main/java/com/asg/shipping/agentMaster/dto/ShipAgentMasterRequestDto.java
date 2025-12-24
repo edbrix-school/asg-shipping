@@ -43,4 +43,6 @@ public class ShipAgentMasterRequestDto {
     private Integer seqNo;
 
     private String active;
+
+    private Long countryPoid;
 }

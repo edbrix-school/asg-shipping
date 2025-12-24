@@ -50,6 +50,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .faxNo(request.getFaxNo())
                 .remarks(request.getRemarks())
                 .seqNo(request.getSeqNo())
+                .countryPoid(request.getCountryPoid())
                 .active(Boolean.TRUE.equals(request.getActive()) ? "Y" : "N")
                 .deleted("N")
                 .createdBy(getCurrentUser())
@@ -70,6 +71,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         entity.setContactPerson(request.getContactPerson());
         entity.setDetails(request.getDetails());
         entity.setLinePoid(request.getLinePoid());
+        entity.setCountryPoid(request.getCountryPoid());
         entity.setPortPoid(request.getPortPoid());
         entity.setEmail(request.getEmail() != null && !request.getEmail().isEmpty() ? String.join(",", request.getEmail()) : null);
         entity.setContactNo(request.getContactNo());
@@ -115,6 +117,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .email(e.getEmail())
                 .contactNo(e.getContactNo())
                 .faxNo(e.getFaxNo())
+                .countryPoid(e.getCountryPoid())
                 .remarks(e.getRemarks())
                 .seqNo(e.getSeqNo())
                 .active(e.getActive())
