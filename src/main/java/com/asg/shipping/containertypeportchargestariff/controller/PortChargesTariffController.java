@@ -68,15 +68,6 @@ public class PortChargesTariffController {
         return success("Port charges tariff deleted successfully");
     }
 
-    @AllowedAction(UserRolesRightsEnum.CREATE)
-    @PostMapping("/{id}/copy")
-    public ResponseEntity<?> copyPortChargesTariff(@PathVariable Long id, @RequestBody(required = false) CopyTariffRequestDto copyRequest) {
-        log.info("Copying port charges tariff with id: {}", id);
-        PortChargesTariffDto result = portChargesTariffService.copyPortChargesTariff(id, copyRequest);
-        log.info("Successfully copied port charges tariff to new id: {}", result.getTransactionPoid());
-        return success("Port charges tariff copied successfully", result);
-    }
-
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/validate-overlap")
     public ResponseEntity<?> validateOverlap(@Valid @RequestBody ValidateOverlapRequestDto request) {

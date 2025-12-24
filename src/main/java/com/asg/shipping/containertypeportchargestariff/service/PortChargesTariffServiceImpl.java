@@ -9,6 +9,7 @@ import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesDtl;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesHdr;
+import com.asg.shipping.containertypeportchargestariff.repository.PortChargesTariffCustomRepository;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesDtlRepository;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesHdrRepository;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
@@ -44,6 +45,7 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
     private final ShipPortChargesDtlRepository dtlRepository;
     private final PortMasterRepository portMasterRepository;
     private final ShipLineMasterThirdPartyRepository lineMasterThirdPartyRepository;
+    private final PortChargesTariffCustomRepository customRepository;
 
     @Override
     @Transactional
@@ -176,58 +178,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
 
     @Override
     @Transactional
-    public PortChargesTariffDto copyPortChargesTariff(Long id, CopyTariffRequestDto copyRequest) {
-        Long groupPoid = UserContext.getGroupPoid();
-
-        ShipPortChargesHdr source = hdrRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Port Charges Tariff", "transactionPoid", id.toString()));
-
-        if (!groupPoid.equals(source.getGroupPoid())) {
-            throw new ResourceNotFoundException("Port Charges Tariff", "transactionPoid", id.toString());
-        }
-
-        LocalDate newFrom = copyRequest.getPeriodFrom() != null ?
-                copyRequest.getPeriodFrom() : source.getPeriodTo().plusDays(1);
-        LocalDate newTo = copyRequest.getPeriodTo() != null ?
-                copyRequest.getPeriodTo() : source.getPeriodTo().plusDays(365);
-
-        if (newFrom.isAfter(newTo)) {
-            throw new ValidationException("Period From must be before or equal to Period To");
-        }
-
-        validateDateOverlap(source.getPortPoid(), source.getChargeLinePoid(), source.getChargeDivision(),
-                newFrom, newTo, null, groupPoid);
-
-        ShipPortChargesHdr newHdr = new ShipPortChargesHdr();
-        newHdr.setTransactionDate(LocalDate.now());
-        newHdr.setGroupPoid(groupPoid);
-        newHdr.setPortPoid(source.getPortPoid());
-        newHdr.setDescription(copyRequest.getDescription() != null ?
-                copyRequest.getDescription() : source.getDescription());
-        newHdr.setPeriodFrom(newFrom);
-        newHdr.setPeriodTo(newTo);
-        newHdr.setChargeLinePoid(source.getChargeLinePoid());
-        newHdr.setChargeDivision(source.getChargeDivision());
-        newHdr.setCreatedBy(getCurrentUser());
-        newHdr.setCreatedDate(LocalDateTime.now());
-        newHdr.setDeleted("N");
-
-        ShipPortChargesHdr savedHdr = hdrRepository.save(newHdr);
-        hdrRepository.flush();
-
-        List<ShipPortChargesDtl> sourceDetails = dtlRepository.findByTransactionPoid(id);
-        if (!sourceDetails.isEmpty()) {
-            List<ShipPortChargesDtl> newDetails = sourceDetails.stream()
-                    .map(detail -> copyDetailEntity(detail, savedHdr.getTransactionPoid()))
-                    .collect(Collectors.toList());
-            dtlRepository.saveAll(newDetails);
-        }
-
-        return getPortChargesTariff(savedHdr.getTransactionPoid());
-    }
-
-    @Override
-    @Transactional
     public ValidateOverlapResponseDto validateOverlap(ValidateOverlapRequestDto request) {
 
         Long groupPoid = UserContext.getGroupPoid();
@@ -304,21 +254,8 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
 
         if (!overlaps.isEmpty()) {
             ShipPortChargesHdr conflict = overlaps.get(0);
-            throw new ValidationException("Period overlaps with existing tariff (ID: " + conflict.getTransactionPoid() + ")");
+            throw new ValidationException("Period overlaps with existing tariff (Transaction ID: " + conflict.getTransactionPoid() + ")");
         }
-    }
-
-
-    private List<ShipPortChargesHdr> findOverlappingTariffs(Long groupPoid, Long portPoid, Long chargeLinePoid, String chargeDivision, LocalDate periodFrom, LocalDate periodTo, Long excludeId) {
-        return hdrRepository.findAll().stream()
-                .filter(hdr -> groupPoid.equals(hdr.getGroupPoid()))
-                .filter(hdr -> portPoid.equals(hdr.getPortPoid()))
-                .filter(hdr -> chargeLinePoid.equals(hdr.getChargeLinePoid()))
-                .filter(hdr -> chargeDivision.equals(hdr.getChargeDivision()))
-                .filter(hdr -> !"Y".equals(hdr.getDeleted()))
-                .filter(hdr -> excludeId == null || !excludeId.equals(hdr.getTransactionPoid()))
-                .filter(hdr -> periodFrom.compareTo(hdr.getPeriodTo()) <= 0 && periodTo.compareTo(hdr.getPeriodFrom()) >= 0)
-                .collect(Collectors.toList());
     }
 
     private void processDetails(Long transactionPoid, List<PortChargesDetailUpdateDto> details) {
@@ -498,29 +435,5 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
                 .amountOtherCost(dtl.getAmountOtherCost())
                 .shipChargeType(dtl.getShipChargeType())
                 .build();
-    }
-
-    private ShipPortChargesDtl copyDetailEntity(ShipPortChargesDtl source, Long newTransactionPoid) {
-        ShipPortChargesDtl copy = new ShipPortChargesDtl();
-        copy.setTransactionPoid(newTransactionPoid);
-        copy.setDetRowId(source.getDetRowId());
-        copy.setChargeCodePoid(source.getChargeCodePoid());
-        copy.setChargeTypeApplicable(source.getChargeTypeApplicable());
-        copy.setChargeApplicable(source.getChargeApplicable());
-        copy.setImcoClassType(source.getImcoClassType());
-        copy.setOogType(source.getOogType());
-        copy.setOthersType(source.getOthersType());
-        copy.setAmount20(source.getAmount20());
-        copy.setAmount40(source.getAmount40());
-        copy.setAmount53(source.getAmount53());
-        copy.setAmountOther(source.getAmountOther());
-        copy.setAmount20Cost(source.getAmount20Cost());
-        copy.setAmount40Cost(source.getAmount40Cost());
-        copy.setAmount53Cost(source.getAmount53Cost());
-        copy.setAmountOtherCost(source.getAmountOtherCost());
-        copy.setShipChargeType(source.getShipChargeType());
-        copy.setCreatedBy(getCurrentUser());
-        copy.setCreatedDate(LocalDateTime.now());
-        return copy;
     }
 }

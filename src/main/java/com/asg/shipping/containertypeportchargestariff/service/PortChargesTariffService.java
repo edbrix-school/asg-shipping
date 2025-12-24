@@ -18,7 +18,5 @@ public interface PortChargesTariffService {
 
     void deletePortChargesTariff(Long id);
 
-    PortChargesTariffDto copyPortChargesTariff(Long id, CopyTariffRequestDto copyRequest);
-
     ValidateOverlapResponseDto validateOverlap(ValidateOverlapRequestDto request);
 }
