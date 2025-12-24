@@ -17,12 +17,12 @@ public class ChargeGroupMasterRequestDto {
     private String chargeGroupName;
 
     private String chargeGroupName2;
-    private String glPrefix;
+    //private String glPrefix;
     private Long chargeGlPayable;
     private Long chargeGlSale;
     private Long chargeGlCostSale;
 
-    private Boolean linewisePayablePosting;
+    private String linewisePayablePosting;
     private Long seqNo;
-    private Boolean active;
+    private String active;
 }

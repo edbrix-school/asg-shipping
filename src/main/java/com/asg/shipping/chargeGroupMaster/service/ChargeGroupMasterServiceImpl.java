@@ -41,18 +41,22 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
                 .ifPresent(e -> {
                     throw new IllegalArgumentException("Charge Group Code already exists");
                 });
+        repository.findByChargeGroupName(request.getChargeGroupName())
+                .ifPresent(e -> {
+                    throw new IllegalArgumentException("Charge Group Name already exists");
+                });
 
         ShipChargeGroupMaster entity = ShipChargeGroupMaster.builder()
                 .groupPoid(UserContext.getGroupPoid())
                 .chargeGroupCode(request.getChargeGroupCode())
-                .chargeGroupName(request.getChargeGroupName())
+                .chargeGroupName(request.getChargeGroupName().trim().toUpperCase())
                 .chargeGroupName2(request.getChargeGroupName2())
                 .chargeGlPayable(request.getChargeGlPayable())
                 .chargeGlSale(request.getChargeGlSale())
                 .chargeGlCostSale(request.getChargeGlCostSale())
-                .linewisePayablePosting(request.getLinewisePayablePosting() ? "Y" : "N")
-                .glPrefix(request.getGlPrefix())
-                .active(request.getActive() ? "Y" : "N")
+                .linewisePayablePosting(request.getLinewisePayablePosting())
+               // .glPrefix(request.getGlPrefix())
+                .active(request.getActive())
                 .deleted("N")
                 .seqNo(request.getSeqNo())
                 .createdBy(getCurrentUser())
@@ -84,9 +88,9 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         entity.setChargeGlPayable(request.getChargeGlPayable());
         entity.setChargeGlSale(request.getChargeGlSale());
         entity.setChargeGlCostSale(request.getChargeGlCostSale());
-        entity.setGlPrefix(request.getGlPrefix());
-        entity.setLinewisePayablePosting(request.getLinewisePayablePosting() ? "Y" : "N");
-        entity.setActive(request.getActive() ? "Y" : "N");
+       // entity.setGlPrefix(request.getGlPrefix());
+        entity.setLinewisePayablePosting(request.getLinewisePayablePosting());
+        entity.setActive(request.getActive());
         entity.setSeqNo(request.getSeqNo());
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
@@ -156,8 +160,8 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
                 .chargeGlSale(e.getChargeGlSale())
                 .chargeGlCostSale(e.getChargeGlCostSale())
                 .glPrefix(e.getGlPrefix())
-                .linewisePayablePosting("Y".equals(e.getLinewisePayablePosting()))
-                .active("Y".equals(e.getActive()))
+                .linewisePayablePosting(e.getLinewisePayablePosting())
+                .active(e.getActive())
                 .seqNo(e.getSeqNo())
                 .createdBy(e.getCreatedBy())
                 .createdDate(e.getCreatedDate())
