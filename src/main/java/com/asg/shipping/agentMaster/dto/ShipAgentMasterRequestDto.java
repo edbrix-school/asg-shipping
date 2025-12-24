@@ -32,7 +32,7 @@ public class ShipAgentMasterRequestDto {
 
     private Long portPoid;
 
-    private String email;
+    private List<String> email;
 
     private String contactNo;
 

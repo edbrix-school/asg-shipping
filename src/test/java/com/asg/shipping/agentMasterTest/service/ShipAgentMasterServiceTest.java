@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -55,7 +56,7 @@ public class ShipAgentMasterServiceTest {
                 .details("Test Details")
                 .linePoid(1L)
                 .portPoid(2L)
-                .email("test@example.com")
+                .email(Collections.singletonList("test@example.com"))
                 .contactNo("1234567890")
                 .faxNo("0987654321")
                 .remarks("Test Remarks")
