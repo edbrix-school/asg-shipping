@@ -33,7 +33,7 @@ import static com.asg.common.lib.security.util.UserContext.getUserPoid;
  * REST Controller for Port Storage Tariffs Master operations
  */
 @RestController
-@RequestMapping("/v1/port-storage-tariffs-master ")
+@RequestMapping("/v1/port-storage-tariffs-master")
 @RequiredArgsConstructor
 @Slf4j
 @Tag(name = "Port Storage Tariffs Master Management", description = "APIs for managing port storage tariffs with storage slabs")
