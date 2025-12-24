@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,7 +46,7 @@ public class ShipAgentMasterControllerTest {
                 .details("Test Details")
                 .linePoid(1L)
                 .portPoid(2L)
-                .email("test@example.com")
+                .email(Collections.singletonList("test@example.com"))
                 .contactNo("1234567890")
                 .active("Y")
                 .build();
