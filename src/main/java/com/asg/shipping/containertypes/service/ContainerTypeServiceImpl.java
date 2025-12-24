@@ -160,44 +160,44 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
         log.info("Successfully toggled active status for container type with id: {} to {}", id, containerType.getActive());
     }
 
-    @Override
-    @Transactional
-    public void deleteContainerType(Long id) {
-        log.info("Deleting container type with id: {}", id);
-
-        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
-
-        ShipContainerTypeMaster containerType = containerTypeRepository.findByContainerTypePoidAndGroupPoid(id, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Container Type", "containerTypePoid", id.toString()));
-
-        // Check if already deleted (idempotent)
-        if ("Y".equals(containerType.getDeleted())) {
-            log.info("Container type with id: {} is already deleted", id);
-            return;
-        }
-
-        // Soft delete
-        containerType.setDeleted("Y");
-        containerType.setActive("N");
-        containerType.setLastModifiedBy(getCurrentUser());
-        containerType.setLastModifiedDate(LocalDateTime.now());
-
-        containerTypeRepository.save(containerType);
-
-        log.info("Successfully deleted container type with id: {}", id);
-    }
+//    @Override
+//    @Transactional
+//    public void deleteContainerType(Long id) {
+//        log.info("Deleting container type with id: {}", id);
+//
+//        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+//
+//        ShipContainerTypeMaster containerType = containerTypeRepository.findByContainerTypePoidAndGroupPoid(id, groupPoid)
+//                .orElseThrow(() -> new ResourceNotFoundException("Container Type", "containerTypePoid", id.toString()));
+//
+//        // Check if already deleted (idempotent)
+//        if ("Y".equals(containerType.getDeleted())) {
+//            log.info("Container type with id: {} is already deleted", id);
+//            return;
+//        }
+//
+//        // Soft delete
+//        containerType.setDeleted("Y");
+//        containerType.setActive("N");
+//        containerType.setLastModifiedBy(getCurrentUser());
+//        containerType.setLastModifiedDate(LocalDateTime.now());
+//
+//        containerTypeRepository.save(containerType);
+//
+//        log.info("Successfully deleted container type with id: {}", id);
+//    }
 
     /**
      * Validate ContainerTypeCreateDTO
      */
     private void validateContainerTypeCreateDTO(ContainerTypeCreateDTO dto, Long groupPoid) {
-        // Check if container type code already exists for this group
-        if (containerTypeRepository.existsByContainerTypeCodeAndGroupPoid(dto.getContainerTypeCode(), groupPoid)) {
+        // Check if container type code already exists irrespective of group as per db DDL
+        if (containerTypeRepository.existsByContainerTypeCode(dto.getContainerTypeCode())) {
             throw new ValidationException("Container type code already exists for this group");
         }
 
         // Check if container type name already exists for this group
-        if (containerTypeRepository.existsByContainerTypeNameAndGroupPoid(dto.getContainerTypeName(), groupPoid)) {
+        if (containerTypeRepository.existsByContainerTypeName(dto.getContainerTypeName())) {
             throw new ValidationException("Container type name already exists for this group");
         }
     }
@@ -208,7 +208,7 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
     private void validateContainerTypeUpdateDTO(ContainerTypeUpdateDTO dto, Long groupPoid, Long excludeContainerTypePoid) {
         // Note: Code is not updateable, so we don't check code uniqueness on update
         // Check if container type name already exists for this group (excluding current container type)
-        if (containerTypeRepository.existsByContainerTypeNameAndGroupPoidExcludingPoid(dto.getContainerTypeName(), groupPoid, excludeContainerTypePoid)) {
+        if (containerTypeRepository.existsByContainerTypeNameExcludingPoid(dto.getContainerTypeName(), excludeContainerTypePoid)) {
             throw new ValidationException("Container type name already exists for this group");
         }
     }
