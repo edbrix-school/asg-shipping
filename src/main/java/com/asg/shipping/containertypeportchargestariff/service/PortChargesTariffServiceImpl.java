@@ -210,9 +210,8 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
                 .build();
     }
 
-
     private void validateCreateRequest(PortChargesTariffCreateDto dto) {
-        if (StringUtils.isNotBlank(dto.getDocRef()) && hdrRepository.existsByDocRefIgnoreCaseAndDeletedNot(dto.getDocRef(), "Y")) {
+        if (StringUtils.isNotBlank(dto.getDocRef()) && hdrRepository.existsByDocRefIgnoreCase(dto.getDocRef())) {
             throw new ResourceAlreadyExistsException("Doc Ref", dto.getDocRef());
         }
         if (dto.getPortPoid() != null) {
