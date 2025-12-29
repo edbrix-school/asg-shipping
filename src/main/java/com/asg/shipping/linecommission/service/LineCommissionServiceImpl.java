@@ -115,20 +115,18 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         List<ContainerRateDto> containerRates =
                 request.getContainerRates() == null ? List.of() : request.getContainerRates();
 
-        if(!containerRates.isEmpty()){
-            validateAndExtractDistinctContainerTypes(containerRates);
+        validateAndExtractDistinctContainerTypes(containerRates);
 
-            long overlap = hdrRepository.countOverlapping(
-                    null,
-                    request.getLinePoid(),
-                    request.getPeriodFrom(),
-                    request.getPeriodTo(),
-                    groupPoid,
-                    companyPoid
-            );
-            if (overlap > 0) {
-                throw new ValidationException("Period overlaps with an existing record for this line");
-            }
+        long overlap = hdrRepository.countOverlapping(
+                null,
+                request.getLinePoid(),
+                request.getPeriodFrom(),
+                request.getPeriodTo(),
+                groupPoid,
+                companyPoid
+        );
+        if (overlap > 0) {
+            throw new ValidationException("Period overlaps with an existing record for this line");
         }
 
         ShipLineCommHdrEntity hdr = mapper.toCreateHeaderEntity(request, groupPoid, companyPoid, userId);
@@ -154,20 +152,18 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         List<ContainerRateDto> containerRates =
                 request.getContainerRates() == null ? List.of() : request.getContainerRates();
 
-        if(!containerRates.isEmpty()) {
-            validateAndExtractDistinctContainerTypes(containerRates);
+        validateAndExtractDistinctContainerTypes(containerRates);
 
-            long overlap = hdrRepository.countOverlapping(
-                    transactionPoid,
-                    request.getLinePoid(),
-                    request.getPeriodFrom(),
-                    request.getPeriodTo(),
-                    groupPoid,
-                    companyPoid
-            );
-            if (overlap > 0) {
-                throw new ValidationException("Period overlaps with an existing record for this line");
-            }
+        long overlap = hdrRepository.countOverlapping(
+                transactionPoid,
+                request.getLinePoid(),
+                request.getPeriodFrom(),
+                request.getPeriodTo(),
+                groupPoid,
+                companyPoid
+        );
+        if (overlap > 0) {
+            throw new ValidationException("Period overlaps with an existing record for this line");
         }
 
         ShipLineCommHdrEntity hdr = hdrRepository.findByTransactionPoidAndGroupPoid(transactionPoid, groupPoid)
