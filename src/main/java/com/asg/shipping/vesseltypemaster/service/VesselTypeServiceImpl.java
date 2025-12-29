@@ -42,6 +42,7 @@ public class VesselTypeServiceImpl implements VesselTypeService {
     private final DocumentSearchService documentSearchService;
     private final VesselTypeMapper mapper;
     private final LoggingService loggingService;
+    private final com.asg.common.lib.service.LovDataService lovService;
 
     @Override
     @Transactional(readOnly = true)
@@ -82,6 +83,7 @@ public class VesselTypeServiceImpl implements VesselTypeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vessel Type", "vesselTypePoid", id.toString()));
 
         VesselTypeDto dto = mapper.mapToDto(vesselType);
+        enrichDtoWithLovData(dto, vesselType, groupPoid);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
@@ -103,8 +105,11 @@ public class VesselTypeServiceImpl implements VesselTypeService {
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getVesselTypePoid().toString());
 
+        VesselTypeDto result = mapper.mapToDto(saved);
+        enrichDtoWithLovData(result, saved, groupPoid);
+
         log.info("Successfully created vessel type with id: {}", saved.getVesselTypePoid());
-        return mapper.mapToDto(saved);
+        return result;
     }
 
     @Override
@@ -130,8 +135,11 @@ public class VesselTypeServiceImpl implements VesselTypeService {
 
         loggingService.logChanges(oldVesselType, saved, ShipVesselTypeMaster.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "VESSEL_TYPE_POID");
 
+        VesselTypeDto result = mapper.mapToDto(saved);
+        enrichDtoWithLovData(result, saved, groupPoid);
+
         log.info("Successfully updated vessel type with id: {}", id);
-        return mapper.mapToDto(saved);
+        return result;
     }
 
     @Override
@@ -201,6 +209,8 @@ public class VesselTypeServiceImpl implements VesselTypeService {
         if (vesselTypeRepository.existsByVesselTypeName(dto.getVesselTypeName())) {
             throw new ResourceAlreadyExistsException("Vessel type name", dto.getVesselTypeName());
         }
+
+        validateCostCentre(dto.getCostCentrePoid());
     }
 
     /**
@@ -209,6 +219,30 @@ public class VesselTypeServiceImpl implements VesselTypeService {
     private void validateVesselTypeUpdateDTO(VesselTypeUpdateDTO dto, Long excludeVesselTypePoid) {
         if (vesselTypeRepository.existsByVesselTypeNameExcludingPoid(dto.getVesselTypeName(), excludeVesselTypePoid)) {
             throw new ResourceAlreadyExistsException("Vessel type name", dto.getVesselTypeName());
+        }
+
+        validateCostCentre(dto.getCostCentrePoid());
+    }
+
+    private void validateCostCentre(Long costCentrePoid) {
+        if (costCentrePoid != null) {
+            com.asg.common.lib.dto.LovGetListDto lovGetListDto = lovService.getDetailsByPoidAndLovName(costCentrePoid, "GL_COST_CENTRE");
+            if (lovGetListDto == null || lovGetListDto.getPoid() == null) {
+                throw new com.asg.common.lib.exception.ValidationException("Cost Centre is not active");
+            }
+        }
+    }
+
+    private void enrichDtoWithLovData(VesselTypeDto dto, ShipVesselTypeMaster entity, Long groupPoid) {
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        try {
+            if (entity.getCostCentrePoid() != null) {
+                dto.setCostCentreDet(lovService.getDetailsByPoidAndLovName(entity.getCostCentrePoid(), "GL_COST_CENTRE"));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch LOV data", e);
         }
     }
 }

@@ -33,6 +33,7 @@ public class VesselTypeMapper {
                 .vesselTypeName2(entity.getVesselTypeName2())
                 .active(entity.getActive())
                 .seqno(entity.getSeqno())
+                .costCentrePoid(entity.getCostCentrePoid())
                 .createdBy(entity.getCreatedBy())
                 .createdDate(entity.getCreatedDate())
                 .lastModifiedBy(entity.getLastModifiedBy())
@@ -50,21 +51,18 @@ public class VesselTypeMapper {
         entity.setVesselTypeName(dto.getVesselTypeName());
         entity.setVesselTypeName2(dto.getVesselTypeName2());
         entity.setSeqno(dto.getSeqno());
+        entity.setCostCentrePoid(dto.getCostCentrePoid());
 
-        // Set active status (default to Y if not provided)
         if (dto.getActive() != null && !dto.getActive().isEmpty()) {
             entity.setActive(dto.getActive());
         } else {
             entity.setActive("Y");
         }
 
-        // Set audit fields
         entity.setCreatedBy(getCurrentUser());
         entity.setCreatedDate(LocalDateTime.now());
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
-
-        // Set deleted flag
         entity.setDeleted("N");
     }
 
@@ -73,17 +71,15 @@ public class VesselTypeMapper {
      */
     public void mapUpdateDTOToEntity(VesselTypeUpdateDTO dto, ShipVesselTypeMaster entity, Long groupPoid, Long userPoid) {
         entity.setGroupPoid(groupPoid);
-        // Note: vesselTypeCode is not updateable
         entity.setVesselTypeName(dto.getVesselTypeName());
         entity.setVesselTypeName2(dto.getVesselTypeName2());
         entity.setSeqno(dto.getSeqno());
+        entity.setCostCentrePoid(dto.getCostCentrePoid());
 
-        // Set active status
         if (dto.getActive() != null && !dto.getActive().isEmpty()) {
             entity.setActive(dto.getActive());
         }
 
-        // Update audit fields (do not update createdBy/createdDate)
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
     }
