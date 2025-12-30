@@ -1,0 +1,19 @@
+package com.asg.shipping.MafiTrailerDateUpdateForm.dto;
+
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class MafiTrailerDateUpdateFormResponse {
+
+	private MafitrailerHeaderDTO mafiHeader;
+	private List<MafiDetailDto> mafiDetails;
+
+}
