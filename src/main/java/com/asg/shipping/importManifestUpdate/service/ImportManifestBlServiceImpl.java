@@ -1,9 +1,13 @@
 package com.asg.shipping.importManifestUpdate.service;
 
 
+import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.entity.*;
 import com.asg.shipping.importManifestUpdate.respository.*;
@@ -14,11 +18,16 @@ import jakarta.persistence.StoredProcedureQuery;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -102,6 +111,21 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
 
         log.info("Successfully updated Import Manifest BL with id: {}", id);
         return result;
+    }
+
+    @Override
+    public Map<String, Object> listOfImportManifest(String docId, FilterRequestDto request, Pageable pageable) {
+        String operator = documentService.resolveOperator(request);
+        String isDeleted = documentService.resolveIsDeleted(request);
+        List<FilterDto> filters = documentService.resolveFilters(request);
+
+        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
+                "BL_NUMBER",   // label
+                "TRANSACTION_POID");  // value
+
+        Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+
+        return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
     /**
