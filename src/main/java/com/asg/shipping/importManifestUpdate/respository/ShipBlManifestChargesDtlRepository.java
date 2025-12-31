@@ -13,12 +13,25 @@ import java.util.Optional;
 @Repository
 public interface ShipBlManifestChargesDtlRepository  extends JpaRepository<ShipBlManifestChargesDtl, ShipBlManifestDtlId> {
 
-    List<ShipBlManifestChargesDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
+    //List<ShipBlManifestChargesDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
 
-    Optional<ShipBlManifestChargesDtl> findByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
+    //Optional<ShipBlManifestChargesDtl> findByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
 
-    void deleteByTransactionPoid(Long transactionPoid);
+    //void deleteByTransactionPoid(Long transactionPoid);
 
-    @Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM ShipBlManifestChargesDtl d WHERE d.transactionPoid = :transactionPoid")
+   /* @Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM ShipBlManifestChargesDtl d WHERE d.transactionPoid = :transactionPoid")
+    Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);*/
+
+
+    List<ShipBlManifestChargesDtl>
+    findByIdTransactionPoidOrderByIdDetRowId(Long transactionPoid);
+
+    void deleteByIdTransactionPoid(Long transactionPoid);
+
+    @Query("""
+        SELECT COALESCE(MAX(d.id.detRowId), 0)
+        FROM ShipBlManifestChargesDtl d
+        WHERE d.id.transactionPoid = :transactionPoid
+    """)
     Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 }

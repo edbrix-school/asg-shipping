@@ -856,7 +856,7 @@ public class ImportManifestBlMapper {
                 .email2(entity.getEmail2())
                 .sendEmailFax(entity.getSendEmailFax())
                 .sendYesNo(entity.getSendYesNo())
-                .addressType(entity.getAddressType())
+                //.addressType(entity.getAddressType())
                 .faxLog(entity.getFaxLog())
                 .emailLog(entity.getEmailLog())
                 .build();
@@ -877,7 +877,7 @@ public class ImportManifestBlMapper {
                 .email2(dto.getEmail2())
                 .sendEmailFax(dto.getSendEmailFax() != null ? dto.getSendEmailFax() : "BOTH")
                 .sendYesNo(dto.getSendYesNo() != null ? dto.getSendYesNo() : "Y")
-                .addressType(dto.getAddressType())
+                //.addressType(dto.getAddressType())
                 .faxLog(dto.getFaxLog())
                 .emailLog(dto.getEmailLog())
                 .build();
