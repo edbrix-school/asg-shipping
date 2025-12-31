@@ -1,10 +1,14 @@
 package com.asg.shipping.importManifestUpdate.service;
 
 
+import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.entity.*;
 import com.asg.shipping.importManifestUpdate.respository.*;
@@ -15,11 +19,16 @@ import jakarta.persistence.StoredProcedureQuery;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -106,6 +115,8 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
 
         ShipBlManifestHdr entity = repository.findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Import Manifest BL", "transactionPoid", id.toString()));
+
+        // Call PROC_SHIP_VALD_BEFORE_SAVE for validation
         validateBeforeSave(dto, id, companyPoid, groupPoid);
 
         // Validate
@@ -158,6 +169,21 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
 
         log.info("Successfully updated Import Manifest BL with id: {}", id);
         return result;
+    }
+
+    @Override
+    public Map<String, Object> listOfImportManifest(String docId, FilterRequestDto request, Pageable pageable) {
+        String operator = documentService.resolveOperator(request);
+        String isDeleted = documentService.resolveIsDeleted(request);
+        List<FilterDto> filters = documentService.resolveFilters(request);
+
+        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
+                "BL_NUMBER",   // label
+                "TRANSACTION_POID");  // value
+
+        Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+
+        return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
     /**
@@ -287,7 +313,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
     private void updateDetailTables(ImportManifestBlUpdateDTO dto, Long transactionPoid) {
         // Delete existing details and recreate (simplified approach - can be optimized)
         if (dto.getGeneralCargoDetails() != null) {
-            generalDtlRepository.deleteByTransactionPoid(transactionPoid);
+            generalDtlRepository.deleteByIdTransactionPoid(transactionPoid);
             for (GeneralCargoRequestDto detailDto : dto.getGeneralCargoDetails()) {
                 Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
                         getNextDetRowId(generalDtlRepository.getMaxDetRowId(transactionPoid));
@@ -302,35 +328,24 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         if (dto.getCargoDescriptions() != null) {
-
-            cargoDtlRepository.deleteByTransactionPoid(transactionPoid);
-
-            Long maxDetRowId = cargoDtlRepository.getMaxDetRowId(transactionPoid);
-
+            cargoDtlRepository.deleteByIdTransactionPoid(transactionPoid);
             for (CargoDescriptionRequestDto detailDto : dto.getCargoDescriptions()) {
-
-                Long detRowId = detailDto.getDetRowId() != null
-                        ? detailDto.getDetRowId()
-                        : getNextDetRowId(maxDetRowId);
-
-                ShipBlManifestCargoDtl entity =
-                        mapper.mapCargoDtlFromDto(detailDto, transactionPoid);
-
-
-                entity.setTransactionPoid(transactionPoid);
-                entity.setDetRowId(detRowId);
-                entity.setDescriptionType(detailDto.getDescriptionType());
-
+                Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
+                        getNextDetRowId(cargoDtlRepository.getMaxDetRowId(transactionPoid));
+                ShipBlManifestCargoDtl entity = mapper.mapCargoDtlFromDto(detailDto, transactionPoid);
+                if (entity.getId() == null) {
+                    entity.setId(new ShipBlManifestCargoDtlId(transactionPoid, detRowId,detailDto.getDescriptionType()));
+                } else {
+                    entity.getId().setDetRowId(detRowId);
+                }
                 cargoDtlRepository.save(entity);
-
-                maxDetRowId = detRowId;
             }
         }
 
-
         if (dto.getContainers() != null) {
-
-            containerDtlRepository.deleteByTransactionPoid(transactionPoid);
+            // For container details, we need to be careful about container inventory integration
+            // Delete existing and recreate
+            containerDtlRepository.deleteByIdTransactionPoid(transactionPoid);
             for (ContainerRequestDto detailDto : dto.getContainers()) {
                 Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
                         getNextDetRowId(containerDtlRepository.getMaxDetRowId(transactionPoid));
@@ -342,7 +357,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
                 }
                 // Validate container number uniqueness
                 if (entity.getContainerNo() != null && !entity.getContainerNo().trim().isEmpty()) {
-                    containerDtlRepository.findByTransactionPoidAndContainerNo(transactionPoid, entity.getContainerNo())
+                    containerDtlRepository.findByIdTransactionPoidAndContainerNo(transactionPoid, entity.getContainerNo())
                             .ifPresent(existing -> {
                                 if (!existing.getId().getDetRowId().equals(detRowId)) {
                                     throw new ValidationException("Container number already exists: " + entity.getContainerNo());
@@ -354,7 +369,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         if (dto.getChargeDetails() != null) {
-            chargesDtlRepository.deleteByTransactionPoid(transactionPoid);
+            chargesDtlRepository.deleteByIdTransactionPoid(transactionPoid);
             for (ChargeRequestDto detailDto : dto.getChargeDetails()) {
                 Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
                         getNextDetRowId(chargesDtlRepository.getMaxDetRowId(transactionPoid));
@@ -369,7 +384,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         if (dto.getPartBls() != null) {
-            containerPrtRepository.deleteByTransactionPoid(transactionPoid);
+            containerPrtRepository.deleteByIdTransactionPoid(transactionPoid);
             for (PartBlRequestDto detailDto : dto.getPartBls()) {
                 Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
                         getNextDetRowId(containerPrtRepository.getMaxDetRowId(transactionPoid));
@@ -384,7 +399,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         if (dto.getNotifyParties() != null) {
-            emailFaxDtlRepository.deleteByTransactionPoid(transactionPoid);
+            emailFaxDtlRepository.deleteByIdTransactionPoid(transactionPoid);
             for (NotifyPartyRequestDto detailDto : dto.getNotifyParties()) {
                 Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
                         getNextDetRowId(emailFaxDtlRepository.getMaxDetRowId(transactionPoid));
@@ -399,7 +414,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         if (dto.getMafiDetails() != null) {
-            mafiDtlRepository.deleteByTransactionPoid(transactionPoid);
+            mafiDtlRepository.deleteByIdTransactionPoid(transactionPoid);
             for (MafiRequestDto detailDto : dto.getMafiDetails()) {
                 Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
                         getNextDetRowId(mafiDtlRepository.getMaxDetRowId(transactionPoid));
@@ -481,18 +496,19 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
      */
     public ImportManifestBlRequestDto loadDetailTables(ImportManifestBlRequestDto dto, Long transactionPoid) {
         dto.setGeneralCargoDetails(mapper.mapGeneralDtlListToDto(
-                generalDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
+                generalDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setCargoDescriptions(mapper.mapCargoDtlListToDto(
-                cargoDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
+                cargoDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setContainers(mapper.mapContainerDtlListToDto(
-                containerDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
+                containerDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setChargeDetails(mapper.mapChargesDtlListToDto(
-                chargesDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
+                chargesDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setPartBls(mapper.mapContainerPrtListToDto(
-                containerPrtRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
+                containerPrtRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setNotifyParties(mapper.mapEmailFaxDtlListToDto(
-                emailFaxDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
+                emailFaxDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setMafiDetails(mapper.mapMafiDtlListToDto(
+                mafiDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
                 mafiDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
         return dto;
     }

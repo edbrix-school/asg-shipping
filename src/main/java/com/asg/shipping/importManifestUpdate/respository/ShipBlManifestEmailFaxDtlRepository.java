@@ -12,12 +12,12 @@ import java.util.Optional;
 
 @Repository
 public interface ShipBlManifestEmailFaxDtlRepository  extends JpaRepository<ShipBlManifestEmailFaxDtl, ShipBlManifestEmailFaxId> {
-    List<ShipBlManifestEmailFaxDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
+    List<ShipBlManifestEmailFaxDtl> findByIdTransactionPoidOrderByIdDetRowId(Long transactionPoid);
 
-    Optional<ShipBlManifestEmailFaxDtl> findByTransactionPoidAndDetRowIdAndAddressType(Long transactionPoid, Long detRowId, String addressType);
+    //Optional<ShipBlManifestEmailFaxDtl> findByTransactionPoidAndDetRowIdAndAddressType(Long transactionPoid, Long detRowId, String addressType);
 
-    void deleteByTransactionPoid(Long transactionPoid);
+    void deleteByIdTransactionPoid(Long transactionPoid);
 
-    @Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM ShipBlManifestEmailFaxDtl d WHERE d.transactionPoid = :transactionPoid")
+    @Query("SELECT COALESCE(MAX(d.id.detRowId), 0) FROM ShipBlManifestEmailFaxDtl d WHERE d.id.transactionPoid = :transactionPoid")
     Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 }

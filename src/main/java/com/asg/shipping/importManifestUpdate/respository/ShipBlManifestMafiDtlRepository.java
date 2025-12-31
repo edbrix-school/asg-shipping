@@ -12,12 +12,12 @@ import java.util.Optional;
 
 @Repository
 public interface ShipBlManifestMafiDtlRepository extends JpaRepository<ShipBlManifestMafiDtl, ShipBlManifestDtlId> {
-    List<ShipBlManifestMafiDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
+    List<ShipBlManifestMafiDtl> findByIdTransactionPoidOrderByIdDetRowId(Long transactionPoid);
 
-    Optional<ShipBlManifestMafiDtl> findByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
+    //Optional<ShipBlManifestMafiDtl> findByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
 
-    void deleteByTransactionPoid(Long transactionPoid);
+    void deleteByIdTransactionPoid(Long transactionPoid);
 
-    @Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM ShipBlManifestMafiDtl d WHERE d.transactionPoid = :transactionPoid")
+    @Query("SELECT COALESCE(MAX(d.id.detRowId), 0) FROM ShipBlManifestMafiDtl d WHERE d.id.transactionPoid = :transactionPoid")
     Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 }

@@ -686,27 +686,27 @@ public class ImportManifestBlMapper {
                 .build();
     }
 
+    // Detail mapping methods - Cargo DTL
     public CargoDescriptionRequestDto mapCargoDtlToDto(ShipBlManifestCargoDtl entity) {
         if (entity == null) return null;
-
         return CargoDescriptionRequestDto.builder()
-                .detRowId(entity.getDetRowId())
-                .descriptionType(entity.getDescriptionType())
+                .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .cargoDescription(entity.getCargoDescription())
+                .descriptionType(entity.getId()!=null ? entity.getId().getDescriptionType() : null)
                 .recordOrder(entity.getRecordOrder())
                 .build();
     }
 
-    public ShipBlManifestCargoDtl mapCargoDtlFromDto(
-            CargoDescriptionRequestDto dto,
-            Long transactionPoid
-    ) {
+    public ShipBlManifestCargoDtl mapCargoDtlFromDto(CargoDescriptionRequestDto dto, Long transactionPoid) {
         if (dto == null) return null;
 
+        ShipBlManifestCargoDtlId id = new ShipBlManifestCargoDtlId(
+                transactionPoid,
+                dto.getDetRowId(),
+               dto.getDescriptionType()
+        );
         return ShipBlManifestCargoDtl.builder()
-                .transactionPoid(transactionPoid)
-                .detRowId(dto.getDetRowId())
-                .descriptionType(dto.getDescriptionType())
+                .id(id)
                 .cargoDescription(dto.getCargoDescription())
                 .recordOrder(dto.getRecordOrder())
                 .build();
@@ -961,6 +961,7 @@ public class ImportManifestBlMapper {
                 .email2(entity.getEmail2())
                 .sendEmailFax(entity.getSendEmailFax())
                 .sendYesNo(entity.getSendYesNo())
+                //.addressType(entity.getAddressType())
                 .addressType(entity.getId().getAddressType())
                 .faxLog(entity.getFaxLog())
                 .emailLog(entity.getEmailLog())
@@ -982,6 +983,7 @@ public class ImportManifestBlMapper {
                 .email2(dto.getEmail2())
                 .sendEmailFax(dto.getSendEmailFax() != null ? dto.getSendEmailFax() : "BOTH")
                 .sendYesNo(dto.getSendYesNo() != null ? dto.getSendYesNo() : "Y")
+                //.addressType(dto.getAddressType())
                 .faxLog(dto.getFaxLog())
                 .emailLog(dto.getEmailLog())
                 .build();
