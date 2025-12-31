@@ -53,7 +53,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = documentService.resolveFilters(request);
 
-//        RawSearchResult raw = documentService.search("000-005", filters, operator, pageable, isDeleted, "BL_NUMBER", "TRANSACTION_POID");
         RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "BL_NUMBER", "TRANSACTION_POID");
 
         Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
