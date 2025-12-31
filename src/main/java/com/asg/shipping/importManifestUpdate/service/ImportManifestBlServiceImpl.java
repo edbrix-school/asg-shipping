@@ -509,7 +509,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
                 emailFaxDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setMafiDetails(mapper.mapMafiDtlListToDto(
                 mafiDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
-                mafiDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
         return dto;
     }
 

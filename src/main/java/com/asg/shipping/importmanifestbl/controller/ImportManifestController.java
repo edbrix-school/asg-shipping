@@ -24,7 +24,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 @RequestMapping("v1/import-manifest-bl")
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "import-manifest-bl-controller", description = "Manage Import Manifest BL records")
-public class ImportManifestBlController {
+public class ImportManifestController {
 
     private final ImportManifestBlService importManifestBlService;
 

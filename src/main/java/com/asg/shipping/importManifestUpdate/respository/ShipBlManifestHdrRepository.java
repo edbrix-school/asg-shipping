@@ -61,6 +61,10 @@ public interface ShipBlManifestHdrRepository extends JpaRepository<ShipBlManifes
             @Param("blNumber") String blNumber,
             @Param("excludeTransactionPoid") Long excludeTransactionPoid);
 
+    boolean existsByBlNumber(String trim);
+
+    boolean existsByVoyageTransactionPoidAndBlNumber(Long voyageTransactionPoid, String trim);
+
     /**
      * Check if DOC_REF already exists
      */
