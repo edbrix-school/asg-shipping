@@ -3,6 +3,7 @@ package com.asg.shipping.importManifestUpdate.service;
 
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.entity.*;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -43,13 +45,67 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
 
     @Override
     @Transactional
+    public ImportManifestBlRequestDto createImportManifestBl(ImportManifestBlCreateDto dto) {
+        log.info("Creating new Import Manifest BL");
+
+        validateMandatoryFields(dto);
+        validateCreateDTO(dto);
+
+
+        if (dto.getBlNumber() != null && !dto.getBlNumber().trim().isEmpty()) {
+            if (repository.existsByBlNumber(dto.getBlNumber().trim())) {
+                throw new ValidationException("BL number already exists");
+            }
+        }
+
+        ShipBlManifestHdr entity = mapper.mapToEntity(dto);
+        entity.setCreatedBy(getCurrentUser());
+        entity.setCreatedDate(LocalDateTime.now());
+        entity.setBlType("IMPORT");
+        entity.setDocRef(dto.getDocRef());
+
+        formatEdiFields(entity);
+
+        autoPopulateDefaults(entity);
+
+        // STEP 8: Call PROC_SHIP_VALD_BEFORE_SAVE (first procedure)
+        callValidationBeforeSave(dto);
+
+        // Save to database
+        ShipBlManifestHdr saved = repository.save(entity);
+        Long transactionPoid = saved.getTransactionPoid();
+
+
+
+        ImportManifestBlUpdateDTO updateDto = new ImportManifestBlUpdateDTO();
+        updateDto.setGeneralCargoDetails(dto.getGeneralCargoDetails());
+        updateDto.setCargoDescriptions(dto.getCargoDescriptions());
+        updateDto.setContainers(dto.getContainers());
+        updateDto.setChargeDetails(dto.getChargeDetails());
+        updateDto.setPartBls(dto.getPartBls());
+        updateDto.setNotifyParties(dto.getNotifyParties());
+        updateDto.setMafiDetails(dto.getMafiDetails());
+
+        updateDetailTables(updateDto, transactionPoid);
+
+        // Call PROC_SHIP_BL_PAGE_SAVE_AFTER (second procedure)
+        processAfterSave(saved, com.asg.common.lib.security.util.UserContext.getGroupPoid(),
+                com.asg.common.lib.security.util.UserContext.getCompanyPoid(), "AUTOSUMWEIGHTPACKATE");
+
+        ImportManifestBlRequestDto result = mapper.mapToDto(saved);
+        loadDetailTables(result, transactionPoid);
+
+        log.info("Successfully created Import Manifest BL with id: {}", transactionPoid);
+        return result;
+    }
+
+    @Override
+    @Transactional
     public ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid) {
         log.info("Updating Import Manifest BL with id: {}", id);
 
         ShipBlManifestHdr entity = repository.findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Import Manifest BL", "transactionPoid", id.toString()));
-
-        // Call PROC_SHIP_VALD_BEFORE_SAVE for validation
         validateBeforeSave(dto, id, companyPoid, groupPoid);
 
         // Validate
@@ -246,23 +302,34 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         if (dto.getCargoDescriptions() != null) {
+
             cargoDtlRepository.deleteByTransactionPoid(transactionPoid);
+
+            Long maxDetRowId = cargoDtlRepository.getMaxDetRowId(transactionPoid);
+
             for (CargoDescriptionRequestDto detailDto : dto.getCargoDescriptions()) {
-                Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
-                        getNextDetRowId(cargoDtlRepository.getMaxDetRowId(transactionPoid));
-                ShipBlManifestCargoDtl entity = mapper.mapCargoDtlFromDto(detailDto, transactionPoid);
-                if (entity.getId() == null) {
-                    entity.setId(new ShipBlManifestCargoDtlId(transactionPoid, detRowId,detailDto.getDescriptionType()));
-                } else {
-                    entity.getId().setDetRowId(detRowId);
-                }
+
+                Long detRowId = detailDto.getDetRowId() != null
+                        ? detailDto.getDetRowId()
+                        : getNextDetRowId(maxDetRowId);
+
+                ShipBlManifestCargoDtl entity =
+                        mapper.mapCargoDtlFromDto(detailDto, transactionPoid);
+
+
+                entity.setTransactionPoid(transactionPoid);
+                entity.setDetRowId(detRowId);
+                entity.setDescriptionType(detailDto.getDescriptionType());
+
                 cargoDtlRepository.save(entity);
+
+                maxDetRowId = detRowId;
             }
         }
 
+
         if (dto.getContainers() != null) {
-            // For container details, we need to be careful about container inventory integration
-            // Delete existing and recreate
+
             containerDtlRepository.deleteByTransactionPoid(transactionPoid);
             for (ContainerRequestDto detailDto : dto.getContainers()) {
                 Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() :
@@ -412,7 +479,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
     /**
      * Load all detail tables for a transaction
      */
-    private void loadDetailTables(ImportManifestBlRequestDto dto, Long transactionPoid) {
+    public ImportManifestBlRequestDto loadDetailTables(ImportManifestBlRequestDto dto, Long transactionPoid) {
         dto.setGeneralCargoDetails(mapper.mapGeneralDtlListToDto(
                 generalDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
         dto.setCargoDescriptions(mapper.mapCargoDtlListToDto(
@@ -427,9 +494,174 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
                 emailFaxDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
         dto.setMafiDetails(mapper.mapMafiDtlListToDto(
                 mafiDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)));
+        return dto;
     }
 
     private Long getNextDetRowId(Long maxDetRowId) {
         return (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
     }
+
+    // ==================== CREATE API VALIDATION METHODS ====================
+
+    private void validateMandatoryFields(ImportManifestBlCreateDto dto) {
+        if (dto.getVoyageTransactionPoid() == null) {
+            throw new ValidationException("Voyage number is required");
+        }
+        if (dto.getCargoType() == null) {
+            throw new ValidationException("Cargo Type is required");
+        }
+        if (dto.getBlNumber() == null) {
+            throw new ValidationException("BL number is required");
+        }
+        if (dto.getBlType() == null) {
+            throw new ValidationException("BL Type is required");
+        }
+    }
+
+    private void validateCreateDTO(ImportManifestBlCreateDto dto) {
+
+        validateVoyageCompany(dto.getVoyageTransactionPoid());
+
+
+        if (dto.getBlNumber() != null && !dto.getBlNumber().trim().isEmpty()) {
+            if (repository.existsByVoyageTransactionPoidAndBlNumber(dto.getVoyageTransactionPoid(), dto.getBlNumber().trim())) {
+                throw new ValidationException("BL number already exists for this voyage");
+            }
+        }
+
+
+        if (dto.getPortOfLoadingPoid() == null) {
+            throw new ValidationException("Port of loading is required for IMPORT BL");
+        }
+
+        // Validate financial year
+        validateFinancialYear(UserContext.getCompanyPoid(), dto.getTransactionDate() != null ? dto.getTransactionDate().atStartOfDay() : LocalDateTime.now());
+    }
+
+    private void validateVoyageCompany(Long voyageTransactionPoid) {
+        String sql = "SELECT COMPANY_POID FROM SHIP_VOYAGE_HDR WHERE TRANSACTION_POID = ?";
+        try {
+            Long voyageCompanyPoid = jdbcTemplate.queryForObject(sql, Long.class, voyageTransactionPoid);
+            if (voyageCompanyPoid == null || !voyageCompanyPoid.equals(UserContext.getCompanyPoid())) {
+                throw new ValidationException("Voyage company mismatch");
+            }
+        } catch (Exception e) {
+            log.error("Error validating voyage company", e);
+            throw new ValidationException("Voyage not found or company mismatch");
+        }
+    }
+
+
+    private void validateFinancialYear(Long companyPoid, LocalDateTime transactionDate) {
+        try {
+            log.info("companyPoid ------------------------->{}", companyPoid);
+            log.info("transactionDate ------------------------->{}", transactionDate);
+            String sql = "SELECT FUNC_GLOB_FINANCIAL_YEAR_VALID(?, ?) FROM DUAL";
+            String result = jdbcTemplate.queryForObject(sql, String.class, companyPoid,
+                    java.sql.Timestamp.valueOf(transactionDate));
+            log.info("result ------------------------->{}",result);
+            if (result != null && result.contains("ERROR")) {
+                throw new ValidationException("Changes allowed only within current Financial Period");
+            }
+        } catch (Exception e) {
+            log.error("Error validating financial year", e);
+            if (e instanceof ValidationException) {
+                throw e;
+            }
+        }
+    }
+
+
+
+    private void callValidationBeforeSave(ImportManifestBlCreateDto dto) {
+        try {
+            Long userPoid = com.asg.common.lib.security.util.UserContext.getUserPoid();
+            Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+            Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
+
+            StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_VALD_BEFORE_SAVE");
+            query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_TRANSACTION_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_VALIDATION_TYPE", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_RESULT", String.class, ParameterMode.OUT);
+
+            query.setParameter("P_LOGIN_GROUP_POID", groupPoid);
+            query.setParameter("P_LOGIN_COMPANY_POID", companyPoid);
+            query.setParameter("P_LOGIN_USER_POID", userPoid);
+            query.setParameter("P_TRANSACTION_POID", dto.getTransactionPoid());
+            query.setParameter("P_VOYAGE_TRANSACTION_POID", dto.getVoyageTransactionPoid());
+            query.setParameter("P_VALIDATION_TYPE", "VLD_QUOTATION");
+
+            query.execute();
+
+            String result = (String) query.getOutputParameterValue("P_RESULT");
+            if (result != null && !result.equalsIgnoreCase("TRUE")) {
+                if (dto.getQuotationTransactionPoid() == null &&
+                        "2".equals(dto.getFreightStatus()) &&
+                        "N".equals(dto.getBookedByPp())) {
+                    throw new ValidationException("Map Quotation in manifest");
+                }
+            }
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error calling PROC_SHIP_VALD_BEFORE_SAVE during create", e);
+        }
+    }
+
+    private void autoPopulateDefaults(ShipBlManifestHdr entity) {
+        // Set hardcoded defaults first
+        if (entity.getBlType() == null) {
+            entity.setBlType("IMPORT");
+        }
+        if (entity.getCargoType() == null) {
+            entity.setCargoType("FCL-FCL");
+        }
+        if (entity.getBlIssueType() == null) {
+            entity.setBlIssueType("1");
+        }
+        if (entity.getPortOfDischargePoid() == null) {
+            entity.setPortOfDischargePoid(800L);
+        }
+        if (entity.getPlaceOfDeliveryPoid()== null) {
+            entity.setPlaceOfDeliveryPoid(800L);
+        }
+        if (entity.getHoldReason() == null) {
+            entity.setHoldReason("5");
+        }
+        if (entity.getFreightStatus() == null) {
+            entity.setFreightStatus("1");
+        }
+
+        if (entity.getSalesmanPoid() == null || entity.getSalesmanPoid() == 1) {
+            try {
+                String sql = "SELECT DISTINCT PARAMETER_VALUE FROM GLOBAL_PARAMETERS " +
+                        "WHERE PARAMETER_NAME = 'SALESMAN_POID_SHIPPING_DEFAULT'";
+                Long salesmanPoid = jdbcTemplate.queryForObject(sql, Long.class);
+                entity.setSalesmanPoid(salesmanPoid != null ? salesmanPoid : 51L);
+            } catch (Exception e) {
+                entity.setSalesmanPoid(51L);
+            }
+        }
+
+        if (entity.getComodityPoid() == null) {
+            try {
+                String sql = "SELECT DISTINCT PARAMETER_VALUE FROM GLOBAL_PARAMETERS " +
+                        "WHERE PARAMETER_NAME = 'COMODITY_POID_SHIPPING_DEFAULT'";
+                Long comodityPoid = jdbcTemplate.queryForObject(sql, Long.class);
+                entity.setComodityPoid(comodityPoid != null ? comodityPoid : 10L);
+            } catch (Exception e) {
+                entity.setComodityPoid(10L);
+            }
+        }
+
+
+        if (entity.getBlType() != null && !"EXPORT".equals(entity.getBlType())) {
+            entity.setBookedByPp("Y");
+        }
+    }
+
 }
