@@ -43,8 +43,6 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
     private final ShipCustomerChargesHdrRepository headerRepository;
     private final ShipCustomerChargesDtlRepository detailRepository;
     private final CustomerAutoChargeExportBLMapper mapper;
-    private final JdbcTemplate jdbcTemplate;
-
     @Override
     public Map<String, Object> list(FilterRequestDto filters, Pageable pageable) {
         String operator = documentSearchService.resolveOperator(filters);
@@ -88,20 +86,8 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
 
         validatePeriodDates(createDTO.getPeriodFrom(), createDTO.getPeriodTo());
 
-        if (createDTO.getDocRef() != null && !createDTO.getDocRef().trim().isEmpty()) {
-            headerRepository.findByDocRefAndDeleted(createDTO.getDocRef(), "N")
-                    .ifPresent(existing -> {
-                        throw new ValidationException("DOC_REF already exists: " + createDTO.getDocRef());
-                    });
-        }
-
         ShipCustomerChargesHdrEntity entity = ShipCustomerChargesHdrEntity.builder().build();
         mapper.mapCreateDTOToEntity(createDTO, entity, UserContext.getGroupPoid());
-
-        if (entity.getDocRef() == null || entity.getDocRef().trim().isEmpty()) {
-            String docRef = generateDocRef(getCompanyPoid());
-            entity.setDocRef(docRef);
-        }
 
         entity = headerRepository.save(entity);
         log.info("Customer auto charge export BL created with id: {}", entity.getTransactionPoid());
@@ -121,9 +107,6 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         ShipCustomerChargesHdrEntity entity = headerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", id.toString()));
 
-        if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", id.toString());
-        }
 
         var periodFrom = updateDTO.getPeriodFrom() != null
                 ? updateDTO.getPeriodFrom()
@@ -155,43 +138,23 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         ShipCustomerChargesHdrEntity entity = headerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", id.toString()));
 
-        if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", id.toString());
-        }
-
-        detailRepository.deleteByTransactionPoid(id);
         entity.setDeleted("Y");
         headerRepository.save(entity);
         log.info("Customer auto charge export BL deleted with id: {}", id);
     }
 
 
-    private String generateDocRef(Long companyPoid) {
-        try {
-            String companyCode = jdbcTemplate.queryForObject(
-                    "SELECT GET_COMPANY_CODE(?) FROM DUAL",
-                    String.class,
-                    companyPoid
-            );
 
-            String seqNo = jdbcTemplate.queryForObject(
-                    "SELECT RTN_GLOBAL_SEQ_NO('SHIPPING_CUSTOMER_CHARGES', ?, NULL) FROM DUAL",
-                    String.class,
-                    companyCode != null ? companyCode : "DEFAULT"
-            );
+    private void validatePeriodDates(LocalDate from, LocalDate to) {
+        if (from == null || to == null) {
+            throw new ValidationException("Period From and Period To must not be null");
+        }
 
-            return seqNo != null ? seqNo : "CUST-CHG-" + System.currentTimeMillis();
-        } catch (Exception e) {
-            log.error("Error generating DOC_REF for companyPoid: {}", companyPoid, e);
-            return "CUST-CHG-" + System.currentTimeMillis();
+        if (from.isAfter(to)) {
+            throw new ValidationException("Period From cannot be after Period To");
         }
     }
 
-    private void validatePeriodDates(LocalDate periodFrom, LocalDate periodTo) {
-        if (periodFrom != null && periodTo != null && periodFrom.isAfter(periodTo)) {
-            throw new ValidationException("Period from date must be less than or equal to period to date");
-        }
-    }
 
     private void saveDetailRecords(Long transactionPoid, List<CustomerAutoChargeDetailDto> detailDtos) {
         if (detailDtos != null && !detailDtos.isEmpty()) {
