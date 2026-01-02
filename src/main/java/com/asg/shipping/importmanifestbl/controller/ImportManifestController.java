@@ -7,6 +7,10 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
+import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
+import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
+import com.asg.shipping.importmanifestbl.dto.UpdateEmailVerificationRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestBlService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -120,14 +124,12 @@ public class ImportManifestController {
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/{id}/update-email-verification")
+    @PostMapping("/update-email-verification")
     public ResponseEntity<?> updateEmailVerification(
-            @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long id,
             @Valid @RequestBody EmailVerificationRequestDto request
     ) {
         try {
-            EmailVerificationResponseDto response = importManifestBlService.updateEmailVerification(id, request);
+            EmailVerificationResponseDto response = importManifestBlService.updateEmailVerification(request.getTransactionPoId(), request);
             return success("Email verification updated successfully", response);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());
@@ -147,13 +149,12 @@ public class ImportManifestController {
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/{id}/resend-can")
+    @PostMapping("/resend-can")
     public ResponseEntity<?> resendCan(
-            @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long id
+            @Valid @RequestBody ResendCanRequestDto request
     ) {
         try {
-            ResendCanResponseDto response = importManifestBlService.resendCan(id);
+            ResendCanResponseDto response = importManifestBlService.resendCan(request.getTransactionPoId());
             return success("CAN resent successfully", response);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());
@@ -173,13 +174,12 @@ public class ImportManifestController {
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/{id}/send-edi-emails")
+    @PostMapping("/send-edi-emails")
     public ResponseEntity<?> sendEdiEmails(
-            @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long id
+            @Valid @RequestBody SendEdiEmailsRequestDto request
     ) {
         try {
-            SendEdiEmailsResponseDto response = importManifestBlService.sendEdiEmails(id);
+            SendEdiEmailsResponseDto response = importManifestBlService.sendEdiEmails(request.getTransactionPoId());
             return success("EDI emails sent successfully", response);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());
@@ -199,14 +199,12 @@ public class ImportManifestController {
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/{id}/load-email-fax")
+    @PostMapping("/load-email-fax")
     public ResponseEntity<?> loadEmailFax(
-            @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long id,
             @Valid @RequestBody LoadEmailFaxRequestDto request
     ) {
         try {
-            LoadEmailFaxResponseDto response = importManifestBlService.loadEmailFax(id, request);
+            LoadEmailFaxResponseDto response = importManifestBlService.loadEmailFax(request.getTransactionPoId(), null);
             return success("Email/Fax data loaded successfully", response);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());

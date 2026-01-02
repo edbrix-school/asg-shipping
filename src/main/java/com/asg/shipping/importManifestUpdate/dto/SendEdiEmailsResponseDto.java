@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class SendEdiEmailsResponseDto {
     private String status;
     private Integer emailsSent;
+    private String emailIds;
 }

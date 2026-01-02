@@ -46,7 +46,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
         query.execute();
 
         String status = (String) query.getOutputParameterValue("P_STATUS");
-        log.info("Email verification update status for BL {} : {}", transactionPoId, status);
+        log.info("Email verification update status for BL {} : {}", request.getTransactionPoId(), status);
 
         return EmailVerificationResponseDto.builder().status(status).build();
     }
@@ -71,25 +71,46 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
 
     @Override
     public SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId) {
-        StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_BL_EDI_EMAILS");
+        try {
 
-        query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_EMAI_IDS", String.class, ParameterMode.OUT);
 
-        query.setParameter("P_GROUP_POID", UserContext.getGroupPoid());
-        query.setParameter("P_COMPANY_POID", UserContext.getCompanyPoid());
-        query.setParameter("P_DOC_KEY_POID", transactionPoId);
+            StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_BL_EDI_EMAILS");
+            query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_EMAI_IDS", String.class, ParameterMode.OUT);
 
-        query.execute();
+            query.setParameter("P_GROUP_POID", UserContext.getGroupPoid());
+            query.setParameter("P_COMPANY_POID", UserContext.getCompanyPoid());
+            query.setParameter("P_DOC_KEY_POID", transactionPoId);
 
-        String emailIds = (String) query.getOutputParameterValue("P_EMAI_IDS");
-        int emailsSent = emailIds != null && !emailIds.startsWith("ERRPR") ? emailIds.split(";").length : 0;
-        log.info("EDI emails sent for transactionPoId: {}, count: {}", transactionPoId, emailsSent);
+            query.execute();
 
-        return SendEdiEmailsResponseDto.builder().status("SUCCESS").emailsSent(emailsSent).build();
+            String emailIds = (String) query.getOutputParameterValue("P_EMAI_IDS");
+
+            if (emailIds != null && emailIds.startsWith("ERRPR")) {
+                throw new RuntimeException("EDI email processing failed: " + emailIds);
+            }
+
+            if ("@".equals(emailIds)) {
+                emailIds = "";
+            }
+
+            int emailsSent = (emailIds != null && !emailIds.trim().isEmpty()) ?
+                    emailIds.split(";").length : 0;
+
+            return SendEdiEmailsResponseDto.builder()
+                    .emailIds(emailIds)
+                    .emailsSent(emailsSent)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error sending EDI emails for transactionPoId: {}", transactionPoId, e);
+            throw new RuntimeException("Failed to send EDI emails: " + e.getMessage());
+        }
     }
+
+
 
     @Override
     public BlStatusResponseDto getBlStatus(Long transactionPoId) {
