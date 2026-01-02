@@ -23,7 +23,7 @@ public interface ShipContainerTypeMasterRepository extends JpaRepository<ShipCon
      * Check if container type code exists for the given group (excluding deleted records)
      */
     @Query("SELECT COUNT(c) > 0 FROM ShipContainerTypeMaster c " +
-           "WHERE c.containerTypeCode = :code")
+           "WHERE c.containerTypeCode = :code and (c.deleted IS NULL OR c.deleted != 'Y')" )
     boolean existsByContainerTypeCode(@Param("code") String code);
 
     /**
@@ -42,7 +42,7 @@ public interface ShipContainerTypeMasterRepository extends JpaRepository<ShipCon
      * Check if container type name exists for the given group (excluding deleted records)
      */
     @Query("SELECT COUNT(c) > 0 FROM ShipContainerTypeMaster c " +
-           "WHERE c.containerTypeName = :name")
+           "WHERE c.containerTypeName = :name and (c.deleted IS NULL OR c.deleted != 'Y')" )
     boolean existsByContainerTypeName(@Param("name") String name);
 
     /**
@@ -50,7 +50,7 @@ public interface ShipContainerTypeMasterRepository extends JpaRepository<ShipCon
      */
     @Query("SELECT COUNT(c) > 0 FROM ShipContainerTypeMaster c " +
            "WHERE c.containerTypeName = :name " +
-           "AND c.containerTypePoid != :excludePoid")
+           "AND c.containerTypePoid != :excludePoid AND (c.deleted IS NULL OR c.deleted != 'Y')")
     boolean existsByContainerTypeNameExcludingPoid(
             @Param("name") String name,
             @Param("excludePoid") Long excludePoid
