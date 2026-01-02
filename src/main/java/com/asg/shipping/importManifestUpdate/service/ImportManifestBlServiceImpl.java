@@ -544,7 +544,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
             throw new ValidationException("Port of loading is required for IMPORT BL");
         }
         
-//        validateFinancialYear(UserContext.getCompanyPoid(), dto.getTransactionDate() != null ? dto.getTransactionDate().atStartOfDay() : LocalDateTime.now());
+        validateFinancialYear(UserContext.getCompanyPoid(), dto.getTransactionDate() != null ? dto.getTransactionDate().atStartOfDay() : LocalDateTime.now());
     }
 
 
