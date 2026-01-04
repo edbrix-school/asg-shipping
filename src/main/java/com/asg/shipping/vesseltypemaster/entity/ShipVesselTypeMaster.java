@@ -54,6 +54,10 @@ public class ShipVesselTypeMaster {
     @Column(name = "DELETED", length = 1)
     private String deleted;
 
+    @Column(name = "COST_CENTER_POID")
+    private Long costCentrePoid;
+
+
     @PrePersist
     protected void onCreate() {
         if (createdDate == null) {

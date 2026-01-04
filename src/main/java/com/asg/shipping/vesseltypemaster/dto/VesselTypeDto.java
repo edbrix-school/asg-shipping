@@ -28,4 +28,6 @@ public class VesselTypeDto {
     private String lastModifiedBy;
     private LocalDateTime lastModifiedDate;
     private String deleted;
+    private Long costCentrePoid;
+    private com.asg.common.lib.dto.LovGetListDto costCentreDet;
 }

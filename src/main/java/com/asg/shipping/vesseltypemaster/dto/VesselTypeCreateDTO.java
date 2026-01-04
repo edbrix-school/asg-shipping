@@ -31,4 +31,6 @@ public class VesselTypeCreateDTO {
 
     @Positive(message = "Sequence number must be positive")
     private Integer seqno;
+
+    private Long costCentrePoid;
 }
