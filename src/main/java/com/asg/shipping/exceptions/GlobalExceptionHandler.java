@@ -123,4 +123,26 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error at {} ", request.getRequestURI(), ex);
         return ApiResponse.error(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value());
     }
+
+    @ExceptionHandler(com.asg.common.lib.exception.ResourceAlreadyExistsException.class)
+    public ResponseEntity<?> handleResourceAlreadyExists(com.asg.common.lib.exception.ResourceAlreadyExistsException ex) {
+        return ApiResponse.conflict(ex.getMessage());
+    }
+
+    @ExceptionHandler(com.asg.common.lib.exception.ResourceNotFoundException.class)
+    public ResponseEntity<?> handleResourceNotFound(com.asg.common.lib.exception.ResourceNotFoundException ex) {
+        return ApiResponse.notFound(ex.getMessage());
+    }
+
+    @ExceptionHandler(com.asg.shipping.exceptions.ValidationException.class)
+    public ResponseEntity<?> handleShippingValidationException(com.asg.shipping.exceptions.ValidationException ex) {
+        Map<String, Object> errors = new HashMap<>();
+        if (ex.getFieldErrors() != null && !ex.getFieldErrors().isEmpty()) {
+            ex.getFieldErrors().forEach(error -> 
+                errors.put(error.getField() != null ? error.getField() : "general", error.getMessage())
+            );
+            return ApiResponse.error(ex.getMessage(), HttpStatus.BAD_REQUEST.value(), errors);
+        }
+        return ApiResponse.badRequest(ex.getMessage());
+    }
 }

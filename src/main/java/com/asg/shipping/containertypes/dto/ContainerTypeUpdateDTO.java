@@ -1,0 +1,58 @@
+package com.asg.shipping.containertypes.dto;
+
+import jakarta.validation.constraints.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+
+/**
+ * Request DTO for updating an existing Container Type
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ContainerTypeUpdateDTO {
+
+    @NotBlank(message = "Container type name is required")
+    @Size(max = 100, message = "Container type name must not exceed 100 characters")
+    private String containerTypeName;
+
+    @NotBlank(message = "Container type size is required")
+    @Size(max = 20, message = "Container type size must not exceed 20 characters")
+    private String containerTypeSize;
+
+    @NotBlank(message = "Container type ISO name is required")
+    @Size(max = 100, message = "Container type ISO name must not exceed 100 characters")
+    private String containerTypeIsoName;
+
+    @DecimalMin(value = "0.0", inclusive = false, message = "Cargo weight must be positive")
+    private BigDecimal containerCargoWeight;
+
+    @DecimalMin(value = "0.0", inclusive = false, message = "Tare weight must be positive")
+    private BigDecimal containerTareWeight;
+
+    @NotNull(message = "TEU factor is required")
+    @DecimalMin(value = "0.0", inclusive = false, message = "TEU factor must be positive")
+    private BigDecimal containerTeuFactor;
+
+    @NotBlank(message = "Container type category is required")
+    @Size(max = 20, message = "Container type category must not exceed 20 characters")
+    private String containerTypeCategory;
+
+    private Long containerGrpPoid;
+
+    @Size(max = 10, message = "APMT type code must not exceed 10 characters")
+    private String containerApmtTypeCode;
+
+    @Pattern(regexp = "^[YN]$", message = "Active must be Y or N")
+    private String active;
+
+    @Positive(message = "Sequence number must be positive")
+    private Integer seqno;
+}
+
+
