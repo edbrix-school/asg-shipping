@@ -169,7 +169,6 @@ public class CustomerAutoChargeExportBlController {
                     """
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = false,
             content = @Content(
                     examples = @ExampleObject(
                             name = "Customer Auto Charge Export BL Filters",
