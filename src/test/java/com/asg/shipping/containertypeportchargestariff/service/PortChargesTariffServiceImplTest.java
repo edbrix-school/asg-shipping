@@ -5,12 +5,12 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesDtl;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesHdr;
-import com.asg.shipping.containertypeportchargestariff.repository.PortChargesTariffCustomRepository;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesDtlRepository;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesHdrRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linemasterthirdparty.repository.ShipLineMasterThirdPartyRepository;
 import com.asg.shipping.portMaster.repository.PortMasterRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,7 +41,7 @@ class PortChargesTariffServiceImplTest {
     @Mock
     private ShipLineMasterThirdPartyRepository lineMasterThirdPartyRepository;
     @Mock
-    private PortChargesTariffCustomRepository customRepository;
+    private EntityManager entityManager;
 
     @InjectMocks
     private PortChargesTariffServiceImpl service;

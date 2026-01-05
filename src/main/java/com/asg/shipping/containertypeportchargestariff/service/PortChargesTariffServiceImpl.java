@@ -9,7 +9,6 @@ import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesDtl;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesHdr;
-import com.asg.shipping.containertypeportchargestariff.repository.PortChargesTariffCustomRepository;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesDtlRepository;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesHdrRepository;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
@@ -17,6 +16,7 @@ import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linemasterthirdparty.repository.ShipLineMasterThirdPartyRepository;
 import com.asg.shipping.portMaster.repository.PortMasterRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,12 +40,12 @@ import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 @Slf4j
 public class PortChargesTariffServiceImpl implements PortChargesTariffService {
 
+    private final EntityManager em;
     private final DocumentSearchService documentService;
     private final ShipPortChargesHdrRepository hdrRepository;
     private final ShipPortChargesDtlRepository dtlRepository;
     private final PortMasterRepository portMasterRepository;
     private final ShipLineMasterThirdPartyRepository lineMasterThirdPartyRepository;
-    private final PortChargesTariffCustomRepository customRepository;
 
     @Override
     @Transactional
@@ -89,7 +89,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdr.setDescription(dto.getDescription());
         hdr.setPeriodFrom(dto.getPeriodFrom());
         hdr.setPeriodTo(dto.getPeriodTo());
-        hdr.setDocRef(dto.getDocRef());
         hdr.setSeqNo(dto.getSeqNo());
         hdr.setChargeLinePoid(dto.getChargeLinePoid());
         hdr.setChargeDivision(dto.getChargeDivision());
@@ -101,6 +100,7 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
 
         ShipPortChargesHdr savedHdr = hdrRepository.save(hdr);
         hdrRepository.flush();
+        em.refresh(savedHdr);
 
         if (dto.getDetails() != null && !dto.getDetails().isEmpty()) {
             processCreateDetails(savedHdr.getTransactionPoid(), dto.getDetails());
@@ -128,7 +128,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdr.setDescription(dto.getDescription());
         hdr.setPeriodFrom(dto.getPeriodFrom());
         hdr.setPeriodTo(dto.getPeriodTo());
-        hdr.setDocRef(dto.getDocRef());
         hdr.setSeqNo(dto.getSeqNo());
         hdr.setChargeLinePoid(dto.getChargeLinePoid());
         hdr.setChargeDivision(dto.getChargeDivision());
@@ -211,9 +210,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
     }
 
     private void validateCreateRequest(PortChargesTariffCreateDto dto) {
-        if (StringUtils.isNotBlank(dto.getDocRef()) && hdrRepository.existsByDocRefIgnoreCase(dto.getDocRef())) {
-            throw new ResourceAlreadyExistsException("Doc Ref", dto.getDocRef());
-        }
         if (dto.getPortPoid() != null) {
             if (!portMasterRepository.existsByPortPoidAndGroupPoid(dto.getPortPoid(), UserContext.getGroupPoid())) {
                 throw new ResourceNotFoundException("Port Master", "portPoid", dto.getPortPoid().toString());
@@ -230,9 +226,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
     }
 
     private void validateUpdateRequest(PortChargesTariffUpdateDto dto, Long transactionPoid) {
-        if (StringUtils.isNotBlank(dto.getDocRef()) && hdrRepository.existsByDocRefIgnoreCaseAndTransactionPoidNot(dto.getDocRef(), transactionPoid)) {
-            throw new ResourceAlreadyExistsException("Doc Ref", dto.getDocRef());
-        }
         if (dto.getPortPoid() != null) {
             if (!portMasterRepository.existsByPortPoidAndGroupPoid(dto.getPortPoid(), UserContext.getGroupPoid())) {
                 throw new ResourceNotFoundException("Port Master", "portPoid", dto.getPortPoid().toString());
