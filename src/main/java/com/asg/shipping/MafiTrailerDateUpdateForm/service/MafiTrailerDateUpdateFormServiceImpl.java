@@ -47,7 +47,7 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 	@Transactional(readOnly = true)
 	public Map<String, Object> getAll(String docId, FilterRequestDto request, Pageable pageable) {
 
-		return listCurrencies(docId, request, pageable);
+		return listMafiTrailers(docId, request, pageable);
 	}
 
 	@Override
@@ -120,7 +120,7 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 		}
 	}
 
-	private Map<String, Object> listCurrencies(String docId, FilterRequestDto request, Pageable pageable) {
+	private Map<String, Object> listMafiTrailers(String docId, FilterRequestDto request, Pageable pageable) {
 
 		String operator = documentService.resolveOperator(request);
 		String isDeleted = documentService.resolveIsDeleted(request);
