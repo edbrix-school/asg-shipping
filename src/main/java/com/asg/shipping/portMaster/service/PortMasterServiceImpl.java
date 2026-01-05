@@ -115,7 +115,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 	@Override
 	public Map<String, Object> getAllPorts(String docId, FilterRequestDto request, Pageable pageable) {
-		return listCurrencies(docId, request, pageable);
+		return listPorts(docId, request, pageable);
 	}
 
 	@Override
@@ -144,7 +144,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 		entity.setLastModifiedDate(LocalDateTime.now());
 	}
 
-	private Map<String, Object> listCurrencies(String docId, FilterRequestDto request, Pageable pageable) {
+	private Map<String, Object> listPorts(String docId, FilterRequestDto request, Pageable pageable) {
 
 		String operator = documentService.resolveOperator(request);
 		String isDeleted = documentService.resolveIsDeleted(request);

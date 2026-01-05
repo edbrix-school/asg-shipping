@@ -1,12 +1,7 @@
 package com.asg.shipping.deliveryorderissuetocustomer.service;
 
-import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
-import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LovDataService;
-import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
@@ -17,9 +12,6 @@ import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,8 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 import static com.asg.common.lib.security.util.UserContext.*;
 
@@ -40,25 +30,8 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     private final DeliveryOrderIssueToCustomerRepository viewRepository;
     private final ShipBlManifestHDRRepository blManifestRepository;
-    private final DocumentSearchService documentService;
     private final LovDataService lovService;
     private final JdbcTemplate jdbcTemplate;
-
-    @Override
-    @Transactional(readOnly = true)
-    public Map<String, Object> listDeliveryOrderIssueToCustomer(String docId, FilterRequestDto request, Pageable pageable) {
-        log.info("Searching pending delivery orders with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
-
-        String operator = documentService.resolveOperator(request);
-        String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
-
-        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "BL_NUMBER", "TRANSACTION_POID");
-
-        Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
-
-        return PaginationUtil.wrapPage(page, raw.displayFields());
-    }
 
     @Override
     @Transactional(readOnly = true)

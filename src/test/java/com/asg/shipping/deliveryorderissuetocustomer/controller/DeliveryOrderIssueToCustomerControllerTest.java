@@ -2,7 +2,6 @@ package com.asg.shipping.deliveryorderissuetocustomer.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
-import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
@@ -13,18 +12,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -128,50 +123,6 @@ public class DeliveryOrderIssueToCustomerControllerTest {
                 .build();
 
         filterRequestDto = new FilterRequestDto("OR", "false", List.of());
-    }
-
-    @Test
-    void listDeliveryOrderIssueToCustomer_Success() throws Exception {
-        Map<String, Object> result = new HashMap<>();
-        result.put("content", "test data");
-        result.put("totalElements", 10);
-        
-        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getDocumentId).thenReturn("1");
-            
-            when(service.listDeliveryOrderIssueToCustomer(eq("1"), any(FilterRequestDto.class), any(Pageable.class)))
-                    .thenReturn(result);
-
-            mockMvc.perform(post("/v1/delivery-order-issue-to-customer/list")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(filterRequestDto))
-                            .param("page", "0")
-                            .param("size", "10"))
-                    .andExpect(status().isOk());
-
-            verify(service).listDeliveryOrderIssueToCustomer(eq("1"), any(FilterRequestDto.class), any(Pageable.class));
-        }
-    }
-
-    @Test
-    void listDeliveryOrderIssueToCustomer_WithoutFilters() throws Exception {
-        Map<String, Object> result = new HashMap<>();
-        result.put("content", "test data");
-        
-        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getDocumentId).thenReturn("1");
-            
-            when(service.listDeliveryOrderIssueToCustomer(eq("1"), isNull(), any(Pageable.class)))
-                    .thenReturn(result);
-
-            mockMvc.perform(post("/v1/delivery-order-issue-to-customer/list")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .param("page", "0")
-                            .param("size", "10"))
-                    .andExpect(status().isOk());
-
-            verify(service).listDeliveryOrderIssueToCustomer(eq("1"), isNull(), any(Pageable.class));
-        }
     }
 
     @Test
