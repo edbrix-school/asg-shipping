@@ -27,6 +27,7 @@ public class LovServiceImpl implements LovService {
         return response;
     }
 
+
     @Override
     public LovItem getLovItemByPoid(Long poid, String lovName, Long groupPoid, Long companyPoid, Long userPoid) {
         log.info("poid : {}, lovName : {}, groupPoid : {}, companyPoid : {}, userId : {}",
@@ -71,5 +72,4 @@ public class LovServiceImpl implements LovService {
         }
         return new LovItem(null, code, null, null, null, null);
     }
-
 }
