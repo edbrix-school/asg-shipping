@@ -18,31 +18,31 @@ public interface ShipLineMasterThirdPartyRepository extends JpaRepository<ShipLi
     /**
      * Find line by POID, Group POID, and LINE_TYPE = 'THIRD_PARTY'
      */
-    @Query("SELECT l FROM ShipLineMaster l WHERE l.linePoid = :linePoid AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY'")
+    @Query("SELECT l FROM ShipLineMasterThirdParty l WHERE l.linePoid = :linePoid AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY'")
     Optional<ShipLineMaster> findByLinePoidAndGroupPoidAndThirdParty(@Param("linePoid") Long linePoid, @Param("groupPoid") Long groupPoid);
 
     /**
      * Check if line code exists for the given group with LINE_TYPE = 'THIRD_PARTY' (excluding deleted records)
      */
-    @Query("SELECT COUNT(l) > 0 FROM ShipLineMaster l WHERE l.lineCode = :lineCode AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.deleted = 'N'")
+    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineCode = :lineCode AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.deleted = 'N'")
     boolean existsByLineCodeAndGroupPoidAndThirdParty(@Param("lineCode") String lineCode, @Param("groupPoid") Long groupPoid);
 
     /**
      * Check if line code exists for the given group with LINE_TYPE = 'THIRD_PARTY' excluding a specific line (for updates)
      */
-    @Query("SELECT COUNT(l) > 0 FROM ShipLineMaster l WHERE l.lineCode = :lineCode AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.linePoid != :excludeLinePoid AND l.deleted = 'N'")
+    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineCode = :lineCode AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.linePoid != :excludeLinePoid AND l.deleted = 'N'")
     boolean existsByLineCodeAndGroupPoidAndThirdPartyExcluding(@Param("lineCode") String lineCode, @Param("groupPoid") Long groupPoid, @Param("excludeLinePoid") Long excludeLinePoid);
 
     /**
      * Check if line name exists for the given group with LINE_TYPE = 'THIRD_PARTY' (excluding deleted records)
      */
-    @Query("SELECT COUNT(l) > 0 FROM ShipLineMaster l WHERE l.lineName = :lineName AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.deleted = 'N'")
+    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineName = :lineName AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.deleted = 'N'")
     boolean existsByLineNameAndGroupPoidAndThirdParty(@Param("lineName") String lineName, @Param("groupPoid") Long groupPoid);
 
     /**
      * Check if line name exists for the given group with LINE_TYPE = 'THIRD_PARTY' excluding a specific line (for updates)
      */
-    @Query("SELECT COUNT(l) > 0 FROM ShipLineMaster l WHERE l.lineName = :lineName AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.linePoid != :excludeLinePoid AND l.deleted = 'N'")
+    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineName = :lineName AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.linePoid != :excludeLinePoid AND l.deleted = 'N'")
     boolean existsByLineNameAndGroupPoidAndThirdPartyExcluding(@Param("lineName") String lineName, @Param("groupPoid") Long groupPoid, @Param("excludeLinePoid") Long excludeLinePoid);
 
     boolean existsByLinePoid(Long linePoid);
