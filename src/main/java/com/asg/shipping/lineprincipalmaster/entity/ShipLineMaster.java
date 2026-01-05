@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 /**
  * Entity class for SHIP_LINE_MASTER table
  */
-@Entity
+@Entity(name = "ShipLineMasterPrincipal")
 @Table(name = "SHIP_LINE_MASTER", 
        uniqueConstraints = {
            @UniqueConstraint(name = "SHIP_LINE_MASTER_UK_CODE", columnNames = {"LINE_CODE", "GROUP_POID"}),
