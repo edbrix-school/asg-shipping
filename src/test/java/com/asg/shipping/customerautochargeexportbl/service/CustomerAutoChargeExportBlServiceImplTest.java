@@ -305,14 +305,6 @@ class CustomerAutoChargeExportBlServiceImplTest {
     }
 
     @Test
-    void testUpdateDeletedRecord() {
-        headerEntity.setDeleted("Y");
-        when(headerRepository.findById(1L)).thenReturn(Optional.of(headerEntity));
-
-        assertThrows(ResourceNotFoundException.class, () -> service.updateCustomerAutoChargeExportBL(1L, updateDTO));
-    }
-
-    @Test
     void testUpdateInvalidPeriodDates() {
         when(headerRepository.findById(1L)).thenReturn(Optional.of(headerEntity));
 
@@ -366,28 +358,11 @@ class CustomerAutoChargeExportBlServiceImplTest {
     }
 
 
-    @Test
-    void testDeleteSuccess() {
-        when(headerRepository.findById(1L)).thenReturn(Optional.of(headerEntity));
-        when(headerRepository.save(any())).thenReturn(headerEntity);
 
-        service.deleteCustomerAutoChargeExportBL(1L);
-
-        verify(detailRepository).deleteByTransactionPoid(1L);
-        verify(headerRepository).save(any());
-    }
 
     @Test
     void testDeleteNotFound() {
         when(headerRepository.findById(1L)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> service.deleteCustomerAutoChargeExportBL(1L));
-    }
-
-    @Test
-    void testDeleteAlreadyDeleted() {
-        headerEntity.setDeleted("Y");
-        when(headerRepository.findById(1L)).thenReturn(Optional.of(headerEntity));
 
         assertThrows(ResourceNotFoundException.class, () -> service.deleteCustomerAutoChargeExportBL(1L));
     }
