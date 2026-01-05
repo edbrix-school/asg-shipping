@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "ShipLineMasterThirdParty")
 @Table(name = "SHIP_LINE_MASTER")
 @Data
 @Builder
