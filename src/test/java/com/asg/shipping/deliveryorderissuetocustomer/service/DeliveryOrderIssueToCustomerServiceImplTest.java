@@ -108,26 +108,6 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
     }
 
     @Test
-    void listDeliveryOrderIssueToCustomer_Success() {
-        String docId = "1";
-        FilterRequestDto filters = new FilterRequestDto("OR", "false", List.of());
-        Pageable pageable = PageRequest.of(0, 10);
-        
-        RawSearchResult rawResult = new RawSearchResult(List.of(Map.of("BL_NUMBER", "BL001")), Map.of("BL_NUMBER", "BL Number"), 1L);
-        
-        when(documentService.resolveOperator(filters)).thenReturn("OR");
-        when(documentService.resolveIsDeleted(filters)).thenReturn("false");
-        when(documentService.resolveFilters(filters)).thenReturn(List.of());
-        when(documentService.search(eq(docId), any(), eq("OR"), eq(pageable), eq("false"), eq("BL_NUMBER"), eq("TRANSACTION_POID")))
-                .thenReturn(rawResult);
-
-        Map<String, Object> result = service.listDeliveryOrderIssueToCustomer(docId, filters, pageable);
-
-        assertNotNull(result);
-        verify(documentService).search(eq(docId), any(), eq("OR"), eq(pageable), eq("false"), eq("BL_NUMBER"), eq("TRANSACTION_POID"));
-    }
-
-    @Test
     void getDeliveryOrderIssueToCustomer_Success() {
         Long transactionPoid = 1L;
         

@@ -131,50 +131,6 @@ public class DeliveryOrderIssueToCustomerControllerTest {
     }
 
     @Test
-    void listDeliveryOrderIssueToCustomer_Success() throws Exception {
-        Map<String, Object> result = new HashMap<>();
-        result.put("content", "test data");
-        result.put("totalElements", 10);
-        
-        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getDocumentId).thenReturn("1");
-            
-            when(service.listDeliveryOrderIssueToCustomer(eq("1"), any(FilterRequestDto.class), any(Pageable.class)))
-                    .thenReturn(result);
-
-            mockMvc.perform(post("/v1/delivery-order-issue-to-customer/list")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(filterRequestDto))
-                            .param("page", "0")
-                            .param("size", "10"))
-                    .andExpect(status().isOk());
-
-            verify(service).listDeliveryOrderIssueToCustomer(eq("1"), any(FilterRequestDto.class), any(Pageable.class));
-        }
-    }
-
-    @Test
-    void listDeliveryOrderIssueToCustomer_WithoutFilters() throws Exception {
-        Map<String, Object> result = new HashMap<>();
-        result.put("content", "test data");
-        
-        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getDocumentId).thenReturn("1");
-            
-            when(service.listDeliveryOrderIssueToCustomer(eq("1"), isNull(), any(Pageable.class)))
-                    .thenReturn(result);
-
-            mockMvc.perform(post("/v1/delivery-order-issue-to-customer/list")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .param("page", "0")
-                            .param("size", "10"))
-                    .andExpect(status().isOk());
-
-            verify(service).listDeliveryOrderIssueToCustomer(eq("1"), isNull(), any(Pageable.class));
-        }
-    }
-
-    @Test
     void getDeliveryOrderIssueToCustomer_Success() throws Exception {
         Long id = 1L;
         when(service.getDeliveryOrderIssueToCustomer(id)).thenReturn(responseDto);

@@ -29,19 +29,6 @@ public class DeliveryOrderIssueToCustomerController {
     private final DeliveryOrderIssueToCustomerService deliveryOrderIssueToCustomerService;
 
     /**
-     * Search pending delivery orders
-     * GET /v1/delivery-order-issue-to-customer/search?docId=xxx
-     */
-    @AllowedAction(UserRolesRightsEnum.VIEW)
-    @PostMapping("/list")
-    public ResponseEntity<?> listDeliveryOrderIssueToCustomer(@ParameterObject Pageable pageable,
-                                                              @RequestBody(required = false) FilterRequestDto filters) {
-        log.info("Search request for Delivery Order Issue To Customer with docId: {}", UserContext.getDocumentId());
-        Map<String, Object> result = deliveryOrderIssueToCustomerService.listDeliveryOrderIssueToCustomer(UserContext.getDocumentId(), filters, pageable);
-        return success("Pending delivery orders retrieved successfully", result);
-    }
-
-    /**
      * Get delivery order by BL transaction POID
      * GET /v1/delivery-order-issue-to-customer/{id}
      */
