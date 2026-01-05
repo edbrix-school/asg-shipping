@@ -1,9 +1,7 @@
 package com.asg.shipping.deliveryorderissuetocustomer.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
-import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
-import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
@@ -11,12 +9,8 @@ import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueT
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 
