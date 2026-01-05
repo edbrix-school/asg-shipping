@@ -1,0 +1,51 @@
+package com.asg.shipping.collectionhandover.dto;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+/**
+ * Request DTO for updating an existing Collection Handover
+ */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class CollectionHandoverUpdateDTO {
+
+    @Size(max = 30, message = "Document reference must not exceed 30 characters")
+    private String docRef;
+
+    @Size(max = 20, message = "Location code must not exceed 20 characters")
+    private String locationCode;
+
+    private BigDecimal cashAmount;
+
+    private BigDecimal chequeAmount;
+
+    private BigDecimal outstandingAmount;
+
+    private BigDecimal totalAmount;
+
+    private Integer noofChqs;
+
+    @Size(max = 500, message = "Location remarks must not exceed 500 characters")
+    private String locRemarks;
+
+    @Pattern(regexp = "^[YN]?$", message = "Verified received must be Y or N")
+    private String verifiedRcvd;
+
+    @Size(max = 500, message = "Main office remarks must not exceed 500 characters")
+    private String mainOfcRemarks;
+
+    @Valid
+    private List<CollectionHandoverDetailUpdateDTO> details;
+}
+
