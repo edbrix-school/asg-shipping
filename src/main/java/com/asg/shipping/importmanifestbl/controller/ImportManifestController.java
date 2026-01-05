@@ -5,15 +5,16 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
-import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
 import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
-import com.asg.shipping.importmanifestbl.dto.UpdateEmailVerificationRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestBlService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,6 +29,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
+import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
+import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 
 @RestController
 @RequiredArgsConstructor
@@ -65,7 +68,7 @@ public class ImportManifestController {
         }
     }
 
-    
+
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Import Manifest BL retrieved successfully"),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
@@ -111,6 +114,46 @@ public class ImportManifestController {
         } catch (Exception e) {
             return internalServerError("Failed to delete Import Manifest BL: " + e.getMessage());
         }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @PutMapping("/{id}")
+    @Operation(
+            summary = "Update Import Manifest BL record",
+            description = "Update an existing Import Manifest BL record with validation",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully updated Import Manifest BL record",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ImportManifestBlRequestDto.class)
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request data or validation error",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Import Manifest BL record not found",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    public ResponseEntity<?> updateImportManifestBl(
+            @Parameter(description = "Transaction POID", required = true, example = "12345")
+            @PathVariable Long id,
+            @Valid @RequestBody ImportManifestBlUpdateDTO dto) {
+
+        Long companyPoid = getCompanyPoid();
+        Long groupPoid = getGroupPoid();
+
+        ImportManifestBlRequestDto updated = importManifestBlService.updateImportManifestBl(id, dto, companyPoid, groupPoid);
+
+        return success("Import Manifest BL updated successfully", updated);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -172,7 +215,7 @@ public class ImportManifestController {
             @ApiResponse(responseCode = "200", description = "EDI emails sent successfully"),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
+            @ApiResponse(responseCode = "500", description = "Internal server error@Put")
     })
     @PostMapping("/send-edi-emails")
     public ResponseEntity<?> sendEdiEmails(
@@ -236,6 +279,56 @@ public class ImportManifestController {
             return notFound(e.getMessage());
         } catch (Exception e) {
             return internalServerError("Failed to retrieve BL status: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "List Import Manifest BLs",
+            description = """
+                    Fetch Import Manifest BL records using filters and pagination.
+                    
+                    Valid `searchField` values: BL_NUMBER, TRANSACTION_POID, VOYAGE_NUMBER, VESSEL_NAME, CONSIGNEE_NAME, SHIPPER_NAME
+                    """
+    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            content = @Content(
+                    examples = @ExampleObject(
+                            name = "Import Manifest BL Filters",
+                            value = """
+                                    {
+                                      "operator": "AND",
+                                      "isDeleted": "N",
+                                      "filters": [
+                                        {
+                                          "searchField": "BL_NUMBER",
+                                          "searchValue": "BL123456"
+                                        },
+                                        {
+                                          "searchField": "VESSEL_NAME",
+                                          "searchValue": "VESSEL001"
+                                        }
+                                      ]
+                                    }
+                                    """
+                    )
+            )
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Import Manifest BL list retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/list")
+    public ResponseEntity<?> list(
+            @ParameterObject Pageable pageable,
+            @RequestBody(required = false) FilterRequestDto filters
+    ) {
+        try {
+            Map<String, Object> response = importManifestBlService.list(filters, pageable);
+            return success("Import Manifest BL list retrieved successfully", response);
+        } catch (Exception e) {
+            return internalServerError("Failed to retrieve Import Manifest BL list: " + e.getMessage());
         }
     }
 }

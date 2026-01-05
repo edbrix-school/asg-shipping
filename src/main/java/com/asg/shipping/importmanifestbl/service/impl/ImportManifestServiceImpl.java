@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.service.impl;
 
+import com.asg.common.lib.dto.FilterDto;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.entity.*;
 import com.asg.shipping.importManifestUpdate.respository.*;
@@ -12,6 +13,18 @@ import org.springframework.stereotype.Service;
 
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
+import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.utility.PaginationUtil;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+
+import java.util.List;
+import java.util.Map;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.security.util.UserContext;
+
 
 
 @Service
@@ -24,6 +37,7 @@ public class ImportManifestServiceImpl implements ImportManifestBlService {
     private final AddressDetailsRepository addressDetailsRepository;
     private final com.asg.shipping.importManifestUpdate.service.ImportManifestBlServiceImpl updateService;
     private final ImportManifestBlMapper mapper;
+    private final DocumentSearchService documentService;
 
     @Override
     public ImportManifestBlRequestDto getImportManifest(Long transactionPoId) {
@@ -151,6 +165,39 @@ public class ImportManifestServiceImpl implements ImportManifestBlService {
     @Override
     public ImportManifestBlRequestDto createImportManifestBl(ImportManifestBlCreateDto request, Long companyPoid, Long groupPoid) {
       return updateService.createImportManifestBl(request);
+    }
+
+    @Override
+    public ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid) {
+        return updateService.updateImportManifestBl(id,dto,companyPoid,groupPoid);
+    }
+
+
+    @Override
+    public Map<String, Object> list(FilterRequestDto request, Pageable pageable) {
+        try {
+
+            String operator = documentService.resolveOperator(request);
+            String isDeleted = documentService.resolveIsDeleted(request);
+            List<FilterDto> filters = documentService.resolveFilters(request);
+
+
+            RawSearchResult raw = documentService.search(
+                    UserContext.getDocumentId(),
+                    filters,
+                    operator,
+                    pageable,
+                    isDeleted,
+                    "BL_NUMBER",
+                    "TRANSACTION_POID"
+            );
+            
+            Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+            return PaginationUtil.wrapPage(page, raw.displayFields());
+        } catch (Exception e) {
+            log.error("Error listing Import Manifest BLs", e);
+            throw e;
+        }
     }
 
     private ShipBlManifestHdr findEntityById(Long transactionPoId) {

@@ -181,68 +181,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
     }
 
 
-    /*@Override
-    @Transactional
-    public ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid) {
-        log.info("Updating Import Manifest BL with id: {}", id);
-
-        ShipBlManifestHdr entity = repository.findByTransactionPoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Import Manifest BL", "transactionPoid", id.toString()));
-
-        // Call PROC_SHIP_VALD_BEFORE_SAVE for validation
-        validateBeforeSave(dto, id, companyPoid, groupPoid);
-
-        // Validate
-        validateUpdateDTO(dto, id, companyPoid, groupPoid);
-
-        // Store old values for comparison
-        String oldBlNumber = entity.getBlNumber();
-        String oldCargoType = entity.getCargoType();
-        LocalDate oldTransactionDate = entity.getTransactionDate();
-        String oldFreightStatus = entity.getFreightStatus();
-        String oldDoNo = entity.getDoNo();
-
-        // Update entity
-        mapper.mapUpdateDTOToEntity(dto, entity);
-
-        // Apply EDI formatting if EDI fields changed
-        if (dto.getShipperEdiName() != null || dto.getConsigneeEdiName() != null ||
-                dto.getNotify1EdiName() != null || dto.getNotify2EdiName() != null ||
-                dto.getNotify3EdiName() != null) {
-            formatEdiFields(entity);
-        }
-
-        // Validate transaction date change
-       /* if (dto.getTransactionDate() != null && !dto.getTransactionDate().equals(oldTransactionDate)) {
-            validateTransactionDateChange(companyPoid, dto.getTransactionDate());
-        }*/
-
-        ShipBlManifestHdr saved = repository.save(entity);
-
-        // Update all detail tables
-        updateDetailTables(dto, saved.getTransactionPoid());
-
-        // Handle cargo type change (affects container inventory)
-      /*  if (dto.getCargoType() != null && !dto.getCargoType().equals(oldCargoType)) {
-            handleCargoTypeChange(saved.getTransactionPoid(), dto.getCargoType());
-        }*/
-
-        // Call PROC_SHIP_DO_BL_STATUS if DO/BL status changed
-        if (dto.getDoNo() != null && !dto.getDoNo().equals(oldDoNo) ||
-                (dto.getFreightStatus() != null && !dto.getFreightStatus().equals(oldFreightStatus))) {
-            updateDoBlStatus(saved.getTransactionPoid(), groupPoid, companyPoid);
-        }
-
-        // Call PROC_SHIP_BL_PAGE_SAVE_AFTER for post-save processing
-        processAfterSave(saved, groupPoid, companyPoid, "AUTOSUMWEIGHTPACKATE");
-
-        ImportManifestBlRequestDto result = mapper.mapToDto(saved);
-        loadDetailTables(result, saved.getTransactionPoid());
-        //enrichLovData(result);
-
-        log.info("Successfully updated Import Manifest BL with id: {}", id);
-        return result;
-    }*/
 
     @Override
     @Transactional
@@ -276,8 +214,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
             return;
         }
 
-        // Validate financial year
-        //validateFinancialYear(entity.getTransactionDate());
 
         entity.setDeleted("Y");
         entity.setLastModifiedBy(getCurrentUser());
