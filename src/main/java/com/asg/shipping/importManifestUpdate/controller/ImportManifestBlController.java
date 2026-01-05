@@ -153,4 +153,64 @@ public class ImportManifestBlController {
         log.info("Successfully updated Import Manifest BL with id: {}", id);
         return ApiResponse.success("Import Manifest BL updated successfully", updated);
     }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/{id}")
+    @Operation(
+            summary = "Get Import Manifest BL record details",
+            description = "Retrieve complete Import Manifest BL record information by ID including LOV data",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved Import Manifest BL record",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ImportManifestBlRequestDto.class)
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Import Manifest BL record not found",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    public ResponseEntity<?> getImportManifestBl(
+            @Parameter(description = "Transaction POID", required = true, example = "12345")
+            @PathVariable Long id) {
+
+        log.info("Getting Import Manifest BL with id: {}", id);
+        ImportManifestBlRequestDto manifestBl = service.getImportManifestBl(id);
+        log.info("Successfully retrieved Import Manifest BL with id: {}", id);
+        return ApiResponse.success("Import Manifest BL retrieved successfully", manifestBl);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.DELETE)
+    @DeleteMapping("/{id}")
+    @Operation(
+            summary = "Delete Import Manifest BL record",
+            description = "Soft delete an Import Manifest BL record by setting DELETED='Y'",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully deleted Import Manifest BL record"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Import Manifest BL record not found",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    public ResponseEntity<?> deleteImportManifestBl(
+            @Parameter(description = "Transaction POID", required = true, example = "12345")
+            @PathVariable Long id) {
+
+        log.info("Deleting Import Manifest BL with id: {}", id);
+        service.deleteImportManifestBl(id);
+        log.info("Successfully deleted Import Manifest BL with id: {}", id);
+        return ApiResponse.success("Import Manifest BL deleted successfully");
+    }
 }

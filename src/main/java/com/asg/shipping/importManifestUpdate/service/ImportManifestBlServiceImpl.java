@@ -23,6 +23,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -51,6 +53,77 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
     private final JdbcTemplate jdbcTemplate;
 
     @Override
+    @Transactional
+    public ImportManifestBlRequestDto updateImportManifestBl(
+            Long id,
+            ImportManifestBlUpdateDTO dto,
+            Long companyPoid,
+            Long groupPoid) {
+
+        log.info("Updating Import Manifest BL with id: {}", id);
+
+        ShipBlManifestHdr entity = repository.findByTransactionPoid(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Import Manifest BL", "transactionPoid", id.toString()));
+
+
+        validateBeforeSave(dto, id, companyPoid, groupPoid);
+        validateUpdateDTO(dto, id, companyPoid, groupPoid);
+
+        String oldFreightStatus = entity.getFreightStatus();
+        String oldDoNo = entity.getDoNo();
+
+        mapper.mapUpdateDTOToEntity(dto, entity);
+
+        // 4️⃣ ✅ Financial Year Validation (ADD HERE)
+        //validateFinancialYear(entity.getTransactionDate());
+
+        if (hasAnyEdiChange(dto)) {
+            formatEdiFields(entity);
+        }
+
+        ShipBlManifestHdr saved = repository.save(entity);
+
+        updateDetailTables(dto, saved.getTransactionPoid());
+
+        // DO/BL status procedure (SAFE – must also be after commit)
+        boolean callDoStatus =
+                (dto.getDoNo() != null && !dto.getDoNo().equals(oldDoNo))
+                        || (dto.getFreightStatus() != null
+                        && !dto.getFreightStatus().equals(oldFreightStatus));
+
+        Long transactionPoid = saved.getTransactionPoid();
+
+        //Register AFTER COMMIT actions
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+
+                    @Override
+                    public void afterCommit() {
+
+                        if (callDoStatus) {
+                            updateDoBlStatus(transactionPoid, groupPoid, companyPoid);
+                        }
+
+                        callAfterSaveProcedure(
+                                saved,
+                                groupPoid,
+                                companyPoid,
+                                "AUTOSUMWEIGHTPACKATE"
+                        );
+                    }
+                }
+        );
+
+        ImportManifestBlRequestDto result = mapper.mapToDto(saved);
+        loadDetailTables(result, transactionPoid);
+
+        log.info("Successfully updated Import Manifest BL with id: {}", id);
+        return result;
+    }
+
+
+    /*@Override
     @Transactional
     public ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid) {
         log.info("Updating Import Manifest BL with id: {}", id);
@@ -82,9 +155,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         // Validate transaction date change
-       /* if (dto.getTransactionDate() != null && !dto.getTransactionDate().equals(oldTransactionDate)) {
-            validateTransactionDateChange(companyPoid, dto.getTransactionDate());
-        }*/
+       // validateFinancialYear(entity.getTransactionDate());
 
         ShipBlManifestHdr saved = repository.save(entity);
 
@@ -92,9 +163,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         updateDetailTables(dto, saved.getTransactionPoid());
 
         // Handle cargo type change (affects container inventory)
-      /*  if (dto.getCargoType() != null && !dto.getCargoType().equals(oldCargoType)) {
+      *//*  if (dto.getCargoType() != null && !dto.getCargoType().equals(oldCargoType)) {
             handleCargoTypeChange(saved.getTransactionPoid(), dto.getCargoType());
-        }*/
+        }*//*
 
         // Call PROC_SHIP_DO_BL_STATUS if DO/BL status changed
         if (dto.getDoNo() != null && !dto.getDoNo().equals(oldDoNo) ||
@@ -111,6 +182,50 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
 
         log.info("Successfully updated Import Manifest BL with id: {}", id);
         return result;
+    }*/
+
+    @Override
+    @Transactional
+    public ImportManifestBlRequestDto getImportManifestBl(Long id) {
+        log.info("Getting Import Manifest BL with id: {}", id);
+
+        ShipBlManifestHdr entity = repository.findByTransactionPoid(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Import Manifest BL", "transactionPoid", id.toString()));
+
+        ImportManifestBlRequestDto dto = mapper.mapToDto(entity);
+
+        loadDetailTables(dto, id);
+
+        // Enrich with LOV data
+        //enrichLovData(dto);
+
+        log.info("Successfully retrieved Import Manifest BL with id: {}", id);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void deleteImportManifestBl(Long id) {
+        log.info("Deleting Import Manifest BL with id: {}", id);
+
+        ShipBlManifestHdr entity = repository.findByTransactionPoid(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Import Manifest BL", "transactionPoid", id.toString()));
+
+        if ("Y".equals(entity.getDeleted())) {
+            log.info("Import Manifest BL with id: {} is already deleted", id);
+            return;
+        }
+
+        // Validate financial year
+        //validateFinancialYear(entity.getTransactionDate());
+
+        entity.setDeleted("Y");
+        entity.setLastModifiedBy(getCurrentUser());
+        entity.setLastModifiedDate(LocalDateTime.now());
+
+        repository.save(entity);
+
+        log.info("Successfully deleted Import Manifest BL with id: {}", id);
     }
 
     @Override
@@ -404,7 +519,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
      * PROC_SHIP_BL_PAGE_SAVE_AFTER - Post-save processing
      * Parameters: P_LOGIN_GROUP_POID, P_LOGIN_COMPANY_POID, P_TRANSACTION_POID, P_PARAM1, P_PARAM2, P_LOGIN_USER_POID
      */
-    private void processAfterSave(ShipBlManifestHdr saved, Long groupPoid, Long companyPoid, String param2) {
+    private void callAfterSaveProcedure(ShipBlManifestHdr saved, Long groupPoid, Long companyPoid, String param2) {
         try {
             Long userPoid = com.asg.common.lib.security.util.UserContext.getUserPoid();
             Long transactionPoid = saved.getTransactionPoid();
@@ -455,5 +570,19 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
 
     private Long getNextDetRowId(Long maxDetRowId) {
         return (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+    }
+
+    private void validateFinancialYear(LocalDate transactionDate) {
+        if (transactionDate != null && transactionDate.isAfter(LocalDate.now())) {
+            throw new ValidationException("Transaction date cannot be in future");
+        }
+    }
+
+    private boolean hasAnyEdiChange(ImportManifestBlUpdateDTO dto) {
+        return dto.getShipperEdiName() != null
+                || dto.getConsigneeEdiName() != null
+                || dto.getNotify1EdiName() != null
+                || dto.getNotify2EdiName() != null
+                || dto.getNotify3EdiName() != null;
     }
 }

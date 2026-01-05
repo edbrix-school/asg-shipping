@@ -12,4 +12,8 @@ public interface ImportManifestBlService {
     ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid);
 
     Map<String, Object> listOfImportManifest(String docId, FilterRequestDto request, Pageable pageable);
+
+    ImportManifestBlRequestDto getImportManifestBl(Long id);
+
+    void deleteImportManifestBl(Long id);
 }
