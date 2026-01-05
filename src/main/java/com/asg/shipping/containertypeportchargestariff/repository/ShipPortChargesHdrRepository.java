@@ -11,10 +11,6 @@ import java.util.List;
 
 @Repository
 public interface ShipPortChargesHdrRepository extends JpaRepository<ShipPortChargesHdr, Long> {
-    boolean existsByDocRefIgnoreCase(String docRef);
-
-    boolean existsByDocRefIgnoreCaseAndTransactionPoidNot(String docRef, Long transactionPoid);
-
     @Query("""
                 SELECT h FROM ShipPortChargesHdr h
                 WHERE h.groupPoid = :groupPoid

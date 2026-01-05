@@ -24,15 +24,7 @@ import java.time.LocalDateTime;
 public class ShipPortChargesHdr {
 
     @Id
-    @GeneratedValue(
-            strategy = GenerationType.SEQUENCE,
-            generator = "SHIP_PORT_CHARGES_HDR_SEQ_GEN"
-    )
-    @SequenceGenerator(
-            name = "SHIP_PORT_CHARGES_HDR_SEQ_GEN",
-            sequenceName = "SHIP_PORT_CHARGES_HDR_SEQ",
-            allocationSize = 1
-    )
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "TRANSACTION_POID", nullable = false)
     private Long transactionPoid;
 
