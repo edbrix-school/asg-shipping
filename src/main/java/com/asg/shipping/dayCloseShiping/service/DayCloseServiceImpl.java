@@ -162,7 +162,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 			String docRef, Long groupPoid, Long companyPoid, Long userPoid) {
 
 		SimpleJdbcCall call = new SimpleJdbcCall(jdbcTemplate)
-				.withProcedureName("PROC_GL_CHO_INTO_CHQ_MAIN_SHIP_TEST_1");
+				.withProcedureName("PROC_GL_CHO_INTO_CHQ_MAIN_SHIP");
 
 		Map<String, Object> inParams = Map.of("P_CHO_ID", transactionPoid, "P_CHO_DT", transactionDate, "P_DOC_ID",
 				docId, "P_DOC_REF", docRef, "P_LOGIN_GROUP_POID", groupPoid, "P_LOGIN_COMPANY_POID", companyPoid,
