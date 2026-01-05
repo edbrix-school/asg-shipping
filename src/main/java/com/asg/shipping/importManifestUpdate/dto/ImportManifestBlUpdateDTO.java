@@ -218,6 +218,9 @@ public class ImportManifestBlUpdateDTO {
 
     private Long ffBillToPoid;
 
+    private String manifestEmailVerified;
+    private String emailVerifiedWithSpecialC;
+
     @Pattern(regexp = "^[YN]?$", message = "Demurrage actual next day must be Y or N")
     private String demActualNextDay;
 
