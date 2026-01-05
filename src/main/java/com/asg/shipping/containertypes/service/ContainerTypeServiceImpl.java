@@ -160,32 +160,32 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
         log.info("Successfully toggled active status for container type with id: {} to {}", id, containerType.getActive());
     }
 
-//    @Override
-//    @Transactional
-//    public void deleteContainerType(Long id) {
-//        log.info("Deleting container type with id: {}", id);
-//
-//        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
-//
-//        ShipContainerTypeMaster containerType = containerTypeRepository.findByContainerTypePoidAndGroupPoid(id, groupPoid)
-//                .orElseThrow(() -> new ResourceNotFoundException("Container Type", "containerTypePoid", id.toString()));
-//
-//        // Check if already deleted (idempotent)
-//        if ("Y".equals(containerType.getDeleted())) {
-//            log.info("Container type with id: {} is already deleted", id);
-//            return;
-//        }
-//
-//        // Soft delete
-//        containerType.setDeleted("Y");
-//        containerType.setActive("N");
-//        containerType.setLastModifiedBy(getCurrentUser());
-//        containerType.setLastModifiedDate(LocalDateTime.now());
-//
-//        containerTypeRepository.save(containerType);
-//
-//        log.info("Successfully deleted container type with id: {}", id);
-//    }
+    @Override
+    @Transactional
+    public void deleteContainerType(Long id) {
+        log.info("Deleting container type with id: {}", id);
+
+        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+
+        ShipContainerTypeMaster containerType = containerTypeRepository.findByContainerTypePoidAndGroupPoid(id, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Container Type", "containerTypePoid", id.toString()));
+
+        // Check if already deleted (idempotent)
+        if ("Y".equals(containerType.getDeleted())) {
+            log.info("Container type with id: {} is already deleted", id);
+            return;
+        }
+
+        // Soft delete
+        containerType.setDeleted("Y");
+        containerType.setActive("N");
+        containerType.setLastModifiedBy(getCurrentUser());
+        containerType.setLastModifiedDate(LocalDateTime.now());
+
+        containerTypeRepository.save(containerType);
+
+        log.info("Successfully deleted container type with id: {}", id);
+    }
 
     /**
      * Validate ContainerTypeCreateDTO

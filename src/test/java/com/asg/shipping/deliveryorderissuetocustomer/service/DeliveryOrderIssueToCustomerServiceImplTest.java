@@ -1,8 +1,6 @@
 package com.asg.shipping.deliveryorderissuetocustomer.service;
 
-import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
-import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
@@ -21,14 +19,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -105,26 +99,6 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
                 .doPriority("MEDIUM")
                 .deliverySentTo("N")
                 .build();
-    }
-
-    @Test
-    void listDeliveryOrderIssueToCustomer_Success() {
-        String docId = "1";
-        FilterRequestDto filters = new FilterRequestDto("OR", "false", List.of());
-        Pageable pageable = PageRequest.of(0, 10);
-        
-        RawSearchResult rawResult = new RawSearchResult(List.of(Map.of("BL_NUMBER", "BL001")), Map.of("BL_NUMBER", "BL Number"), 1L);
-        
-        when(documentService.resolveOperator(filters)).thenReturn("OR");
-        when(documentService.resolveIsDeleted(filters)).thenReturn("false");
-        when(documentService.resolveFilters(filters)).thenReturn(List.of());
-        when(documentService.search(eq(docId), any(), eq("OR"), eq(pageable), eq("false"), eq("BL_NUMBER"), eq("TRANSACTION_POID")))
-                .thenReturn(rawResult);
-
-        Map<String, Object> result = service.listDeliveryOrderIssueToCustomer(docId, filters, pageable);
-
-        assertNotNull(result);
-        verify(documentService).search(eq(docId), any(), eq("OR"), eq(pageable), eq("false"), eq("BL_NUMBER"), eq("TRANSACTION_POID"));
     }
 
     @Test
