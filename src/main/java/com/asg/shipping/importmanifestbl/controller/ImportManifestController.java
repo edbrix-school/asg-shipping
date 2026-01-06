@@ -5,10 +5,10 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
-import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
-import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestBlService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -330,5 +330,48 @@ public class ImportManifestController {
         } catch (Exception e) {
             return internalServerError("Failed to retrieve Import Manifest BL list: " + e.getMessage());
         }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Default Values",
+            description = "Fetch default values for Import Manifest BL creation based on document ID."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Default values retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/default-values")
+    public ResponseEntity<?> getDefaultValues(
+    ){
+        try {
+            DefaultValueDto response = importManifestBlService.getDefaultValues(UserContext.getDocumentId());
+            if (response == null) {
+                return notFound("No default values found for docId: " + UserContext.getDocumentId());
+            }
+            return success("Default values retrieved successfully", response);
+        } catch (Exception e) {
+            return internalServerError("Failed to retrieve default values: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Container Types and Commodities Dropdown",
+            description = "Fetch container types and commodities for a specific voyage to populate dropdown lists."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Container types and commodities retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/containers-dropdown")
+    public ResponseEntity<?> getContainerTypesByVoyage(
+            @Parameter(description = "Voyage Transaction POID", example = "12345")
+            @RequestParam(required = false) Long voyageTransPoid) {
+
+        ContainersDropDownDto containerTypes = importManifestBlService.getContainerTypesByVoyage(voyageTransPoid);
+        return ResponseEntity.ok(containerTypes);
     }
 }
