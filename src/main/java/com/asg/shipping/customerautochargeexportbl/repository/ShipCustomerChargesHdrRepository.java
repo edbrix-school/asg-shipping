@@ -2,7 +2,6 @@ package com.asg.shipping.customerautochargeexportbl.repository;
 
 import com.asg.shipping.customerautochargeexportbl.entity.ShipCustomerChargesHdrEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-;
 import org.springframework.stereotype.Repository;
 
 
