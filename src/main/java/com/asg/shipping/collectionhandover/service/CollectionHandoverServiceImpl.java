@@ -11,8 +11,8 @@ import com.asg.shipping.collectionhandover.dto.*;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtl;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtlId;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
-import com.asg.shipping.collectionhandover.repository.ArShDayEndCloseDtlRepository;
-import com.asg.shipping.collectionhandover.repository.ArShDayEndCloseHdrRepository;
+import com.asg.shipping.collectionhandover.repository.CollectionHandoverDtlRepository;
+import com.asg.shipping.collectionhandover.repository.CollectionHandoverHdrRepository;
 import com.asg.shipping.collectionhandover.util.CollectionHandoverMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,8 +38,8 @@ import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 @Slf4j
 public class CollectionHandoverServiceImpl implements CollectionHandoverService {
 
-    private final ArShDayEndCloseHdrRepository headerRepository;
-    private final ArShDayEndCloseDtlRepository detailRepository;
+    private final CollectionHandoverHdrRepository headerRepository;
+    private final CollectionHandoverDtlRepository detailRepository;
     private final DocumentSearchService documentService;
     private final CollectionHandoverMapper mapper;
 
