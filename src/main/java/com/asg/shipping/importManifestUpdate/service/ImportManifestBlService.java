@@ -1,5 +1,6 @@
 package com.asg.shipping.importManifestUpdate.service;
 
+import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlCreateDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
@@ -8,6 +9,8 @@ import org.springframework.data.domain.Pageable;
 import java.util.Map;
 
 public interface ImportManifestBlService {
+
+    ImportManifestBlRequestDto createImportManifestBl(ImportManifestBlCreateDto dto);
 
     ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid);
 

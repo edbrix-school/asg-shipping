@@ -4,15 +4,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -30,9 +28,6 @@ public class PortChargesTariffCreateDto {
 
     @NotNull(message = "Period to date is required")
     private LocalDate periodTo;
-
-    @Size(max = 25, message = "Document reference cannot exceed 25 characters")
-    private String docRef;
 
     private Integer seqNo;
     

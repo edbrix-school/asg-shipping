@@ -40,8 +40,8 @@ public class ShipBlManifestEmailFaxDtl {
     @Column(name = "SEND_YES_NO", length = 25)
     private String sendYesNo;
 
-   /* @Column(name = "ADDRESS_TYPE", length = 25)
-    private String addressType;*/
+    @Column(name = "ADDRESS_TYPE", length = 25, insertable = false, updatable = false)
+    private String addressType;
 
     @Column(name = "FAX_LOG", length = 4000)
     private String faxLog;
