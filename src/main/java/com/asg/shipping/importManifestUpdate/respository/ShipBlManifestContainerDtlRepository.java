@@ -38,4 +38,7 @@ public interface ShipBlManifestContainerDtlRepository extends JpaRepository<Ship
         WHERE d.id.transactionPoid = :transactionPoid
     """)
     Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
+
+    List<ShipBlManifestContainerDtl>
+    findByIdTransactionPoid(Long transactionPoid);
 }

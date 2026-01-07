@@ -9,8 +9,10 @@ import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.entity.*;
+import com.asg.shipping.importManifestUpdate.event.BlManifestSaveEvent;
 import com.asg.shipping.importManifestUpdate.respository.*;
 import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
 import jakarta.persistence.EntityManager;
@@ -19,13 +21,12 @@ import jakarta.persistence.StoredProcedureQuery;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.context.ApplicationEventPublisher;
-import com.asg.shipping.importManifestUpdate.event.BlManifestSaveEvent;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -34,6 +35,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -58,6 +60,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
     private final BlManifestValidationRepository validationRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final ImportManifestBlProcRepository procRepository;
+    private final AddressDetailsRepository addressDetailsRepository;
 
     @Override
     @Transactional
@@ -124,7 +127,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Import Manifest BL", "transactionPoid", id.toString()));
 
-
+        validateMandatoryFieldsForUpdate(dto);
         validateBeforeSave(dto, id, companyPoid, groupPoid);
         validateUpdateDTO(dto, id, companyPoid, groupPoid);
 
@@ -132,9 +135,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         String oldDoNo = entity.getDoNo();
 
         mapper.mapUpdateDTOToEntity(dto, entity);
-
-        // 4️⃣ ✅ Financial Year Validation (ADD HERE)
-        //validateFinancialYear(entity.getTransactionDate());
 
         if (hasAnyEdiChange(dto)) {
             formatEdiFields(entity);
@@ -237,6 +237,92 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
 
         return PaginationUtil.wrapPage(page, raw.displayFields());
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request) {
+        try {
+            findEntityById(transactionPoId);
+            return procRepository.updateEmailVerification(transactionPoId, request);
+        } catch (ResourceNotFoundException e) {
+            log.error("Failed to update: Entity not found for transactionPoId: {}", transactionPoId);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error updating email verification for transactionPoId: {}", transactionPoId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public ResendCanResponseDto resendCan(Long transactionPoId) {
+        try {
+            ShipBlManifestHdr entity = findEntityById(transactionPoId);
+            return procRepository.resendCan(entity.getVoyageTransactionPoid(), transactionPoId);
+        } catch (ResourceNotFoundException e) {
+            log.error("Failed to resend CAN: Entity not found for transactionPoId: {}", transactionPoId);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error resending CAN for transactionPoId: {}", transactionPoId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId) {
+        try {
+            findEntityById(transactionPoId);
+            return procRepository.sendEdiEmails(transactionPoId);
+        } catch (ResourceNotFoundException e) {
+            log.error("Failed to send EDI emails: Entity not found for transactionPoId: {}", transactionPoId);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error sending EDI emails for transactionPoId: {}", transactionPoId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public LoadEmailFaxResponseDto loadEmailFax(Long transactionPoId, LoadEmailFaxRequestDto request) {
+        try {
+            findEntityById(transactionPoId);
+            var addressDetails = addressDetailsRepository.findByAddressMasterPoidAndAddressType(
+                    request.getAddressMasterPoid(), "CAN");
+            var emailFaxDetails = addressDetails.stream()
+                    .map(ad -> EmailFaxDetailDto.builder()
+                            .addressPoid(Long.valueOf(ad.getAddressPoid()))
+                            .email1(ad.getEmail())
+                            .email2(ad.getEmail2())
+                            .fax(ad.getFax())
+                            .addressType(request.getAddressType())
+                            .build())
+                    .toList();
+            log.info("Loaded email/fax data for transactionPoId: {}, count: {}", transactionPoId, emailFaxDetails.size());
+            return LoadEmailFaxResponseDto.builder().emailFaxDetails(emailFaxDetails).build();
+        } catch (ResourceNotFoundException e) {
+            log.error("Failed to load email/fax: Entity not found for transactionPoId: {}", transactionPoId);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error loading email/fax data for transactionPoId: {}", transactionPoId, e);
+            throw e;
+        }
+    }
+
+    @Override
+    public BlStatusResponseDto getBlStatus(Long transactionPoId) {
+        try {
+            findEntityById(transactionPoId);
+            return procRepository.getBlStatus(transactionPoId);
+        } catch (ResourceNotFoundException e) {
+            log.error("Failed to get BL status: Entity not found for transactionPoId: {}", transactionPoId);
+            throw e;
+        } catch (Exception e) {
+            log.error("Error getting BL status for transactionPoId: {}", transactionPoId, e);
+            throw e;
+        }
     }
 
     /**
@@ -396,7 +482,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
         }
 
         if (dto.getContainers() != null) {
-            // For container details, we need to be careful about container inventory integration
+         /*   // For container details, we need to be careful about container inventory integration
             // Delete existing and recreate
             containerDtlRepository.deleteByIdTransactionPoid(transactionPoid);
             for (ContainerRequestDto detailDto : dto.getContainers()) {
@@ -418,6 +504,48 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
                             });
                 }
                 containerDtlRepository.save(entity);
+            }*/
+
+
+            List<ShipBlManifestContainerDtl> existingContainers =
+                    containerDtlRepository.findByIdTransactionPoid(transactionPoid);
+
+
+            Map<Long, ContainerRequestDto> incomingMap =
+                    dto.getContainers().stream()
+                            .filter(c -> c.getDetRowId() != null)
+                            .collect(Collectors.toMap(
+                                    ContainerRequestDto::getDetRowId,
+                                    c -> c
+                            ));
+
+            for (ShipBlManifestContainerDtl existing : existingContainers) {
+
+                Long detRowId = existing.getId().getDetRowId();
+                ContainerRequestDto incoming = incomingMap.get(detRowId);
+
+                if (incoming == null) {
+
+                    containerDtlRepository.delete(existing);
+
+                } else {
+                    // Allowed update
+                    mapper.updateContainerFromDto(incoming, existing);
+                    containerDtlRepository.save(existing);
+                }
+            }
+
+
+            for (ContainerRequestDto incoming : dto.getContainers()) {
+
+                if (incoming.getDetRowId() == null) {
+
+                    ShipBlManifestContainerDtl entity =
+                            mapper.mapContainerDtlFromDto(incoming, transactionPoid);
+
+                    //
+                    containerDtlRepository.save(entity);
+                }
             }
         }
 
@@ -571,6 +699,21 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
 
 
     private void validateMandatoryFields(ImportManifestBlCreateDto dto) {
+        if (dto.getVoyageTransactionPoid() == null) {
+            throw new ValidationException("Voyage number is required");
+        }
+        if (dto.getCargoType() == null) {
+            throw new ValidationException("Cargo Type is required");
+        }
+        if (dto.getBlNumber() == null) {
+            throw new ValidationException("BL number is required");
+        }
+        if (dto.getBlType() == null) {
+            throw new ValidationException("BL Type is required");
+        }
+    }
+
+    private void validateMandatoryFieldsForUpdate(ImportManifestBlUpdateDTO dto) {
         if (dto.getVoyageTransactionPoid() == null) {
             throw new ValidationException("Voyage number is required");
         }
@@ -812,5 +955,10 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService{
                 || dto.getNotify1EdiName() != null
                 || dto.getNotify2EdiName() != null
                 || dto.getNotify3EdiName() != null;
+    }
+
+    private ShipBlManifestHdr findEntityById(Long transactionPoId) {
+        return repository.findById(transactionPoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ship BL Manifest", "transactionPoId", transactionPoId));
     }
 }
