@@ -38,12 +38,34 @@ public interface DemurrageDetentionPayableTransferService {
     void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid);
 
     /**
-     * Process and load available containers into detail table
+     * Process and load available containers based on Line and BL Type (BEFORE create)
      */
+    Map<String, Object> processDataBeforeCreate(ProcessDataRequestDTO request);
+
+    /**
+     * Load bill-wise settlement data for selected containers (BEFORE create)
+     */
+    Map<String, Object> loadBillwiseDataBeforeCreate(LoadBillwiseRequestDTO request);
+
+    /**
+     * Update principal extra days for containers (calls stored procedure)
+     */
+    void updatePrincipalDays(UpdateFreeDaysRequestDTO request);
+
+    /**
+     * Process and load available containers into detail table (AFTER create - deprecated)
+     */
+    @Deprecated
     DemurrageDetentionPayableTransferDto processData(Long id, ProcessDataRequestDTO request);
 
     /**
-     * Update free days for selected containers and call stored procedure
+     * Load bill-wise settlement data for selected containers (AFTER create - deprecated)
      */
+    @Deprecated
+    DemurrageDetentionPayableTransferDto loadBillwiseData(Long id, LoadBillwiseRequestDTO request);
+/**
+     * Update free days for selected containers (AFTER create - deprecated)
+     */
+    @Deprecated
     void updateFreeDays(Long id, UpdateFreeDaysRequestDTO request);
 }
