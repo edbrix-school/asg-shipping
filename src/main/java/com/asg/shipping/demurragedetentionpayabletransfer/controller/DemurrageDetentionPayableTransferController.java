@@ -1,6 +1,7 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.service.DemurrageDetentionPayableTransferService;
 import jakarta.validation.Valid;
@@ -32,91 +33,99 @@ public class DemurrageDetentionPayableTransferController {
      * Search/list Demurrage/Detention Payable Transfer records
      */
     @PostMapping("/search")
-    public ResponseEntity<Map<String, Object>> searchDemurrageDetentionPayableTransfer(
+    public ResponseEntity<?> searchDemurrageDetentionPayableTransfer(
             @RequestBody FilterRequestDto request,
             @PageableDefault(size = 20) Pageable pageable) {
         log.info("Search request for demurrage detention payable transfer");
-        // Document ID for Demurrage/Detention Payable Transfer is hardcoded
         String docId = "100-151";
         Map<String, Object> result = service.searchDemurrageDetentionPayableTransfer(docId, request, pageable);
-        return ResponseEntity.ok(result);
+        return ApiResponse.success("Demurrage/Detention Payable Transfer records retrieved successfully", result);
     }
 
     /**
      * Get a single Demurrage/Detention Payable Transfer record by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<DemurrageDetentionPayableTransferDto> getDemurrageDetentionPayableTransfer(
+    public ResponseEntity<?> getDemurrageDetentionPayableTransfer(
             @PathVariable Long id) {
         log.info("Get request for id: {}", id);
         DemurrageDetentionPayableTransferDto result = service.getDemurrageDetentionPayableTransfer(id);
-        return ResponseEntity.ok(result);
+        return ApiResponse.success("Demurrage/Detention Payable Transfer retrieved successfully", result);
     }
 
     /**
      * Create a new Demurrage/Detention Payable Transfer record
      */
     @PostMapping
-    public ResponseEntity<DemurrageDetentionPayableTransferDto> createDemurrageDetentionPayableTransfer(
+    public ResponseEntity<?> createDemurrageDetentionPayableTransfer(
             @Valid @RequestBody DemurrageDetentionPayableTransferCreateDTO dto) {
         log.info("Create request");
         Long companyPoid = getCompanyPoid();
         Long groupPoid = getGroupPoid();
         DemurrageDetentionPayableTransferDto result = service.createDemurrageDetentionPayableTransfer(dto, companyPoid, groupPoid);
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        return ApiResponse.success("Demurrage/Detention Payable Transfer created successfully", result);
     }
 
     /**
      * Update an existing Demurrage/Detention Payable Transfer record
      */
     @PutMapping("/{id}")
-    public ResponseEntity<DemurrageDetentionPayableTransferDto> updateDemurrageDetentionPayableTransfer(
+    public ResponseEntity<?> updateDemurrageDetentionPayableTransfer(
             @PathVariable Long id,
             @Valid @RequestBody DemurrageDetentionPayableTransferUpdateDTO dto) {
         log.info("Update request for id: {}", id);
         Long companyPoid = getCompanyPoid();
         Long groupPoid = getGroupPoid();
         DemurrageDetentionPayableTransferDto result = service.updateDemurrageDetentionPayableTransfer(id, dto, companyPoid, groupPoid);
-        return ResponseEntity.ok(result);
+        return ApiResponse.success("Demurrage/Detention Payable Transfer updated successfully", result);
     }
 
     /**
      * Delete (soft delete) a Demurrage/Detention Payable Transfer record
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> deleteDemurrageDetentionPayableTransfer(@PathVariable Long id) {
+    public ResponseEntity<?> deleteDemurrageDetentionPayableTransfer(@PathVariable Long id) {
         log.info("Delete request for id: {}", id);
         Long companyPoid = getCompanyPoid();
         Long groupPoid = getGroupPoid();
         service.deleteDemurrageDetentionPayableTransfer(id, companyPoid, groupPoid);
-        return ResponseEntity.ok(Map.of("message", "Demurrage/Detention Payable Transfer deleted successfully"));
+        return ApiResponse.success("Demurrage/Detention Payable Transfer deleted successfully");
     }
 
     /**
-     * Process and load available containers into detail table
+     * Process and load available containers based on Line and BL Type (BEFORE create)
+     * This is a query operation that returns available containers without saving to database
      */
-    @PostMapping("/{id}/process-data")
-    public ResponseEntity<DemurrageDetentionPayableTransferDto> processData(
-            @PathVariable Long id,
-            @RequestBody(required = false) ProcessDataRequestDTO request) {
-        log.info("Process data request for id: {}", id);
-        if (request == null) {
-            request = new ProcessDataRequestDTO();
-        }
-        DemurrageDetentionPayableTransferDto result = service.processData(id, request);
-        return ResponseEntity.ok(result);
+    @PostMapping("/process-data")
+    public ResponseEntity<?> processData(
+            @Valid @RequestBody ProcessDataRequestDTO request) {
+        log.info("Process data request for line: {}, blType: {}", request.getLinePoid(), request.getBlType());
+        Map<String, Object> result = service.processDataBeforeCreate(request);
+        return ApiResponse.success("Available containers loaded successfully", result);
     }
 
     /**
-     * Update free days for selected containers and call stored procedure
+     * Load bill-wise settlement data for selected containers (BEFORE create)
+     * This is a query operation that returns bill-wise data for checked containers
      */
-    @PostMapping("/{id}/update-free-days")
-    public ResponseEntity<Map<String, String>> updateFreeDays(
-            @PathVariable Long id,
+    @PostMapping("/load-billwise")
+    public ResponseEntity<?> loadBillwiseData(
+            @Valid @RequestBody LoadBillwiseRequestDTO request) {
+        log.info("Load billwise data request for {} containers", request.getSelectedContainers().size());
+        Map<String, Object> result = service.loadBillwiseDataBeforeCreate(request);
+        return ApiResponse.success("Bill-wise settlement data loaded successfully", result);
+    }
+
+    /**
+     * Update principal extra days for containers (calls stored procedure)
+     * This updates the PP Extra Days field in the BL Manifest
+     */
+    @PostMapping("/update-principal-days")
+    public ResponseEntity<?> updatePrincipalDays(
             @Valid @RequestBody UpdateFreeDaysRequestDTO request) {
-        log.info("Update free days request for id: {}", id);
-        service.updateFreeDays(id, request);
-        return ResponseEntity.ok(Map.of("message", "Free days updated successfully"));
+        log.info("Update principal days request for {} containers", request.getContainerUpdates().size());
+        service.updatePrincipalDays(request);
+        return ApiResponse.success("Principal extra days updated successfully");
     }
 
 }

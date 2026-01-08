@@ -1,9 +1,7 @@
 package com.asg.shipping.importManifestUpdate.service;
 
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlCreateDto;
+import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Map;
@@ -19,4 +17,15 @@ public interface ImportManifestBlService {
     ImportManifestBlRequestDto getImportManifestBl(Long id);
 
     void deleteImportManifestBl(Long id);
+
+    EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
+
+    ResendCanResponseDto resendCan(Long transactionPoId);
+
+    SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId);
+
+    LoadEmailFaxResponseDto loadEmailFax(Long transactionPoId, LoadEmailFaxRequestDto request);
+
+    BlStatusResponseDto getBlStatus(Long transactionPoId);
+
 }

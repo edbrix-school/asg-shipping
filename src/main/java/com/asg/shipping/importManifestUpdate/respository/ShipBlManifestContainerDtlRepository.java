@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,4 +39,17 @@ public interface ShipBlManifestContainerDtlRepository extends JpaRepository<Ship
         WHERE d.id.transactionPoid = :transactionPoid
     """)
     Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
+
+    List<ShipBlManifestContainerDtl>
+    findByIdTransactionPoid(Long transactionPoid);
+
+    boolean existsByIdTransactionPoidAndContainerNo(Long transactionPoid, String containerNo);
+
+    @Query("""
+            select d.totalAmountCollected
+            from ShipBlManifestContainerDtl d
+            where d.id.transactionPoid = :transactionPoid
+              and d.containerNo = :containerNo
+            """)
+    Optional<BigDecimal> findTotalAmountCollected(@Param("transactionPoid") Long transactionPoid, @Param("containerNo") String containerNo);
 }
