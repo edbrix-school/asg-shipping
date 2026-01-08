@@ -5,10 +5,13 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.response.ApiResponse;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
+import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.service.ImportManifestBlService;
+import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
+import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
+import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,8 +30,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-import static com.asg.common.lib.dto.response.ApiResponse.internalServerError;
-import static com.asg.common.lib.dto.response.ApiResponse.success;
+import static com.asg.common.lib.dto.response.ApiResponse.*;
+import static com.asg.common.lib.dto.response.ApiResponse.notFound;
 import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 
@@ -212,5 +215,131 @@ public class ImportManifestBlController {
         service.deleteImportManifestBl(id);
         log.info("Successfully deleted Import Manifest BL with id: {}", id);
         return ApiResponse.success("Import Manifest BL deleted successfully");
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Update Email Verification",
+            description = "Update email verification status for Import Manifest BL."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Email verification updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/update-email-verification")
+    public ResponseEntity<?> updateEmailVerification(
+            @Valid @RequestBody EmailVerificationRequestDto request
+    ) {
+        try {
+            EmailVerificationResponseDto response = service.updateEmailVerification(request.getTransactionPoId(), request);
+            return success("Email verification updated successfully", response);
+        } catch (ResourceNotFoundException e) {
+            return notFound(e.getMessage());
+        } catch (Exception e) {
+            return internalServerError("Failed to update email verification: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Resend CAN",
+            description = "Resend Cargo Arrival Notice for Import Manifest BL."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "CAN resent successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/resend-can")
+    public ResponseEntity<?> resendCan(
+            @Valid @RequestBody ResendCanRequestDto request
+    ) {
+        try {
+            ResendCanResponseDto response = service.resendCan(request.getTransactionPoId());
+            return success("CAN resent successfully", response);
+        } catch (ResourceNotFoundException e) {
+            return notFound(e.getMessage());
+        } catch (Exception e) {
+            return internalServerError("Failed to resend CAN: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Send EDI Emails",
+            description = "Send EDI emails for Import Manifest BL."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "EDI emails sent successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error@Put")
+    })
+    @PostMapping("/send-edi-emails")
+    public ResponseEntity<?> sendEdiEmails(
+            @Valid @RequestBody SendEdiEmailsRequestDto request
+    ) {
+        try {
+            SendEdiEmailsResponseDto response = service.sendEdiEmails(request.getTransactionPoId());
+            return success("EDI emails sent successfully", response);
+        } catch (ResourceNotFoundException e) {
+            return notFound(e.getMessage());
+        } catch (Exception e) {
+            return internalServerError("Failed to send EDI emails: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Load Email/Fax Data",
+            description = "Load email/fax data for selected party."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Email/Fax data loaded successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/load-email-fax")
+    public ResponseEntity<?> loadEmailFax(
+            @Valid @RequestBody LoadEmailFaxRequestDto request
+    ) {
+        try {
+            LoadEmailFaxResponseDto response = service.loadEmailFax(request.getTransactionPoId(), null);
+            return success("Email/Fax data loaded successfully", response);
+        } catch (ResourceNotFoundException e) {
+            return notFound(e.getMessage());
+        } catch (Exception e) {
+            return internalServerError("Failed to load email/fax data: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get BL Status",
+            description = "Get BL status information for DO."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "BL status retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/{id}/bl-status")
+    public ResponseEntity<?> getBlStatus(
+            @Parameter(description = "Transaction POID", required = true)
+            @PathVariable Long id
+    ) {
+        try {
+            BlStatusResponseDto response = service.getBlStatus(id);
+            return success("BL status retrieved successfully", response);
+        } catch (ResourceNotFoundException e) {
+            return notFound(e.getMessage());
+        } catch (Exception e) {
+            return internalServerError("Failed to retrieve BL status: " + e.getMessage());
+        }
     }
 }

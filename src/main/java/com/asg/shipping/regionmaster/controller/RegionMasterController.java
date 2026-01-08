@@ -212,7 +212,7 @@ public class RegionMasterController {
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
-    @PatchMapping("/{regionPoid}/activate")
+    @PutMapping("/{regionPoid}/activate")
     @Operation(
             summary = "Toggle Active Status",
             description = "Toggles the active status of a region master between Y and N",

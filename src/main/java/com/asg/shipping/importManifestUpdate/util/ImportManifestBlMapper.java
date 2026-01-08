@@ -1063,4 +1063,71 @@ public class ImportManifestBlMapper {
         if (entities == null) return null;
         return entities.stream().map(this::mapMafiDtlToDto).collect(Collectors.toList());
     }
+
+    public void updateContainerFromDto(
+            ContainerRequestDto dto,
+            ShipBlManifestContainerDtl entity) {
+
+        // ❌ NEVER update:
+        // entity.getId()
+        // entity.setId()
+        // transactionPoid
+        // detRowId
+
+        if (dto.getMateTransactionPoid() != null) {
+            entity.setMateTransactionPoid(dto.getMateTransactionPoid());
+        }
+        if (dto.getContainerNo() != null) {
+            entity.setContainerNo(dto.getContainerNo().trim());
+        }
+
+        entity.setEquipmentShipperOwn(dto.getEquipmentShipperOwn());
+        entity.setCargoDescription(dto.getCargoDescription());
+        entity.setEquipmentSealNo(dto.getEquipmentSealNo());
+        entity.setEquipmentIsoType(dto.getEquipmentIsoType());
+        entity.setEquipmentType(dto.getEquipmentType());
+        entity.setEquipmentSize(dto.getEquipmentSize());
+        entity.setQuantity(dto.getQuantity());
+        entity.setGrsVolume(dto.getGrsVolume());
+        entity.setGrsWeight(dto.getGrsWeight());
+        entity.setNetVolume(dto.getNetVolume());
+        entity.setNetWeight(dto.getNetWeight());
+        entity.setTareWeight(dto.getTareWeight());
+        entity.setNoOfPacks(dto.getNoOfPacks());
+        entity.setPackUnit(dto.getPackUnit());
+        entity.setComodityPoid(dto.getComodityPoid());
+        entity.setDestinationPortPoid(dto.getDestinationPortPoid());
+        entity.setImo(dto.getImo());
+        entity.setOogL(dto.getOogL());
+        entity.setOogB(dto.getOogB());
+        entity.setOogH(dto.getOogH());
+        entity.setRefferTemp(dto.getRefferTemp());
+        entity.setRefferHum(dto.getRefferHum());
+        entity.setRefferVent(dto.getRefferVent());
+        entity.setIssueToConsignee(dto.getIssueToConsignee());
+        entity.setReturnFromConsignee(dto.getReturnFromConsignee());
+        entity.setIsImco(dto.getIsImco());
+        entity.setIsOog(dto.getIsOog());
+        entity.setIsRefer(dto.getIsRefer());
+        entity.setReferType(dto.getReferType());
+        entity.setImcoClassType(dto.getImcoClassType());
+        entity.setGuaranteeFlag(dto.getGuaranteeFlag());
+        entity.setGuaranteedBy(dto.getGuaranteedBy());
+        entity.setExtraFreeDays(dto.getExtraFreeDays());
+        entity.setExtraFreeDaysPrnpls(dto.getExtraFreeDaysPrnpls());
+        entity.setOogLW(dto.getOogLW());
+        entity.setOogRW(dto.getOogRW());
+        entity.setOogF(dto.getOogF());
+        entity.setOogA(dto.getOogA());
+        entity.setOogType(dto.getOogType());
+        entity.setImcoClassActual(dto.getImcoClassActual());
+        entity.setPrintReturnFormDefault(dto.getPrintReturnFormDefault());
+        entity.setPrintDeliveryFormDefault(dto.getPrintDeliveryFormDefault());
+        entity.setHsCode(dto.getHsCode());
+        entity.setHsDescription(dto.getHsDescription());
+        entity.setAmountPerDayAfterFree(dto.getAmountPerDayAfterFree());
+        entity.setActualDischargeDate(dto.getActualDischargeDate());
+
+        // ⚠️ Demurrage / collected fields deliberately untouched
+    }
 }

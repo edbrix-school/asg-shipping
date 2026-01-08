@@ -25,6 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.Types;
 import java.time.LocalDate;
@@ -366,6 +367,226 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     // Private helper methods
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> processDataBeforeCreate(ProcessDataRequestDTO request) {
+        log.info("Processing data before create for line: {}, blType: {}", request.getLinePoid(), request.getBlType());
+
+        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
+        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+
+        if (request.getLinePoid() == null || request.getBlType() == null) {
+            throw new ValidationException("Line POID and BL Type are required");
+        }
+
+        // Query available containers from view - using NOT EXISTS instead of NOT IN for better compatibility
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER V ");
+        sql.append("WHERE NOT EXISTS (");
+        sql.append("  SELECT 1 FROM SHIP_DEM_DETN_TRANSFER_HDR H ");
+        sql.append("  INNER JOIN SHIP_DEM_DETN_TRANSFER_DTL D ON D.TRANSACTION_POID = H.TRANSACTION_POID ");
+        sql.append("  WHERE NVL(H.DELETED, 'N') = 'N' ");
+        sql.append("  AND NVL(D.IS_SELECT, 'N') = 'Y' ");
+        sql.append("  AND D.MAINFEST_TRANSACTION_POID = V.MAINFEST_TRANSACTION_POID ");
+        sql.append("  AND D.CONTAINER_NO = V.CONTAINER_NO");
+        sql.append(") ");
+        sql.append("AND V.BL_TYPE = ? ");
+        sql.append("AND V.LINE_POID = ? ");
+        sql.append("AND V.COMPANY_POID = ? ");
+
+        List<Object> params = new java.util.ArrayList<>();
+        params.add(request.getBlType());
+        params.add(request.getLinePoid());
+        params.add(companyPoid);
+
+        if (request.getEmptyFromDate() != null) {
+            sql.append("AND V.EMPTY_IN_DATE >= ? ");
+            params.add(java.sql.Date.valueOf(request.getEmptyFromDate()));
+        }
+        if (request.getEmptyToDate() != null) {
+            sql.append("AND V.EMPTY_IN_DATE <= ? ");
+            params.add(java.sql.Date.valueOf(request.getEmptyToDate()));
+        }
+
+        sql.append("ORDER BY V.BL_NUMBER");
+
+        try {
+            List<Map<String, Object>> containers = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+
+            log.info("Found {} available containers", containers.size());
+            return Map.of(
+                    "containers", containers,
+                    "totalCount", containers.size()
+            );
+        } catch (Exception e) {
+            log.error("Error querying available containers", e);
+            // If view doesn't exist, return empty result instead of throwing error
+            log.warn("VW_SHIP_DEM_DTN_TRANSFER view may not exist. Returning empty result.");
+            return Map.of(
+                    "containers", java.util.Collections.emptyList(),
+                    "totalCount", 0,
+                    "warning", "View VW_SHIP_DEM_DTN_TRANSFER not found or query failed"
+            );
+        }
+    }
+    public Map<String, Object> loadBillwiseDataBeforeCreate(LoadBillwiseRequestDTO request) {
+        log.info("Loading bill-wise data before create for {} containers", request.getSelectedContainers().size());
+
+        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
+        List<Map<String, Object>> allBillDetails = new java.util.ArrayList<>();
+
+        for (LoadBillwiseRequestDTO.SelectedContainer container : request.getSelectedContainers()) {
+            String sql = "SELECT * FROM VW_SHIP_PAYABLE_BILLWISE " +
+                    "WHERE MANIFEST_TRANSACTION_POID = ? " +
+                    "AND CONTAINER_NO = ? " +
+                    "AND COMPANY_POID = ? " +
+                    "AND NVL(BALANCE, 0) <> 0 " +
+                    "ORDER BY BILL_REF_NO";
+
+            try {
+                List<Map<String, Object>> billRecords = jdbcTemplate.queryForList(
+                        sql,
+                        container.getMainfestTransactionPoid(),
+                        container.getContainerNo(),
+                        companyPoid
+                );
+                allBillDetails.addAll(billRecords);
+            } catch (Exception e) {
+                log.warn("Failed to load bill-wise data for container: {}. Error: {}",
+                        container.getContainerNo(), e.getMessage());
+                // Add placeholder record
+                Map<String, Object> placeholder = new java.util.HashMap<>();
+                placeholder.put("CONTAINER_NO", container.getContainerNo());
+                placeholder.put("DESCRIPTION", "Demurrage/Detention for " + container.getContainerNo());
+                placeholder.put("BILL_TYPE", "AGAINST");
+                placeholder.put("BILL_REF_NO", container.getBlNumber());
+                placeholder.put("BALANCE", java.math.BigDecimal.ZERO);
+                allBillDetails.add(placeholder);
+            }
+        }
+
+        log.info("Loaded {} bill-wise records", allBillDetails.size());
+        return Map.of(
+                "billDetails", allBillDetails,
+                "totalCount", allBillDetails.size()
+        );
+    }
+
+    @Override
+    @Transactional
+    public void updatePrincipalDays(UpdateFreeDaysRequestDTO request) {
+        log.info("Updating principal extra days for {} containers", request.getContainerUpdates().size());
+
+        for (UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate update : request.getContainerUpdates()) {
+            // Call stored procedure to update principal extra days in BL Manifest
+            callProcShipCntPpfredaysUpdate(
+                    update.getMainfestTransactionPoid(),
+                    update.getExtraFreeDaysPrnpls(),
+                    update.getContainerNo()
+            );
+        }
+
+        log.info("Successfully updated principal extra days");
+    }
+
+    @Override
+    @Transactional
+    public DemurrageDetentionPayableTransferDto loadBillwiseData(Long id, LoadBillwiseRequestDTO request) {
+        log.info("Loading bill-wise settlement data for demurrage/detention payable transfer with id: {}", id);
+
+        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
+
+        ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
+
+        if ("Y".equals(entity.getDeleted())) {
+            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString());
+        }
+
+        // Validate that selected containers exist in transfer details
+        for (LoadBillwiseRequestDTO.SelectedContainer container : request.getSelectedContainers()) {
+            ShipDemDetnTransferDtl transferDtl = transferDtlRepository
+                    .findByTransactionPoidAndDetRowId(id, container.getDetRowId())
+                    .orElseThrow(() -> new ValidationException(
+                            "Container with detRowId " + container.getDetRowId() + " not found in transfer details"));
+
+            if (!transferDtl.getContainerNo().equals(container.getContainerNo())) {
+                throw new ValidationException("Container number mismatch for detRowId: " + container.getDetRowId());
+            }
+        }
+
+        // Delete existing bill details for this transaction
+        billDtlRepository.deleteByTransactionPoid(id);
+
+        // Load bill-wise payable data for each selected container
+        Long maxDetRowId = billDtlRepository.getMaxDetRowId(id);
+        long currentDetRowId = maxDetRowId != null ? maxDetRowId : 0;
+
+        for (LoadBillwiseRequestDTO.SelectedContainer container : request.getSelectedContainers()) {
+            String sql = "SELECT * FROM VW_SHIP_PAYABLE_BILLWISE " +
+                    "WHERE MANIFEST_TRANSACTION_POID = ? " +
+                    "AND CONTAINER_NO = ? " +
+                    "AND COMPANY_POID = ? " +
+                    "AND NVL(BALANCE, 0) <> 0 " +
+                    "ORDER BY BILL_REF_NO";
+
+            try {
+                List<Map<String, Object>> billRecords = jdbcTemplate.queryForList(
+                        sql,
+                        container.getMainfestTransactionPoid(),
+                        container.getContainerNo(),
+                        companyPoid
+                );
+
+                for (Map<String, Object> record : billRecords) {
+                    currentDetRowId++;
+                    ShipDemDtnTransferBillDtl billDetail = ShipDemDtnTransferBillDtl.builder()
+                            .transactionPoid(id)
+                            .detRowId(currentDetRowId)
+                            .containerNo(container.getContainerNo())
+                            .description((String) record.get("DESCRIPTION"))
+                            .billRefType((String) record.get("BILL_TYPE"))
+                            .billRefno((String) record.get("BILL_REF_NO"))
+                            .billwiseBalance((BigDecimal) record.get("BALANCE"))
+                            .drAmt(BigDecimal.ZERO)
+                            .crAmt(BigDecimal.ZERO)
+                            .glPoid(((Number) record.get("GL_POID")).longValue())
+                            .checkall("Y")
+                            .build();
+                    billDtlRepository.save(billDetail);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to load bill-wise data for container: {}. Creating placeholder.", container.getContainerNo());
+                currentDetRowId++;
+                ShipDemDtnTransferBillDtl billDetail = ShipDemDtnTransferBillDtl.builder()
+                        .transactionPoid(id)
+                        .detRowId(currentDetRowId)
+                        .containerNo(container.getContainerNo())
+                        .description("Demurrage/Detention for " + container.getContainerNo())
+                        .billRefType("AGAINST")
+                        .billRefno(container.getBlNumber())
+                        .billwiseBalance(BigDecimal.ZERO)
+                        .drAmt(BigDecimal.ZERO)
+                        .crAmt(BigDecimal.ZERO)
+                        .glPoid(entity.getPayableGlPoid())
+                        .checkall("Y")
+                        .build();
+                billDtlRepository.save(billDetail);
+            }
+        }
+
+        List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+
+        DemurrageDetentionPayableTransferDto result = mapper.mapToDto(entity);
+        result.setTransferDetails(mapper.mapTransferDtlListToDto(transferDetails));
+        result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
+        enrichLovData(result);
+
+        log.info("Successfully loaded bill-wise settlement data for id: {}", id);
+        return result;
+    }
     private void validateCreateDTO(DemurrageDetentionPayableTransferCreateDTO dto, Long companyPoid, Long groupPoid) {
         if (dto.getLinePoid() == null) {
             throw new ValidationException("Line POID is required");
