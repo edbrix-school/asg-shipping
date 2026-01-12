@@ -129,8 +129,8 @@ class RegionMasterServiceImplTest {
         when(repository.save(any())).thenReturn(entity);
         when(mapper.toResponse(entity)).thenReturn(response);
 
-        doNothing().when(loggingService)
-                .createLogSummaryEntry(any(), any(), any());
+        lenient().doNothing().when(loggingService)
+                .createLogSummaryEntry(any(String.class), any(), any());
         doNothing().when(loggingService)
                 .logChanges(any(), any(), any(), any(), any(), any(), any());
 
@@ -156,8 +156,8 @@ class RegionMasterServiceImplTest {
                 .thenReturn(Optional.of(entity));
         when(mapper.toResponse(entity)).thenReturn(response);
 
-        doNothing().when(loggingService)
-                .createLogSummaryEntry(any(), any(), any());
+        lenient().doNothing().when(loggingService)
+                .createLogSummaryEntry(any(String.class), any(), any());
         doNothing().when(loggingService)
                 .logChanges(any(), any(), any(), any(), any(), any(), any());
 

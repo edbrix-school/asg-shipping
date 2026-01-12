@@ -186,7 +186,7 @@ class PortStorageTariffsServiceImplTest {
             when(lovService.getDetailsByPoidAndLovName(anyLong(), eq("PORT_MASTER"))).thenReturn(createLovDto());
             when(lovService.getDetailsByCodeAndLovName(anyString(), eq("PORT_TARIFF_TYPES"))).thenReturn(createLovDto());
             when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyString(), anyLong(), any(), any(), any())).thenReturn(false);
-            when(tariffHdrRepository.existsByDocRef(anyString())).thenReturn(false);
+            lenient().when(tariffHdrRepository.existsByDocRef(anyString())).thenReturn(false);
             when(tariffHdrRepository.save(any(ShipPortTariffHdr.class))).thenReturn(testTariffHdr);
             when(mapper.mapToDto(testTariffHdr)).thenReturn(testDto);
             when(tariffDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());

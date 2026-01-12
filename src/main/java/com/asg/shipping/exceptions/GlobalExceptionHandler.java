@@ -145,4 +145,9 @@ public class GlobalExceptionHandler {
         }
         return ApiResponse.badRequest(ex.getMessage());
     }
+
+    @ExceptionHandler(com.asg.common.lib.exception.ValidationException.class)
+    public ResponseEntity<?> handleValidationException(com.asg.common.lib.exception.ValidationException ex) {
+        return ApiResponse.badRequest(ex.getMessage());
+    }
 }
