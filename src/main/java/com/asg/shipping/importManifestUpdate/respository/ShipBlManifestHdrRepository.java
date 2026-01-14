@@ -80,4 +80,6 @@ public interface ShipBlManifestHdrRepository extends JpaRepository<ShipBlManifes
    /* @Query("SELECT COUNT(h) > 0 FROM ShipBlManifestHdr h " +
             "WHERE h.docRef = :docRef AND h.transactionPoid != :excludeTransactionPoid AND h.deleted = 'N'")
     boolean existsByDocRefExcludingPoid(@Param("docRef") String docRef, @Param("excludeTransactionPoid") Long excludeTransactionPoid);*/
+
+    Optional<ShipBlManifestHdr> findByTransactionPoidAndBlNumber(Long transactionPoid, String blNumber);
 }
