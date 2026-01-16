@@ -8,6 +8,9 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.service.LovDataService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.entity.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.repository.*;
@@ -49,6 +52,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     private final ShipDemDtnTransferBillDtlRepository billDtlRepository;
     private final DocumentSearchService documentService;
     private final LovDataService lovService;
+    private final LoggingService loggingService;
     private final DemurrageDetentionPayableTransferMapper mapper;
     private final EntityManager entityManager;
     private final JdbcTemplate jdbcTemplate;
@@ -112,6 +116,9 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         dto.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
 
         enrichLovData(dto);
+
+        // Log view
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully retrieved demurrage/detention payable transfer with id: {}", id);
         return dto;
@@ -183,6 +190,9 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
+        // Log creation
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getTransactionPoid().toString());
+
         log.info("Successfully created demurrage/detention payable transfer with id: {}", saved.getTransactionPoid());
         return result;
     }
@@ -244,6 +254,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
+        // Log update with details
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), id.toString());
+        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", id);
+        String tableName = ShipDemDetnTransferHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
+
         log.info("Successfully updated demurrage/detention payable transfer with id: {}", id);
         return result;
     }
@@ -266,6 +281,12 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         entity.setLastModifiedDate(LocalDateTime.now());
 
         headerRepository.save(entity);
+
+        // Log deletion with details
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
+        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", id);
+        String tableName = ShipDemDetnTransferHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
 
         log.info("Successfully deleted demurrage/detention payable transfer with id: {}", id);
     }
@@ -382,17 +403,16 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         // Query available containers from view - using NOT EXISTS instead of NOT IN for better compatibility
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER V ");
-        sql.append("WHERE NOT EXISTS (");
+        sql.append("WHERE V.BL_TYPE = ? ");
+        sql.append("AND V.LINE_POID = ? ");
+        sql.append("AND V.COMPANY_POID = ? ");
+        sql.append("AND NOT EXISTS (");
         sql.append("  SELECT 1 FROM SHIP_DEM_DETN_TRANSFER_HDR H ");
         sql.append("  INNER JOIN SHIP_DEM_DETN_TRANSFER_DTL D ON D.TRANSACTION_POID = H.TRANSACTION_POID ");
         sql.append("  WHERE NVL(H.DELETED, 'N') = 'N' ");
-        sql.append("  AND NVL(D.IS_SELECT, 'N') = 'Y' ");
         sql.append("  AND D.MAINFEST_TRANSACTION_POID = V.MAINFEST_TRANSACTION_POID ");
         sql.append("  AND D.CONTAINER_NO = V.CONTAINER_NO");
         sql.append(") ");
-        sql.append("AND V.BL_TYPE = ? ");
-        sql.append("AND V.LINE_POID = ? ");
-        sql.append("AND V.COMPANY_POID = ? ");
 
         List<Object> params = new java.util.ArrayList<>();
         params.add(request.getBlType());
@@ -400,32 +420,31 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         params.add(companyPoid);
 
         if (request.getEmptyFromDate() != null) {
-            sql.append("AND V.EMPTY_IN_DATE >= ? ");
+            sql.append("AND TRUNC(V.EMPTY_IN) >= ? ");
             params.add(java.sql.Date.valueOf(request.getEmptyFromDate()));
         }
         if (request.getEmptyToDate() != null) {
-            sql.append("AND V.EMPTY_IN_DATE <= ? ");
+            sql.append("AND TRUNC(V.EMPTY_IN) <= ? ");
             params.add(java.sql.Date.valueOf(request.getEmptyToDate()));
         }
 
         sql.append("ORDER BY V.BL_NUMBER");
 
         try {
+            log.debug("Executing SQL: {}", sql.toString());
+            log.debug("With params: {}", params);
             List<Map<String, Object>> containers = jdbcTemplate.queryForList(sql.toString(), params.toArray());
-
             log.info("Found {} available containers", containers.size());
             return Map.of(
                     "containers", containers,
                     "totalCount", containers.size()
             );
         } catch (Exception e) {
-            log.error("Error querying available containers", e);
-            // If view doesn't exist, return empty result instead of throwing error
-            log.warn("VW_SHIP_DEM_DTN_TRANSFER view may not exist. Returning empty result.");
+            log.error("Error querying available containers: {}", e.getMessage(), e);
             return Map.of(
                     "containers", java.util.Collections.emptyList(),
                     "totalCount", 0,
-                    "warning", "View VW_SHIP_DEM_DTN_TRANSFER not found or query failed"
+                    "warning", "View VW_SHIP_DEM_DTN_TRANSFER not found or query failed: " + e.getMessage()
             );
         }
     }
@@ -478,14 +497,14 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         log.info("Updating principal extra days for {} containers", request.getContainerUpdates().size());
 
         for (UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate update : request.getContainerUpdates()) {
-            // Call stored procedure to update principal extra days in BL Manifest
             callProcShipCntPpfredaysUpdate(
                     update.getMainfestTransactionPoid(),
                     update.getExtraFreeDaysPrnpls(),
                     update.getContainerNo()
             );
         }
-
+        
+        entityManager.flush();
         log.info("Successfully updated principal extra days");
     }
 
