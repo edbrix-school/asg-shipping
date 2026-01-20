@@ -157,7 +157,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 
 		Long groupPoid = UserContext.getGroupPoid();
 		Long companyPoid = UserContext.getCompanyPoid();
-		System.err.println("companyPoid --->" + companyPoid);
 
 		ShipMateHdr entity = headerRepository
 				.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
