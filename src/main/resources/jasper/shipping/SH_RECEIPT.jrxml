@@ -1,0 +1,771 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SH_RECEIPT" language="groovy" pageWidth="595" pageHeight="842" columnWidth="495" leftMargin="64" rightMargin="36" topMargin="20" bottomMargin="20" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="2.5937424601000023"/>
+	<property name="ireport.x" value="641"/>
+	<property name="ireport.y" value="323"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<style name="table">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<pen lineWidth="0.25" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="0.25" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.25" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<bottomPen lineWidth="0.25" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#000000"/>
+			<bottomPen lineWidth="0.25" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#000000"/>
+			<bottomPen lineWidth="0.25" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2">
+		<box>
+			<pen lineWidth="1.0" lineColor="#FFFFFF"/>
+		</box>
+	</style>
+	<style name="table 2_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#FFFFFF"/>
+			<bottomPen lineWidth="0.25" lineColor="#FFFFFF"/>
+		</box>
+	</style>
+	<style name="table 2_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#FFFFFF"/>
+			<bottomPen lineWidth="0.25" lineColor="#FFFFFF"/>
+		</box>
+	</style>
+	<style name="table 2_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#FFFFFF"/>
+			<bottomPen lineWidth="0.25" lineColor="#FFFFFF"/>
+		</box>
+		<conditionalStyle>
+			<conditionExpression><![CDATA[new Boolean($V{REPORT_COUNT}.intValue()%2==0)]]></conditionExpression>
+			<style backcolor="#EFF7FF"/>
+		</conditionalStyle>
+	</style>
+	<style name="table 3">
+		<box>
+			<pen lineWidth="1.0" lineColor="#FFFFFF"/>
+		</box>
+	</style>
+	<style name="table 3_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#FFFFFF"/>
+			<bottomPen lineWidth="0.25" lineColor="#FFFFFF"/>
+		</box>
+	</style>
+	<style name="table 3_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#FFFFFF"/>
+			<bottomPen lineWidth="0.25" lineColor="#FFFFFF"/>
+		</box>
+	</style>
+	<style name="table 3_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<topPen lineWidth="0.25" lineColor="#FFFFFF"/>
+			<bottomPen lineWidth="0.25" lineColor="#FFFFFF"/>
+		</box>
+	</style>
+	<style name="table 4">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 4_TH" mode="Opaque" backcolor="#FFFFFF"/>
+	<style name="table 4_CH" mode="Opaque" backcolor="#FFFFFF"/>
+	<style name="table 4_TD" mode="Opaque" backcolor="#FFFFFF"/>
+	<subDataset name="Charge_detail" uuid="f4afee65-d43c-44cb-8911-782411d1267f">
+		<parameter name="P_TRANSACTION_POID" class="java.lang.String"/>
+		<parameter name="P_BL_POID" class="java.math.BigDecimal"/>
+		<parameter name="DETAIL_SHOW_FLAG" class="java.lang.String">
+			<defaultValueExpression><![CDATA["Y"]]></defaultValueExpression>
+		</parameter>
+		<queryString>
+			<![CDATA[SELECT decode(CMAST.CHARGE_CODE,'DEM','Line Demurrage ','Total Amount collected  ') PRINT_GROUP,SUM(AMOUNT+NVL(TAX_AMOUNT,0)) Amount,1 PRINT_GROUP_ORDER FROM AR_SH_RECEIPT_CHARGES_DTL ARCDTL
+LEFT JOIN SHIP_CHARGE_MASTER CMAST ON CMAST.CHARGE_POID = ARCDTL.CHARGE_POID
+WHERE ARCDTL.TRANSACTION_POID = $P{P_TRANSACTION_POID}  AND ARCDTL.BL_POID = $P{P_BL_POID} AND $P{DETAIL_SHOW_FLAG} = 'N'
+GROUP BY decode(CMAST.CHARGE_CODE,'DEM','Line Demurrage ','Total Amount collected  ')
+UNION ALL
+select PRINT_GROUP, sum(Amount) amount,PRINT_GROUP_ORDER from (
+SELECT  (select NVL(min(PRINT_GROUP),GET_CHARGE_NAME(ARCDTL.CHARGE_POID))
+from SHIP_BL_MANIFEST_CHARGES_DTL mchgdtl where mchgdtl.DET_ROW_ID=ARCDTL.CHARGES_DET_ROW_ID and mchgdtl.CHARGE_POID= ARCDTL.CHARGE_POID AND  mchgdtl.TRANSACTION_POID= $P{P_BL_POID}) PRINT_GROUP, (select min(DECODE(SUBSTR(PRINT_GROUP,1,5),'Freig',1,'Local',99999,'Termi',99998,2) )from SHIP_BL_MANIFEST_CHARGES_DTL mchgdtl where mchgdtl.DET_ROW_ID=ARCDTL.CHARGES_DET_ROW_ID and mchgdtl.CHARGE_POID= ARCDTL.CHARGE_POID AND  mchgdtl.TRANSACTION_POID=  $P{P_BL_POID}) PRINT_GROUP_ORDER,
+(Amount+NVL(TAX_AMOUNT,0)) Amount  FROM  AR_SH_RECEIPT_CHARGES_DTL ARCDTL
+inner JOIN SHIP_CHARGE_MASTER CMAST ON CMAST.CHARGE_POID = ARCDTL.CHARGE_POID
+WHERE ARCDTL.TRANSACTION_POID =  $P{P_TRANSACTION_POID}
+AND BL_POID IN(SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_HDR WHERE BL_TYPE = 'IMPORT' and $P{DETAIL_SHOW_FLAG} ='Y'  AND TRANSACTION_POID= $P{P_BL_POID})
+)
+group by  PRINT_GROUP_ORDER,PRINT_GROUP HAVING sum(Amount)<>0
+order by  PRINT_GROUP_ORDER]]>
+		</queryString>
+		<field name="PRINT_GROUP" class="java.lang.String"/>
+		<field name="AMOUNT" class="java.math.BigDecimal"/>
+		<field name="PRINT_GROUP_ORDER" class="java.math.BigDecimal"/>
+		<variable name="Sum_amount" class="java.math.BigDecimal" calculation="Sum">
+			<variableExpression><![CDATA[$F{AMOUNT}]]></variableExpression>
+		</variable>
+		<variable name="Total_text" class="java.lang.String">
+			<variableExpression><![CDATA["Total amount(BD)   :"]]></variableExpression>
+		</variable>
+		<variable name="Total_received" class="java.lang.String">
+			<variableExpression><![CDATA["Amount Received(BD):"]]></variableExpression>
+		</variable>
+	</subDataset>
+	<subDataset name="Payment_details" uuid="9f8bc016-0fd8-4fcf-ae8f-eceaa05024a1">
+		<parameter name="P_TRANSACTION_POID" class="java.lang.String"/>
+		<parameter name="P_PART_OF" class="java.lang.String" isForPrompting="false"/>
+		<queryString>
+			<![CDATA[SELECT DECODE(TRIM(replace(PYMT_TYPE,'IMCO','')),'CHEQUE',$P{P_PART_OF}||' '||BANK_CODE||' '||'CHQ:'||' '||CHQ_CARDNO||' DATED '||to_char(CHQ_DATE,'DD-MON-YYYY')||' BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999')),'CASH',
+$P{P_PART_OF}||' '||'CASH BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999')),'CARD',$P{P_PART_OF}||' '||'CARD:'||BANK_CODE||' '||CHQ_CARDNO||' '||to_char(CHQ_DATE,'DD-MON-YYYY')||' BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999')),TRIM(PYMT_TYPE)||' BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999'))) CASH_CHEQUE
+FROM  AR_SH_RECEIPT_PYMT_DETAILS ARPAYDTL
+LEFT JOIN GLOBAL_CUSTOMER_BANK_MASTER BANKMAS ON BANKMAS.BANK_POID = ARPAYDTL.BANK_POID
+WHERE ARPAYDTL.TRANSACTION_POID = $P{P_TRANSACTION_POID} AND( NVL(AMOUNT,0) > 0)]]>
+		</queryString>
+		<field name="CASH_CHEQUE" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="AmountInWord" uuid="6d678bb5-b09a-4bad-97e2-69af65910fcc">
+		<parameter name="Amount" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[select FN_AMOUNT_IN_WORDS_COMMON($P{Amount},'BHD') AMOUNT_IN_WORD from dual]]>
+		</queryString>
+		<field name="AMOUNT_IN_WORD" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="PartOf" uuid="c3476b5a-187f-4f10-b8e6-58d3b504d11d">
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT DECODE(TRIM(PYMT_TYPE),'CHEQUE',' '||'CHQ:'||BANK_CODE||' '||CHQ_CARDNO||' '||to_char(CHQ_DATE,'DD-MON-YYYY')||' BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999')),'CASH',
+' '||'CASH BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999')),'CARD',' '||'CARD:'||BANK_CODE||' '||CHQ_CARDNO||' '||to_char(CHQ_DATE,'DD-MON-YYYY')||' BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999')),TRIM(PYMT_TYPE)||' BD:'||TRIM(TO_CHAR(AMOUNT,'999,999,999,999.999'))) CASH_CHEQUE
+FROM  AR_SH_RECEIPT_PYMT_DETAILS ARPAYDTL
+LEFT JOIN GL_BANK_MASTER BANKMAS ON BANKMAS.BANK_POID = ARPAYDTL.BANK_POID
+WHERE ARPAYDTL.TRANSACTION_POID = (select transaction_poid from AR_SH_RECEIPT_split_dtl where split_transaction_poid = $P{DOC_KEY_POID}) AND( NVL(AMOUNT,0) > 0)]]>
+		</queryString>
+		<field name="CASH_CHEQUE" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="Container_Details" uuid="bd4a50a5-c132-47cb-a60f-834833eb91e1">
+		<parameter name="P_BL_POID" class="java.math.BigDecimal">
+			<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+		</parameter>
+		<parameter name="DOC_KEY_POID_C" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[select DISTINCT CONTAINER_NO from
+AR_SH_RECEIPT_HDR ARHDR
+INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL SHCNT ON ARHDR.BL_POID=SHCNT.TRANSACTION_POID
+INNER JOIN AR_SH_RECEIPT_CHARGES_DTL SHCHG ON   ARHDR.BL_POID=SHCHG.BL_POID and ARHDR.TRANSACTION_POID=SHCHG.TRANSACTION_POID
+WHERE (TO_CHAR(CHARGE_POID) IN (select  (PARAMETER_VALUE) from GLOBAL_PARAMETERS  where (UPPER(parameter_Keyid_type) IN('CHARGE_IMCO_POID') AND IS_IMCO='Y'))
+OR
+TO_CHAR(CHARGE_POID) IN (select  (PARAMETER_VALUE) from GLOBAL_PARAMETERS  where UPPER(parameter_Keyid_type) IN('CHARGE_DEPOSIT_POID'))) and arhdr.bl_POID= $P{P_BL_POID} AND ARHDR.TRANSACTION_POID=$P{DOC_KEY_POID_C}]]>
+		</queryString>
+		<field name="CONTAINER_NO" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="COMPANY_LOG_1_1" uuid="40fbf5b3-e667-42f1-931b-7c9ec62887c8">
+		<parameter name="LOGIN_COMP_POID_L" class="java.lang.String" isForPrompting="false"/>
+		<parameter name="LOGIN_DIV_POID_L" class="java.lang.String" isForPrompting="false"/>
+		<queryString>
+			<![CDATA[SELECT CM.COMPANY_POID, CM.COMPANY_NAME, CM.ADDRESS, CM.LOGO_IMAGE, CMD.REMARKS, CMD.COMPANY_DIV_LOGO, CMD.COMPANY_DIV_ADDRESS
+FROM GLOBAL_COMPANY_MASTER CM
+INNER JOIN GLOBAL_COMPANY_MASTER_DIV_DTL CMD ON CM.COMPANY_POID = CMD.COMPANY_POID
+WHERE CM.COMPANY_POID = $P{LOGIN_COMP_POID_L}
+AND CMD.DIV_POID = $P{LOGIN_DIV_POID_L}]]>
+		</queryString>
+		<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+		<field name="COMPANY_NAME" class="java.lang.String"/>
+		<field name="ADDRESS" class="java.lang.String"/>
+		<field name="LOGO_IMAGE" class="java.io.InputStream"/>
+		<field name="REMARKS" class="java.lang.String"/>
+		<field name="COMPANY_DIV_LOGO" class="java.io.InputStream"/>
+		<field name="COMPANY_DIV_ADDRESS" class="java.lang.String"/>
+	</subDataset>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_BL_POID" class="java.lang.String"/>
+	<parameter name="DETAIL_SHOW_FLAG" class="java.lang.String">
+		<defaultValueExpression><![CDATA["Y"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT HDR.TRANSACTION_POID,BHDR.BL_number,HDR.DOC_REF DOC_REF,to_char(HDR.TRANSACTION_DATE,'DD-MON-YYYY') TRANSACTION_DATE,
+(TO_DATE(SYSDATE)-TO_DATE(HDR.TRANSACTION_DATE)) ISSUED_DAYS,
+HDR.BL_POID,LMAST.LINE_NAME||'/'||VESSEL_name||'/'||VOYAGE_NO LINE_VESSEL_INFO,
+1 bl_count,
+TO_CHAR(VHDR.ARRIVAL_DATE,'DD-MON-YYYY') ARRIVAL_DATE, PMAST.PORT_NAME, ADHDR.ADDRESS_NAME CUSTOMER_PRINT_NAME,'For'||' '||COMPANY_NAME COMPANY_NAME,(SELECT SUM(AMOUNT+NVL(TAX_Amount,0)) AMOUNT FROM  AR_SH_RECEIPT_CHARGES_DTL CHGDTL
+WHERE CHGDTL.TRANSACTION_POID=HDR.TRANSACTION_POID AND CHGDTL.BL_POID=HDR.BL_POID) TOTAL_CHARGE_AMOUNT,nvl(BHDR.DOCUMENT_COMPANY_POID,nvl(BHDR.COMPANY_POID,1)) COMPANY_POID ,nvl(BHDR.DOCUMENT_COMPANY_DIVISION_POID,nvl(BHDR.DOCUMENT_COMPANY_DIVISION_POID,1)) COMPANY_DIVISION_POID,
+NVL((select DISTINCT 'YES' from
+AR_SH_RECEIPT_HDR ARHDR
+INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL SHCNT ON ARHDR.BL_POID=SHCNT.TRANSACTION_POID
+INNER JOIN AR_SH_RECEIPT_CHARGES_DTL SHCHG ON   ARHDR.BL_POID=SHCHG.BL_POID
+WHERE (TO_CHAR(CHARGE_POID) IN (select  (PARAMETER_VALUE) from GLOBAL_PARAMETERS  where (UPPER(parameter_Keyid_type) IN('CHARGE_IMCO_POID') AND IS_IMCO='Y'))
+OR
+TO_CHAR(CHARGE_POID) IN (select  (PARAMETER_VALUE) from GLOBAL_PARAMETERS  where UPPER(parameter_Keyid_type) IN('CHARGE_DEPOSIT_POID')))
+and arhdr.bl_POID= HDR.BL_POID and shchg.transaction_poid=hdr.transaction_poid),'NO') IS_DEPOSIT,
+  NVL((SELECT decode(TO_CHAR(VHDR.ARRIVAL_DATE,'RRRR'),'2018',DECODE(NVL(DOC_REF,'-999'),'-999','-999','INVOICE TOTAL'),NVL(DOC_REF,'-999')) FROM AR_SH_SALES_INVOICE_HDR WHERE TRANSACTION_POID=NVL(CREATED_INVOICE_POID,-999)),'-999')
+  AS AGAINST_INVOICE
+,
+nvl(FN_FOR_CUSTOMER_ADDRESS('000-000',(select customer_poid from AR_SH_SALES_INVOICE_HDR where transaction_poid=CREATED_INVOICE_POID),'CUSTOMER')
+,ADHDR.ADDRESS_NAME)  DETAILS_ADDRESS
+FROM AR_SH_RECEIPT_HDR HDR
+LEFT JOIN SHIP_BL_MANIFEST_HDR BHDR ON BHDR.TRANSACTION_POID=HDR.BL_POID
+LEFT JOIN SHIP_VOYAGE_HDR   VHDR ON VHDR.TRANSACTION_POID=BHDR.VOYAGE_TRANSACTION_POID
+LEFT JOIN SHIP_LINE_MASTER LMAST ON LMAST.LINE_POID = VHDR.LINE_POID
+LEFT JOIN SHIP_VESSEL_MASTER VMAST ON VMAST.VESSEL_POID = VHDR.VESSEL_POID
+LEFT JOIN GLOBAL_ADDRESS_MASTER ADHDR ON ADHDR.ADDRESS_MASTER_POID=HDR.PRINT_CUSTOMER_POID
+LEFT JOIN SHIP_PORT_MASTER PMAST ON PMAST.PORT_POID = BHDR.PORT_OF_LOADING_POID
+left JOIN GLOBAL_COMPANY_MASTER COMMAST ON COMMAST.COMPANY_POID = nvl(BHDR.DOCUMENT_COMPANY_POID,nvl(BHDR.COMPANY_POID,1))
+WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="DOC_REF" class="java.lang.String"/>
+	<field name="TRANSACTION_DATE" class="java.lang.String"/>
+	<field name="ISSUED_DAYS" class="java.math.BigDecimal"/>
+	<field name="BL_POID" class="java.math.BigDecimal"/>
+	<field name="LINE_VESSEL_INFO" class="java.lang.String"/>
+	<field name="BL_COUNT" class="java.math.BigDecimal"/>
+	<field name="ARRIVAL_DATE" class="java.lang.String"/>
+	<field name="PORT_NAME" class="java.lang.String"/>
+	<field name="CUSTOMER_PRINT_NAME" class="java.lang.String"/>
+	<field name="COMPANY_NAME" class="java.lang.String"/>
+	<field name="TOTAL_CHARGE_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+	<field name="COMPANY_DIVISION_POID" class="java.math.BigDecimal"/>
+	<field name="IS_DEPOSIT" class="java.lang.String"/>
+	<field name="AGAINST_INVOICE" class="java.lang.String"/>
+	<field name="DETAILS_ADDRESS" class="java.lang.String"/>
+	<variable name="V_PAGE_COUNT" class="java.math.BigDecimal" resetType="None" incrementType="Page">
+		<variableExpression><![CDATA[$V{PAGE_NUMBER}]]></variableExpression>
+	</variable>
+	<variable name="Part_of" class="java.lang.String">
+		<variableExpression><![CDATA[$F{BL_COUNT} == 1 ? "" :"PART OF"]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="249" splitType="Stretch">
+			<rectangle radius="10">
+				<reportElement x="-1" y="130" width="274" height="73" uuid="3a8b4434-e611-48bc-bd56-942f46c489d4"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle radius="10">
+				<reportElement mode="Transparent" x="273" y="130" width="221" height="73" backcolor="#FFFFFF" uuid="24486d15-c04b-4634-af89-536cee52c2e3"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</rectangle>
+			<staticText>
+				<reportElement x="171" y="85" width="146" height="27" uuid="718be290-4318-4e31-91b6-d0113b79e2c3">
+					<printWhenExpression><![CDATA[$F{IS_DEPOSIT}.contains( 'NO' )]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="20" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[R E C E I P T]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="373" y="153" width="111" height="18" uuid="df99db3b-410e-45eb-98f1-3164ddb73ced"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TRANSACTION_DATE}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToTallestObject" x="85" y="211" width="232" height="18" uuid="e3582f6e-b6d8-47fb-948e-62b3e67067f9"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LINE_VESSEL_INFO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="407" y="210" width="87" height="18" uuid="908e19f8-4727-4532-b2d1-21bc64e9480b"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ARRIVAL_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="301" y="153" width="61" height="18" uuid="cad0c566-24b6-4f78-bfad-1c49e1bfcfab"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Date          ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="394" y="210" width="5" height="18" uuid="fdac6152-c60a-4246-ab75-9d078fb46139"/>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="328" y="210" width="61" height="18" uuid="457f03ab-56fe-42ee-99a9-dc773b64370d"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Arrived]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="373" y="134" width="111" height="18" uuid="4335f18e-0051-4572-8219-4edb083b1fa0"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Courier New" size="9" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DOC_REF}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="301" y="172" width="61" height="18" uuid="048b7f03-abf6-4be3-8d30-98b805bab425"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[BL No.        ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="301" y="134" width="61" height="18" uuid="b4f87926-bfdc-4798-8a05-883b601f7344"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Receipt No.	 ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="362" y="172" width="5" height="18" uuid="b22d85e0-7c42-424c-8c74-941e46b65919"/>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="1" y="229" width="73" height="18" uuid="7baa1658-3ba1-4ea8-82cc-b4c5074c72a1"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Port of Load        ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="362" y="134" width="5" height="18" uuid="5f33a798-503f-4f45-ac19-70d03079d066"/>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="362" y="153" width="5" height="18" uuid="a10ea17c-5061-4bab-ba0f-dbb70d2074c1"/>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="0" y="211" width="74" height="18" uuid="dd79ccfc-7f42-4032-afab-e900a2a9b879"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Line/Vessel/Voy ]]></text>
+			</staticText>
+			<line>
+				<reportElement x="-1" y="206" width="495" height="1" uuid="0a7b1feb-a2d9-46a9-b79a-b446ea98aa2f"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+			<textField isBlankWhenNull="true">
+				<reportElement x="85" y="231" width="232" height="18" uuid="82bd297a-ccb3-4e33-ade2-98fbaa9143c8"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PORT_NAME}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="5" y="132" width="268" height="71" uuid="ec4a65c2-5bfa-4299-b7d7-a12e36820be0"/>
+				<textElement>
+					<font fontName="SansSerif" size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DETAILS_ADDRESS}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="373" y="172" width="111" height="18" uuid="197d23fe-5056-434f-b295-72ea14bc0296"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="77" y="231" width="5" height="18" uuid="80933d4f-010e-4e4e-b6fa-de8cbef7fa58"/>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="77" y="211" width="5" height="18" uuid="dc40c526-0421-4061-a512-bbd728eb312c"/>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="185" y="107" width="118" height="16" uuid="415b0ce4-4f69-49eb-bd0b-2cb9cfe554ee">
+					<printWhenExpression><![CDATA[$F{ISSUED_DAYS}>0]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="11" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[(D U P L I C A T E)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="39" y="85" width="387" height="27" uuid="900c8229-0b8f-4c9f-b470-e91557206765">
+					<printWhenExpression><![CDATA[$F{IS_DEPOSIT}.contains( 'YES' )]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="20" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[D E P O S I T  R E C E I P T]]></text>
+			</staticText>
+			<componentElement>
+				<reportElement key="table 4" x="2" y="2" width="492" height="65" uuid="82d4bbcf-3ecf-4fb6-aa2d-43c185a99ddc"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="COMPANY_LOG_1_1" uuid="5d0b011f-6a67-4cf5-b5f0-52d0441ada4c">
+						<datasetParameter name="LOGIN_COMP_POID_L">
+							<datasetParameterExpression><![CDATA[$F{COMPANY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="LOGIN_DIV_POID_L">
+							<datasetParameterExpression><![CDATA[$F{COMPANY_DIVISION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="507" uuid="119367b5-cd1f-40b9-a48a-6d30d6bfa24a">
+						<jr:detailCell height="86" rowSpan="1">
+							<image hAlign="Center">
+								<reportElement x="0" y="0" width="507" height="62" forecolor="#FFFFFF" uuid="0ec1bd10-670f-43ea-999c-a284d9489421"/>
+								<imageExpression><![CDATA[$F{COMPANY_DIV_LOGO}]]></imageExpression>
+							</image>
+							<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+								<reportElement x="0" y="66" width="507" height="15" isPrintWhenDetailOverflows="true" uuid="1ac25c31-49b7-44cf-a1cb-ad00de3ad76c"/>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font fontName="SansSerif" size="8"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{COMPANY_DIV_ADDRESS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+		</band>
+	</title>
+	<detail>
+		<band height="119" splitType="Stretch">
+			<line>
+				<reportElement x="1" y="2" width="493" height="1" uuid="928f0a0f-cd78-4a19-94a2-2fd0aadd81e5"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+			<componentElement>
+				<reportElement key="Detail" style="table 2" mode="Transparent" x="0" y="3" width="494" height="46" uuid="2a1aa99d-7600-4bb6-9ac3-a548f89f57d4">
+					<printWhenExpression><![CDATA[$F{AGAINST_INVOICE}.contains( '-999' )]]></printWhenExpression>
+				</reportElement>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Charge_detail" uuid="41fae942-4f35-4200-ada2-51d3c1596618">
+						<datasetParameter name="P_TRANSACTION_POID">
+							<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="P_BL_POID">
+							<datasetParameterExpression><![CDATA[$F{BL_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="DETAIL_SHOW_FLAG">
+							<datasetParameterExpression><![CDATA[$P{DETAIL_SHOW_FLAG}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="329" uuid="49e98193-0e4b-448b-958c-38e567e8cd0b">
+						<jr:columnHeader style="table 1_TH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="329" height="16" backcolor="#FFFFFF" uuid="9e38a314-ab5c-481d-899b-fd4a4d5e33ec"/>
+								<textElement>
+									<font fontName="SansSerif" isBold="true"/>
+								</textElement>
+								<text><![CDATA[Description]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="Row" height="19" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="3" width="329" height="16" uuid="f185d15f-d468-4787-8c53-61d2a017d110"/>
+								<textElement>
+									<font fontName="SansSerif"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{PRINT_GROUP}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="155" uuid="cfbdd1aa-156a-4fed-8fa3-c79c6b805e60">
+						<jr:columnHeader style="table 1_TH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="155" height="16" uuid="e8a94606-e525-4495-91bb-f262d0beb67e"/>
+								<textElement textAlignment="Right">
+									<font fontName="SansSerif" isBold="true"/>
+								</textElement>
+								<text><![CDATA[Amount(BHD)]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="Row" height="19" rowSpan="1">
+							<textField pattern="#,##,##0.000">
+								<reportElement x="3" y="3" width="151" height="16" uuid="705ae7a1-5e12-4c0d-ab6d-a39fe7d3b470"/>
+								<textElement textAlignment="Right">
+									<font fontName="SansSerif"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{AMOUNT}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToTallestObject" x="5" y="30" width="268" height="18" uuid="180f2b87-74b3-4741-8cb7-a17847fd05c7">
+					<printWhenExpression><![CDATA[!$F{AGAINST_INVOICE}.contains( '-999' )]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AGAINST_INVOICE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="5" y="12" width="74" height="18" uuid="ed46bc07-9410-400c-93d7-93b64d31717c">
+					<printWhenExpression><![CDATA[!$F{AGAINST_INVOICE}.contains( '-999' )]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font fontName="SansSerif" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Against Invoice]]></text>
+			</staticText>
+			<staticText>
+				<reportElement positionType="Float" x="394" y="10" width="92" height="16" uuid="b231be55-fd2a-450e-9cf4-fe7cd97005f6">
+					<printWhenExpression><![CDATA[!$F{AGAINST_INVOICE}.contains( '-999' )]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Total Amount(BD) 	]]></text>
+			</staticText>
+			<textField pattern="#,##,##0.000">
+				<reportElement positionType="Float" x="411" y="28" width="70" height="16" uuid="2de9b7e2-11ad-4366-8eaa-f68e30a55f1c">
+					<printWhenExpression><![CDATA[!$F{AGAINST_INVOICE}.contains( '-999' )]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL_CHARGE_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="1" y="8" width="493" height="1" uuid="d783df43-e338-4dda-a437-4a65817c47d0">
+					<printWhenExpression><![CDATA[!$F{AGAINST_INVOICE}.contains( '-999' )]]></printWhenExpression>
+				</reportElement>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+		</band>
+		<band height="102" splitType="Stretch">
+			<componentElement>
+				<reportElement key="" x="5" y="0" width="207" height="25" uuid="45bdb422-36f6-4ce5-af6e-3e0214ea9550"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Container_Details" uuid="0901b36a-eb61-4cfc-a64f-19dfdf0164a3">
+						<datasetParameter name="P_BL_POID">
+							<datasetParameterExpression><![CDATA[$F{BL_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="DOC_KEY_POID_C">
+							<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="114" uuid="4f3e1310-0f52-4773-9b15-8c783482e0ea">
+						<jr:columnHeader style="table 4_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="108" height="16" uuid="619741f5-9160-4465-abd0-eecc6be8c8e0"/>
+								<text><![CDATA[Container Number :-]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 4_TD" height="17" rowSpan="1">
+							<textField>
+								<reportElement x="0" y="0" width="108" height="16" isPrintInFirstWholeBand="true" uuid="5dd7e4a3-bc68-42cf-82af-8faf0b1ae001"/>
+								<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+		</band>
+		<band height="93">
+			<componentElement>
+				<reportElement key="table 4" x="5" y="24" width="312" height="16" isRemoveLineWhenBlank="true" uuid="bda6346f-1951-4087-b840-081a3091bf06"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Payment_details" uuid="512bdd54-6dbf-49c1-b069-8ce85a75ced5">
+						<datasetParameter name="P_TRANSACTION_POID">
+							<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="P_PART_OF">
+							<datasetParameterExpression><![CDATA[$V{Part_of}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="383" uuid="2350891a-95aa-4227-b4b5-46948e62a8c5">
+						<jr:detailCell height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="378" height="16" isRemoveLineWhenBlank="true" uuid="34f17c10-1975-4aca-bcb8-e61cb00cbebd"/>
+								<textElement>
+									<font fontName="SansSerif"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CASH_CHEQUE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<line>
+				<reportElement positionType="Float" x="1" y="0" width="494" height="1" uuid="2c2a1443-4f87-4f48-ade3-8aabfb3209cf"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+			<textField pattern="#,##,##0.000">
+				<reportElement positionType="Float" x="411" y="4" width="70" height="16" uuid="56f148c4-5f70-43e8-8613-58618f5b93cc"/>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL_CHARGE_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="317" y="4" width="92" height="16" uuid="34598bad-cf2d-4ba9-9733-1538b15288af"/>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Total Amount(BD) 	:]]></text>
+			</staticText>
+			<line>
+				<reportElement x="1" y="23" width="494" height="1" uuid="7f0bd3c0-0c71-4c3d-9126-8064591bbcd9"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+			<componentElement>
+				<reportElement key="table 4" stretchType="RelativeToTallestObject" x="77" y="4" width="240" height="16" uuid="4fd20e31-25a4-4223-9584-66762bd1e164"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="AmountInWord" uuid="0e41c0ae-4546-4691-81ec-f53026c22f28">
+						<datasetParameter name="Amount">
+							<datasetParameterExpression><![CDATA[$F{TOTAL_CHARGE_AMOUNT}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="230" uuid="e6e6ff35-595a-4837-a32e-80e8b57eca1e">
+						<jr:detailCell height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement stretchType="RelativeToTallestObject" x="0" y="0" width="230" height="20" uuid="b12ab54f-7e9d-4127-95a5-f2fc95ce90f1"/>
+								<textFieldExpression><![CDATA[$F{AMOUNT_IN_WORD}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<staticText>
+				<reportElement x="5" y="3" width="69" height="20" uuid="0fe34fcd-8e23-4566-82e3-4bef926eadd5"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Bahrain Dinar ]]></text>
+			</staticText>
+			<componentElement>
+				<reportElement key="table 4" positionType="Float" stretchType="RelativeToBandHeight" x="5" y="40" width="312" height="47" isRemoveLineWhenBlank="true" uuid="76884e37-f272-4fe0-ae46-ba81dac9ef34"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="PartOf" uuid="5e4d9420-3704-4e3e-8c02-66d8ded1ace3">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="380" uuid="a0d9d2f7-b68f-4455-af0f-28c46092f6b8">
+						<jr:tableHeader height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="380" height="16" uuid="36a49405-38b4-4837-a3f8-a2399e208600"/>
+								<textElement>
+									<font fontName="SansSerif"/>
+								</textElement>
+								<text><![CDATA[Part of]]></text>
+							</staticText>
+						</jr:tableHeader>
+						<jr:detailCell height="16" rowSpan="1">
+							<textField>
+								<reportElement x="0" y="0" width="378" height="16" isRemoveLineWhenBlank="true" uuid="4d0a1c1c-6353-4149-bed9-acc2ec5997ea"/>
+								<textElement>
+									<font fontName="SansSerif"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CASH_CHEQUE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="72" splitType="Stretch">
+			<staticText>
+				<reportElement positionType="Float" x="2" y="3" width="259" height="15" uuid="94b4ef54-4fa9-47e7-80d1-f0a0b754b962"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[(Cheques are subject to realization)]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="0" y="23" width="234" height="18" uuid="b7ed2fd3-42fd-4f16-9550-85ecce30658c"/>
+				<textElement>
+					<font fontName="SansSerif" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{COMPANY_NAME}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="1" y="68" width="494" height="1" uuid="46aec5e6-8ef0-47a3-a7f8-ece435223a14"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="3" y="47" width="481" height="12" forecolor="#999999" uuid="22692d74-e883-45d2-9ba8-792f6bcf4c52"/>
+				<textElement textAlignment="Justified" verticalAlignment="Bottom">
+					<font size="7"/>
+				</textElement>
+				<text><![CDATA[ISO:300-102                                                                                 Computer Generated Document, Requires No Signature.]]></text>
+			</staticText>
+		</band>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>
