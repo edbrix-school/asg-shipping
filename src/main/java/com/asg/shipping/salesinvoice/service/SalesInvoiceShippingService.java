@@ -2,6 +2,7 @@ package com.asg.shipping.salesinvoice.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.salesinvoice.dto.*;
+import net.sf.jasperreports.engine.JRException;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
@@ -45,5 +46,9 @@ public interface SalesInvoiceShippingService {
     BigDecimal getBillCompany(Long blPoid, Long customerPoid);
 
     LoadPrintDataResponseDTO loadPrintData(Long id, LoadPrintDataRequestDTO request);
+
+    byte[] printInvoice(Long transactionPoid,Long blPoid) throws Exception;
+
+    byte[] printCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception;
 }
 

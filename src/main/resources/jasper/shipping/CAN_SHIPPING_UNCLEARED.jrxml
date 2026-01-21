@@ -1,0 +1,669 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="CAN_SHIPPING_UNCLEARED" language="groovy" pageWidth="595" pageHeight="925" columnWidth="530" leftMargin="45" rightMargin="20" topMargin="20" bottomMargin="12" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.2100000000000006"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="182"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="SansSerif" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="SansSerif" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="SansSerif" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<subDataset name="CompanyLogo" uuid="0609c782-d35b-478a-8d93-2cbfa3d6de3c">
+		<parameter name="LOGIN_COMP_POID_L" class="java.lang.String"/>
+		<parameter name="LOGIN_DIV_POID_L" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT CM.COMPANY_POID, CM.COMPANY_NAME, CM.ADDRESS, CM.LOGO_IMAGE, CMD.REMARKS, CMD.COMPANY_DIV_LOGO, CMD.COMPANY_DIV_ADDRESS
+FROM GLOBAL_COMPANY_MASTER CM
+INNER JOIN GLOBAL_COMPANY_MASTER_DIV_DTL CMD ON CM.COMPANY_POID = CMD.COMPANY_POID WHERE CM.COMPANY_POID = $P{LOGIN_COMP_POID_L}
+AND CMD.DIV_POID = $P{LOGIN_DIV_POID_L}]]>
+		</queryString>
+		<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+		<field name="COMPANY_NAME" class="java.lang.String"/>
+		<field name="ADDRESS" class="java.lang.String"/>
+		<field name="LOGO_IMAGE" class="java.io.InputStream"/>
+		<field name="REMARKS" class="java.lang.String"/>
+		<field name="COMPANY_DIV_LOGO" class="java.io.InputStream"/>
+		<field name="COMPANY_DIV_ADDRESS" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="ChargeQuery" uuid="73e85456-531a-4d74-b8be-6e9e0beb06bc">
+		<parameter name="DOC_KEY_POID_CHG" class="java.lang.String">
+			<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+		</parameter>
+		<queryString>
+			<![CDATA[select TRANSACTION_POID,nvl(PRINT_GROUP,'Total charges payable  ') Charge,   DECODE(SUBSTR(PRINT_GROUP,1,5),'Freig',1,'Local',99999,'Termi',99998,2)  PRINT_GROUP_order,null CHARGE_TYPE,
+SUM ( round(nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0),3)) total_amount,
+floor(SUM ( ROUND(nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0),3))) Amount1 ,
+rpad(replace(to_number(mod(SUM(round(nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0),3)),1)),'.',''),3,0) Amount2
+from SHIP_BL_MANIFEST_charges_DTL
+where FREIGHT_TYPE='C'
+AND TRANSACTION_POID= $P{DOC_KEY_POID_CHG}
+AND CHARGE_POID NOT IN  (SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS WHERE PARAMETER_NAME='MANIFEST_IMCO_POID' AND PARAMETER_KEYID_TYPE='CHARGE_IMCO_POID' AND CATEGORY='SHIPPING')
+and   (DET_ROW_ID,CHARGE_POID,TRANSACTION_POID) not in (
+select nvl(CHARGES_DET_ROW_ID,0) ,nvl(CHARGE_POID,0) ,nvl(BL_POID,0)   from AR_SH_RECEIPT_CHARGES_DTL
+)
+GROUP BY  TRANSACTION_POID,PRINT_GROUP
+
+union all
+
+select cntdnt.transaction_poid,'Total Demurrage Amount payable (as of '||to_char(sysdate,'dd-Mon-RRRR') || ') ' Charge, null,null CHARGE_TYPE,
+sum(fUNC_RTN_DEM_DETTN_FULL(vhdr.GROUP_POID , vhdr.COMPANY_POID , -999, cntdnt.transaction_poid, CONTAINER_NO, GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), lINE_POID, ARRIVAL_DATE, to_date(sysdate), 'DEMM', EXTRA_FREE_DAYS)) total_amount,
+floor(sum(fUNC_RTN_DEM_DETTN_FULL(vhdr.GROUP_POID , vhdr.COMPANY_POID , -999, cntdnt.transaction_poid, CONTAINER_NO, GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), lINE_POID, ARRIVAL_DATE, to_date(sysdate), 'DEMM', EXTRA_FREE_DAYS)) ) Amount1 ,
+rpad(replace(to_number(mod(sum(fUNC_RTN_DEM_DETTN_FULL(vhdr.GROUP_POID , vhdr.COMPANY_POID , -999, cntdnt.transaction_poid, CONTAINER_NO, GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), lINE_POID, ARRIVAL_DATE, to_date(sysdate), 'DEMM', EXTRA_FREE_DAYS)) ,1)),'.',''),3,0) Amount2
+from
+SHIP_VOYAGE_HDR vhdr
+inner join SHIP_BL_MANIFEST_HDR mhdr on mhdr.voyage_transaction_poid=vhdr.transaction_poid
+inner join SHIP_BL_MANIFEST_CONTAINER_DTL cntdnt on cntdnt.transaction_poid=mhdr.transaction_poid  AND cntdnt.TRANSACTION_POID= $P{DOC_KEY_POID_CHG} AND RETURN_FROM_CONSIGNEE IS NULL
+GROUP BY  cntdnt.TRANSACTION_POID having (sum(fUNC_RTN_DEM_DETTN_FULL(vhdr.GROUP_POID , vhdr.COMPANY_POID , -999, cntdnt.transaction_poid, CONTAINER_NO, GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), lINE_POID, ARRIVAL_DATE, to_date(sysdate), 'DEMM', EXTRA_FREE_DAYS)))>0
+
+ORDER BY  TRANSACTION_POID,3]]>
+		</queryString>
+		<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+		<field name="CHARGE" class="java.lang.String"/>
+		<field name="PRINT_GROUP_ORDER" class="java.math.BigDecimal"/>
+		<field name="CHARGE_TYPE" class="java.lang.String"/>
+		<field name="TOTAL_AMOUNT" class="java.math.BigDecimal"/>
+		<field name="AMOUNT1" class="java.math.BigDecimal"/>
+		<field name="AMOUNT2" class="java.lang.String"/>
+		<variable name="Sum_total_Charges" class="java.math.BigDecimal" calculation="Sum">
+			<variableExpression><![CDATA[$F{TOTAL_AMOUNT}]]></variableExpression>
+		</variable>
+		<variable name="Sum_total_Charges_frc" class="java.lang.String">
+			<variableExpression><![CDATA[$V{Sum_total_Charges}.subtract($V{Sum_total_Charges}.intValue()).toString().replace("0.","").concat("000")]]></variableExpression>
+		</variable>
+		<variable name="total_amount1" class="java.math.BigDecimal" calculation="Sum">
+			<variableExpression><![CDATA[$F{AMOUNT1}]]></variableExpression>
+		</variable>
+	</subDataset>
+	<subDataset name="ContainerType" uuid="a052bd9b-8850-48f0-8eba-b5ab3503fa22">
+		<parameter name="DOC_KEY_POID_CNT" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT TRANSACTION_POID,DESCRIPTION FROM   TABLE(func_ship_pivot_any_data($P{DOC_KEY_POID_CNT},'CNTTYPE',NULL)) SHIP_BL_CONTAINER_TYPE
+WHERE TRANSACTION_POID= $P{DOC_KEY_POID_CNT}]]>
+		</queryString>
+		<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+		<field name="DESCRIPTION" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="SpcRefSTD" uuid="9bd8557d-f7c8-4036-9759-f768ae91b1d7">
+		<parameter name="DOC_KEY_POID_LINE" class="java.lang.String"/>
+		<parameter name="DOC_KEY_POID_RUNDAYS" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT TRANSACTION_POID,DESCRIPTION FROM   TABLE(func_ship_pivot_any_data($P{DOC_KEY_POID_RUNDAYS},'LINEFREEDAYS',$P{DOC_KEY_POID_LINE})) SHIP_BL_CONTAINER_TYPE
+WHERE TRANSACTION_POID=$P{DOC_KEY_POID_LINE}]]>
+		</queryString>
+		<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+		<field name="DESCRIPTION" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="CargoDesc" uuid="c8d729ac-802b-4027-aa10-26e494eb520f">
+		<parameter name="DOC_KEY_POID_CARGO" class="java.lang.String"/>
+		<parameter name="P_DISPLAY_LINE" class="java.lang.String" isForPrompting="false"/>
+		<queryString>
+			<![CDATA[SELECT TRANSACTION_POID,DESCRIPTION FROM   TABLE(func_ship_pivot_any_data($P{DOC_KEY_POID_CARGO},'CARGO',null))  SHIP_BL_CONTAINER_TYPE
+WHERE TRANSACTION_POID= $P{DOC_KEY_POID_CARGO} AND   GET_LINE_poid('MSC')<>$P{P_DISPLAY_LINE}
+UNION ALL
+select TRANSACTION_POID,MAX(CARGO_DESCRIPTION) from SHIP_BL_MANIFEST_CONTAINER_DTL scdtl where scdtl.TRANSACTION_POID= $P{DOC_KEY_POID_CARGO}
+AND GET_LINE_poid('MSC')=$P{P_DISPLAY_LINE}
+GROUP BY TRANSACTION_POID
+UNION ALL
+select TRANSACTION_POID,MAX(CARGO_DESCRIPTION) from SHIP_BL_MANIFEST_GENERAL_DTL scdtl where scdtl.TRANSACTION_POID= $P{DOC_KEY_POID_CARGO}
+GROUP BY TRANSACTION_POID]]>
+		</queryString>
+		<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+		<field name="DESCRIPTION" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="AmountsInWord" uuid="ab584604-f28e-4578-81d5-c6e5dbe90e01">
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<parameter name="DOC_KEY_POID_CHG" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[select TRANSACTION_POID,FN_AMOUNT_IN_WORDS_COMMON(sum(amount),'BHD') Amount,REGEXP_SUBSTR (sum(amount), '[^.]+', 1, 1) Amount_NUM1,rpad(REGEXP_SUBSTR (sum(amount), '[^.]+', 1, 2),3,0) Amount_NUM2 from(
+select TRANSACTION_POID,
+SUM((nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0))) Amount from SHIP_BL_MANIFEST_charges_DTL
+where FREIGHT_TYPE='C'
+AND TRANSACTION_POID= $P{DOC_KEY_POID_CHG} and 1=2
+GROUP BY CHARGE_POID,CHARGE_TYPE,TRANSACTION_POID
+ union all
+select TRANSACTION_POID,SUM((nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0))) Amount from SHIP_BL_MANIFEST_charges_DTL
+where FREIGHT_TYPE='C'
+AND TRANSACTION_POID= $P{DOC_KEY_POID_CHG}
+AND CHARGE_POID NOT IN  (SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS WHERE PARAMETER_NAME='MANIFEST_IMCO_POID' AND PARAMETER_KEYID_TYPE='CHARGE_IMCO_POID' AND CATEGORY='SHIPPING')
+GROUP BY  TRANSACTION_POID
+union all
+select TRANSACTION_POID,SUM((nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0))) Amount from SHIP_BL_MANIFEST_charges_DTL
+where FREIGHT_TYPE='C' and nvl(CHARGE_BASIS_ON,'XXXX') like '%AUTOBASIS%'
+AND TRANSACTION_POID= $P{DOC_KEY_POID_CHG}
+AND CHARGE_POID  IN  (SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS WHERE PARAMETER_NAME='MANIFEST_IMCO_POID' AND PARAMETER_KEYID_TYPE='CHARGE_IMCO_POID' AND CATEGORY='SHIPPING')
+GROUP BY  TRANSACTION_POID
+ORDER BY  TRANSACTION_POID)
+group by TRANSACTION_POID]]>
+		</queryString>
+		<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+		<field name="AMOUNT" class="java.lang.String"/>
+		<field name="AMOUNT_NUM1" class="java.lang.String"/>
+		<field name="AMOUNT_NUM2" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="imcoprint" uuid="73e80a99-31dc-4da3-96c6-d5389e430dff">
+		<parameter name="DOC_KEY_POID_CHG" class="java.lang.String">
+			<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+		</parameter>
+		<queryString>
+			<![CDATA[select TRANSACTION_POID,'Total IMCO Deposit Amount payable (Separate Cheque)  ' Charge, null,null CHARGE_TYPE,
+SUM ( (nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0))) total_amount,
+floor(SUM ( (nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0)))) Amount1 ,
+rpad(replace(to_number(mod(SUM(nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0)),1)),'.',''),3,0) Amount2
+from SHIP_BL_MANIFEST_charges_DTL
+where FREIGHT_TYPE='C'
+AND CHARGE_POID  IN  (SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS WHERE PARAMETER_NAME='MANIFEST_IMCO_POID' AND PARAMETER_KEYID_TYPE='CHARGE_IMCO_POID' AND CATEGORY='SHIPPING')
+ AND TRANSACTION_POID= $P{DOC_KEY_POID_CHG}
+GROUP BY  TRANSACTION_POID
+
+
+ORDER BY  TRANSACTION_POID,3]]>
+		</queryString>
+		<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+		<field name="CHARGE" class="java.lang.String"/>
+		<field name="NULL" class="java.lang.String"/>
+		<field name="CHARGE_TYPE" class="java.lang.String"/>
+		<field name="TOTAL_AMOUNT" class="java.math.BigDecimal"/>
+		<field name="AMOUNT1" class="java.math.BigDecimal"/>
+		<field name="AMOUNT2" class="java.lang.String"/>
+	</subDataset>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["100-203"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT  nvl((select
+SUM ( round((nvl(CURRENCY_EXCHANGE,1)*nvl(QUANTITY,0)*nvl(PER_QUANTITY_AMOUNT,0))+nvl(tax_amount,0),3)) oth_total_amount from SHIP_BL_MANIFEST_charges_DTL
+where FREIGHT_TYPE='C'
+AND TRANSACTION_POID= shdr.TRANSACTION_POID
+and   (DET_ROW_ID,CHARGE_POID,TRANSACTION_POID) not in (
+select nvl(CHARGES_DET_ROW_ID,0) ,nvl(CHARGE_POID,0) ,nvl(BL_POID,0)   from AR_SH_RECEIPT_CHARGES_DTL
+) and ((SELECT nvl(SUM(NVL(DR_AMT,0)-NVL(CR_AMT,0)),1) FROM GL_LEDGER_BILLWISE_BREAKUP
+WHERE (GL_POID,BILL_REF) IN (
+SELECT GL_POID,DOC_REF FROM AR_SH_SALES_INVOICE_HDR ARH
+INNER JOIN SALES_CUSTOMER_MASTER SCM ON ARH.CUSTOMER_POID=SCM.CUSTOMER_POID  WHERE TRANSACTION_POID IN (
+select RECEIPT_INVOICE_POID from SHIP_BL_MANIFEST_charges_DTL where TRANSACTION_POID=shdr.TRANSACTION_POID
+and FREIGHT_TYPE='C'
+)
+))>0)  ),0) oth_total_amount ,
+ (SELECT
+NVL(dem_total_amount + ((dem_total_amount*(SELECT NVL(MAX(PERCENTAGE),0) FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN (SELECT TAX_POID FROM SHIP_CHARGE_MASTER WHERE CHARGE_POID=RTN_GLOBAL_PARAMETER(1, 'SHIPPERDEMURRAGE', 'SHDEMURRAGE', 1, '0'))))/100),0)
+FROM
+(select
+sum(fUNC_RTN_DEM_DETTN_FULL(vhdr.GROUP_POID , vhdr.COMPANY_POID , -999, cntdnt.transaction_poid, CONTAINER_NO, GET_CONTAINER_CODE_POID(cntdnt.EQUIPMENT_ISO_TYPE), lINE_POID, vhdr.ARRIVAL_DATE, to_date(sysdate), 'DEMM', EXTRA_FREE_DAYS)) dem_total_amount
+from
+SHIP_VOYAGE_HDR vhdr
+inner join SHIP_BL_MANIFEST_HDR mhdr on mhdr.voyage_transaction_poid=vhdr.transaction_poid
+inner join SHIP_BL_MANIFEST_CONTAINER_DTL cntdnt on cntdnt.transaction_poid=mhdr.transaction_poid
+AND RETURN_FROM_CONSIGNEE IS NULL
+AND mhdr.TRANSACTION_POID= shdr.TRANSACTION_POID
+where
+(fUNC_RTN_DEM_DETTN_FULL(vhdr.GROUP_POID , vhdr.COMPANY_POID , -999, cntdnt.transaction_poid, CONTAINER_NO, GET_CONTAINER_CODE_POID(cntdnt.EQUIPMENT_ISO_TYPE), lINE_POID, vhdr.ARRIVAL_DATE, to_date(sysdate), 'DEMM', EXTRA_FREE_DAYS))>0)
+ )
+dem_total_amount,
+ CARGO_ARRIVAL_NUMBER DOC_REF,to_CHAR(nvl(ARRIVAL_DATE,EXPECTED_DATE),'DD-MON-YYYY') expected_arrival_date,
+shdr.TRANSACTION_POID,TO_CHAR(shdr.TRANSACTION_DATE,'DD-MON-YYYY') TRANSACTION_DATE,VOYAGE_TRANSACTION_POID,BL_NUMBER,FREIGHT_STATUS,
+GET_COMPANY_NAME(shdr.COMPANY_POID) COMPANY,  SHIPPER_EDI_NAME,SHIPPER_EDI_ADDRESS,nvl(GET_ADDRESS_NAME(CONSIGNEE_POID),CONSIGNEE_EDI_NAME)  CONSIGNEE_EDI_NAME,CONSIGNEE_EDI_ADDRESS,
+nvl(decode(NOTIFY_POID_1,'1',NOTIFY1_EDI_NAME,GET_ADDRESS_NAME(NOTIFY_POID_1)),NOTIFY1_EDI_NAME) NOTIFY1_EDI_NAME,
+ nvl(decode(NOTIFY_POID_1,'1',NOTIFY1_EDI_ADDRESS,GET_ADDRESS_DETAILS_WITH_TYPE(NOTIFY_ADDRESS_POID_1,NULL)),NOTIFY1_EDI_ADDRESS) NOTIFY1_EDI_ADDRESS,
+NOTIFY2_EDI_NAME,NOTIFY2_EDI_ADDRESS,
+NOTIFY3_EDI_NAME,NOTIFY3_EDI_ADDRESS,CAN_NOTIFY_CUSTOMER_POID,
+VOYAGE_NO,GET_VESSEL_NAME(VESSEL_POID) ||' / '||voyage_no vessel_name,
+BL_STATUS,PORT_OF_LOADING_POID,GET_PORT_NAME(PORT_OF_LOADING_POID) PORT_OF_LOADING,GET_PORT_NAME(PORT_OF_DISCHARGE_POID) PORT_OF_DISCHARGE,REMARKS
+,TOTAL_VOLUME,TOTAL_WEIGHT,
+(
+SELECT SUM(NO_OF_PACKS) FROM (
+select sum(NO_OF_PACKS) NO_OF_PACKS from SHIP_BL_MANIFEST_CONTAINER_DTL scdtl where scdtl.TRANSACTION_POID= shdr.TRANSACTION_POID
+   UNION
+select sum(NO_OF_PACKS)  from SHIP_BL_MANIFEST_GENERAL_DTL scdtl where scdtl.TRANSACTION_POID= shdr.TRANSACTION_POID )) TOTAL_NO_OF_PACKS,
+(
+  SELECT MAX(PACK_UNIT) FROM (
+  select  max(PACK_UNIT) PACK_UNIT from SHIP_BL_MANIFEST_CONTAINER_DTL scdtl where scdtl.TRANSACTION_POID= shdr.TRANSACTION_POID
+  UNION
+  select  max(PACK_UNIT) from SHIP_BL_MANIFEST_GENERAL_DTL scdtl where scdtl.TRANSACTION_POID= shdr.TRANSACTION_POID
+)
+) UNIT_PACK,upper(DECODE(BL_ISSUE_TYPE,'1','ORIGINAL BL REQUIRED','2','EXPRESS RELEASED','3','SEAWAY BILL','4','OTHER')) BL_ISSUE_TYPE,
+NVL(shdr.DOCUMENT_COMPANY_POID,shdr.COMPANY_POID) PRINT_COMPANY_POID,NVL(shdr.DOCUMENT_COMPANY_DIVISION_POID,1) PRINT_COMPANY_DIVISION_POID,
+company_name,
+line_name LINE_SHORT_NAME,
+LNMAST.line_poid,
+NVL((SELECT 'X' FROM VOYAGEWISEBILLS_APPROVED WHERE BL_POID=shdr.TRANSACTION_POID),'NOT FINALIZED-DRAFT ONLY') DRAFT_YES_NO,
+decode(freight_status,'1','PREPAID','2','COLLECT','3','ELSE WHERE','OTHER') freight_status1,
+(select min(SEND_YES_NO_DATE) from GLOBAL_EMAIL_FAX_RECORDS
+where LINK_TRANSACTION_POID=shdr.transaction_poid) sent_date, to_Date(sysdate) current_date
+FROM SHIP_BL_MANIFEST_HDR shdr
+inner join SHIP_VOYAGE_HDR vhdr
+on VHDR.TRANSACTION_POID=SHDR.VOYAGE_TRANSACTION_POID
+left join global_company_master comp
+on NVL(shdr.DOCUMENT_COMPANY_POID,shdr.COMPANY_POID)  = comp.company_poid
+INNER JOIN SHIP_LINE_MASTER LNMAST  ON LNMAST.LINE_POID  =vhdr.LINE_POID
+where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="OTH_TOTAL_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="DEM_TOTAL_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="DOC_REF" class="java.lang.String"/>
+	<field name="EXPECTED_ARRIVAL_DATE" class="java.lang.String"/>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="TRANSACTION_DATE" class="java.lang.String"/>
+	<field name="VOYAGE_TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="FREIGHT_STATUS" class="java.lang.String"/>
+	<field name="COMPANY" class="java.lang.String"/>
+	<field name="SHIPPER_EDI_NAME" class="java.lang.String"/>
+	<field name="SHIPPER_EDI_ADDRESS" class="java.lang.String"/>
+	<field name="CONSIGNEE_EDI_NAME" class="java.lang.String"/>
+	<field name="CONSIGNEE_EDI_ADDRESS" class="java.lang.String"/>
+	<field name="NOTIFY1_EDI_NAME" class="java.lang.String"/>
+	<field name="NOTIFY1_EDI_ADDRESS" class="java.lang.String"/>
+	<field name="NOTIFY2_EDI_NAME" class="java.lang.String"/>
+	<field name="NOTIFY2_EDI_ADDRESS" class="java.lang.String"/>
+	<field name="NOTIFY3_EDI_NAME" class="java.lang.String"/>
+	<field name="NOTIFY3_EDI_ADDRESS" class="java.lang.String"/>
+	<field name="CAN_NOTIFY_CUSTOMER_POID" class="java.math.BigDecimal"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="VESSEL_NAME" class="java.lang.String"/>
+	<field name="BL_STATUS" class="java.lang.String"/>
+	<field name="PORT_OF_LOADING_POID" class="java.math.BigDecimal"/>
+	<field name="PORT_OF_LOADING" class="java.lang.String"/>
+	<field name="PORT_OF_DISCHARGE" class="java.lang.String"/>
+	<field name="REMARKS" class="java.lang.String"/>
+	<field name="TOTAL_VOLUME" class="java.math.BigDecimal"/>
+	<field name="TOTAL_WEIGHT" class="java.math.BigDecimal"/>
+	<field name="TOTAL_NO_OF_PACKS" class="java.math.BigDecimal"/>
+	<field name="UNIT_PACK" class="java.lang.String"/>
+	<field name="BL_ISSUE_TYPE" class="java.lang.String"/>
+	<field name="PRINT_COMPANY_POID" class="java.math.BigDecimal"/>
+	<field name="PRINT_COMPANY_DIVISION_POID" class="java.math.BigDecimal"/>
+	<field name="COMPANY_NAME" class="java.lang.String"/>
+	<field name="LINE_SHORT_NAME" class="java.lang.String"/>
+	<field name="LINE_POID" class="java.math.BigDecimal"/>
+	<field name="DRAFT_YES_NO" class="java.lang.String"/>
+	<field name="FREIGHT_STATUS1" class="java.lang.String"/>
+	<field name="SENT_DATE" class="java.sql.Timestamp"/>
+	<field name="CURRENT_DATE" class="java.sql.Timestamp"/>
+	<variable name="as agent" class="java.lang.String">
+		<variableExpression><![CDATA[$F{COMPANY_NAME}]]></variableExpression>
+		<initialValueExpression><![CDATA[$F{COMPANY_NAME}]]></initialValueExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="869" splitType="Stretch">
+			<staticText>
+				<reportElement x="0" y="76" width="511" height="30" uuid="6e907084-7e16-42c1-9e50-1ba547c96fd4"/>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="13" isBold="true" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[UNCLEARED CARGO NOTICE]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="39" y="150" width="469" height="15" uuid="d770930b-b136-43d0-95d0-3187543e1539"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="10" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOTIFY1_EDI_NAME} + " (As Notify Party)"]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="2" y="130" width="35" height="15" uuid="f3ae9004-af42-47e3-abb8-18212deaf031"/>
+				<text><![CDATA[To:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="2" y="216" width="86" height="15" backcolor="#FFFFFF" uuid="e0328334-d1d5-475d-afca-ea1ae5a1723d"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[Vessel / Voy]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="2" y="273" width="85" height="15" backcolor="#FFFFFF" uuid="b8573083-16de-4358-80db-c5054ba6be73"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[Discharged On]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="3" y="236" width="84" height="15" backcolor="#FFFFFF" uuid="bf1f877b-c103-4c45-9e96-dacdd005e513"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[POL]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="2" y="178" width="125" height="15" backcolor="#FFFFFF" uuid="6ed06597-f3a1-4d23-90a6-177ce8647b1e"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[BILL OF LADING NO.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="2" y="199" width="138" height="15" backcolor="#FFFFFF" uuid="c8a37f67-c6e9-4fc1-838b-4d1f07ee818f"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[Container No(s)  & Type]]></text>
+			</staticText>
+			<componentElement>
+				<reportElement key="table" x="0" y="0" width="508" height="60" uuid="6ba2fade-83ec-41f8-85b4-5022947853ce"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="CompanyLogo" uuid="2d8215dd-0ff4-4232-8fcd-b0acf63eb175">
+						<datasetParameter name="LOGIN_COMP_POID_L">
+							<datasetParameterExpression><![CDATA[$F{PRINT_COMPANY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="LOGIN_DIV_POID_L">
+							<datasetParameterExpression><![CDATA[$F{PRINT_COMPANY_DIVISION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="512" uuid="4fae2a16-f001-4361-bc58-1beeb514ce2b">
+						<jr:detailCell height="65" rowSpan="1">
+							<image hAlign="Center">
+								<reportElement x="0" y="0" width="511" height="62" forecolor="#FFFFFF" uuid="7ffbd0b5-711d-41da-b846-426f2dd329c0"/>
+								<imageExpression><![CDATA[$F{COMPANY_DIV_LOGO}]]></imageExpression>
+							</image>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<textField isBlankWhenNull="true">
+				<reportElement x="146" y="217" width="293" height="15" uuid="5c016e6f-3d0c-4b0c-89e2-91c00c86edd2"/>
+				<textFieldExpression><![CDATA[$F{VESSEL_NAME}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="146" y="272" width="98" height="15" uuid="fc5ded4f-b3fe-439c-be6a-d33a28114394"/>
+				<textFieldExpression><![CDATA[$F{EXPECTED_ARRIVAL_DATE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="39" y="132" width="469" height="15" uuid="ad64ac50-bbb7-43d0-9eb1-e1f636cf1393"/>
+				<textFieldExpression><![CDATA[$F{CONSIGNEE_EDI_NAME}+" (As Consignee)"]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="145" y="178" width="118" height="15" uuid="606c9c49-2b72-46ba-a165-eaa49e2e5bef"/>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<componentElement>
+				<reportElement key="table" x="144" y="199" width="225" height="15" uuid="c307d387-b4a4-42bc-8d4b-99148ce62a04"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="ContainerType" uuid="6604b2c9-d5cc-4cb1-85be-383643f4b288">
+						<datasetParameter name="DOC_KEY_POID_CNT">
+							<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="272" uuid="b36f0b91-5562-4d1e-ac7d-5ba90fd0df45">
+						<jr:detailCell height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="272" height="20" uuid="b9b08707-40e2-4f32-bbc5-572b62006270"/>
+								<textFieldExpression><![CDATA[$F{DESCRIPTION}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<textField isBlankWhenNull="true">
+				<reportElement x="146" y="237" width="129" height="15" uuid="98ed7909-5435-4761-bb5d-fa93d442cb08"/>
+				<textFieldExpression><![CDATA[$F{PORT_OF_LOADING}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="127" y="826" width="279" height="12" uuid="d89fc261-e8fc-4784-9d44-dfe473d5bfed"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[CUSTOMER SERVICES: TEL: 17515050; D/O OFFICE: TEL: 17515065]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="825" width="511" height="1" uuid="bbfbf239-39c4-4f37-a8ea-308731ce2fc9"/>
+				<graphicElement>
+					<pen lineWidth="0.4"/>
+				</graphicElement>
+			</line>
+			<textField pattern="dd-MMM-yy" isBlankWhenNull="false">
+				<reportElement x="70" y="109" width="85" height="15" uuid="81ae0a74-f49b-440e-b099-397f471dbceb"/>
+				<textFieldExpression><![CDATA[$F{CURRENT_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="3" y="108" width="65" height="15" uuid="34c8ac5a-a8a1-4224-9c5e-8547ce0f6757"/>
+				<text><![CDATA[As On Date :]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="148" y="256" width="129" height="15" uuid="9c150311-0dea-4403-b458-c6c9cf6e24e9"/>
+				<textFieldExpression><![CDATA[$F{PORT_OF_DISCHARGE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement mode="Opaque" x="3" y="256" width="84" height="15" backcolor="#FFFFFF" uuid="ac89343b-1ebe-4693-96ff-3d9987fd5de6"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[POD]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="335" width="527" height="72" uuid="ce4daaa1-2844-455c-959c-44aea1292913"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Dear Sirs,
+
+With reference to our cargo arrival notice and subsequent reminders to you to clear the consignment, we regret to inform you that the consignment remains unclaimed till date for reasons best known to you.
+]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="488" width="527" height="216" uuid="391ed7f6-8ed4-4aa5-bd44-8cd31075c13d"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[We therefore strongly urge you to take delivery immediately without further delay and will hold you fully responsible for all costs and consequences.
+
+We specifically remind you that the Carrier has fulfilled its obligations under the terms of the Bill of Lading/Sea WayBill and that the cargo remains at the wharf/terminal at your full risk, exposure and expenses. The Carrier shall not be liable for any damages or loss whatsoever caused due to this unreasonably long idling of container(s)/cargo.
+
+If we do not receive any positive response from your office within 7 days of receipt of this letter, we shall reserve the right to initiate proceedings with the concerned authorities for permission to destuff the cargo, and retrieve our container. All relevant costs in this connection will be debited to your account.
+
+Should you wish to discuss this matter or require any further information, please contact our office as a matter of priority.
+
+Yours faithfully,]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="2" y="699" width="216" height="20" uuid="96eb1b70-50b8-4062-96d6-969ccd282b57"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["For "+ $V{as agent}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="2" y="724" width="257" height="29" uuid="9971a6f0-75af-42dc-acdb-8bb45e826efb"/>
+				<text><![CDATA[As Agents Only
+For and on behalf of
+]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="2" y="757" width="190" height="20" uuid="993b0f78-7bcf-45ed-b650-6b2128baf709"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LINE_SHORT_NAME}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement mode="Opaque" x="138" y="178" width="5" height="15" backcolor="#FFFFFF" uuid="a3ca023e-4860-443e-823e-c0f3c9ce22c5"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="138" y="217" width="5" height="15" backcolor="#FFFFFF" uuid="b604be36-7f59-441b-9170-1f04942039f1"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="138" y="198" width="5" height="15" backcolor="#FFFFFF" uuid="6470aa4f-6780-4ff8-b6e2-4aabbce90692"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="138" y="237" width="5" height="15" backcolor="#FFFFFF" uuid="af3b9ac7-6a7e-4d6c-85c4-2a6c465671f0"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="138" y="255" width="5" height="15" backcolor="#FFFFFF" uuid="d0cadad8-1d2b-48eb-8ada-c0c594810b0a"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="398" width="527" height="18" uuid="ee214aac-4382-4861-ac2e-97b82f2b2288"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Please note that as of today the costs incurred are as follows:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="429" width="527" height="18" uuid="982685f9-4832-4033-ac81-e81a345ab222"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Port Storage: (Settle directly with terminals)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="414" width="125" height="18" uuid="8cb6ea17-ed67-4221-ae95-c9c261a63e91"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Line Demurrage: ]]></text>
+			</staticText>
+			<textField pattern="#,##0.000;(-#,##0.000)">
+				<reportElement x="127" y="414" width="148" height="15" uuid="a03e8204-6a22-4303-b658-a07c67769a15"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DEM_TOTAL_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="1" y="445" width="87" height="18" uuid="3b225034-625e-46e9-860d-bb678c9d4206"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Others: ]]></text>
+			</staticText>
+			<textField pattern="###0.000;(-###0.000)">
+				<reportElement x="127" y="445" width="148" height="15" uuid="0aeb5c14-195c-4257-a87c-0b17acfa6ebc"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{OTH_TOTAL_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="2" y="467" width="527" height="29" uuid="1c8b472d-94e9-46d5-a130-abb2d369b8ea"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[For your information, line demurrages and terminal storage charges continue to increase on a daily basis.]]></text>
+			</staticText>
+			<frame>
+				<reportElement x="1" y="290" width="505" height="25" uuid="5b74cd9a-8f6f-4708-a9ef-5d397bc4fc06"/>
+				<staticText>
+					<reportElement x="3" y="7" width="122" height="15" uuid="bdcf8b4b-4378-4ac4-9683-03fdf8a4c873"/>
+					<textElement>
+						<font size="9"/>
+					</textElement>
+					<text><![CDATA[CARGO DESCRIPTION         ]]></text>
+				</staticText>
+				<staticText>
+					<reportElement mode="Opaque" x="134" y="7" width="5" height="15" backcolor="#FFFFFF" uuid="0edb7170-0c50-4fab-945a-d28f1f5d436b"/>
+					<textElement>
+						<font fontName="SansSerif" size="10"/>
+					</textElement>
+					<text><![CDATA[:]]></text>
+				</staticText>
+				<componentElement>
+					<reportElement key="table" positionType="Float" stretchType="RelativeToBandHeight" isPrintRepeatedValues="false" mode="Transparent" x="151" y="0" width="339" height="16" uuid="088e3728-8ac3-42ed-9427-45b0f61c250d"/>
+					<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+						<datasetRun subDataset="CargoDesc" uuid="3d449a83-8987-4144-bab3-6d8d836f0bce">
+							<datasetParameter name="DOC_KEY_POID_CARGO">
+								<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+							</datasetParameter>
+							<datasetParameter name="P_DISPLAY_LINE">
+								<datasetParameterExpression><![CDATA[$F{LINE_POID}]]></datasetParameterExpression>
+							</datasetParameter>
+							<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+						</datasetRun>
+						<jr:column width="378" uuid="355bcef9-fafc-4db1-9d54-fa83020819d8">
+							<jr:detailCell height="17" rowSpan="1">
+								<textField isBlankWhenNull="true">
+									<reportElement stretchType="RelativeToTallestObject" x="0" y="0" width="378" height="16" uuid="244e3acd-eed1-4cc1-8e90-19663692a767"/>
+									<textElement verticalAlignment="Top"/>
+									<textFieldExpression><![CDATA[$F{DESCRIPTION}]]></textFieldExpression>
+								</textField>
+							</jr:detailCell>
+						</jr:column>
+					</jr:table>
+				</componentElement>
+			</frame>
+			<staticText>
+				<reportElement mode="Opaque" x="138" y="273" width="5" height="15" backcolor="#FFFFFF" uuid="ab6dbd31-8f0b-4e35-bc5f-958a5f9ee70d"/>
+				<textElement>
+					<font fontName="SansSerif" size="10"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="102" y="414" width="23" height="18" uuid="1eb18b2d-b737-4bc7-b785-c0741f53568e"/>
+				<textElement textAlignment="Right">
+					<font fontName="Serif" isBold="true"/>
+				</textElement>
+				<text><![CDATA[BD]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="102" y="445" width="23" height="18" uuid="c29b6b65-0f25-4aa5-a245-ba29661ed435"/>
+				<textElement textAlignment="Right">
+					<font fontName="Serif" isBold="true"/>
+				</textElement>
+				<text><![CDATA[BD]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="776" width="204" height="12" uuid="c7a9f029-237e-4113-b040-99caf2b04a29"/>
+				<textElement verticalAlignment="Middle">
+					<font size="8" isBold="true" isItalic="true"/>
+				</textElement>
+				<text><![CDATA[Special Note :]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="786" width="509" height="32" uuid="ff7fb70d-06bf-4988-8b0c-216d330533c2"/>
+				<textElement>
+					<font size="8" isBold="true" isItalic="true"/>
+				</textElement>
+				<text><![CDATA[All prices mentioned in this document are exclusive of any taxes, including (but not limited to) VAT or other indirect taxes that may be imposed by any public or governmental authority in respect of this document. Each Party will bear their respective tax liability, if any, applicable in their country of reporting.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="841" width="508" height="16" forecolor="#999999" uuid="9d08b3c7-6740-4b2a-88e6-ea33f0f4f9d8"/>
+				<textElement>
+					<font size="9" isBold="false" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[ISO : 100-203                                     This is a computer-generated document and it does not require a signature.]]></text>
+			</staticText>
+		</band>
+	</title>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

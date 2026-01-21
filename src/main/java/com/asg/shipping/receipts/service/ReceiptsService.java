@@ -2,6 +2,7 @@ package com.asg.shipping.receipts.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.receipts.dto.*;
+import net.sf.jasperreports.engine.JRException;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Map;
@@ -21,4 +22,6 @@ public interface ReceiptsService {
 	ReceiptAutoPopulateDto autoPopulateFields(Long blPoid,Long transactionPoid);
 
 	ReceiptCalculateDemurrageResponseDto calculateDemurrage(ReceiptCalculateDemurrageRequestDto requestDto);
+
+    byte[] validityPrint(Long transactionPoid, Long blPoid) throws Exception;
 }

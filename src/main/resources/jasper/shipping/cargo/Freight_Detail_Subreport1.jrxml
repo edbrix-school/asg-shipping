@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Freight_Detail_Subreport1" language="groovy" pageWidth="238" pageHeight="802" columnWidth="238" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\10.100.1.24\\adflibrary\\deployed\\Reports\\Templates\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_FREIGHTCARGO" class="java.lang.String">
+		<defaultValueExpression><![CDATA['FALSE']]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT GET_CHARGE_CODE(CHARGE_POID)  EDI_CHARGE_CODE,CURRENCY_CODE, SUM(BUY_PERCHARGE) BUY_PERCHARGE,QUANTITY,FREIGHT_TYPE,
+SUM(nvl(BUY_PERCHARGE,0)*nvl(QUANTITY,0)) as TOTALAMT
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+inner join SHIP_BL_MANIFEST_CHARGES_DTL CHGDTL
+ON MFHDR.TRANSACTION_POID =CHGDTL.TRANSACTION_POID
+where MFHDR.TRANSACTION_POID = $P{DOC_KEY_POID} AND CHARGE_TYPE ='MANIFEST'
+AND $P{P_FREIGHTCARGO}='TRUE' and BUY_PERCHARGE is not null
+GROUP BY GET_CHARGE_CODE(CHARGE_POID),CURRENCY_CODE,
+QUANTITY,FREIGHT_TYPE,CHARGE_BASIS_ON HAVING SUM(BUY_PERCHARGE)<>0
+order by GET_CHARGE_CODE(CHARGE_POID)]]>
+	</queryString>
+	<field name="EDI_CHARGE_CODE" class="java.lang.String"/>
+	<field name="CURRENCY_CODE" class="java.lang.String"/>
+	<field name="BUY_PERCHARGE" class="java.math.BigDecimal"/>
+	<field name="QUANTITY" class="java.math.BigDecimal"/>
+	<field name="FREIGHT_TYPE" class="java.lang.String"/>
+	<field name="TOTALAMT" class="java.math.BigDecimal"/>
+	<variable name="PREPAID" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$F{FREIGHT_TYPE}.equals("P")?($F{TOTALAMT}):null]]></variableExpression>
+	</variable>
+	<variable name="COLLECT" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$F{FREIGHT_TYPE}.equals("C")?($F{TOTALAMT}):null]]></variableExpression>
+	</variable>
+	<variable name="ELSEWHERE" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$F{FREIGHT_TYPE}.equals("E")?($F{TOTALAMT}):null]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="19" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="31" y="0" width="21" height="18" uuid="739dd851-77b1-4146-908f-f847a3a696c9"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CURRENCY_CODE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="51" y="0" width="43" height="18" uuid="f0a473b3-20dc-49de-b499-07dedd445852"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BUY_PERCHARGE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="93" y="0" width="22" height="18" uuid="9571c04d-0579-4e33-ba7e-38cfaf4b8f03"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{QUANTITY}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="157" y="0" width="45" height="18" uuid="1417675d-0a9d-47b8-8bdd-49948a77ddc2"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{COLLECT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="116" y="0" width="41" height="18" uuid="b5b7bbfb-8b0e-4bd8-a68c-e0b16fc8bc4a"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{PREPAID}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="1" y="0" width="31" height="18" uuid="1ee80003-ee7b-4f9f-a663-2e208588d5c6"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EDI_CHARGE_CODE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="202" y="0" width="36" height="18" uuid="51e64574-fac2-4546-9ebe-e2db0df0fe47"/>
+				<textElement textAlignment="Right">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{ELSEWHERE}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

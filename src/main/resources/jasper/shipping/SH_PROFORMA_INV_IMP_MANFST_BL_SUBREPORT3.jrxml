@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT3" language="groovy" pageWidth="570" pageHeight="360" columnWidth="570" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="dd942e33-2433-4f5a-90dd-62aacd8710fd">
+	<property name="ireport.zoom" value="2.357947691000002"/>
+	<property name="ireport.x" value="174"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="P_CHRG_TRN_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_DEM_DATE" class="java.lang.String"/>
+	<parameter name="P_DISC_PER" class="java.lang.String" isForPrompting="false"/>
+	<queryString>
+		<![CDATA[select
+demurrage_details,
+demmurrage_base_amt,
+discper, amtafterdisc,
+demurrage_tax_percent,demurrage_tax_amt,demurrage_total
+from
+(
+select
+'Line Demurrage upto ' || $P{P_DEM_DATE} demurrage_details,
+demmurrage_base_amt,
+$P{P_DISC_PER} discper,
+demmurrage_base_amt - (($P{P_DISC_PER}/100)*demmurrage_base_amt) amtafterdisc,
+demurrage_tax_percent,
+((demurrage_tax_percent/100)*(demmurrage_base_amt - (($P{P_DISC_PER}/100)*demmurrage_base_amt))) demurrage_tax_amt,
+(demmurrage_base_amt - (($P{P_DISC_PER}/100)*demmurrage_base_amt)) + ((demurrage_tax_percent/100)*((demmurrage_base_amt - (($P{P_DISC_PER}/100)*demmurrage_base_amt)))) demurrage_total
+from
+(
+SELECT NVL(dem_total_amount,0) demmurrage_base_amt,
+                (
+                    SELECT NVL(MAX(PERCENTAGE), 0)
+                    FROM GLOBAL_TAX_MASTER
+                    WHERE TAX_POID IN (
+                        SELECT TAX_POID
+                        FROM SHIP_CHARGE_MASTER
+                        WHERE CHARGE_POID = RTN_GLOBAL_PARAMETER(1, 'SHIPPERDEMURRAGE', 'SHDEMURRAGE', 1, '0')
+                    )
+                ) demurrage_tax_percent
+FROM (
+    SELECT SUM(
+        fUNC_RTN_DEM_DETTN_FULL(
+            vhdr.GROUP_POID, vhdr.COMPANY_POID, -999,
+            cntdnt.transaction_poid, CONTAINER_NO,
+            GET_CONTAINER_CODE_POID(cntdnt.EQUIPMENT_ISO_TYPE),
+            lINE_POID, vhdr.ARRIVAL_DATE, TO_DATE($P{P_DEM_DATE}),
+            'DEMM', EXTRA_FREE_DAYS
+        )
+    ) dem_total_amount
+    FROM SHIP_VOYAGE_HDR vhdr
+    INNER JOIN SHIP_BL_MANIFEST_HDR mhdr ON mhdr.voyage_transaction_poid = vhdr.transaction_poid
+    INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL cntdnt ON cntdnt.transaction_poid = mhdr.transaction_poid
+    WHERE RETURN_FROM_CONSIGNEE IS NULL
+      AND mhdr.TRANSACTION_POID = $P{P_CHRG_TRN_POID}
+      AND (
+        fUNC_RTN_DEM_DETTN_FULL(
+            vhdr.GROUP_POID, vhdr.COMPANY_POID, -999,
+            cntdnt.transaction_poid, CONTAINER_NO,
+            GET_CONTAINER_CODE_POID(cntdnt.EQUIPMENT_ISO_TYPE),
+            lINE_POID, vhdr.ARRIVAL_DATE, TO_DATE($P{P_DEM_DATE}),
+            'DEMM', EXTRA_FREE_DAYS
+        )
+      ) > 0
+)
+)
+
+union all
+
+select GET_CHARGE_NAME(CHARGE_CODE_POID) Charge_name,nvl(nvl(AMOUNT_20,AMOUNT_40),AMOUNT_OTHER) base_amount,
+'0' discper, nvl(nvl(AMOUNT_20,AMOUNT_40),AMOUNT_OTHER),
+Tax_Percentage, round(nvl(nvl(AMOUNT_20,AMOUNT_40),AMOUNT_OTHER)*(Tax_Percentage/100),3) Tax_Amount,
+(nvl(nvl(AMOUNT_20,AMOUNT_40),AMOUNT_OTHER)+round(nvl(nvl(AMOUNT_20,AMOUNT_40),AMOUNT_OTHER)*(Tax_Percentage/100),3) )total_amount from
+(
+select CHARGE_TYPE_APPLICABLE,CHARGE_APPLICABLE,CHARGE_CODE_POID,AMOUNT_20,AMOUNT_40,AMOUNT_OTHER,
+(
+    SELECT TAX_POID
+    FROM GLOBAL_TAX_MASTER
+    WHERE TAX_POID IN (
+        SELECT TAX_POID  FROM GLOBAL_TAX_PERIOD_HDR GTH
+        INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID
+        WHERE TO_DATE(sysdate) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) AND CHARGE_POID=CHARGE_CODE_POID
+    )
+) Tax_poid,
+(
+    SELECT  PERCENTAGE FROM GLOBAL_TAX_MASTER
+    WHERE TAX_POID IN (
+        SELECT TAX_POID  FROM GLOBAL_TAX_PERIOD_HDR GTH
+        INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID
+        WHERE TO_DATE(sysdate) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) AND CHARGE_POID=CHARGE_CODE_POID
+    )
+) Tax_Percentage,
+RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX',1, 'N') TAX_APPLICABLE
+from SHIP_PORT_CHARGES_HDR MCHDR
+INNER JOIN  SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID
+WHERE  (
+    SELECT to_date(nvl(ARRIVAL_DATE,EXPECTED_DATE))
+    FROM  SHIP_VOYAGE_HDR VHDR
+    INNER JOIN  SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID
+    where blhdr.transaction_poid =$P{P_CHRG_TRN_POID}
+)
+BETWEEN PERIOD_FROM AND PERIOD_TO AND nvl(CHARGE_LINE_POID,'0') ='0'
+AND CHARGE_TYPE_APPLICABLE IN ('LATECOLLECTIONIMP','LATECOLLECTIONBOTH') and NVL(deleted,'N')='N'
+AND (
+    SELECT (to_date(sysdate)-to_date(nvl(ARRIVAL_DATE,EXPECTED_DATE)))+1 days
+    FROM  SHIP_VOYAGE_HDR VHDR
+    INNER JOIN   SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID
+    INNER JOIN   SHIP_BL_MANIFEST_CHARGES_DTL cntdtl ON cntdtl.TRANSACTION_POID=BLHDR.TRANSACTION_POID
+    where    nvl(blhdr.transaction_poid,0) not in( SELECT nvl(BL_POID,0) FROM AR_SH_RECEIPT_HDR
+UNION ALL
+    SELECT nvl(BL_POID,0)  FROM AR_SH_SALES_INVOICE_HDR WHERE nvl(INVOICE_TYPE,'xx')<>'AUTOCAN') AND blhdr.transaction_poid = $P{P_CHRG_TRN_POID}
+    group by  to_date(nvl(ARRIVAL_DATE,EXPECTED_DATE)),BLHDR.TRANSACTION_POID
+) >=(
+    SELECT TO_NUMBER(PARAMETER_VALUE) FROM GLOBAL_PARAMETERS WHERE PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%'
+)
+union all
+select CHARGE_TYPE_APPLICABLE,CHARGE_APPLICABLE,CHARGE_CODE_POID,CONTAINER_COUNT*AMOUNT_20,CONTAINER_COUNT*AMOUNT_40,AMOUNT_OTHER,
+(
+    SELECT TAX_POID  FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN (
+    SELECT TAX_POID  FROM GLOBAL_TAX_PERIOD_HDR GTH
+    INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID
+    WHERE TO_DATE(sysdate) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) AND CHARGE_POID=CHARGE_CODE_POID)
+) Tax_poid,
+(
+    SELECT  PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN (
+        SELECT TAX_POID  FROM GLOBAL_TAX_PERIOD_HDR GTH
+        INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID
+        WHERE TO_DATE(sysdate) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) AND CHARGE_POID=CHARGE_CODE_POID
+    )
+) Tax_Percentage,
+RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', '1', 'N') TAX_APPLICABLE
+from SHIP_PORT_CHARGES_HDR MCHDR
+INNER JOIN  SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID
+LEFT JOIN ( SELECT COUNT(CONTAINER_NO) CONTAINER_COUNT FROM SHIP_VOYAGE_HDR vhdr
+    INNER JOIN SHIP_BL_MANIFEST_HDR mhdr ON mhdr.voyage_transaction_poid = vhdr.transaction_poid
+    INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL cntdnt ON cntdnt.transaction_poid = mhdr.transaction_poid
+    WHERE RETURN_FROM_CONSIGNEE IS NULL
+      AND mhdr.TRANSACTION_POID = $P{P_CHRG_TRN_POID}
+      AND (
+        fUNC_RTN_DEM_DETTN_FULL(
+            vhdr.GROUP_POID, vhdr.COMPANY_POID, -999,
+            cntdnt.transaction_poid, CONTAINER_NO,
+            GET_CONTAINER_CODE_POID(cntdnt.EQUIPMENT_ISO_TYPE),
+            lINE_POID, vhdr.ARRIVAL_DATE, TO_DATE($P{P_DEM_DATE}),
+            'DEMM', EXTRA_FREE_DAYS
+        )
+      ) > 0) ON 1=1
+WHERE  (
+    SELECT to_date(nvl(ARRIVAL_DATE,EXPECTED_DATE))
+    FROM  SHIP_VOYAGE_HDR VHDR
+    INNER JOIN   SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID
+    where  BLHDR.TRANSACTION_POID in (
+        SELECT BL_POID FROM AR_SH_RECEIPT_HDR UNION ALL
+        SELECT BL_POID FROM AR_SH_SALES_INVOICE_HDR
+        WHERE nvl(INVOICE_TYPE,'xx')<>'AUTOCAN'
+    ) and blhdr.transaction_poid =$P{P_CHRG_TRN_POID}
+) BETWEEN PERIOD_FROM AND PERIOD_TO
+AND nvl(CHARGE_LINE_POID,'0') ='0'
+AND CHARGE_TYPE_APPLICABLE IN ('REVALIDATEIMP','REVALIDATEBOTH') and NVL(deleted,'N')='N'
+ORDER BY CHARGE_TYPE_APPLICABLE,CHARGE_APPLICABLE
+)
+)]]>
+	</queryString>
+	<field name="DEMURRAGE_DETAILS" class="java.lang.String"/>
+	<field name="DEMMURRAGE_BASE_AMT" class="java.math.BigDecimal"/>
+	<field name="DISCPER" class="java.lang.String"/>
+	<field name="AMTAFTERDISC" class="java.math.BigDecimal"/>
+	<field name="DEMURRAGE_TAX_PERCENT" class="java.math.BigDecimal"/>
+	<field name="DEMURRAGE_TAX_AMT" class="java.math.BigDecimal"/>
+	<field name="DEMURRAGE_TOTAL" class="java.math.BigDecimal"/>
+	<variable name="TOTAL_DEMURRAGE_VAT" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{DEMURRAGE_TAX_AMT}]]></variableExpression>
+	</variable>
+	<variable name="TOTAL_DEMURRAGE_BASE" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{AMTAFTERDISC}]]></variableExpression>
+	</variable>
+	<variable name="TOTAL_DEMURRAGE" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{DEMURRAGE_TOTAL}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="17">
+			<rectangle>
+				<reportElement mode="Opaque" x="6" y="-1" width="560" height="15" backcolor="#F0F0F0" uuid="c2d8dc3e-9efe-4374-b72c-db319294700f"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<staticText>
+				<reportElement x="6" y="1" width="252" height="12" uuid="3ee4979e-d335-4e9c-acf5-b9e932ac9dfb"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<text><![CDATA[PARTICULARS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="258" y="1" width="44" height="12" uuid="13843989-2042-4a02-9fe7-dbc7b2ba5bda"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[Base Amt]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="401" y="1" width="25" height="12" uuid="e3ef4072-00ae-4eb7-8f57-3c13a78cadf6"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[VAT%]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="428" y="1" width="60" height="12" uuid="b28baf51-b6ee-425d-88b1-cf8fa179999e"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[VAT Amount]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="302" y="0" width="44" height="12" uuid="40f31892-7304-44e6-acd1-7661726bc56d"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[Disc(%)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="349" y="0" width="47" height="12" uuid="d40b576a-a24f-4277-8067-8e6e3a4f4472"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[Amount]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="499" y="1" width="66" height="12" uuid="e26c1f92-a745-47a8-9291-7a9ebb2c2f92"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[Total]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="15" splitType="Stretch">
+			<textField>
+				<reportElement x="6" y="0" width="252" height="12" uuid="c413ea8c-e6f0-4740-a5b6-817e599e188e"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DEMURRAGE_DETAILS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="258" y="0" width="44" height="12" uuid="8449e03f-9fef-41d7-b853-ecc5d00b1668"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DEMMURRAGE_BASE_AMT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="" isBlankWhenNull="true">
+				<reportElement x="401" y="0" width="25" height="12" uuid="eb75e911-26f5-4718-8a57-faf5820b0652"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DEMURRAGE_TAX_PERCENT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="###0.000;-###0.000" isBlankWhenNull="true">
+				<reportElement x="428" y="0" width="60" height="12" uuid="b1e3b1ef-9544-48b8-b3ef-3cf35cdc773c"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DEMURRAGE_TAX_AMT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="499" y="0" width="67" height="12" uuid="38ff2a22-146f-45e9-b637-10a90f53040a"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DEMURRAGE_TOTAL}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="302" y="0" width="44" height="12" uuid="865837f5-30fa-4861-8b5f-35f0f5b254a9"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DISCPER}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="349" y="0" width="47" height="12" uuid="3cf09c29-35cb-40d4-b04b-e65870b5d28e"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AMTAFTERDISC}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

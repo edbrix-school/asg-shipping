@@ -17,8 +17,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +32,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 @RestController
 @RequestMapping("v1/receipts-shipping")
 @RequiredArgsConstructor
+@Slf4j
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "receipts-controller", description = "Manage Receipts records")
 public class ReceiptsController {
@@ -460,6 +464,26 @@ public class ReceiptsController {
 			return success("Demurrage calculated successfully", response);
 		} catch (Exception e) {
 			return internalServerError("Failed to calculate demurrage: " + e.getMessage());
+		}
+	}
+
+	@GetMapping("/validity-print/{transactionPoid}")
+	public ResponseEntity<?> validityPrint(
+			@Parameter(description = "Transaction POID", example = "12345")
+			@PathVariable Long transactionPoid,
+			@Parameter(description = "BL POID", example = "67890")
+			@RequestParam Long blPoid
+	) {
+		try {
+			byte[] pdf = receiptsService.validityPrint(transactionPoid, blPoid);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF)
+					.body(pdf);
+		} catch (Exception e) {
+			log.error("error",e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
 		}
 	}
 }

@@ -760,5 +760,43 @@ public class SalesInvoiceShippingController {
         };
     }
 
+    @GetMapping("/print-invoice/{transactionPoid}")
+    public ResponseEntity<?> printInvoice(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "BL POID", example = "92170", required = true)
+            @RequestParam Long blPoid) {
+        try {
+            byte[] pdf = service.printInvoice(transactionPoid,blPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=sales-invoice-shipping-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Journal Voucher: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+    }
+    @GetMapping("/customer-autocharge/{transactionPoid}")
+    public ResponseEntity<?> printCustomerAutoCharge(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "BL POID", example = "92170", required = true)
+            @RequestParam Long blPoid) {
+        try {
+            byte[] pdf = service.printCustomerAutoCharge(transactionPoid,blPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=sales-invoice-shipping-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Journal Voucher: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+    }
 }
 

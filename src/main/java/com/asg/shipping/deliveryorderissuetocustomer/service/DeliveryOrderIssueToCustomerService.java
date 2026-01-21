@@ -1,8 +1,12 @@
 package com.asg.shipping.deliveryorderissuetocustomer.service;
 
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
+import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerPrintRequest;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import net.sf.jasperreports.engine.JRException;
+
+import java.util.Map;
 
 public interface DeliveryOrderIssueToCustomerService {
     /**
@@ -19,4 +23,6 @@ public interface DeliveryOrderIssueToCustomerService {
      * Update delivery order details
      */
     DeliveryOrderIssueToCustomerDto updateDeliveryOrder(Long id, UpdateDeliveryOrderRequestDto request);
+
+    Map<String, byte[]> validateDocument(Long transactionPoid, IssueDeliveryOrderRequestDto request) throws Exception;
 }

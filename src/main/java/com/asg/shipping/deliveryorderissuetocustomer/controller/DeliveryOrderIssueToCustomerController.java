@@ -3,15 +3,22 @@ package com.asg.shipping.deliveryorderissuetocustomer.controller;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
+import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerPrintRequest;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
+import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 
 @Slf4j
@@ -59,4 +66,43 @@ public class DeliveryOrderIssueToCustomerController {
         DeliveryOrderIssueToCustomerDto dto = deliveryOrderIssueToCustomerService.updateDeliveryOrder(id, request);
         return success("Delivery order updated successfully", dto);
     }
+
+//    @AllowedAction(UserRolesRightsEnum.PRINT)
+//    @PostMapping(
+//            value = "/validate-Document/{transactionPoid}",
+//            produces = MediaType.MULTIPART_MIXED_VALUE
+//    )
+//    public ResponseEntity<?> print(
+//            @PathVariable Long transactionPoid,
+//            @RequestBody IssueDeliveryOrderRequestDto request
+//    ) {
+//        try {
+//           , byte[] pdfs =
+//                    deliveryOrderIssueToCustomerService.validateDocument(transactionPoid, request);
+//
+//            if (pdfs.isEmpty()) {
+//                return ResponseEntity.noContent().build();
+//            }
+//
+//            MultipartBodyBuilder builder = new MultipartBodyBuilder();
+//
+//            pdfs.forEach((name, bytes) ->
+//                    builder.part(name, bytes)
+//                            .contentType(MediaType.APPLICATION_PDF)
+//                            .header(
+//                                    HttpHeaders.CONTENT_DISPOSITION,
+//                                    "attachment; filename=" + name + "-" + transactionPoid + ".pdf"
+//                            )
+//            );
+//
+//            return ResponseEntity.ok()
+//                    .contentType(MediaType.MULTIPART_MIXED)
+//                    .body(builder.build());
+//
+//        } catch (Exception e) {
+//            log.error("Failed to generate PDFs", e);
+//            return error("Failed to generate PDFs: " + e.getMessage(), 500);
+//        }
+//    }
+
 }
