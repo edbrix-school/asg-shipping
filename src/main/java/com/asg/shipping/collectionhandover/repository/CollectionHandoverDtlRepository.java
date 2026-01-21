@@ -34,6 +34,6 @@ public interface CollectionHandoverDtlRepository extends JpaRepository<ArShDayEn
     /**
      * Get max DET_ROW_ID for a transaction (for generating new DET_ROW_ID)
      */
-    @Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM ArShDayEndCloseDtl d WHERE d.transactionPoid = :transactionPoid")
+    @Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM CollectionHandoverDtl d WHERE d.transactionPoid = :transactionPoid")
     Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 }

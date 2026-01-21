@@ -29,7 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/v1/vessel-voyages")
+@RequestMapping("/v1/vessel-voyage-creation-line-edi")
 @Validated
 @Slf4j
 public class VesselVoyageController {
@@ -108,7 +108,7 @@ public class VesselVoyageController {
     @GetMapping("/{voyagePoid}/edi/errors")
     public ResponseEntity<?> ediErrors(@PathVariable Long voyagePoid) {
         log.info("Action={} | Get EDI errors | voyagePoid={}", UserContext.getActionRequested(), voyagePoid);
-        return ApiResponse.success("EDI errors fetched successfully", vesselVoyageService.getEdiErrors(voyagePoid));
+            return ApiResponse.success("EDI errors fetched successfully", vesselVoyageService.getEdiErrors(voyagePoid));
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)

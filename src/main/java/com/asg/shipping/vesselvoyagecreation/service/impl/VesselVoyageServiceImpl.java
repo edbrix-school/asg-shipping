@@ -39,6 +39,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -270,12 +271,21 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     public String reprocessEdi(Long voyagePoid) {
+        require(voyagePoid, "Missing voyagePoid");
         Long groupPoid = require(UserContext.getGroupPoid(), "Missing groupPoid");
         Long companyPoid = require(UserContext.getCompanyPoid(), "Missing companyPoid");
         String docId = Optional.ofNullable(UserContext.getDocumentId()).orElse("100-101");
-        String user = Optional.ofNullable(UserContext.getUserId()).orElse("0");
-        log.info("Reprocess EDI | voyagePoid={} groupPoid={} companyPoid={} docId={} user={}", voyagePoid, groupPoid, companyPoid, docId, user);
-        return storedProcedureRepository.procAttachmentsEdiProcNew(groupPoid, companyPoid, docId, voyagePoid, voyagePoid, user);
+        Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
+
+        // Validate that voyagePoid exists
+        if (!voyageHdrRepository.existsById(voyagePoid)) {
+            throw new ResourceNotFoundException("Voyage not found: " + voyagePoid);
+        }
+        
+        log.info("Reprocess EDI | voyagePoid={} groupPoid={} companyPoid={} docId={} user={}", voyagePoid, groupPoid, companyPoid, docId, userPoid);
+        return storedProcedureRepository.procAttachmentsEdiProcNew(
+                groupPoid, companyPoid, docId, voyagePoid, voyagePoid, userPoid);
+
     }
 
     @Override

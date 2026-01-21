@@ -23,7 +23,7 @@ public class StoredProcedureRepository {
         return (String) q.getOutputParameterValue(2);
     }
 
-    public String procAttachmentsEdiProcNew(Long groupPoid, Long companyPoid, String docId, Long docKeyPoid, Long jobPoid, String loginUser) {
+    public String procAttachmentsEdiProcNew( Long groupPoid, Long companyPoid, String docId, Long docKeyPoid, Long jobPoid, Long userPoid) {
         StoredProcedureQuery q = entityManager.createStoredProcedureQuery("PROC_ATTACHMENTS_EDI_PROC_NEW");
         q.registerStoredProcedureParameter(1, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);
@@ -31,13 +31,13 @@ public class StoredProcedureRepository {
         q.registerStoredProcedureParameter(4, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(5, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(6, String.class, ParameterMode.OUT);
-        q.registerStoredProcedureParameter(7, String.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(7, Long.class, ParameterMode.IN);
         q.setParameter(1, groupPoid);
         q.setParameter(2, companyPoid);
         q.setParameter(3, docId);
         q.setParameter(4, docKeyPoid);
         q.setParameter(5, jobPoid);
-        q.setParameter(7, loginUser);
+        q.setParameter(7, userPoid);
         q.execute();
         return (String) q.getOutputParameterValue(6);
     }

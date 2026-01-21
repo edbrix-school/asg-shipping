@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 /**
  * Entity class for AR_SH_DAY_END_CLOSE_DTL table
  */
-@Entity
+@Entity(name = "CollectionHandoverDtl")
 @Table(name = "AR_SH_DAY_END_CLOSE_DTL")
 @IdClass(ArShDayEndCloseDtlId.class)
 @Data

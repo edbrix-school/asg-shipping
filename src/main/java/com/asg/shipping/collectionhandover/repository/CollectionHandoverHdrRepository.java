@@ -22,14 +22,14 @@ public interface CollectionHandoverHdrRepository extends JpaRepository<ArShDayEn
     /**
      * Check if DOC_REF already exists
      */
-    @Query("SELECT COUNT(h) > 0 FROM ArShDayEndCloseHdr h " +
+    @Query("SELECT COUNT(h) > 0 FROM CollectionHandoverHdr h " +
            "WHERE h.docRef = :docRef AND h.deleted = 'N'")
     boolean existsByDocRef(@Param("docRef") String docRef);
 
     /**
      * Check if DOC_REF already exists excluding a specific TRANSACTION_POID (for updates)
      */
-    @Query("SELECT COUNT(h) > 0 FROM ArShDayEndCloseHdr h " +
+    @Query("SELECT COUNT(h) > 0 FROM CollectionHandoverHdr h " +
            "WHERE h.docRef = :docRef AND h.transactionPoid != :excludeTransactionPoid AND h.deleted = 'N'")
     boolean existsByDocRefExcludingPoid(@Param("docRef") String docRef, @Param("excludeTransactionPoid") Long excludeTransactionPoid);
 }
