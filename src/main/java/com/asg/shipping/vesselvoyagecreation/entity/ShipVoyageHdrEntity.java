@@ -23,8 +23,7 @@ import java.time.LocalDateTime;
 public class ShipVoyageHdrEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SHIP_VOYAGE_HDR_SEQ_GEN")
-    @SequenceGenerator(name = "SHIP_VOYAGE_HDR_SEQ_GEN", sequenceName = "SHIP_VOYAGE_HDR_SEQ", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "TRANSACTION_POID", nullable = false)
     private Long transactionPoid;
 
