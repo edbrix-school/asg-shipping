@@ -24,3 +24,4 @@ public interface ReceiptAutoPopulateRepository {
     TaxConfig findTaxConfig(Long companyPoid);
 
     List<String> findDemurrageContainers(Long blPoid, Long transactionPoid);
+}

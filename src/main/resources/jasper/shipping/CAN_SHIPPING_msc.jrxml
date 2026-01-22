@@ -4,9 +4,9 @@
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="690"/>
 	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
-	<style name="SubTitle" forecolor="#736343" fontName="SansSerif" fontSize="18"/>
-	<style name="Column header" forecolor="#666666" fontName="SansSerif" fontSize="12" pdfFontName="Times-Bold" isBold="true"/>
-	<style name="Detail" fontName="SansSerif" fontSize="12"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" pdfFontName="Times-Bold" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
 	<style name="Row" mode="Transparent">
 		<conditionalStyle>
 			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
@@ -1014,7 +1014,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="1" y="645" width="524" height="83" uuid="aa1000b9-c655-4474-aed2-2c63d99659ab"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[We furthermore confirm that we shall hold the above mentioned Carrier under the Bill of
 Lading or Sea Waybill harmless and indemnified in respect of liability incurred by the
@@ -1025,56 +1025,56 @@ the undersigned.]]></text>
 			<staticText>
 				<reportElement x="24" y="189" width="499" height="20" uuid="54c98058-f543-4d68-a838-d2181305c628"/>
 				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Port of Loading:………………………]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="22" y="121" width="499" height="20" uuid="328d1423-a51d-4925-985c-10ee23f384a3"/>
 				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[B/L or SWB:…..………………………………]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="237" width="521" height="16" uuid="62144c1b-8002-4276-9040-bab6e615b9ca"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[We, the undersigned………………………………………………..,hereby confirm as ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="0" y="594" width="528" height="18" uuid="dcefa2a7-885d-4783-9673-5d0521d3b512"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Bill of Lading: https://www.msc.com/bhr/contract-of-carriage/bl-standard-terms-conditions]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="253" width="521" height="16" uuid="5ed9614c-e368-4ee6-8279-a3dc4aca3a7d"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[receiver/consignee of the above mentioned shipment;]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="16" y="293" width="507" height="46" uuid="8077cd89-4d3d-4615-b57c-9960c00f39e5"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[above and the terms and conditions of the Mediterranean Shipping Company S.A., Geneva applicable thereon as mentioned on the reverse side of the Bill of Lading or Sea Waybill stated above;]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="-1" y="339" width="555" height="19" uuid="09c9224c-bbe2-4896-9b01-a450810c2f5c"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[b) That we accept the terms and conditions of Mediterranean Shipping Company S.A.,]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="72" width="545" height="41" uuid="8d1c011b-12a4-46ff-a719-449fdfd31b91"/>
 				<textElement>
-					<font fontName="SansSerif" size="12" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="12" pdfFontName="Times-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[To: MSC Mediterranean Shipping Company S.A., its agents and affiliates (“MSC”)
        National Shipping Agency W.L.L. as agent for MSC, Kingdom of Bahrain.]]></text>
@@ -1082,21 +1082,21 @@ the undersigned.]]></text>
 			<staticText>
 				<reportElement x="0" y="613" width="528" height="18" uuid="a0f53103-2a0f-4679-acdc-9071bd0c1577"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Sea Waybill: https://www.msc.com/bhr/contract-of-carriage/seawaybill-terms-conditions]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="0" y="728" width="525" height="16" uuid="68acfbee-6175-49be-a03f-64919074e64f"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Place: …………………………..]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="16" y="354" width="491" height="73" uuid="f7039638-b83d-4299-b09e-e16d1b5cbd00"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Geneva to be applicable and that we consider ourselves bound by said terms and
 conditions against release or delivery of the Goods described in the BL or SWB stated above;]]></text>
@@ -1104,49 +1104,49 @@ conditions against release or delivery of the Goods described in the BL or SWB s
 			<staticText>
 				<reportElement x="15" y="424" width="492" height="50" uuid="af6cfb46-de7b-4bf7-a10c-51c872ec7efe"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[or Sea Waybill stated above as a condition to release or delivery of the Goods described in the BL or SWB stated above to us or any third party assigned by us or acting as servant or (independent) subcontractor to us;]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="24" y="213" width="499" height="20" uuid="a0a8e5f3-def9-4882-be0e-89164a6afb60"/>
 				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Port of Discharge:…………………….]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="787" width="523" height="16" uuid="7a3c5875-81d8-4538-894f-d7bb9ee9371b"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[                                                               Signed and stamped: ………………………………]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="0" y="477" width="525" height="19" uuid="87f72e64-1dd3-45e6-bc6d-388111173e23"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[d) That we have, as the case may be, informed servants or (independent)]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="23" y="143" width="499" height="20" uuid="e27b002c-b183-4d9d-af4e-057c90a443a1"/>
 				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[No. of Containers/Type.:…..…………………………]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="560" width="508" height="33" uuid="224baa61-f36f-4acd-9507-4adbc9888da9"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[We take note that for easy reference these terms and conditions are always available in MSC Internet site:]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="10" width="545" height="61" uuid="5b4ec382-3a14-4dec-a9d9-7e5fc02828f2"/>
 				<textElement textAlignment="Center">
-					<font fontName="SansSerif" size="14" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="14" pdfFontName="Times-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[LETTER OF ACKNOWLEDGEMENT FOR DELIVERY AGAINST TELEX
 RELEASE OF BILL OF LADING OR SEA WAYBILL
@@ -1155,42 +1155,42 @@ RELEASE OF BILL OF LADING OR SEA WAYBILL
 			<staticText>
 				<reportElement x="-1" y="408" width="531" height="19" uuid="a37ceeb2-2b36-40bc-8438-45fda5a3d45b"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[c) That we accept to be party to the contract of carriage laid down in the Bill of Lading]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="0" y="805" width="525" height="16" uuid="754f6085-cf9c-49f9-bf2f-e101d3d60ada"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Enclosure: Copy of MSC Bill of Lading]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="16" y="492" width="493" height="50" uuid="5724141a-eb87-4d90-a0d5-eb783feaa574"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[subcontractors appointed by us or acting on our behalf, about the aforementioned terms and conditions being applicable to the release and delivery of the goods described in the Bill of Lading or Sea Waybill stated above.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="-1" y="276" width="531" height="19" uuid="91ab4bf8-74f6-438b-8ecb-b66b15b3ff1b"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="12" isBold="false"/>
+					<font fontName="Verdana" size="12" isBold="false"/>
 				</textElement>
 				<text><![CDATA[a) That we have taken note of the particulars of the Bill of Lading or Sea Waybill stated]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="24" y="165" width="499" height="20" uuid="d370badd-ca6d-46a0-91ed-606395aaeffd"/>
 				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Vessel Name:………………………….]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="0" y="765" width="525" height="16" uuid="74339170-e716-4cde-8105-907237efa9b5"/>
 				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="11" isBold="false"/>
+					<font fontName="Verdana" size="11" isBold="false"/>
 				</textElement>
 				<text><![CDATA[Date: ……………………………..]]></text>
 			</staticText>
