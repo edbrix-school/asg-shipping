@@ -2,8 +2,10 @@ package com.asg.shipping.vesselvoyagecreation.service.impl;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -32,6 +34,7 @@ import com.asg.shipping.vesselvoyagecreation.util.DateValidationUtil;
 import com.asg.shipping.vesselvoyagecreation.util.VoyageMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,6 +70,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private final DocumentSearchService documentSearchService;
     private final VoyageBillsRepository voyageBillsRepository;
     private final VoyageMapper voyageMapper;
+    private final LoggingService loggingService;
 
     @Value("${vvc.edi.upload-dir:./uploads/edi}")
     private String ediUploadDir;
@@ -207,6 +211,13 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         ShipVoyageHdrEntity saved = voyageHdrRepository.save(entity);
         // Reload to get trigger-populated docRef/jobNo if needed
         ShipVoyageHdrEntity fresh = voyageHdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
+
+        // Add logging
+        String docId = UserContext.getDocumentId();
+        String key = fresh.getTransactionPoid().toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
+        loggingService.logChanges(null, fresh, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.CREATED, "TRANSACTION_POID");
+
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(fresh.getLinePoid()).orElse(null);
         return voyageMapper.toResponse(fresh, lineCode);
     }
@@ -230,8 +241,18 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         );
         if (dup) throw new ResourceAlreadyExistsException("Duplicate Job, Check Line, Vessel, Voyage...");
 
+        // Store old entity for logging
+        ShipVoyageHdrEntity oldEntity = new ShipVoyageHdrEntity();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         voyageMapper.updateEntity(entity, request, userId);
         voyageHdrRepository.save(entity);
+
+        // Add logging
+        String docId = UserContext.getDocumentId();
+        String key = entity.getTransactionPoid().toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
+        loggingService.logChanges(oldEntity, entity, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(entity.getLinePoid()).orElse(null);
         return voyageMapper.toResponse(entity, lineCode);
@@ -522,6 +543,30 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         return new ByteArrayResource(zipBytes) {
             @Override public String getFilename() { return zipName; }
         };
+    }
+
+    @Override
+    @Transactional
+    public void deleteVoyage(Long voyagePoid) {
+        log.info("Deleting vessel voyage with id: {}", voyagePoid);
+
+        Long groupPoid = UserContext.getGroupPoid();
+        String userId = UserContext.getUserId();
+
+        ShipVoyageHdrEntity entity = voyageHdrRepository.findByTransactionPoidAndGroupPoid(voyagePoid, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Vessel voyage not found: " + voyagePoid));
+
+        entity.setDeleted("Y");
+        entity.setLastModifiedBy(userId);
+        entity.setLastModifiedDate(LocalDateTime.now());
+        voyageHdrRepository.save(entity);
+
+        // Add logging
+        String docId = UserContext.getDocumentId();
+        String key = entity.getTransactionPoid().toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
+
+        log.info("Successfully deleted vessel voyage with id: {}", voyagePoid);
     }
 }
 

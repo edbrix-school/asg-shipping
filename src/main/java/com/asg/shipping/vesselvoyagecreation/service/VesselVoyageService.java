@@ -65,6 +65,8 @@ public interface VesselVoyageService {
     Resource downloadExcelExport(Long voyagePoid, String type);
 
     Resource downloadManifestReport(Long voyagePoid, String freightCargo, String importExport);
+
+    void deleteVoyage(Long voyagePoid);
 }
 
 

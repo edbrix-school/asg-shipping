@@ -215,6 +215,14 @@ public class VesselVoyageController {
         return ApiResponse.success("Selected XL import completed", vesselVoyageService.importSelectedXl(voyagePoid));
     }
 
+    @AllowedAction(UserRolesRightsEnum.DELETE)
+    @DeleteMapping("/{voyagePoid}")
+    public ResponseEntity<?> deleteVoyage(@PathVariable Long voyagePoid) {
+        log.info("Action={} | Delete voyage | voyagePoid={}", UserContext.getActionRequested(), voyagePoid);
+        vesselVoyageService.deleteVoyage(voyagePoid);
+        return ApiResponse.success("Vessel voyage deleted successfully");
+    }
+
     // --------- File outputs (served from configured exports folder) ---------
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -244,6 +252,8 @@ public class VesselVoyageController {
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(resource);
     }
+
+    
 }
 
 
