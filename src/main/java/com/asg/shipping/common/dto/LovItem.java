@@ -17,4 +17,3 @@ public class LovItem {
     private Long value;
     private Integer seqNo;
 }
-

@@ -31,9 +31,6 @@ public class PortChargesTariffUpdateDto {
     @NotNull(message = "Period to date is required")
     private LocalDate periodTo;
 
-    @Size(max = 25, message = "Document reference cannot exceed 25 characters")
-    private String docRef;
-
     private Integer seqNo;
     @NotNull(message = "Charge line POID is required")
     private Long chargeLinePoid;

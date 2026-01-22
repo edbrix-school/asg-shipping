@@ -11,4 +11,3 @@ import java.util.List;
 public class LovResponse {
     private List<LovItem> items;
 }
-

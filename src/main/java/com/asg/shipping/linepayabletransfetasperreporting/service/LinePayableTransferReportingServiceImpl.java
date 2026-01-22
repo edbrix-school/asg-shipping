@@ -1,0 +1,722 @@
+package com.asg.shipping.linepayabletransfetasperreporting.service;
+
+
+
+import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.exceptions.ValidationException;
+import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
+import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportTransferDtl;
+import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportTransferHdr;
+import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferDtlRepository;
+import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferHdrRepository;
+import com.asg.shipping.linepayabletransfetasperreporting.util.LinePayableTransferReportingMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.sql.*;
+import java.sql.Date;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
+import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
+
+/**
+ * Service implementation for Line Payable Transfer As Per Reporting operations
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class LinePayableTransferReportingServiceImpl implements LinePayableTransferReportingService {
+
+    private final ShipLineReportTransferHdrRepository hdrRepository;
+    private final ShipLineReportTransferDtlRepository dtlRepository;
+    private final DocumentSearchService documentSearchService;
+    private final JdbcTemplate jdbcTemplate;
+    private final LinePayableTransferReportingMapper mapper;
+
+    private static final String DOC_ID = "100-432";
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> searchLinePayableTransfer(String docId, FilterRequestDto filterRequest, Pageable pageable) {
+        log.info("Searching Line Payable Transfer As Per Reporting records");
+
+        String operator = documentSearchService.resolveOperator(filterRequest);
+        String isDeleted = documentSearchService.resolveIsDeleted(filterRequest);
+        List<FilterDto> filters = documentSearchService.resolveFilters(filterRequest);
+
+        RawSearchResult raw = documentSearchService.search(
+                docId,
+                filters,
+                operator,
+                pageable,
+                isDeleted,
+                "DOC_REF",
+                "TRANSACTION_POID"
+        );
+
+        Page<Map<String, Object>> page = new PageImpl<>(
+                raw.records(),
+                pageable,
+                raw.totalRecords()
+        );
+
+        return PaginationUtil.wrapPage(page, raw.displayFields());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LinePayableTransferReportingDto getLinePayableTransferById(Long transactionPoid) {
+        log.info("Getting Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
+
+        ShipLineReportTransferHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Line Payable Transfer As Per Reporting", "transactionPoid", transactionPoid.toString()));
+
+        LinePayableTransferReportingDto dto = mapper.mapToDto(entity);
+
+        // Load detail records
+        List<ShipLineReportTransferDtl> details = dtlRepository.findByTransactionPoid(transactionPoid);
+        dto.setDetails(mapper.mapDtlListToDto(details));
+
+        // Enrich with LOV data
+        enrichLovData(dto);
+
+        log.info("Successfully retrieved Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public LinePayableTransferReportingDto createLinePayableTransfer(LinePayableTransferReportingCreateDTO createDTO) {
+        log.info("Creating Line Payable Transfer As Per Reporting record");
+
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+
+        // Validate
+        validateCreateDTO(createDTO, companyPoid);
+
+        // Create entity
+        ShipLineReportTransferHdr entity = new ShipLineReportTransferHdr();
+        mapper.mapCreateDTOToEntity(createDTO, entity, groupPoid, companyPoid);
+
+        // Generate DOC_REF if not provided
+        if (entity.getDocRef() == null || entity.getDocRef().trim().isEmpty()) {
+            String docRef = generateDocRef(companyPoid);
+            entity.setDocRef(docRef);
+        } else {
+            // Validate DOC_REF uniqueness
+            if (hdrRepository.existsByDocRef(entity.getDocRef(), null)) {
+                throw new ValidationException("DOC_REF already exists: " + entity.getDocRef());
+            }
+        }
+
+        // Save entity (generates TRANSACTION_POID via IDENTITY)
+        ShipLineReportTransferHdr saved = hdrRepository.save(entity);
+
+        // If line, BL type, and dates are provided, load data via stored procedure
+        if (saved.getLinePoid() != null && saved.getBlType() != null
+                && saved.getReportStartDate() != null && saved.getReportEndDate() != null) {
+            loadDataByDateRange(saved.getTransactionPoid(),
+                    LoadDataByDateRangeRequest.builder()
+                            .linePoid(saved.getLinePoid())
+                            .blType(saved.getBlType())
+                            .reportStartDate(saved.getReportStartDate())
+                            .reportEndDate(saved.getReportEndDate())
+                            .build());
+        }
+
+        // Save detail tables from DTO (if provided)
+        saveDetailTables(createDTO, saved.getTransactionPoid());
+
+        LinePayableTransferReportingDto result = mapper.mapToDto(saved);
+        loadDetailTables(result, saved.getTransactionPoid());
+        enrichLovData(result);
+
+        log.info("Successfully created Line Payable Transfer As Per Reporting with id: {}", saved.getTransactionPoid());
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public LinePayableTransferReportingDto updateLinePayableTransfer(Long transactionPoid, LinePayableTransferReportingUpdateDTO updateDTO) {
+        log.info("Updating Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
+
+        Long companyPoid = getCompanyPoid();
+
+        ShipLineReportTransferHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Line Payable Transfer As Per Reporting", "transactionPoid", transactionPoid.toString()));
+
+        // Validate
+        validateUpdateDTO(updateDTO, companyPoid);
+
+        // Check if data loading parameters changed
+        boolean shouldReloadData = checkShouldReloadData(entity, updateDTO);
+
+        // Update entity
+        mapper.mapUpdateDTOToEntity(updateDTO, entity);
+
+        // Validate DOC_REF uniqueness if changed
+        if (updateDTO.getDocRef() != null && !updateDTO.getDocRef().equals(entity.getDocRef())) {
+            if (hdrRepository.existsByDocRef(updateDTO.getDocRef(), transactionPoid)) {
+                throw new ValidationException("DOC_REF already exists: " + updateDTO.getDocRef());
+            }
+        }
+
+        ShipLineReportTransferHdr saved = hdrRepository.save(entity);
+
+        // If parameters changed, reload data
+        if (shouldReloadData && saved.getLinePoid() != null && saved.getBlType() != null
+                && saved.getReportStartDate() != null && saved.getReportEndDate() != null) {
+            loadDataByDateRange(saved.getTransactionPoid(),
+                    LoadDataByDateRangeRequest.builder()
+                            .linePoid(saved.getLinePoid())
+                            .blType(saved.getBlType())
+                            .reportStartDate(saved.getReportStartDate())
+                            .reportEndDate(saved.getReportEndDate())
+                            .build());
+        }
+
+        // Update detail tables
+        updateDetailTables(updateDTO, saved.getTransactionPoid());
+
+        LinePayableTransferReportingDto result = mapper.mapToDto(saved);
+        loadDetailTables(result, saved.getTransactionPoid());
+        enrichLovData(result);
+
+        log.info("Successfully updated Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void deleteLinePayableTransfer(Long transactionPoid) {
+        log.info("Deleting Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
+
+        ShipLineReportTransferHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Line Payable Transfer As Per Reporting", "transactionPoid", transactionPoid.toString()));
+
+        entity.setDeleted("Y");
+        hdrRepository.save(entity);
+
+        log.info("Successfully deleted Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
+    }
+
+    @Override
+    @Transactional
+    public List<LinePayableTransferReportingDtlDto> loadDataByDateRange(Long transactionPoid, LoadDataByDateRangeRequest request) {
+        log.info("Loading data by date range for transaction: {}, line: {}, BL type: {}, dates: {} to {}",
+                transactionPoid, request.getLinePoid(), request.getBlType(),
+                request.getReportStartDate(), request.getReportEndDate());
+
+        // Validate
+        if (request.getReportStartDate().isAfter(request.getReportEndDate())) {
+            throw new ValidationException("Report start date must be less than or equal to end date");
+        }
+
+        // Validate line exists
+        String checkLineSql = "SELECT COUNT(*) FROM SHIP_LINE_MASTER WHERE LINE_POID = ? AND NVL(DELETED,'N') = 'N'";
+        Integer lineCount = jdbcTemplate.queryForObject(checkLineSql, Integer.class, request.getLinePoid());
+        if (lineCount == null || lineCount == 0) {
+            throw new ValidationException("Line not found: " + request.getLinePoid());
+        }
+
+        // Clear existing details
+        dtlRepository.deleteByTransactionPoid(transactionPoid);
+
+        List<LinePayableTransferReportingDtlDto> result = new ArrayList<>();
+
+        try {
+            Long groupPoid = getGroupPoid();
+            Long companyPoid = getCompanyPoid();
+
+            String sql = "{call PROC_SHIP_REPORT_LINE_DATEWISE(?,?,?,?,?,?,?,?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, groupPoid);
+                cs.setLong(2, companyPoid);
+                cs.setLong(3, request.getLinePoid());
+                cs.setString(4, request.getBlType());
+                cs.setDate(5, Date.valueOf(request.getReportStartDate()));
+                cs.setDate(6, Date.valueOf(request.getReportEndDate()));
+                cs.setString(7, "ALL");
+                cs.registerOutParameter(8, Types.REF_CURSOR);
+                cs.execute();
+
+                try (ResultSet rs = (ResultSet) cs.getObject(8)) {
+                    if (rs != null) {
+                        Long detRowId = dtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
+                        if (detRowId == null) detRowId = 0L;
+
+                        while (rs.next()) {
+                            detRowId++;
+
+                            LinePayableTransferReportingDtlDto dto = LinePayableTransferReportingDtlDto.builder()
+                                    .mainfestTransactionPoid(getLongOrNull(rs, "MAINFEST_TRANSACTION_POID"))
+                                    .blNumber(rs.getString("BL_NUMBER"))
+                                    .acutalAmount(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT"))
+                                    .totalAmountTransfer(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT")) // Default to actual amount
+                                    .isSelect("N") // Default to not selected
+                                    .chargePoid(getLongOrNull(rs, "CHARGE_POID"))
+                                    .freightType(rs.getString("FREIGHT_TYPE"))
+                                    .currencyCode(rs.getString("CURRENCY_CODE"))
+                                    .currencyExchange(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE"))
+                                    .currencyAmount(getBigDecimalOrNull(rs, "CURRENCY_AMOUNT"))
+                                    .build();
+
+                            result.add(dto);
+
+                            // Save to database
+                            ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dto, transactionPoid, detRowId);
+                            dtlRepository.save(dtl);
+                        }
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            log.error("Error calling PROC_SHIP_REPORT_LINE_DATEWISE", e);
+            throw new ValidationException("Error loading data by date range: " + e.getMessage());
+        }
+
+        if (result.isEmpty()) {
+            log.warn("No data found for line: {}, BL type: {}, dates: {} to {}",
+                    request.getLinePoid(), request.getBlType(),
+                    request.getReportStartDate(), request.getReportEndDate());
+        } else {
+            log.info("Loaded {} records for transaction: {}", result.size(), transactionPoid);
+        }
+
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public List<LinePayableTransferReportingDtlDto> processWeeklyBlReport(Long transactionPoid, LoadDataByDateRangeRequest request) {
+        log.info("Processing weekly BL report for transaction: {}, line: {}, dates: {} to {}",
+                transactionPoid, request.getLinePoid(), request.getReportStartDate(), request.getReportEndDate());
+
+        if (request.getReportStartDate().isAfter(request.getReportEndDate())) {
+            throw new ValidationException("Report start date must be less than or equal to end date");
+        }
+
+        dtlRepository.deleteByTransactionPoid(transactionPoid);
+        List<LinePayableTransferReportingDtlDto> result = new ArrayList<>();
+
+        try {
+            Long groupPoid = getGroupPoid();
+            Long companyPoid = getCompanyPoid();
+            log.info("Calling PROC_weekly_bl_report with groupPoid={}, companyPoid={}, linePoid={}, dates={} to {}",
+                    groupPoid, companyPoid, request.getLinePoid(), request.getReportStartDate(), request.getReportEndDate());
+
+            String sql = "{call PROC_weekly_bl_report(?,?,?,?,?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setDate(1, Date.valueOf(request.getReportStartDate()));
+                cs.setDate(2, Date.valueOf(request.getReportEndDate()));
+                cs.setString(3, DOC_ID);
+                cs.setLong(4, request.getLinePoid());
+                cs.registerOutParameter(5, Types.REF_CURSOR);
+                cs.execute();
+
+                try (ResultSet rs = (ResultSet) cs.getObject(5)) {
+                    if (rs != null) {
+                        Long detRowId = 0L;
+                        while (rs.next()) {
+                            detRowId++;
+                            LinePayableTransferReportingDtlDto dto = LinePayableTransferReportingDtlDto.builder()
+                                    .detRowId(detRowId)
+                                    .mainfestTransactionPoid(getLongOrNull(rs, "BL_POID"))
+                                    .blNumber(rs.getString("BL_NUMBER"))
+                                    .acutalAmount(getBigDecimalOrNull(rs, "manifest_amount"))
+                                    .totalAmountTransfer(getBigDecimalOrNull(rs, "chargeamount_local"))
+                                    .isSelect("N")
+                                    .chargePoid(getLongOrNull(rs, "WKYRPT_INCLUDE_POID"))
+                                    .freightType(rs.getString("BL_TYPE"))
+                                    .currencyCode(rs.getString("CURRENCY_CODE"))
+                                    .currencyExchange(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE"))
+                                    .currencyAmount(getBigDecimalOrNull(rs, "THC_AMOUNT"))
+                                    .build();
+                            result.add(dto);
+                            ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dto, transactionPoid, detRowId);
+                            dtlRepository.save(dtl);
+                        }
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            log.error("Error calling PROC_weekly_bl_report", e);
+            throw new ValidationException("Error processing weekly BL report: " + e.getMessage());
+        }
+
+        log.info("Processed {} records for transaction: {}", result.size(), transactionPoid);
+        return result;
+    }
+
+    @Override
+    public List<LinePayableTransferReportingDtlDto> loadDataBeforeCreate(LoadDataByDateRangeRequest request) {
+        log.info("Loading data before create for line: {}, BL type: {}, dates: {} to {}",
+                request.getLinePoid(), request.getBlType(), request.getReportStartDate(), request.getReportEndDate());
+
+        if (request.getReportStartDate().isAfter(request.getReportEndDate())) {
+            throw new ValidationException("Report start date must be less than or equal to end date");
+        }
+
+        List<LinePayableTransferReportingDtlDto> result = new ArrayList<>();
+
+        try {
+            Long groupPoid = getGroupPoid();
+            Long companyPoid = getCompanyPoid();
+            log.info("Calling PROC_SHIP_REPORT_LINE_DATEWISE with groupPoid={}, companyPoid={}, linePoid={}, blType={}, dates={} to {}",
+                    groupPoid, companyPoid, request.getLinePoid(), request.getBlType(), 
+                    request.getReportStartDate(), request.getReportEndDate());
+
+            String sql = "{call PROC_SHIP_REPORT_LINE_DATEWISE(?,?,?,?,?,?,?,?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, groupPoid);
+                cs.setLong(2, companyPoid);
+                cs.setLong(3, request.getLinePoid());
+                cs.setString(4, request.getBlType());
+                cs.setDate(5, Date.valueOf(request.getReportStartDate()));
+                cs.setDate(6, Date.valueOf(request.getReportEndDate()));
+                cs.setString(7, "ALL");
+                cs.registerOutParameter(8, Types.REF_CURSOR);
+                cs.execute();
+
+                try (ResultSet rs = (ResultSet) cs.getObject(8)) {
+                    if (rs != null) {
+                        while (rs.next()) {
+                            result.add(LinePayableTransferReportingDtlDto.builder()
+                                    .detRowId((long) (result.size() + 1))
+                                    .mainfestTransactionPoid(getLongOrNull(rs, "MAINFEST_TRANSACTION_POID"))
+                                    .blNumber(rs.getString("BL_NUMBER"))
+                                    .acutalAmount(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT"))
+                                    .totalAmountTransfer(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT"))
+                                    .isSelect("N")
+                                    .chargePoid(getLongOrNull(rs, "CHARGE_POID"))
+                                    .freightType(rs.getString("FREIGHT_TYPE"))
+                                    .currencyCode(rs.getString("CURRENCY_CODE"))
+                                    .currencyExchange(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE"))
+                                    .currencyAmount(getBigDecimalOrNull(rs, "CURRENCY_AMOUNT"))
+                                    .build());
+                        }
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            log.error("Error calling PROC_SHIP_REPORT_LINE_DATEWISE", e);
+            throw new ValidationException("Error loading data: " + e.getMessage());
+        }
+
+        log.info("Loaded {} records before create", result.size());
+        return result;
+    }
+
+    @Override
+    public List<LinePayableTransferReportingDtlDto> processWeeklyBeforeCreate(LoadDataByDateRangeRequest request) {
+        log.info("Processing weekly BL report before create for line: {}, dates: {} to {}",
+                request.getLinePoid(), request.getReportStartDate(), request.getReportEndDate());
+
+        if (request.getReportStartDate().isAfter(request.getReportEndDate())) {
+            throw new ValidationException("Report start date must be less than or equal to end date");
+        }
+
+        List<LinePayableTransferReportingDtlDto> result = new ArrayList<>();
+
+        try {
+            String sql = "{call PROC_weekly_bl_report(?,?,?,?,?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setDate(1, Date.valueOf(request.getReportStartDate()));
+                cs.setDate(2, Date.valueOf(request.getReportEndDate()));
+                cs.setString(3, DOC_ID);
+                cs.setLong(4, request.getLinePoid());
+                cs.registerOutParameter(5, Types.REF_CURSOR);
+                cs.execute();
+
+                try (ResultSet rs = (ResultSet) cs.getObject(5)) {
+                    if (rs != null) {
+                        Long detRowId = 0L;
+                        while (rs.next()) {
+                            detRowId++;
+                            result.add(LinePayableTransferReportingDtlDto.builder()
+                                    .detRowId(detRowId)
+                                    .mainfestTransactionPoid(getLongOrNull(rs, "BL_POID"))
+                                    .blNumber(rs.getString("BL_NUMBER"))
+                                    .acutalAmount(getBigDecimalOrNull(rs, "manifest_amount"))
+                                    .totalAmountTransfer(getBigDecimalOrNull(rs, "chargeamount_local"))
+                                    .isSelect("N")
+                                    .chargePoid(getLongOrNull(rs, "WKYRPT_INCLUDE_POID"))
+                                    .freightType(rs.getString("BL_TYPE"))
+                                    .currencyCode(rs.getString("CURRENCY_CODE"))
+                                    .currencyExchange(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE"))
+                                    .currencyAmount(getBigDecimalOrNull(rs, "THC_AMOUNT"))
+                                    .build());
+                        }
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            log.error("Error calling PROC_weekly_bl_report", e);
+            throw new ValidationException("Error processing weekly report: " + e.getMessage());
+        }
+
+        log.info("Processed {} weekly records before create", result.size());
+        return result;
+    }
+
+    // ==================== Private Helper Methods ====================
+
+    /**
+     * Generate DOC_REF using company code and sequence
+     */
+    private String generateDocRef(Long companyPoid) {
+        try {
+            String companyCode = jdbcTemplate.queryForObject(
+                    "SELECT GET_COMPANY_CODE(?) FROM DUAL",
+                    String.class,
+                    companyPoid
+            );
+
+            Long sequenceNo = jdbcTemplate.queryForObject(
+                    "SELECT RTN_GLOBAL_SEQ_NO(?) FROM DUAL",
+                    Long.class,
+                    companyPoid
+            );
+
+            return companyCode + "-" + String.format("%05d", sequenceNo);
+        } catch (Exception e) {
+            log.error("Error generating DOC_REF", e);
+            throw new ValidationException("Error generating document reference: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Validate create DTO
+     */
+    private void validateCreateDTO(LinePayableTransferReportingCreateDTO dto, Long companyPoid) {
+        if (dto.getLinePoid() == null) {
+            throw new ValidationException("Line POID is required");
+        }
+
+        // Validate line exists (without GROUP_POID/COMPANY_POID filter)
+        String checkLineSql = "SELECT COUNT(*) FROM SHIP_LINE_MASTER WHERE LINE_POID = ? AND NVL(DELETED,'N') = 'N'";
+        Integer count = jdbcTemplate.queryForObject(checkLineSql, Integer.class, dto.getLinePoid());
+        if (count == null || count == 0) {
+            throw new ValidationException("Line not found: " + dto.getLinePoid());
+        }
+
+        if (dto.getBlType() == null || dto.getBlType().trim().isEmpty()) {
+            throw new ValidationException("BL type is required");
+        }
+
+        if (!"IMPORT".equalsIgnoreCase(dto.getBlType()) && !"EXPORT".equalsIgnoreCase(dto.getBlType())) {
+            throw new ValidationException("BL type must be IMPORT or EXPORT");
+        }
+
+        if (dto.getReportStartDate() == null) {
+            throw new ValidationException("Report start date is required");
+        }
+
+        if (dto.getReportEndDate() == null) {
+            throw new ValidationException("Report end date is required");
+        }
+
+        if (dto.getReportStartDate().isAfter(dto.getReportEndDate())) {
+            throw new ValidationException("Report start date must be less than or equal to end date");
+        }
+    }
+
+    /**
+     * Validate update DTO
+     */
+    private void validateUpdateDTO(LinePayableTransferReportingUpdateDTO dto, Long companyPoid) {
+        if (dto.getLinePoid() != null) {
+            String checkLineSql = "SELECT COUNT(*) FROM SHIP_LINE_MASTER WHERE LINE_POID = ? AND NVL(DELETED,'N') = 'N'";
+            Integer count = jdbcTemplate.queryForObject(checkLineSql, Integer.class, dto.getLinePoid());
+            if (count == null || count == 0) {
+                throw new ValidationException("Line not found: " + dto.getLinePoid());
+            }
+        }
+
+        if (dto.getBlType() != null && !dto.getBlType().trim().isEmpty()) {
+            if (!"IMPORT".equalsIgnoreCase(dto.getBlType()) && !"EXPORT".equalsIgnoreCase(dto.getBlType())) {
+                throw new ValidationException("BL type must be IMPORT or EXPORT");
+            }
+        }
+
+        if (dto.getReportStartDate() != null && dto.getReportEndDate() != null) {
+            if (dto.getReportStartDate().isAfter(dto.getReportEndDate())) {
+                throw new ValidationException("Report start date must be less than or equal to end date");
+            }
+        }
+    }
+
+    /**
+     * Check if data should be reloaded
+     */
+    private boolean checkShouldReloadData(ShipLineReportTransferHdr entity, LinePayableTransferReportingUpdateDTO dto) {
+        return !Objects.equals(entity.getLinePoid(), dto.getLinePoid()) ||
+                !Objects.equals(entity.getBlType(), dto.getBlType()) ||
+                !Objects.equals(entity.getReportStartDate(), dto.getReportStartDate()) ||
+                !Objects.equals(entity.getReportEndDate(), dto.getReportEndDate());
+    }
+
+    /**
+     * Save detail tables from DTO
+     */
+    private void saveDetailTables(LinePayableTransferReportingCreateDTO dto, Long transactionPoid) {
+        if (dto.getDetails() != null && !dto.getDetails().isEmpty()) {
+            Long detRowId = dtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
+            if (detRowId == null) detRowId = 0L;
+
+            for (LinePayableTransferReportingDtlDto dtlDto : dto.getDetails()) {
+                detRowId++;
+                ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
+                dtlRepository.save(dtl);
+            }
+        }
+    }
+
+    /**
+     * Update detail tables from DTO
+     */
+    private void updateDetailTables(LinePayableTransferReportingUpdateDTO dto, Long transactionPoid) {
+        // Delete existing details
+        dtlRepository.deleteByTransactionPoid(transactionPoid);
+
+        // Save new details
+        if (dto.getDetails() != null && !dto.getDetails().isEmpty()) {
+            Long detRowId = 0L;
+            for (LinePayableTransferReportingDtlDto dtlDto : dto.getDetails()) {
+                detRowId++;
+                ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
+                dtlRepository.save(dtl);
+            }
+        }
+    }
+
+    /**
+     * Load detail tables into DTO
+     */
+    private void loadDetailTables(LinePayableTransferReportingDto dto, Long transactionPoid) {
+        List<ShipLineReportTransferDtl> details = dtlRepository.findByTransactionPoid(transactionPoid);
+        dto.setDetails(mapper.mapDtlListToDto(details));
+    }
+
+    /**
+     * Enrich DTO with LOV data
+     */
+    private void enrichLovData(LinePayableTransferReportingDto dto) {
+        // Enrich line
+        if (dto.getLinePoid() != null) {
+            enrichLineData(dto.getLinePoid(), (name, code) -> {
+                dto.setLineName(name);
+                dto.setLineCode(code);
+            });
+        }
+
+        // Enrich detail records
+        if (dto.getDetails() != null) {
+            for (LinePayableTransferReportingDtlDto detail : dto.getDetails()) {
+                if (detail.getChargePoid() != null) {
+                    enrichChargeData(detail.getChargePoid(), (name, code) -> {
+                        detail.setChargeDescription(name);
+                        detail.setChargeCode(code);
+                    });
+                }
+                if (detail.getCurrencyCode() != null) {
+                    enrichCurrencyData(detail.getCurrencyCode(), (name) -> {
+                        detail.setCurrencyName(name);
+                    });
+                }
+            }
+        }
+    }
+
+    // Helper interfaces for enrichment
+    @FunctionalInterface
+    private interface EnrichmentCallback {
+        void apply(String name, String code);
+    }
+
+    @FunctionalInterface
+    private interface EnrichmentCallbackSingle {
+        void apply(String name);
+    }
+
+    private void enrichLineData(Long poid, EnrichmentCallback callback) {
+        String sql = "SELECT LINE_NAME, LINE_CODE FROM SHIP_LINE_MASTER WHERE LINE_POID = ?";
+        try {
+            Map<String, Object> result = jdbcTemplate.queryForMap(sql, poid);
+            callback.apply((String) result.get("LINE_NAME"), (String) result.get("LINE_CODE"));
+        } catch (Exception e) {
+            log.warn("Could not enrich line data for POID: {}", poid);
+        }
+    }
+
+    private void enrichChargeData(Long poid, EnrichmentCallback callback) {
+        String sql = "SELECT CHARGE_DESCRIPTION, CHARGE_CODE FROM GLOBAL_CHARGE_MASTER WHERE CHARGE_POID = ?";
+        try {
+            Map<String, Object> result = jdbcTemplate.queryForMap(sql, poid);
+            callback.apply((String) result.get("CHARGE_DESCRIPTION"), (String) result.get("CHARGE_CODE"));
+        } catch (Exception e) {
+            log.warn("Could not enrich charge data for POID: {}", poid);
+        }
+    }
+
+    private void enrichCurrencyData(String currencyCode, EnrichmentCallbackSingle callback) {
+        String sql = "SELECT CURRENCY_NAME FROM GLOBAL_CURRENCY_MASTER WHERE CURRENCY_CODE = ?";
+        try {
+            String currencyName = jdbcTemplate.queryForObject(sql, String.class, currencyCode);
+            callback.apply(currencyName);
+        } catch (Exception e) {
+            log.warn("Could not enrich currency data for code: {}", currencyCode);
+        }
+    }
+
+    // Utility methods for safe value extraction
+    private Long getLongOrNull(ResultSet rs, String columnName) {
+        try {
+            Object value = rs.getObject(columnName);
+            if (value == null) return null;
+            if (value instanceof Number) {
+                return ((Number) value).longValue();
+            }
+            return Long.parseLong(value.toString());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private BigDecimal getBigDecimalOrNull(ResultSet rs, String columnName) {
+        try {
+            Object value = rs.getObject(columnName);
+            if (value == null) return null;
+            if (value instanceof BigDecimal) {
+                return (BigDecimal) value;
+            }
+            if (value instanceof Number) {
+                return BigDecimal.valueOf(((Number) value).doubleValue());
+            }
+            return new BigDecimal(value.toString());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}

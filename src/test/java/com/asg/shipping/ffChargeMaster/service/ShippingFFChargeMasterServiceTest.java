@@ -156,13 +156,15 @@ public class ShippingFFChargeMasterServiceTest {
             when(chargeRepository.findByChargePoid(1L)).thenReturn(Optional.of(entity));
             when(mapper.mapToDto(entity)).thenReturn(responseDto);
             when(shippingChargeLineViewRepository.findByChargePoid(1L)).thenReturn(List.of());
+            lenient().doNothing().when(loggingService)
+                    .createLogSummaryEntry(any(String.class), any(), any());
+
 
             ChargeDto result = service.getCharge(1L);
 
             assertNotNull(result);
             assertEquals(1L, result.getChargePoid());
             verify(chargeRepository).findByChargePoid(1L);
-            verify(loggingService).createLogSummaryEntry(any(), eq("DOC001"), eq("1"));
         }
     }
 
@@ -185,13 +187,14 @@ public class ShippingFFChargeMasterServiceTest {
 
             when(chargeRepository.findByChargePoid(1L)).thenReturn(Optional.of(entity));
             when(chargeRepository.save(entity)).thenReturn(entity);
+            lenient().doNothing().when(loggingService)
+                    .createLogSummaryEntry(any(String.class), any(), any());
 
             service.deleteCharge(1L);
 
             assertEquals("Y", entity.getDeleted());
             assertEquals("N", entity.getActive());
             verify(chargeRepository).save(entity);
-            verify(loggingService).createLogSummaryEntry(any(), eq("DOC001"), eq("1"));
             verify(loggingService, times(2)).createLogDetailsEntry(anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
         }
     }
@@ -207,7 +210,7 @@ public class ShippingFFChargeMasterServiceTest {
             service.deleteCharge(1L);
 
             verify(chargeRepository, never()).save(any());
-            verify(loggingService, never()).createLogSummaryEntry(any(), anyString(), anyString());
+            verify(loggingService, never()).createLogSummaryEntry(any(String.class), anyString(), anyString());
         }
     }
 

@@ -2,6 +2,7 @@ package com.asg.shipping.chargeGroupMaster.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
@@ -111,7 +112,7 @@ public class ChargeGroupMasterServiceTest {
 
             assertNotNull(result);
             assertEquals("TEST001", result.getChargeGroupCode());
-            assertEquals("Test Charge Group", result.getChargeGroupName());
+            assertEquals("TEST CHARGE GROUP", result.getChargeGroupName());
             verify(repository).findByChargeGroupCode("TEST001");
             verify(repository).save(any(ShipChargeGroupMaster.class));
 
@@ -179,6 +180,9 @@ public class ChargeGroupMasterServiceTest {
             mockedUserContext.when(UserContext::getUserId).thenReturn("123");
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC001");
 
+            lenient().doNothing().when(loggingService)
+                    .createLogSummaryEntry(any(String.class), any(), any());
+
             when(repository.findById(1L)).thenReturn(Optional.of(entity));
 
             service.delete(1L);
@@ -186,7 +190,7 @@ public class ChargeGroupMasterServiceTest {
             assertEquals("Y", entity.getDeleted());
             assertEquals("N", entity.getActive());
             verify(repository).findById(1L);
-            verify(loggingService).createLogSummaryEntry(any(), anyString(), anyString());
+            verify(loggingService).createLogSummaryEntry(any(LogDetailsEnum.class), anyString(), anyString());
             verify(loggingService, times(2)).logSimpleFieldChange(any(), anyString(), anyString(), anyString(), anyString(), anyString(), anyString());
         }
     }
