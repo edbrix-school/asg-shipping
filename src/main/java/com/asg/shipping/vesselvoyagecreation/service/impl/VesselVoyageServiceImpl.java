@@ -186,6 +186,9 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vessel voyage not found: " + voyagePoid));
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(e.getLinePoid()).orElse(null);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), voyagePoid.toString());
+
         return voyageMapper.toResponse(e, lineCode);
     }
 
@@ -556,6 +559,12 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         ShipVoyageHdrEntity entity = voyageHdrRepository.findByTransactionPoidAndGroupPoid(voyagePoid, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Vessel voyage not found: " + voyagePoid));
 
+        // Check if already deleted
+        if ("Y".equals(entity.getDeleted())) {
+            log.info("Vessel Voyage with id: {} is already deleted", voyagePoid);
+            return;
+        }
+
         entity.setDeleted("Y");
         entity.setLastModifiedBy(userId);
         entity.setLastModifiedDate(LocalDateTime.now());
@@ -565,6 +574,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         String docId = UserContext.getDocumentId();
         String key = entity.getTransactionPoid().toString();
         loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
+        loggingService.logSimpleFieldChange(ShipVoyageHdrEntity.class, docId, key, "deleted", "N", "Y", "VesselVoyage soft deleted");
 
         log.info("Successfully deleted vessel voyage with id: {}", voyagePoid);
     }
