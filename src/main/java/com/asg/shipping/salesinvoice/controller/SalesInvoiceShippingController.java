@@ -798,5 +798,25 @@ public class SalesInvoiceShippingController {
         }
 
     }
+
+    @GetMapping("/print/{transactionPoid}")
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "BL POID", example = "67890")
+            @RequestParam Long blPoid
+    ) {
+        try {
+            byte[] pdf = service.print(transactionPoid, blPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("error",e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
 }
 

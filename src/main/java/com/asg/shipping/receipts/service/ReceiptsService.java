@@ -24,4 +24,8 @@ public interface ReceiptsService {
 	ReceiptCalculateDemurrageResponseDto calculateDemurrage(ReceiptCalculateDemurrageRequestDto requestDto);
 
     byte[] validityPrint(Long transactionPoid, Long blPoid) throws Exception;
+
+	byte[] receiptAndInvoicePrint(Long transactionPoid, Long blPoid) throws Exception;
+
+	byte[] printInvoiceCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception;
 }

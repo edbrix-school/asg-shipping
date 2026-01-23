@@ -50,5 +50,7 @@ public interface SalesInvoiceShippingService {
     byte[] printInvoice(Long transactionPoid,Long blPoid) throws Exception;
 
     byte[] printCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception;
+
+    byte[] print(Long transactionPoid, Long blPoid) throws Exception;
 }
 

@@ -486,4 +486,44 @@ public class ReceiptsController {
 			return error("Failed to generate PDF: " + e.getMessage(), 500);
 		}
 	}
+
+	@GetMapping("/receipt-invoice/{transactionPoid}")
+	public ResponseEntity<?> receiptAndInvoicePrint(
+			@Parameter(description = "Transaction POID", example = "12345")
+			@PathVariable Long transactionPoid,
+			@Parameter(description = "BL POID", example = "67890")
+			@RequestParam Long blPoid
+	) {
+		try {
+			byte[] pdf = receiptsService.receiptAndInvoicePrint(transactionPoid, blPoid);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF)
+					.body(pdf);
+		} catch (Exception e) {
+			log.error("error",e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+
+	@GetMapping("/customer-autocharge/{transactionPoid}")
+	public ResponseEntity<?> printInvoiceCustomerAutoCharge(
+			@Parameter(description = "Transaction POID", example = "12345")
+			@PathVariable Long transactionPoid,
+			@Parameter(description = "BL POID", example = "67890")
+			@RequestParam Long blPoid
+	) {
+		try {
+			byte[] pdf = receiptsService.printInvoiceCustomerAutoCharge(transactionPoid, blPoid);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF)
+					.body(pdf);
+		} catch (Exception e) {
+			log.error("error",e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
 }

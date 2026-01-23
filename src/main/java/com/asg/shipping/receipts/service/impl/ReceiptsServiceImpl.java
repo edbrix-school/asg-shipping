@@ -299,14 +299,38 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	@Override
 	public byte[] validityPrint(Long transactionPoid, Long blPoid) throws Exception {
 		List<String> containerNumber = autoPopulateRepository.findDemurrageContainers(blPoid,transactionPoid);
-		Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-103");
+		log.info("Container numbers ---------------> {}",containerNumber);
+		Map<String, Object> params = printService.buildBaseParams(blPoid, "300-103");
 		JasperReport mainReport = null;
 		for (String container : containerNumber) {
             params.put("CONTAINER_NO_CODE",container);
-			 mainReport = printService.load("shipping/Container_Return_Validity_Extension.jrxml");
+			 mainReport = printService.load("shipping/SH/Container_Return_Validity_Extension.jrxml");
 		}
 		return printService.fillReportToPdf(mainReport,params,dataSource);
 	}
+
+	@Override
+	public byte[] receiptAndInvoicePrint(Long transactionPoid, Long blPoid) throws Exception {
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-103");
+		params.put("DOC_BL_POID",blPoid);
+//		JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
+		JasperReport mainReport = printService.load("shipping/SH/SH_ALL_BILL_RECEIPT.jrxml");
+		return printService.fillReportToPdf(mainReport,params,dataSource);
+	}
+
+	@Override
+	public byte[] printInvoiceCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception {
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-103");
+		params.put("DOC_BL_POID",blPoid);
+		JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_CUSTOM_PRINT.jrxml");
+		return printService.fillReportToPdf(mainReport,params,dataSource);
+
+
+
+
+
+	}
+
 
 	private ReceiptCalculateDemurrageResponseDto.ChargeDetail processCharge(ChargeDto charge, String containerSize) {
 		String chargeApplicable = charge.getChargeApplicable();
