@@ -1,7 +1,7 @@
 package com.asg.shipping.exportManifestUpdate.repository;
 
-import com.asg.shipping.exportManifestUpdate.entity.ShipBlManifestContainerDtl;
-import com.asg.shipping.exportManifestUpdate.entity.ShipBlManifestContainerDtlId;
+import com.asg.shipping.exportManifestUpdate.entity.ExportShipBlManifestContainerDtl;
+import com.asg.shipping.exportManifestUpdate.entity.ExportShipBlManifestContainerDtlId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,22 +15,22 @@ import java.util.Optional;
  * Repository for SHIP_BL_MANIFEST_CONTAINER_DTL
  */
 @Repository
-public interface ShipBlManifestContainerDtlRepository extends JpaRepository<ShipBlManifestContainerDtl, ShipBlManifestContainerDtlId> {
+public interface ExportShipBlManifestContainerDtlRepository extends JpaRepository<ExportShipBlManifestContainerDtl, ExportShipBlManifestContainerDtlId> {
 
-    List<ShipBlManifestContainerDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
+    List<ExportShipBlManifestContainerDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
 
-    @Query("SELECT COALESCE(MAX(d.detRowId), 0) + 1 FROM ShipBlManifestContainerDtl d WHERE d.transactionPoid = :transactionPoid")
+    @Query("SELECT COALESCE(MAX(d.detRowId), 0) + 1 FROM ExportShipBlManifestContainerDtl d WHERE d.transactionPoid = :transactionPoid")
     Long getNextDetRowId(@Param("transactionPoid") Long transactionPoid);
 
     @Modifying
-    @Query("DELETE FROM ShipBlManifestContainerDtl d WHERE d.transactionPoid = :transactionPoid AND d.detRowId IN :detRowIds")
+    @Query("DELETE FROM ExportShipBlManifestContainerDtl d WHERE d.transactionPoid = :transactionPoid AND d.detRowId IN :detRowIds")
     void deleteByTransactionPoidAndDetRowIds(@Param("transactionPoid") Long transactionPoid, @Param("detRowIds") List<Long> detRowIds);
 
-    Optional<ShipBlManifestContainerDtl> findByTransactionPoidAndContainerNo(Long transactionPoid, String containerNo);
+    Optional<ExportShipBlManifestContainerDtl> findByTransactionPoidAndContainerNo(Long transactionPoid, String containerNo);
 
     @Query("SELECT COALESCE(SUM(d.grsVolume), 0), COALESCE(SUM(d.netVolume), 0), " +
            "COALESCE(SUM(d.grsWeight), 0), COALESCE(SUM(d.netWeight), 0), " +
-           "COALESCE(SUM(d.noOfPacks), 0) FROM ShipBlManifestContainerDtl d " +
+           "COALESCE(SUM(d.noOfPacks), 0) FROM ExportShipBlManifestContainerDtl d " +
            "WHERE d.transactionPoid = :transactionPoid")
     Object[] calculateTotals(@Param("transactionPoid") Long transactionPoid);
 }

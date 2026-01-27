@@ -6,8 +6,8 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.exportManifestUpdate.dto.LovItem;
-import com.asg.shipping.exportManifestUpdate.service.LovService;
+import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.common.service.LovService;
 import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.entity.*;
 import com.asg.shipping.exportManifestUpdate.mapper.ExportManifestBlMapper;
@@ -42,11 +42,11 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
     private static final String DOC_ID = "100-352";
 
-    private final ShipBlManifestHdrRepository hdrRepository;
-    private final ShipBlManifestGeneralDtlRepository generalDtlRepository;
-    private final ShipBlManifestContainerDtlRepository containerDtlRepository;
-    private final ShipBlManifestCargoDtlRepository cargoDtlRepository;
-    private final ShipBlManifestChargesDtlRepository chargesDtlRepository;
+    private final ExportShipBlManifestHdrRepository hdrRepository;
+    private final ExportShipBlManifestGeneralDtlRepository generalDtlRepository;
+    private final ExportShipBlManifestContainerDtlRepository containerDtlRepository;
+    private final ExportShipBlManifestCargoDtlRepository cargoDtlRepository;
+    private final ExportShipBlManifestChargesDtlRepository chargesDtlRepository;
     private final ExportManifestBlCustomRepository customRepository;
     private final ExportManifestBlMapper mapper;
     private final DocumentSearchService documentSearchService;
@@ -63,7 +63,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         Long companyPoid = UserContext.getCompanyPoid();
         
         // Query filters: DELETED = 'N' (NULL excluded), BL_TYPE = 'EXPORT', GROUP_POID and COMPANY_POID match
-        ShipBlManifestHdr entity = hdrRepository
+        ExportShipBlManifestHdr entity = hdrRepository
                 .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
                 .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
         
@@ -134,7 +134,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
         
         // Create entity
-        ShipBlManifestHdr entity = ShipBlManifestHdr.builder()
+        ExportShipBlManifestHdr entity = ExportShipBlManifestHdr.builder()
                 .groupPoid(groupPoid)
                 .companyPoid(companyPoid)
                 .transactionDate(LocalDate.now())
@@ -169,7 +169,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
         
         // Save entity
-        ShipBlManifestHdr saved = hdrRepository.save(entity);
+        ExportShipBlManifestHdr saved = hdrRepository.save(entity);
         
         log.info("Successfully created Export BL with ID: {}", saved.getTransactionPoid());
         ExportManifestBlResponse response = mapper.mapToResponse(saved);
@@ -189,7 +189,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         String userId = getCurrentUser();
         
         // Get existing entity (DELETED = 'N', BL_TYPE = 'EXPORT')
-        ShipBlManifestHdr entity = hdrRepository
+        ExportShipBlManifestHdr entity = hdrRepository
                 .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
                 .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
         
@@ -224,7 +224,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
         
         // Save entity
-        ShipBlManifestHdr saved = hdrRepository.save(entity);
+        ExportShipBlManifestHdr saved = hdrRepository.save(entity);
         
         log.info("Successfully updated Export BL with ID: {}", saved.getTransactionPoid());
         ExportManifestBlResponse response = mapper.mapToResponse(saved);
@@ -243,7 +243,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         Long companyPoid = UserContext.getCompanyPoid();
         String userId = getCurrentUser();
         
-        ShipBlManifestHdr entity = hdrRepository
+        ExportShipBlManifestHdr entity = hdrRepository
                 .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
                 .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
         
@@ -266,7 +266,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         
         validateHeaderExists(transactionPoid);
         
-        List<ShipBlManifestGeneralDtl> entities = generalDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        List<ExportShipBlManifestGeneralDtl> entities = generalDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
         List<GeneralCargoDetailDto> dtos = mapper.mapGeneralCargoListToDto(entities);
         
         // Enrich with LOV data
@@ -295,12 +295,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 if (detRowId == null) {
                     // New record
                     detRowId = generalDtlRepository.getNextDetRowId(transactionPoid);
-                    ShipBlManifestGeneralDtl entity = mapper.mapGeneralCargoToEntity(dto, transactionPoid, detRowId, userId);
+                    ExportShipBlManifestGeneralDtl entity = mapper.mapGeneralCargoToEntity(dto, transactionPoid, detRowId, userId);
                     generalDtlRepository.save(entity);
                 } else {
                     // Update existing record
-                    ShipBlManifestGeneralDtl entity = generalDtlRepository.findById(
-                            new ShipBlManifestGeneralDtlId(transactionPoid, detRowId))
+                    ExportShipBlManifestGeneralDtl entity = generalDtlRepository.findById(
+                            new ExportShipBlManifestGeneralDtlId(transactionPoid, detRowId))
                             .orElseThrow(() -> new RuntimeException("General cargo detail not found"));
                     
                     // Update fields
@@ -339,7 +339,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         
         validateHeaderExists(transactionPoid);
         
-        List<ShipBlManifestContainerDtl> entities = containerDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        List<ExportShipBlManifestContainerDtl> entities = containerDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
         List<ContainerDetailDto> dtos = mapper.mapContainerListToDto(entities);
         
         // Enrich with LOV data
@@ -368,7 +368,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 if (detRowId == null) {
                     // New record
                     detRowId = containerDtlRepository.getNextDetRowId(transactionPoid);
-                    ShipBlManifestContainerDtl entity = mapper.mapContainerToEntity(dto, transactionPoid, detRowId, userId);
+                    ExportShipBlManifestContainerDtl entity = mapper.mapContainerToEntity(dto, transactionPoid, detRowId, userId);
                     
                     // Validate container number uniqueness
                     if (entity.getContainerNo() != null && !entity.getContainerNo().trim().isEmpty()) {
@@ -381,8 +381,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                     containerDtlRepository.save(entity);
                 } else {
                     // Update existing record
-                    ShipBlManifestContainerDtl entity = containerDtlRepository.findById(
-                            new ShipBlManifestContainerDtlId(transactionPoid, detRowId))
+                    ExportShipBlManifestContainerDtl entity = containerDtlRepository.findById(
+                            new ExportShipBlManifestContainerDtlId(transactionPoid, detRowId))
                             .orElseThrow(() -> new RuntimeException("Container detail not found"));
                     
                     // Update fields (similar to general cargo)
@@ -421,7 +421,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         
         validateHeaderExists(transactionPoid);
         
-        List<ShipBlManifestCargoDtl> entities = cargoDtlRepository.findByTransactionPoidAndDescriptionTypeOrderByDetRowId(transactionPoid, "CARGO");
+        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findByTransactionPoidAndDescriptionTypeOrderByDetRowId(transactionPoid, "CARGO");
         return entities.stream().map(mapper::mapCargoDescriptionToDto).collect(Collectors.toList());
     }
 
@@ -444,11 +444,11 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 
                 if (detRowId == null) {
                     detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "CARGO");
-                    ShipBlManifestCargoDtl entity = mapper.mapCargoDescriptionToEntity(dto, transactionPoid, detRowId, userId);
+                    ExportShipBlManifestCargoDtl entity = mapper.mapCargoDescriptionToEntity(dto, transactionPoid, detRowId, userId);
                     cargoDtlRepository.save(entity);
                 } else {
-                    ShipBlManifestCargoDtl entity = cargoDtlRepository.findById(
-                            new ShipBlManifestCargoDtlId(transactionPoid, detRowId, "CARGO"))
+                    ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(
+                            new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "CARGO"))
                             .orElseThrow(() -> new RuntimeException("Cargo description not found"));
                     
                     if (dto.getCargoDescription() != null) entity.setCargoDescription(dto.getCargoDescription());
@@ -471,7 +471,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         
         validateHeaderExists(transactionPoid);
         
-        List<ShipBlManifestCargoDtl> entities = cargoDtlRepository.findByTransactionPoidAndDescriptionTypeOrderByDetRowId(transactionPoid, "MARKS");
+        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findByTransactionPoidAndDescriptionTypeOrderByDetRowId(transactionPoid, "MARKS");
         return entities.stream().map(mapper::mapCargoMarksToDto).collect(Collectors.toList());
     }
 
@@ -494,11 +494,11 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 
                 if (detRowId == null) {
                     detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "MARKS");
-                    ShipBlManifestCargoDtl entity = mapper.mapCargoMarksToEntity(dto, transactionPoid, detRowId, userId);
+                    ExportShipBlManifestCargoDtl entity = mapper.mapCargoMarksToEntity(dto, transactionPoid, detRowId, userId);
                     cargoDtlRepository.save(entity);
                 } else {
-                    ShipBlManifestCargoDtl entity = cargoDtlRepository.findById(
-                            new ShipBlManifestCargoDtlId(transactionPoid, detRowId, "MARKS"))
+                    ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(
+                            new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "MARKS"))
                             .orElseThrow(() -> new RuntimeException("Cargo marks not found"));
                     
                     if (dto.getCargoDescription() != null) entity.setCargoDescription(dto.getCargoDescription());
@@ -523,7 +523,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         
         validateHeaderExists(transactionPoid);
         
-        List<ShipBlManifestChargesDtl> entities = chargesDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        List<ExportShipBlManifestChargesDtl> entities = chargesDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
         List<ChargeDetailDto> details = mapper.mapChargeListToDto(entities);
         
         // Enrich with LOV data
@@ -565,11 +565,11 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 
                 if (detRowId == null) {
                     detRowId = chargesDtlRepository.getNextDetRowId(transactionPoid);
-                    ShipBlManifestChargesDtl entity = mapper.mapChargeToEntity(dto, transactionPoid, detRowId, userId);
+                    ExportShipBlManifestChargesDtl entity = mapper.mapChargeToEntity(dto, transactionPoid, detRowId, userId);
                     chargesDtlRepository.save(entity);
                 } else {
-                    ShipBlManifestChargesDtl entity = chargesDtlRepository.findById(
-                            new ShipBlManifestChargesDtlId(transactionPoid, detRowId))
+                    ExportShipBlManifestChargesDtl entity = chargesDtlRepository.findById(
+                            new ExportShipBlManifestChargesDtlId(transactionPoid, detRowId))
                             .orElseThrow(() -> new RuntimeException("Charge detail not found"));
                     
                     // Update fields
@@ -600,7 +600,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     }
 
     private void recalculateHeaderTotals(Long transactionPoid) {
-        ShipBlManifestHdr header = hdrRepository.findById(transactionPoid)
+        ExportShipBlManifestHdr header = hdrRepository.findById(transactionPoid)
                 .orElseThrow(() -> new RuntimeException("Header not found"));
         
         // Calculate totals from general cargo details
@@ -673,7 +673,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         // Validate BL number uniqueness if provided
         if (request.getBlNumber() != null && !request.getBlNumber().trim().isEmpty()) {
             String oldBlNumber = transactionPoid != null ? 
-                    hdrRepository.findById(transactionPoid).map(ShipBlManifestHdr::getBlNumber).orElse(null) : null;
+                    hdrRepository.findById(transactionPoid).map(ExportShipBlManifestHdr::getBlNumber).orElse(null) : null;
             String status = customRepository.validateBlNumberDuplicate(
                     request.getBlNumber().trim(), oldBlNumber != null ? oldBlNumber : "NEWRECORD", 
                     transactionPoid != null ? "UPDATING" : "INSERTING");
@@ -736,7 +736,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     /**
      * Enrich header DTO with LOV data for all POID fields
      */
-    private void enrichHeaderWithLovData(ExportManifestBlResponse dto, ShipBlManifestHdr entity) {
+    private void enrichHeaderWithLovData(ExportManifestBlResponse dto, ExportShipBlManifestHdr entity) {
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         Long userPoid = getUserPoid();

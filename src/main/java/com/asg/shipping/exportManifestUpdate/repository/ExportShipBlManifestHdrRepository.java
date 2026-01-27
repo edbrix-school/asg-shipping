@@ -1,6 +1,6 @@
 package com.asg.shipping.exportManifestUpdate.repository;
 
-import com.asg.shipping.exportManifestUpdate.entity.ShipBlManifestHdr;
+import com.asg.shipping.exportManifestUpdate.entity.ExportShipBlManifestHdr;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,9 +13,9 @@ import java.util.Optional;
  * Repository for SHIP_BL_MANIFEST_HDR
  */
 @Repository
-public interface ShipBlManifestHdrRepository extends JpaRepository<ShipBlManifestHdr, Long> {
+public interface ExportShipBlManifestHdrRepository extends JpaRepository<ExportShipBlManifestHdr, Long> {
 
-    Optional<ShipBlManifestHdr> findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
+    Optional<ExportShipBlManifestHdr> findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
             Long transactionPoid, Long groupPoid, Long companyPoid, String deleted);
 
     /**
@@ -24,28 +24,28 @@ public interface ShipBlManifestHdrRepository extends JpaRepository<ShipBlManifes
      * - BL_TYPE = 'EXPORT'
      * - GROUP_POID and COMPANY_POID must match
      */
-    @Query("SELECT h FROM ShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
+    @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
            "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid " +
            "AND (h.deleted IS NULL OR h.deleted = '' OR h.deleted != 'N') " +
            "AND h.blType = 'EXPORT'")
-    Optional<ShipBlManifestHdr> findExportBlByTransactionPoid(
+    Optional<ExportShipBlManifestHdr> findExportBlByTransactionPoid(
             @Param("transactionPoid") Long transactionPoid,
             @Param("groupPoid") Long groupPoid,
             @Param("companyPoid") Long companyPoid);
 
-    List<ShipBlManifestHdr> findByGroupPoidAndCompanyPoidAndDeletedAndBlType(
+    List<ExportShipBlManifestHdr> findByGroupPoidAndCompanyPoidAndDeletedAndBlType(
             Long groupPoid, Long companyPoid, String deleted, String blType);
 
-    Optional<ShipBlManifestHdr> findByVoyageTransactionPoidAndBlNumberAndDeleted(
+    Optional<ExportShipBlManifestHdr> findByVoyageTransactionPoidAndBlNumberAndDeleted(
             Long voyageTransactionPoid, String blNumber, String deleted);
 
-    @Query("SELECT h FROM ShipBlManifestHdr h WHERE h.groupPoid = :groupPoid " +
+    @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.groupPoid = :groupPoid " +
            "AND h.companyPoid = :companyPoid AND h.deleted = :deleted " +
            "AND h.blType = 'EXPORT' " +
            "AND (:blNumber IS NULL OR h.blNumber LIKE %:blNumber%) " +
            "AND (:blStatus IS NULL OR h.blStatus = :blStatus) " +
            "AND (:voyageTransactionPoid IS NULL OR h.voyageTransactionPoid = :voyageTransactionPoid)")
-    List<ShipBlManifestHdr> findExportBlsWithFilters(
+    List<ExportShipBlManifestHdr> findExportBlsWithFilters(
             @Param("groupPoid") Long groupPoid,
             @Param("companyPoid") Long companyPoid,
             @Param("deleted") String deleted,

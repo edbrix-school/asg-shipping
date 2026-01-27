@@ -10,13 +10,13 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Composite key for SHIP_BL_MANIFEST_CARGO_DTL
+ * Composite key for SHIP_BL_MANIFEST_CONTAINER_DTL
  */
 @Embeddable
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipBlManifestCargoDtlId implements Serializable {
+public class ExportShipBlManifestContainerDtlId implements Serializable {
 
     @Column(name = "TRANSACTION_POID", nullable = false)
     private Long transactionPoid;
@@ -24,22 +24,18 @@ public class ShipBlManifestCargoDtlId implements Serializable {
     @Column(name = "DET_ROW_ID", nullable = false)
     private Long detRowId;
 
-    @Column(name = "DESCRIPTION_TYPE", nullable = false, length = 10)
-    private String descriptionType;
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ShipBlManifestCargoDtlId that = (ShipBlManifestCargoDtlId) o;
+        ExportShipBlManifestContainerDtlId that = (ExportShipBlManifestContainerDtlId) o;
         return Objects.equals(transactionPoid, that.transactionPoid) &&
-                Objects.equals(detRowId, that.detRowId) &&
-                Objects.equals(descriptionType, that.descriptionType);
+                Objects.equals(detRowId, that.detRowId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(transactionPoid, detRowId, descriptionType);
+        return Objects.hash(transactionPoid, detRowId);
     }
 }
 

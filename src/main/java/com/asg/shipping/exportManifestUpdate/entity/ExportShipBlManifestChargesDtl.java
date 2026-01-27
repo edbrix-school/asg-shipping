@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@IdClass(ShipBlManifestChargesDtlId.class)
-public class ShipBlManifestChargesDtl {
+@IdClass(ExportShipBlManifestChargesDtlId.class)
+public class ExportShipBlManifestChargesDtl {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)

@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ShipBlManifestHdr {
+public class ExportShipBlManifestHdr {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)

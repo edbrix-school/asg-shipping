@@ -10,13 +10,13 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
- * Composite key for SHIP_BL_MANIFEST_CHARGES_DTL
+ * Composite key for SHIP_BL_MANIFEST_GENERAL_DTL
  */
 @Embeddable
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipBlManifestChargesDtlId implements Serializable {
+public class ExportShipBlManifestGeneralDtlId implements Serializable {
 
     @Column(name = "TRANSACTION_POID", nullable = false)
     private Long transactionPoid;
@@ -28,7 +28,7 @@ public class ShipBlManifestChargesDtlId implements Serializable {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        ShipBlManifestChargesDtlId that = (ShipBlManifestChargesDtlId) o;
+        ExportShipBlManifestGeneralDtlId that = (ExportShipBlManifestGeneralDtlId) o;
         return Objects.equals(transactionPoid, that.transactionPoid) &&
                 Objects.equals(detRowId, that.detRowId);
     }

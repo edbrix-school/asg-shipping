@@ -1,7 +1,7 @@
 package com.asg.shipping.exportManifestUpdate.repository;
 
-import com.asg.shipping.exportManifestUpdate.entity.ShipBlManifestCargoDtl;
-import com.asg.shipping.exportManifestUpdate.entity.ShipBlManifestCargoDtlId;
+import com.asg.shipping.exportManifestUpdate.entity.ExportShipBlManifestCargoDtl;
+import com.asg.shipping.exportManifestUpdate.entity.ExportShipBlManifestCargoDtlId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,16 +14,16 @@ import java.util.List;
  * Repository for SHIP_BL_MANIFEST_CARGO_DTL
  */
 @Repository
-public interface ShipBlManifestCargoDtlRepository extends JpaRepository<ShipBlManifestCargoDtl, ShipBlManifestCargoDtlId> {
+public interface ExportShipBlManifestCargoDtlRepository extends JpaRepository<ExportShipBlManifestCargoDtl, ExportShipBlManifestCargoDtlId> {
 
-    List<ShipBlManifestCargoDtl> findByTransactionPoidAndDescriptionTypeOrderByDetRowId(
+    List<ExportShipBlManifestCargoDtl> findByTransactionPoidAndDescriptionTypeOrderByDetRowId(
             Long transactionPoid, String descriptionType);
 
-    @Query("SELECT COALESCE(MAX(d.detRowId), 0) + 1 FROM ShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid AND d.descriptionType = :descriptionType")
+    @Query("SELECT COALESCE(MAX(d.detRowId), 0) + 1 FROM ExportShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid AND d.descriptionType = :descriptionType")
     Long getNextDetRowId(@Param("transactionPoid") Long transactionPoid, @Param("descriptionType") String descriptionType);
 
     @Modifying
-    @Query("DELETE FROM ShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid " +
+    @Query("DELETE FROM ExportShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid " +
            "AND d.descriptionType = :descriptionType AND d.detRowId IN :detRowIds")
     void deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(
             @Param("transactionPoid") Long transactionPoid,

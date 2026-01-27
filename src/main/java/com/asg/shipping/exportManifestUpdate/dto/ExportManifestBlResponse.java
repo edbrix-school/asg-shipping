@@ -1,6 +1,6 @@
 package com.asg.shipping.exportManifestUpdate.dto;
 
-import com.asg.shipping.exportManifestUpdate.dto.LovItem;
+import com.asg.shipping.common.dto.LovItem;
 import lombok.Data;
 
 import java.math.BigDecimal;

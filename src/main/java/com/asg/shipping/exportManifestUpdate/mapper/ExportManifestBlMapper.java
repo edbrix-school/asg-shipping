@@ -16,7 +16,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert Header Entity to Response DTO
      */
-    public ExportManifestBlResponse mapToResponse(ShipBlManifestHdr entity) {
+    public ExportManifestBlResponse mapToResponse(ExportShipBlManifestHdr entity) {
         if (entity == null) {
             return null;
         }
@@ -132,7 +132,7 @@ public class ExportManifestBlMapper {
     /**
      * Map Request DTO to Entity (for create/update)
      */
-    public void mapRequestToEntity(ExportManifestBlRequest request, ShipBlManifestHdr entity, Long groupPoid, Long companyPoid, String userId) {
+    public void mapRequestToEntity(ExportManifestBlRequest request, ExportShipBlManifestHdr entity, Long groupPoid, Long companyPoid, String userId) {
         if (request == null || entity == null) {
             return;
         }
@@ -322,7 +322,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert General Cargo Detail Entity to DTO
      */
-    public GeneralCargoDetailDto mapGeneralCargoToDto(ShipBlManifestGeneralDtl entity) {
+    public GeneralCargoDetailDto mapGeneralCargoToDto(ExportShipBlManifestGeneralDtl entity) {
         if (entity == null) {
             return null;
         }
@@ -350,12 +350,12 @@ public class ExportManifestBlMapper {
     /**
      * Convert General Cargo Detail DTO to Entity
      */
-    public ShipBlManifestGeneralDtl mapGeneralCargoToEntity(GeneralCargoDetailDto dto, Long transactionPoid, Long detRowId, String userId) {
+    public ExportShipBlManifestGeneralDtl mapGeneralCargoToEntity(GeneralCargoDetailDto dto, Long transactionPoid, Long detRowId, String userId) {
         if (dto == null) {
             return null;
         }
 
-        ShipBlManifestGeneralDtl entity = new ShipBlManifestGeneralDtl();
+        ExportShipBlManifestGeneralDtl entity = new ExportShipBlManifestGeneralDtl();
         entity.setTransactionPoid(transactionPoid);
         entity.setDetRowId(detRowId != null ? detRowId : 0L);
         entity.setComodityPoid(dto.getComodityPoid());
@@ -377,7 +377,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert Container Detail Entity to DTO
      */
-    public ContainerDetailDto mapContainerToDto(ShipBlManifestContainerDtl entity) {
+    public ContainerDetailDto mapContainerToDto(ExportShipBlManifestContainerDtl entity) {
         if (entity == null) {
             return null;
         }
@@ -446,12 +446,12 @@ public class ExportManifestBlMapper {
     /**
      * Convert Container Detail DTO to Entity
      */
-    public ShipBlManifestContainerDtl mapContainerToEntity(ContainerDetailDto dto, Long transactionPoid, Long detRowId, String userId) {
+    public ExportShipBlManifestContainerDtl mapContainerToEntity(ContainerDetailDto dto, Long transactionPoid, Long detRowId, String userId) {
         if (dto == null) {
             return null;
         }
 
-        ShipBlManifestContainerDtl entity = new ShipBlManifestContainerDtl();
+        ExportShipBlManifestContainerDtl entity = new ExportShipBlManifestContainerDtl();
         entity.setTransactionPoid(transactionPoid);
         entity.setDetRowId(detRowId != null ? detRowId : 0L);
         entity.setMateTransactionPoid(dto.getMateTransactionPoid());
@@ -500,7 +500,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert Cargo Description Entity to DTO
      */
-    public CargoDescriptionDto mapCargoDescriptionToDto(ShipBlManifestCargoDtl entity) {
+    public CargoDescriptionDto mapCargoDescriptionToDto(ExportShipBlManifestCargoDtl entity) {
         if (entity == null) {
             return null;
         }
@@ -520,12 +520,12 @@ public class ExportManifestBlMapper {
     /**
      * Convert Cargo Description DTO to Entity
      */
-    public ShipBlManifestCargoDtl mapCargoDescriptionToEntity(CargoDescriptionDto dto, Long transactionPoid, Long detRowId, String userId) {
+    public ExportShipBlManifestCargoDtl mapCargoDescriptionToEntity(CargoDescriptionDto dto, Long transactionPoid, Long detRowId, String userId) {
         if (dto == null) {
             return null;
         }
 
-        ShipBlManifestCargoDtl entity = new ShipBlManifestCargoDtl();
+        ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
         entity.setTransactionPoid(transactionPoid);
         entity.setDetRowId(detRowId != null ? detRowId : 0L);
         entity.setDescriptionType("CARGO");
@@ -539,7 +539,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert Cargo Marks Entity to DTO
      */
-    public CargoMarksDto mapCargoMarksToDto(ShipBlManifestCargoDtl entity) {
+    public CargoMarksDto mapCargoMarksToDto(ExportShipBlManifestCargoDtl entity) {
         if (entity == null) {
             return null;
         }
@@ -559,12 +559,12 @@ public class ExportManifestBlMapper {
     /**
      * Convert Cargo Marks DTO to Entity
      */
-    public ShipBlManifestCargoDtl mapCargoMarksToEntity(CargoMarksDto dto, Long transactionPoid, Long detRowId, String userId) {
+    public ExportShipBlManifestCargoDtl mapCargoMarksToEntity(CargoMarksDto dto, Long transactionPoid, Long detRowId, String userId) {
         if (dto == null) {
             return null;
         }
 
-        ShipBlManifestCargoDtl entity = new ShipBlManifestCargoDtl();
+        ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
         entity.setTransactionPoid(transactionPoid);
         entity.setDetRowId(detRowId != null ? detRowId : 0L);
         entity.setDescriptionType("MARKS");
@@ -578,7 +578,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert Charge Detail Entity to DTO
      */
-    public ChargeDetailDto mapChargeToDto(ShipBlManifestChargesDtl entity) {
+    public ChargeDetailDto mapChargeToDto(ExportShipBlManifestChargesDtl entity) {
         if (entity == null) {
             return null;
         }
@@ -638,12 +638,12 @@ public class ExportManifestBlMapper {
     /**
      * Convert Charge Detail DTO to Entity
      */
-    public ShipBlManifestChargesDtl mapChargeToEntity(ChargeDetailDto dto, Long transactionPoid, Long detRowId, String userId) {
+    public ExportShipBlManifestChargesDtl mapChargeToEntity(ChargeDetailDto dto, Long transactionPoid, Long detRowId, String userId) {
         if (dto == null) {
             return null;
         }
 
-        ShipBlManifestChargesDtl entity = new ShipBlManifestChargesDtl();
+        ExportShipBlManifestChargesDtl entity = new ExportShipBlManifestChargesDtl();
         entity.setTransactionPoid(transactionPoid);
         entity.setDetRowId(detRowId != null ? detRowId : 0L);
         entity.setChargePoid(dto.getChargePoid());
@@ -682,7 +682,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert list of General Cargo Details
      */
-    public List<GeneralCargoDetailDto> mapGeneralCargoListToDto(List<ShipBlManifestGeneralDtl> entities) {
+    public List<GeneralCargoDetailDto> mapGeneralCargoListToDto(List<ExportShipBlManifestGeneralDtl> entities) {
         if (entities == null) {
             return null;
         }
@@ -694,7 +694,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert list of Container Details
      */
-    public List<ContainerDetailDto> mapContainerListToDto(List<ShipBlManifestContainerDtl> entities) {
+    public List<ContainerDetailDto> mapContainerListToDto(List<ExportShipBlManifestContainerDtl> entities) {
         if (entities == null) {
             return null;
         }
@@ -706,7 +706,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert list of Cargo Descriptions
      */
-    public List<CargoDescriptionDto> mapCargoDescriptionListToDto(List<ShipBlManifestCargoDtl> entities) {
+    public List<CargoDescriptionDto> mapCargoDescriptionListToDto(List<ExportShipBlManifestCargoDtl> entities) {
         if (entities == null) {
             return null;
         }
@@ -718,7 +718,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert list of Cargo Marks
      */
-    public List<CargoMarksDto> mapCargoMarksListToDto(List<ShipBlManifestCargoDtl> entities) {
+    public List<CargoMarksDto> mapCargoMarksListToDto(List<ExportShipBlManifestCargoDtl> entities) {
         if (entities == null) {
             return null;
         }
@@ -730,7 +730,7 @@ public class ExportManifestBlMapper {
     /**
      * Convert list of Charge Details
      */
-    public List<ChargeDetailDto> mapChargeListToDto(List<ShipBlManifestChargesDtl> entities) {
+    public List<ChargeDetailDto> mapChargeListToDto(List<ExportShipBlManifestChargesDtl> entities) {
         if (entities == null) {
             return null;
         }

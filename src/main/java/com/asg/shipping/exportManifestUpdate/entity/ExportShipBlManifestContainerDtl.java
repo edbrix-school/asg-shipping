@@ -22,8 +22,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@IdClass(ShipBlManifestContainerDtlId.class)
-public class ShipBlManifestContainerDtl {
+@IdClass(ExportShipBlManifestContainerDtlId.class)
+public class ExportShipBlManifestContainerDtl {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
