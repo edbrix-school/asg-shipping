@@ -3,10 +3,18 @@ package com.asg.shipping.bookingFormSH.controller;
 import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 
+import com.asg.common.lib.dto.excel.ExcelFileData;
+import com.asg.common.lib.service.ExcelExportService;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +53,7 @@ import lombok.extern.slf4j.Slf4j;
 public class BookingFormController {
 
 	private final BookingFormService bookingFormService;
+    private final ExcelExportService excelExportService;
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@Operation(summary = "Get all Booking Form SH", description = "Fetches all Booking Form SH records for the given group", responses = {
@@ -153,4 +162,24 @@ public class BookingFormController {
 			return error(status, 500);
 		return success(status);
 	}
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @Operation(summary = "Generate Excel for VgmCustXLGenerateXL")
+    @GetMapping("/excel/vgmCustXLGenerateXL/{transactionPoid}")
+    public ResponseEntity<?> exportExcel(
+            @Parameter(description = "Transaction POID", example = "476")
+            @PathVariable Long transactionPoid) {
+        try {
+            Map<String, Object> parameters = new HashMap<>();
+            ExcelFileData data = excelExportService.generateExcel("100-311", String.valueOf(transactionPoid), null, "VGMCustXLFile.xlsx");
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=" + data.getFileName())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(data.getContent());
+        } catch (Exception e) {
+            log.error("Failed to generate Excel", e);
+            return error("Failed to generate Excel: " + e.getMessage(), 500);
+        }
+    }
 }
