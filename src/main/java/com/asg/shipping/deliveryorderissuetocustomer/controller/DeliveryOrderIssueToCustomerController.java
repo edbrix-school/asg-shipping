@@ -6,14 +6,21 @@ import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCus
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerPrintRequest;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.MultipartBodyBuilder;
+import java.io.ByteArrayOutputStream;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -67,42 +74,30 @@ public class DeliveryOrderIssueToCustomerController {
         return success("Delivery order updated successfully", dto);
     }
 
-//    @AllowedAction(UserRolesRightsEnum.PRINT)
-//    @PostMapping(
-//            value = "/validate-Document/{transactionPoid}",
-//            produces = MediaType.MULTIPART_MIXED_VALUE
-//    )
-//    public ResponseEntity<?> print(
-//            @PathVariable Long transactionPoid,
-//            @RequestBody IssueDeliveryOrderRequestDto request
-//    ) {
-//        try {
-//           , byte[] pdfs =
-//                    deliveryOrderIssueToCustomerService.validateDocument(transactionPoid, request);
-//
-//            if (pdfs.isEmpty()) {
-//                return ResponseEntity.noContent().build();
-//            }
-//
-//            MultipartBodyBuilder builder = new MultipartBodyBuilder();
-//
-//            pdfs.forEach((name, bytes) ->
-//                    builder.part(name, bytes)
-//                            .contentType(MediaType.APPLICATION_PDF)
-//                            .header(
-//                                    HttpHeaders.CONTENT_DISPOSITION,
-//                                    "attachment; filename=" + name + "-" + transactionPoid + ".pdf"
-//                            )
-//            );
-//
-//            return ResponseEntity.ok()
-//                    .contentType(MediaType.MULTIPART_MIXED)
-//                    .body(builder.build());
-//
-//        } catch (Exception e) {
-//            log.error("Failed to generate PDFs", e);
-//            return error("Failed to generate PDFs: " + e.getMessage(), 500);
-//        }
-//    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @PostMapping("/print/{transactionPoid}")
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto, @RequestParam ButtonType buttonType) {
+        try {
+            byte[] pdf = deliveryOrderIssueToCustomerService.print(transactionPoid,requestDto,buttonType);
+            if (pdf ==  null){
+                log.info("PDF is null");
+            }
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=delivery-order-issue-to-customer-"+buttonType.name().toLowerCase()+ "-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Journal Voucher: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+    }
+
+
 
 }

@@ -4,6 +4,8 @@ import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCus
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerPrintRequest;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
+import jakarta.validation.Valid;
 import net.sf.jasperreports.engine.JRException;
 
 import java.util.Map;
@@ -24,5 +26,5 @@ public interface DeliveryOrderIssueToCustomerService {
      */
     DeliveryOrderIssueToCustomerDto updateDeliveryOrder(Long id, UpdateDeliveryOrderRequestDto request);
 
-    Map<String, byte[]> validateDocument(Long transactionPoid, IssueDeliveryOrderRequestDto request) throws Exception;
+    byte[] print(Long transactionPoid, @Valid IssueDeliveryOrderRequestDto requestDto, ButtonType buttonType) throws Exception;
 }

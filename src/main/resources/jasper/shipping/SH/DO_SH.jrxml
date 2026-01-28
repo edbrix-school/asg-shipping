@@ -239,14 +239,14 @@ AND NVL(SLN.DO_PRINT_LINE,'N')='Y']]>
 			<staticText>
 				<reportElement x="165" y="97" width="192" height="26" uuid="0891fc75-4de0-4719-b6a3-35c5acae103c"/>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font fontName="SansSerif" size="19" isBold="true" isUnderline="false"/>
+					<font fontName="SansSerif" size="19" isBold="true"  isUnderline="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[DELIVERY ORDER]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="130" width="252" height="45" uuid="448a4902-139e-4df1-a7b4-62b37b2dfa98"/>
 				<textElement>
-					<font fontName="SansSerif" size="11" isBold="true"/>
+					<font fontName="SansSerif" size="11" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[To,
 The Manager,
@@ -255,28 +255,28 @@ Import Yard,]]></text>
 			<textField isBlankWhenNull="true">
 				<reportElement x="412" y="157" width="115" height="20" uuid="1bb6fcc9-e37e-4892-b70e-6c8b3a6175a8"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DO_NO}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="359" y="157" width="53" height="20" uuid="77fb8baf-4d80-4208-87d3-db12263f1661"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[D/O No.]]></text>
 			</staticText>
 			<textField pattern="dd-MMM-yy" isBlankWhenNull="true">
 				<reportElement x="412" y="178" width="115" height="20" uuid="c9b4b8d6-861e-4d3e-9799-b44630e1098e"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DO_DATE}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="359" y="178" width="53" height="20" uuid="f9a648a3-ccd1-413e-8613-db0e5407d18d"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Date]]></text>
 			</staticText>
@@ -292,14 +292,14 @@ Import Yard,]]></text>
 			<textField isBlankWhenNull="true">
 				<reportElement x="40" y="210" width="342" height="20" uuid="5b3f5a20-b7b5-4456-ac63-28e4fbb62dfd"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{CONSIGNEE_EDI_NAME}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="8" y="210" width="29" height="20" uuid="3fb44fe9-539b-45b1-a632-4edc93db1bb6"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[M/S. ]]></text>
 			</staticText>
@@ -313,7 +313,7 @@ Import Yard,]]></text>
 			<staticText>
 				<reportElement x="5" y="243" width="59" height="20" uuid="37120796-af83-4d8b-8396-b54f7e8abef4"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Loaded At]]></text>
 			</staticText>
@@ -327,7 +327,7 @@ Import Yard,]]></text>
 			<staticText>
 				<reportElement x="5" y="263" width="59" height="20" uuid="61d0755c-ad82-4fde-aecf-54d757eff0c1"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Line]]></text>
 			</staticText>
@@ -348,7 +348,7 @@ Import Yard,]]></text>
 			<staticText>
 				<reportElement x="5" y="283" width="85" height="20" uuid="78cdf856-4e6e-4a39-ab1f-3dc5872867df"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" size="9" isBold="true"/>
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Voy.& Vessel]]></text>
 			</staticText>
@@ -383,42 +383,42 @@ Import Yard,]]></text>
 			<staticText>
 				<reportElement x="305" y="241" width="65" height="20" uuid="35708f49-0a15-4b1d-b665-7452276e4fba"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[E.T.A.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="305" y="261" width="65" height="20" uuid="00c96f94-5f56-4232-bfa2-e3914f6ac228"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[B/L No.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="305" y="281" width="65" height="20" uuid="b0592ea7-838b-49c9-9196-8d95a1be155c"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Ex.Voy,& Vsl.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="305" y="301" width="65" height="20" uuid="34f8eaec-bbb7-499d-a3ac-3ec8c2586b69"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Job No.]]></text>
 			</staticText>
 			<textField isBlankWhenNull="true">
 				<reportElement x="413" y="137" width="115" height="20" uuid="a7ea5d72-923b-446b-9fe8-e46dadd40aab"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{CUSTOM_REGNO}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="329" y="137" width="84" height="20" uuid="231db1a3-28a5-4b80-ac51-4befa147bdbf"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[OFOQ Reg No.]]></text>
 			</staticText>
@@ -483,7 +483,7 @@ Import Yard,]]></text>
 							<staticText>
 								<reportElement style="table_CH" x="0" y="0" width="88" height="28" uuid="983feadc-f3be-4024-bb6e-80e4e9d808f4"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[Container No
 Marks & Numbers]]></text>
@@ -510,7 +510,7 @@ Marks & Numbers]]></text>
 							<staticText>
 								<reportElement x="0" y="0" width="30" height="28" uuid="2fd605f2-7bac-4ca0-8663-57938e48eaf3"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[Type]]></text>
 							</staticText>
@@ -536,7 +536,7 @@ Marks & Numbers]]></text>
 							<staticText>
 								<reportElement x="0" y="1" width="37" height="27" uuid="a542184b-b1e8-456c-9a38-6b1cf9f0072d"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[Size]]></text>
 							</staticText>
@@ -562,7 +562,7 @@ Marks & Numbers]]></text>
 							<staticText>
 								<reportElement x="0" y="0" width="39" height="28" uuid="27241f91-b483-43a2-897f-cca20930d668"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[No  Of
 Packs]]></text>
@@ -589,7 +589,7 @@ Packs]]></text>
 							<staticText>
 								<reportElement x="0" y="0" width="29" height="28" uuid="1ce4d26f-0dd8-4cdb-8b78-5320519d8559"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[Unit
 Pack]]></text>
@@ -616,7 +616,7 @@ Pack]]></text>
 							<staticText>
 								<reportElement x="3" y="0" width="61" height="28" uuid="76eea0d8-5696-4a14-81d6-447e49333e46"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[Weight Kgs]]></text>
 							</staticText>
@@ -639,7 +639,7 @@ Pack]]></text>
 							<staticText>
 								<reportElement x="3" y="0" width="62" height="28" uuid="b9f0db74-c876-43d4-ac1a-bb41da9f4967"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[Measure
 CBM]]></text>
@@ -674,7 +674,7 @@ CBM]]></text>
 							<staticText>
 								<reportElement x="0" y="0" width="177" height="27" uuid="cd68c1fc-83de-4dc0-890e-5593623a16fb"/>
 								<textElement>
-									<font size="9" isBold="true"/>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<text><![CDATA[Cargo Description]]></text>
 							</staticText>
@@ -744,14 +744,14 @@ CBM]]></text>
 			<staticText>
 				<reportElement x="10" y="39" width="45" height="20" uuid="c1a0a9d1-1aa8-4b0f-ba74-fde49ca49c00"/>
 				<textElement>
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[For: ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="79" width="100" height="20" uuid="eaa1e242-5338-4a17-8772-f1efbbddd087"/>
 				<textElement>
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[As Agents]]></text>
 			</staticText>

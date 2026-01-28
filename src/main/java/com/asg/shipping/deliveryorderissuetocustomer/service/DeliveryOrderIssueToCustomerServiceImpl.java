@@ -7,6 +7,7 @@ import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCus
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.entity.ShipBlManifestHDR;
+import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
 import jakarta.validation.ValidationException;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
+import java.io.InputStream;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.time.LocalDateTime;
@@ -81,6 +83,24 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         blManifest.setLastModifiedBy(username);
         blManifest.setLastModifiedDate(LocalDateTime.now());
         blManifestRepository.save(blManifest);
+
+        // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 18 parameters
+        callProcShipDoCntPrintAfter(groupPoid, companyPoid, transactionPoid, null,
+                "ARSHRCPTPRINTUPDATE", username, request.getDoReleasedIdPerson(),
+                request.getDoReleasedToPerson(), request.getDoReleasedAddressPerson(),
+                request.getOriginalBlReleaseCr(), request.getDoPriority(), request.getDoCntToConsignee(),
+                request.getDoCntToNotify(), request.getDoCntToOthers(), request.getDoCntToOthersMails(),
+                request.getEmailsDo(), request.getDeliverySentTo(), request.getPrincipalDoNumber());
+
+        // Check if auto-print is enabled (simplified - would need parameter service)
+        // For now, we'll skip auto-print and call the second stored procedure call
+        // In real implementation, check system parameter START_DO_CNT_DIRECT_CUST
+
+        // Call PROC_SHIP_DO_CNT_PRINT_AFTER again with 11 parameters (NOT_UPDATE)
+        callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, "ARSHRCPTPRINTUPDATE",
+                username, request.getDoReleasedIdPerson(), request.getDoReleasedToPerson(),
+                request.getDoReleasedAddressPerson(), request.getOriginalBlReleaseCr()
+        );
     }
 
     @Override
@@ -140,133 +160,118 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     }
 
     @Override
-    public Map<String, byte[]> validateDocument(
-            Long transactionPoid,
-            IssueDeliveryOrderRequestDto request
-    ) throws Exception {
-
+    public byte[] print(Long transactionPoid, IssueDeliveryOrderRequestDto requestDto, ButtonType buttonType) throws Exception {
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
 
-        if (request.getDeliverySentTo() == null || request.getDeliverySentTo().trim().isEmpty()) {
+        if (requestDto.getDeliverySentTo() == null || requestDto.getDeliverySentTo().trim().isEmpty()) {
             throw new ValidationException("Delivery sent to is required");
         }
 
-        validateEmailConfiguration(request);
+        validateEmailConfiguration(requestDto);
 
         callProcShipDoCntPrintAfter(
                 groupPoid, companyPoid, transactionPoid, null,
                 "ARSHRCPTPRINTUPDATE", username,
-                request.getDoReleasedIdPerson(),
-                request.getDoReleasedToPerson(),
-                request.getDoReleasedAddressPerson(),
-                request.getOriginalBlReleaseCr(),
-                request.getDoPriority(),
-                request.getDoCntToConsignee(),
-                request.getDoCntToNotify(),
-                request.getDoCntToOthers(),
-                request.getDoCntToOthersMails(),
-                request.getEmailsDo(),
-                request.getDeliverySentTo(),
-                request.getPrincipalDoNumber()
+                requestDto.getDoReleasedIdPerson(),
+                requestDto.getDoReleasedToPerson(),
+                requestDto.getDoReleasedAddressPerson(),
+                requestDto.getOriginalBlReleaseCr(),
+                requestDto.getDoPriority(),
+                requestDto.getDoCntToConsignee(),
+                requestDto.getDoCntToNotify(),
+                requestDto.getDoCntToOthers(),
+                requestDto.getDoCntToOthersMails(),
+                requestDto.getEmailsDo(),
+                requestDto.getDeliverySentTo(),
+                requestDto.getPrincipalDoNumber()
         );
 
-//        Map<String, JasperReport> printData = validateAndLoadPrintData(transactionPoid);
-//        if (printData == null) {
-//            return Map.of();
-//        }
-
-        callProcShipDoCntPrintAfterNotUpdate(
-                groupPoid, companyPoid, transactionPoid, null,
-                "ARSHRCPTPRINTUPDATE", username,
-                request.getDoReleasedIdPerson(),
-                request.getDoReleasedToPerson(),
-                request.getDoReleasedAddressPerson(),
-                request.getOriginalBlReleaseCr()
-        );
-
-        Map<String, byte[]> result = new LinkedHashMap<>();
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-414");
         params.put("P_TRAN_NO", transactionPoid);
-      JasperReport mainReport =  printService.load("shipping/DO_SH.jrxml");
-      printService.fillReportToPdf(mainReport,params,dataSource);
 
+        byte[] result = generatePrintByButtonType(transactionPoid, buttonType, params);
+        if (result != null) {
+            return result;
+        }
 
-
-
-//        if (printData.containsKey("mainReport")) {
-//            result.put(
-//                    "DELIVERY_ORDER",
-//                    printService.fillReportToPdf(
-//                            printData.get("mainReport"),
-//                            params,
-//                            dataSource
-//                    )
-//            );
-//        }
-
-//        if (printData.containsKey("containerReport")) {
-//            result.put(
-//                    "CONTAINER_DELIVERY",
-//                    printService.fillReportToPdf(
-//                           printData.get("containerReport"),
-//                            params,
-//                            dataSource
-//                    )
-//            );
-//        }
-//
-//        if (printData.containsKey("returnReport")) {
-//            result.put(
-//                    "CONTAINER_RETURN",
-//                    printService.fillReportToPdf(
-//                             printData.get("returnReport"),
-//                            params,
-//                            dataSource
-//                    )
-//            );
-//        }
-
-        return result;
+        callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, "ARSHRCPTPRINTUPDATE",
+                username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
+                requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
+        );
+        return null;
     }
 
+    private byte[] generatePrintByButtonType(Long transactionPoid, ButtonType buttonType, Map<String, Object> params) throws Exception {
+        return switch (buttonType) {
+            case DeliveryOrderPrint -> generateDeliveryOrderPrint(transactionPoid, params);
+            case ContainerFormPrint -> generateContainerFormPrint(transactionPoid, params);
+            case ReturnFormPrint -> generateReturnFormPrint(transactionPoid, params);
+        };
+    }
 
-    private  JasperReport validateAndLoadPrintData(Long transactionPoid) throws JRException {
-        Map<String, JasperReport> result = new HashMap<>();
+    private byte[] generateDeliveryOrderPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
+        if (!validatePrintDocument(transactionPoid, "DO")) {
+            return null;
+        }
+        JasperReport mainReport = printService.load("shipping/SH/DO_SH.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
 
-//        String doPrintCheck = checkPrintDocumentData(transactionPoid, "DO");
-//        String dlvCntPrintCheck = checkPrintDocumentData(transactionPoid, "DLVCNT");
-//        String rtnCntPrintCheck = checkPrintDocumentData(transactionPoid, "RTNCNT");
-//
-//        log.info("Print validation for transactionPoid {}: DO={}, DLVCNT={}, RTNCNT={}",
-//                  transactionPoid, doPrintCheck, dlvCntPrintCheck, rtnCntPrintCheck);
+    private byte[] generateContainerFormPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
+        if (!validatePrintDocument(transactionPoid, "DLVCNT")) {
+            return null;
+        }
+        String pLineCode = viewRepository.getPlineCode(transactionPoid);
+        String templatePath = "HANJN".equalsIgnoreCase(pLineCode) ?
+                "shipping/SH/Container_Delivery_ValidityHJS_Currently_not.jrxml" :
+                "shipping/SH/Container_Delivery_Validity.jrxml";
+        JasperReport mainReport = printService.load(templatePath);
+        
+        try {
+            InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/shipping/jpg/FSL_STAMP.jpg");
+            if (stampStream == null) {
+                log.warn("FSL_STAMP.jpg not found in classpath");
+                params.put("FSL_STAMP", null);
+            } else {
+                log.info("FSL_STAMP.jpg loaded successfully");
+                byte[] stampBytes = stampStream.readAllBytes();
+                stampStream.close();
+                params.put("FSL_STAMP", new java.io.ByteArrayInputStream(stampBytes));
+            }
+        } catch (Exception e) {
+            log.error("Error loading FSL_STAMP.jpg", e);
+            params.put("FSL_STAMP", null);
+        }
+        
+        if ("HANJN".equalsIgnoreCase(pLineCode)) {
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("jasper/shipping/jpg/hidd_map4.jpg");
+            if (imageStream != null) {
+                params.put("IMAGE_MAP", imageStream);
+            }
+        }
+        
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
 
-//        if ("Y".equalsIgnoreCase(doPrintCheck) &&
-//            "N".equalsIgnoreCase(viewRepository.printDocumentAlreadyPrinted("DO", transactionPoid))) {
-            log.info("Loaded mainReport for transactionPoid {}", transactionPoid);
-//        }
+    private byte[] generateReturnFormPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
+        if (!validatePrintDocument(transactionPoid, "RTNCNT")) {
+            return null;
+        }
+        JasperReport mainReport = printService.load("shipping/SH/Container_Return_Validity.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
 
-//        if ("Y".equalsIgnoreCase(dlvCntPrintCheck) &&
-//            "N".equalsIgnoreCase(viewRepository.printDocumentAlreadyPrinted("DLVCNT", transactionPoid))) {
-//            String pLineCode = viewRepository.getPlineCode(transactionPoid);
-//            JasperReport containerReport = "HANJN".equalsIgnoreCase(pLineCode) ?
-//                    printService.load("shipping/Container_Delivery_ValidityHJS_Currently_not.jrxml") :
-//                    printService.load("shipping/Container_Delivery_Validity.jrxml");
-//            result.put("containerReport", containerReport);
-//            log.info("Loaded containerReport for transactionPoid {}", transactionPoid);
-//        }
-//
-//        if ("Y".equalsIgnoreCase(rtnCntPrintCheck) &&
-//            "N".equalsIgnoreCase(viewRepository.printDocumentAlreadyPrinted("RTNCNT", transactionPoid))) {
-//            result.put("returnReport", printService.load("shipping/Container_Return_Validity.jrxml"));
-//            log.info("Loaded returnReport for transactionPoid {}", transactionPoid);
-//        }
-
-//        boolean hasReports = result.containsKey("mainReport") || result.containsKey("containerReport") || result.containsKey("returnReport");
-//        log.info("validateAndLoadPrintData result for transactionPoid {}: hasReports={}", transactionPoid, hasReports);
-//        return hasReports ? result : null;
-        return null;
+    private boolean validatePrintDocument(Long transactionPoid, String docType) {
+        String printCheck = checkPrintDocumentData(transactionPoid, docType);
+        log.info("print check {} ",printCheck);
+        if ("N".equalsIgnoreCase(printCheck)) {
+            return false;
+        }
+        String alreadyPrinted = viewRepository.printDocumentAlreadyPrinted(docType, transactionPoid);
+        log.info("print alreadyPrinted {} ",alreadyPrinted);
+        return !"Y".equalsIgnoreCase(alreadyPrinted);
     }
 
     private void validateEmailConfiguration(IssueDeliveryOrderRequestDto request) {

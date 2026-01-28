@@ -26,6 +26,8 @@ WHERE BL_POID=$P{P_BLPOID} AND CONTAINER_NO=$P{P_CONTAINERNO}
 	<parameter name="DOC_ID" class="java.lang.String">
 		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
 	</parameter>
+	<parameter name="FSL_STAMP" class="java.io.InputStream"/>
+	<parameter name="SUB_FOOTER" class="net.sf.jasperreports.engine.JasperReport"/>
 	<queryString>
 		<![CDATA[SELECT ROWNUM SEQNO ,D.CONTAINER_NO,CONTAINER_TYPE_SIZE ||' ' ||CONTAINER_TYPE_ISO_NAME   CNTSIZE,D.QUANTITY,NVL(D.GRS_WEIGHT,0)/1000 DWT,
 D.GRS_VOLUME,D.PACK_UNIT,D.NO_OF_PACKS,
@@ -77,28 +79,28 @@ AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO
 			<textField>
 				<reportElement x="0" y="7" width="532" height="16" uuid="ee553aec-12a9-4677-be84-82e19aa15207"/>
 				<textElement textAlignment="Center">
-					<font fontName="SansSerif" size="11" isBold="true" isItalic="false" isUnderline="false"/>
+					<font fontName="SansSerif" size="11" isBold="true"  pdfFontName="Helvetica-Bold" isItalic="false" isUnderline="false"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{COMPANY}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="0" y="24" width="532" height="19" uuid="d6556836-2881-45ec-be33-3dac25cf9292"/>
 				<textElement textAlignment="Center">
-					<font fontName="SansSerif" size="15" isBold="true" isItalic="false"/>
+					<font fontName="SansSerif" size="15" isBold="true" pdfFontName="Helvetica-Bold" isItalic="false"/>
 				</textElement>
 				<text><![CDATA[CONTAINER RETURN FORM]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="4" y="46" width="528" height="20" uuid="7b9a7a17-2c95-4e7c-b796-e08d20cbf1cb"/>
 				<textElement textAlignment="Center">
-					<font fontName="SansSerif" size="14" isBold="true"/>
+					<font fontName="SansSerif" size="14"  pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[PLEASE REMOVE  IMCO LABELS]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="66" width="528" height="28" uuid="7c1fc67b-16df-4e9a-ae4a-865486a1e99a"/>
 				<textElement textAlignment="Center">
-					<font fontName="SansSerif" size="20" isBold="true" isUnderline="true"/>
+					<font fontName="SansSerif" size="20" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
 				</textElement>
 				<text><![CDATA[ONLY HANJIN]]></text>
 			</staticText>
@@ -112,7 +114,7 @@ AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO
 			<textField isBlankWhenNull="true">
 				<reportElement x="156" y="62" width="148" height="20" uuid="fa1c0e7b-8432-4661-96f2-e5d1f870d5e6"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font fontName="SansSerif" size="13" isBold="true"/>
+					<font fontName="SansSerif" size="13" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
 			</textField>
@@ -182,14 +184,14 @@ AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO
 			<textField isBlankWhenNull="true">
 				<reportElement x="431" y="20" width="101" height="20" uuid="a14e4866-97ca-4345-878f-4bb63f4eb470"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font fontName="SansSerif" size="12" isBold="true"/>
+					<font fontName="SansSerif" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="3" y="1" width="403" height="20" uuid="1c32d62f-5397-49c1-a565-5b6c84ed782a"/>
 				<textElement>
-					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true"/>
+					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[TO :  Alsharif Group Container Yard Hidd.]]></text>
 			</staticText>
@@ -203,7 +205,7 @@ AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font fontName="Arial" size="12" isBold="true"/>
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[VALIDITY:]]></text>
 			</staticText>
@@ -216,7 +218,7 @@ AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO
 			<staticText>
 				<reportElement x="359" y="20" width="72" height="20" uuid="2b4779a9-5f2e-4d1a-b12b-934ec6ef25c9"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font fontName="SansSerif" isBold="true"/>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[BL Number  : ]]></text>
 			</staticText>
@@ -262,40 +264,40 @@ AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO
 			</staticText>
 			<image>
 				<reportElement x="0" y="106" width="526" height="472" uuid="89aef777-0412-41c6-a8ce-0b87e40fe945"/>
-				<imageExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\SH\\hidd_map4.jpg"]]></imageExpression>
+				<imageExpression><![CDATA[$P{FSL_STAMP}]]></imageExpression>
 			</image>
 			<staticText>
 				<reportElement x="67" y="430" width="403" height="20" uuid="000651ab-5bd8-4333-8350-8f83d1873078"/>
 				<textElement>
-					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true"/>
+					<font fontName="SansSerif" size="14" isBold="true" pdfFontName="Helvetica-Bold" isUnderline="true"/>
 				</textElement>
 				<text><![CDATA[Avenue-17, After BDB Building,]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="69" y="458" width="403" height="20" uuid="e9a98634-13f1-4bf4-a46b-ac8f6d9ef45e"/>
 				<textElement>
-					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true"/>
+					<font fontName="SansSerif" size="14" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
 				</textElement>
 				<text><![CDATA[Near to BIC Building, Hidd.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="70" y="492" width="440" height="20" uuid="7df9983f-6d87-40ec-bb2d-05d5e173afc4"/>
 				<textElement>
-					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true"/>
+					<font fontName="SansSerif" size="14" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
 				</textElement>
 				<text><![CDATA[Contact persons : Mr. Enasu (33921422) & Mr. Yaasin (39724661).]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="7" y="405" width="403" height="20" uuid="ddf4f82f-75af-4fac-afb9-8c32ebdd1c56"/>
 				<textElement>
-					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true"/>
+					<font fontName="SansSerif" size="14" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
 				</textElement>
 				<text><![CDATA[Address :-]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="7" y="522" width="440" height="20" uuid="ac90d45e-e085-42c4-bf7e-dbe7177828ff"/>
 				<textElement>
-					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true"/>
+					<font fontName="SansSerif" size="14" isBold="true" pdfFontName="Helvetica-Bold" isUnderline="true"/>
 				</textElement>
 				<text><![CDATA[Return Timing 6 Am To 5 Pm.]]></text>
 			</staticText>
@@ -455,7 +457,7 @@ AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO
 					<subreportParameterExpression><![CDATA[$F{COMPANY_POID}]]></subreportParameterExpression>
 				</subreportParameter>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "Templates/DocFooterSubReport.jasper"]]></subreportExpression>
+				<subreportExpression><![CDATA[$P{SUB_FOOTER}]]></subreportExpression>
 			</subreport>
 		</band>
 	</pageFooter>
