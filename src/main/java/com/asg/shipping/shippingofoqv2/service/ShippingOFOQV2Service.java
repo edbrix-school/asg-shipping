@@ -23,5 +23,7 @@ public interface ShippingOFOQV2Service {
     OFOQCheckStatusResponseDto updateShippingOFOQ(Long transactionPoid, ShippingOFOQV2Request request);
 
     void deleteShippingOFOQ(Long transactionPoid);
+
+    AmendBlDto amendBl(@Valid OFOQAmendBlRequestDto request);
 }
 

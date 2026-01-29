@@ -11,7 +11,7 @@ public interface ShippingOFOQProcRepository {
 
     OFOQLoadItemDetailsResponse loadOFOQDetails(LoadOFOQDetailsRequest request);
 
-    List<OFOQManifestXmlDto> loadOFOQManifestXml(ShippingOFOQV2Request request, Long transactionPoid);
+    List<OFOQManifestXmlDto> loadOFOQManifestXml( Long transactionPoid,String blNumber,String manifestType,String docRef,Long vesselPoid);
 
     String saveOFOQApiResponse(Long transactionPoid, String docRef, String manifestType,
                                int responseCode, String responseMessage, String xmlResponse);

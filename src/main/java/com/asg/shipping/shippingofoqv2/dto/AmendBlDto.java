@@ -5,14 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+
 import java.util.List;
 
 @Data
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
-public class OFOQLoadItemDetailsResponse {
-    private List<OFOQItemDtlDto> lineDetails;
-    private List<OFOQBlDtlDto> blDetails;
+@NoArgsConstructor
+@Builder
+public class AmendBlDto {
 
-}
+    private OFOQAmendBLDto amendBL;
+    private List<OFOQManifestAmendmentResponse> manifestAmendmentResponses;
+ }

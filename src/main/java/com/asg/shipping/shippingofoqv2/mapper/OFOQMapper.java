@@ -12,7 +12,7 @@ import java.util.List;
 @Slf4j
 public class OFOQMapper {
 
-    public OFOQApiDataHdrDto toHeaderDto(OfoqApiDataHdrEntity entity) {
+    public OFOQApiDataHdrDto toHeaderDto(OfoqApiDataHdrEntity entity,String functionalReference) {
         log.info("Header mapping - apiProvisionalMfNo: {}, apiProvisionalStatus: {}, manifestNo: {}, manifestStatus: {}",
                 entity.getApiProvisionalMfNo(), entity.getApiProvisionalStatus(), entity.getManifestNo(), entity.getManifestStatus());
 
@@ -28,6 +28,7 @@ public class OFOQMapper {
                 .apiProvisionalStatus(entity.getApiProvisionalStatus())
                 .manifestNo(entity.getManifestNo())
                 .manifestStatus(entity.getManifestStatus())
+                .functionalReference(functionalReference)
                 .remarks(entity.getRemarks())
                 .deleted(entity.getDeleted())
                 .createdBy(entity.getCreatedBy())
@@ -64,16 +65,7 @@ public class OFOQMapper {
                 .build();
     }
 
-    public OFOQManifestSubmitResponseDto toManifestResponseDto(OFOQManifestResponseDtlEntity entity) {
-        return OFOQManifestSubmitResponseDto.builder()
-                .detRowId(entity.getDetRowId())
-//                .functionalRef(entity.getFunctionalRef())
-//                .date(entity.getResponseDate() != null ? new java.util.Date(entity.getResponseDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
-//                .statusCode(entity.getStatusCode())
-//                .responseMessage(entity.getResponseMessage())
-//                .processingStatus(entity.getProcessingStatus())
-                .build();
-    }
+
 
     public OFOQAmendBLDto toAmendBLDto(OFOQAmendBlDtlEntity entity) {
         return OFOQAmendBLDto.builder()
@@ -88,7 +80,20 @@ public class OFOQMapper {
                 .build();
     }
 
-    public OFOQVoyageDataResponse toVoyageDataResponse(OFOQApiDataHdrDto header, 
+    public OFOQCheckStatusManifestResponse toManifestResponseDto(OFOQManifestResponseDtlEntity entity) {
+        OFOQCheckStatusManifestResponse dto = new OFOQCheckStatusManifestResponse();
+        dto.setTransactionPoid(entity.getTransactionPoid());
+        dto.setDetRowId(entity.getDetRowId());
+        dto.setDate(entity.getResponseDate() != null ?
+            entity.getResponseDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null);
+        dto.setFunctionalReference(entity.getFunctionalRef());
+        dto.setStatusCode(String.valueOf(entity.getStatusCode()));
+        dto.setResponseMessage(entity.getResponseMessage());
+        dto.setProcessingStatus(entity.getProcessingStatus());
+        return dto;
+    }
+
+    public OFOQVoyageDataResponse toVoyageDataResponse(OFOQApiDataHdrDto header,
                                                        List<OFOQItemDtlDto> lineDetail,
                                                         List<OFOQManifestAmendmentResponse> manifestAmendmentResponse,
                                                         List<OFOQAmendBLDto> amendBL,

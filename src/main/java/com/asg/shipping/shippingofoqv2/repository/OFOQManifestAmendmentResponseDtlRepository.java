@@ -14,4 +14,6 @@ public interface OFOQManifestAmendmentResponseDtlRepository extends JpaRepositor
     
     @Query("SELECT e FROM OFOQManifestAmendmentResponseDtlEntity e WHERE e.transactionPoid = :transactionPoid")
     List<OFOQManifestAmendmentResponseDtlEntity> findByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
+
+    List<OFOQManifestAmendmentResponseDtlEntity> findByTransactionPoidAndXmlBlNumber(Long transactionPoid, String xmlBlNumber);
 }

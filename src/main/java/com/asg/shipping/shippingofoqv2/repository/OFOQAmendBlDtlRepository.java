@@ -14,4 +14,6 @@ public interface OFOQAmendBlDtlRepository extends JpaRepository<OFOQAmendBlDtlEn
     
     @Query("SELECT e FROM OFOQAmendBlDtlEntity e WHERE e.transactionPoid = :transactionPoid")
     List<OFOQAmendBlDtlEntity> findByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
+
+    OFOQAmendBlDtlEntity findByTransactionPoidAndBlNumber(Long transactionPoid, String blNumber);
 }

@@ -27,6 +27,7 @@ public class OFOQApiDataHdrDto {
     private String manifestNo;
     private String manifestStatus;
     private String remarks;
+    private String functionalReference;
     private String deleted;
     private String createdBy;
     private LocalDateTime createdDate;

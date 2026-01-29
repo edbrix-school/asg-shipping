@@ -74,7 +74,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
     public OFOQVoyageDataResponse getShippingOFOQById(Long transactionPoid) {
         OfoqApiDataHdrEntity headerEntity = findEntityById(transactionPoid);
         
-        OFOQApiDataHdrDto header = ofoqMapper.toHeaderDto(headerEntity);
+        OFOQApiDataHdrDto header = ofoqMapper.toHeaderDto(headerEntity,null);
         
         List<OFOQItemDtlDto> lineDetail = OFOQItemDtlRepository
                 .findByTransactionPoid(transactionPoid).stream()
@@ -154,20 +154,27 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     );
 
             Long transactionPoid = savedHeader.getTransactionPoid();
+            if (request.getLineDetails() != null) {
+                saveItemDetails(request.getLineDetails(),transactionPoid);
+            }
+
+            if (request.getAmendBl() != null) {
+                saveAmendBl(request.getAmendBl(),transactionPoid);
+            }
             log.debug("OFOQ header created with transactionPoid: {}", transactionPoid);
 
-            return submitAndCheckOFOQManifest(request, transactionPoid);
+            return submitAndCheckOFOQManifest(transactionPoid,"M",null,request.getDocRef(),request.getVesselPoid());
         } catch (Exception e) {
             log.error("Error creating OFOQ manifest for docRef: {}", request.getDocRef(), e);
             throw e;
         }
     }
 
-    private OFOQCheckStatusResponseDto submitAndCheckOFOQManifest(ShippingOFOQV2Request request, Long transactionPoid) {
+    private OFOQCheckStatusResponseDto submitAndCheckOFOQManifest( Long transactionPoid,String manifestType,String blNumber,String docRef,Long vesselPoid){
         log.debug("Submitting OFOQ manifest for transactionPoid: {}", transactionPoid);
         try {
             List<OFOQManifestXmlDto> xmlDtos =
-                    shippingOFOQProcRepository.loadOFOQManifestXml(request, transactionPoid);
+                    shippingOFOQProcRepository.loadOFOQManifestXml(transactionPoid,blNumber,manifestType,docRef ,vesselPoid);
 
             String xmlData =
                     xmlDtos.stream()
@@ -177,10 +184,10 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
             OFOQManifestSubmitResponseDto apiResponse =
                     OFOQApiService.callOFOQApi(
                             xmlData,
-                            "M",
-                            "0",
+                            manifestType,
+                            blNumber,
                             transactionPoid,
-                            request.getDocRef()
+                            docRef
                     );
 
             if (apiResponse.getFunctionalRefId() != null) {
@@ -188,14 +195,14 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                 return checkStatus(OFOQCheckStatusDto.builder()
                         .functionalReference(apiResponse.getFunctionalRefId())
                         .transactionPoid(transactionPoid)
-                        .docReference(request.getDocRef())
-                        .blNumber(null)
+                        .docReference(docRef)
+                        .blNumber(blNumber)
                         .build());
             } else {
                 log.warn("OFOQ manifest submission returned null functionalRefId for transactionPoid: {}", transactionPoid);
                 OfoqApiDataHdrEntity header = findEntityById(transactionPoid);
                 OFOQCheckStatusResponseDto responseDto = new OFOQCheckStatusResponseDto();
-                responseDto.setHeader(ofoqMapper.toHeaderDto(header));
+                responseDto.setHeader(ofoqMapper.toHeaderDto(header,apiResponse.getFunctionalRefId()));
                 responseDto.setManifestResponses(new ArrayList<>());
                 return responseDto;
             }
@@ -258,7 +265,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                             .toList();
 
             OFOQCheckStatusResponseDto checkStatusResponseDto = new OFOQCheckStatusResponseDto();
-            checkStatusResponseDto.setHeader(ofoqMapper.toHeaderDto(header));
+            checkStatusResponseDto.setHeader(ofoqMapper.toHeaderDto(header,request.getFunctionalReference()));
             checkStatusResponseDto.setManifestResponses(manifestResponses);
             
             log.info("Status check completed for transactionPoid: {} with statusCode: {}", request.getTransactionPoid(), customsResponse.getStatusCode());
@@ -287,7 +294,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
             ofoqApiDataHdrRepository.save(existingEntity);
             log.debug("OFOQ header updated for transactionPoid: {}", transactionPoid);
 
-            return submitAndCheckOFOQManifest(request, transactionPoid);
+            return submitAndCheckOFOQManifest( transactionPoid,"M",null,request.getDocRef(),request.getVesselPoid());
         } catch (Exception e) {
             log.error("Error updating OFOQ manifest for transactionPoid: {}", transactionPoid, e);
             throw e;
@@ -311,6 +318,32 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
         }
     }
 
+    @Override
+    public AmendBlDto amendBl(OFOQAmendBlRequestDto request) {
+
+        submitAndCheckOFOQManifest(request.getTransactionPoid(),"AM",request.getBlNumber(), request.getDocReference(),request.getVesselPoid());
+        AmendBlDto amendBlDto = new AmendBlDto();
+        OFOQAmendBlDtlEntity ofoqAmendBlDtlEntity = OFOQAmendBlDtlRepository.findByTransactionPoidAndBlNumber(
+                request.getTransactionPoid(),
+                request.getBlNumber()
+        );
+        List<OFOQManifestAmendmentResponseDtlEntity> ofoqManifestAmendmentResponseDtlEntity =
+                OFOQManifestAmendmentResponseDtlRepository.findByTransactionPoidAndXmlBlNumber(
+                        request.getTransactionPoid(),
+                        request.getBlNumber()
+                );
+
+        amendBlDto.setAmendBL(ofoqMapper.toAmendBLDto(ofoqAmendBlDtlEntity));
+        amendBlDto.setManifestAmendmentResponses(
+                ofoqManifestAmendmentResponseDtlEntity.stream()
+                        .map(ofoqMapper::toAmendmentResponseDto)
+                        .toList()
+        );
+        return amendBlDto;
+
+
+    }
+
     private void validateCheckStatusRequest(OFOQCheckStatusDto request) {
         if (request.getTransactionPoid() == null){
             throw new ValidationException("Document must be saved ");
@@ -320,16 +353,16 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
         }
     }
 
-    private String saveManifestStatusResponse(Long transactionPoid, String docRef, String manifestType, String blNumber, OFOQCheckStatusCustomsResponseDto statusResponse) {
-     return  shippingOFOQProcRepository.saveOFOQManifestResponse(
-            transactionPoid,
-            docRef, 
-            statusResponse.getFunctionalReference(),
+    private void saveManifestStatusResponse(Long transactionPoid, String docRef, String manifestType, String blNumber, OFOQCheckStatusCustomsResponseDto statusResponse) {
+        shippingOFOQProcRepository.saveOFOQManifestResponse(
+                transactionPoid,
+                docRef,
+                statusResponse.getFunctionalReference(),
                 statusResponse.getStatusCode(),
                 statusResponse.getResponseMessage(),
-            statusResponse.getResponseBody(),
-            manifestType,
-            blNumber
+                statusResponse.getResponseBody(),
+                manifestType,
+                blNumber
         );
     }
 
