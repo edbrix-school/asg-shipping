@@ -1,6 +1,7 @@
 package com.asg.shipping.shippingofoqv2.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.shippingofoqv2.dto.*;
 import com.asg.shipping.shippingofoqv2.service.ShippingOFOQV2Service;
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,10 +92,8 @@ public class ShippingOFOQV2Controller {
     })
     @PostMapping("/list")
     public ResponseEntity<?> list(
-            @Parameter(description = "Document identifier", required = true, example = "OFOQ-001")
-            @RequestParam String documentId,
 
-            @RequestBody(required = false) FilterRequestDto filters,
+			@RequestBody(required = false) FilterRequestDto filters,
 
             @Parameter(description = "Start date for filtering (YYYY-MM-DD)")
             @RequestParam(required = false) LocalDate startDate,
@@ -104,7 +103,7 @@ public class ShippingOFOQV2Controller {
 
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Map<String, Object> result = shippingOFOQV2Service.listShippingOFOQ(documentId, filters, startDate, endDate, pageable);
+        Map<String, Object> result = shippingOFOQV2Service.listShippingOFOQ(UserContext.getDocumentId(), filters, startDate, endDate, pageable);
         return success("OFOQ API data retrieved successfully", result);
     }
 
