@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.salesinvoice.dto.*;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 /**
@@ -40,6 +41,8 @@ public interface SalesInvoiceShippingService {
     LoadBlDataResponseDTO loadBlData(Long id, LoadBlDataRequestDTO request);
 
     GetBillCompanyResponseDTO getBillCompany(GetBillCompanyRequestDTO request);
+
+    BigDecimal getBillCompany(Long blPoid, Long customerPoid);
 
     LoadPrintDataResponseDTO loadPrintData(Long id, LoadPrintDataRequestDTO request);
 }
