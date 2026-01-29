@@ -10,7 +10,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "CUSTOMER_INVOICE_PRT_MASTER", schema = "PRODUCTION")
+@Table(name = "CUSTOMER_INVOICE_PRT_MASTER")
 @Getter
 @Setter
 public class CustomerInvoicePrtMasterEntity {
