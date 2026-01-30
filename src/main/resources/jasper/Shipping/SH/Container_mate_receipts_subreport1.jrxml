@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Container_mate_receipts_subreport1" language="groovy" pageWidth="350" pageHeight="802" columnWidth="350" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="663cc590-d138-4ccf-bde2-525ffaf8e50c">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="P_TRAN_POID" class="java.math.BigDecimal">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select DTL.TRANSACTION_POID,DTL.CONTAINER_NO,DTL.EQUIPMENT_SEAL_NO,DTL.EQUIPMENT_TYPE,DTL.EQUIPMENT_SIZE,DTL.QUANTITY,DTL.CARGO_DESCRIPTION from SHIP_MATE_CONTAINER_DTL DTL WHERE DTL.TRANSACTION_POID=$P{P_TRAN_POID} AND 1=2
+UNION ALL
+select DTL.TRANSACTION_POID, NULL CONTAINER_NO,NULL EQUIPMENT_SEAL_NO,
+GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'TYPE_ISO_NAME'  ) EQUIPMENT_TYPE
+,GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'SIZE'  ) EQUIPMENT_SIZE,DTL.QUANTITY,DTL.CARGO_DESCRIPTION
+from SHIP_MATE_CARGO_DTL DTL
+WHERE DTL.TRANSACTION_POID=$P{P_TRAN_POID}
+ ]]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="CONTAINER_NO" class="java.lang.String"/>
+	<field name="EQUIPMENT_SEAL_NO" class="java.lang.String"/>
+	<field name="EQUIPMENT_TYPE" class="java.lang.String"/>
+	<field name="EQUIPMENT_SIZE" class="java.lang.String"/>
+	<field name="QUANTITY" class="java.math.BigDecimal"/>
+	<field name="CARGO_DESCRIPTION" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<columnHeader>
+		<band height="3" splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="27" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="3" y="0" width="102" height="27" uuid="18a82fd0-8f9d-4c39-ad9b-58e698256b3d"/>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Dotted"/>
+					<topPen lineWidth="0.5" lineStyle="Dotted"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted"/>
+					<bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="145" y="0" width="41" height="27" uuid="91d6287b-68fd-48f2-a468-2d8ddafdf681"/>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Dotted"/>
+					<topPen lineWidth="0.5" lineStyle="Dotted"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted"/>
+					<bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{EQUIPMENT_TYPE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="104" y="0" width="40" height="27" uuid="ca4b4ee5-c287-452f-bd49-ab32166c0f21"/>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Dotted"/>
+					<topPen lineWidth="0.5" lineStyle="Dotted"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted"/>
+					<bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{EQUIPMENT_SIZE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="186" y="0" width="162" height="27" uuid="e232781a-7b26-400f-9c75-d29ffd56fce1"/>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Dotted"/>
+					<topPen lineWidth="0.5" lineStyle="Dotted"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted"/>
+					<bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted"/>
+				</box>
+				<textElement verticalAlignment="Top"/>
+				<textFieldExpression><![CDATA[$F{CARGO_DESCRIPTION}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

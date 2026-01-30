@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +15,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiDetailDto;
 import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
@@ -27,6 +31,7 @@ import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiDtlReposi
 import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiHdrRepository;
 import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipReadOnlyRepository;
 import com.asg.shipping.MafiTrailerDateUpdateForm.util.MafiTrailerDateUpdateFormMapper;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +47,7 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 	private final ShipBlMafiDtlRepository detailRepository;
 	private final ShipReadOnlyRepository readOnlyRepository;
 	private final MafiTrailerDateUpdateFormMapper mapper;
+	private final LoggingService loggingService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -75,10 +81,12 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 
 		boolean anyUpdateDone = false;
 
-		ShipBlMafiHdr headerEntity = headerRepository
+		ShipBlMafiHdr existingEntity = headerRepository
 				.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(transactionPoid, groupPoid, companyPoid, "N")
 				.orElseThrow(() -> new EntityNotFoundException(
 						"Mafi trailer entry not found for transactionPoid: " + transactionPoid));
+		ShipBlMafiHdr headerEntity = new ShipBlMafiHdr();
+		BeanUtils.copyProperties(existingEntity, headerEntity);
 
 		MafitrailerHeaderDTO headerDto = request.getMafiHeader();
 
@@ -118,6 +126,9 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 		if (!anyUpdateDone) {
 			throw new IllegalStateException("No data to update.");
 		}
+		String docId = UserContext.getDocumentId();
+		loggingService.logChanges(existingEntity, headerEntity, ShipBlMafiHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+		
 	}
 
 	private Map<String, Object> listMafiTrailers(String docId, FilterRequestDto request, Pageable pageable) {

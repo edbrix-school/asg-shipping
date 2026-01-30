@@ -1,5 +1,6 @@
 package com.asg.shipping.bookingFormSH.service;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,9 +20,12 @@ import static org.mockito.Mockito.when;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +46,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCargoDetailDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormChargesDetailDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormContainerDetailDto;
@@ -56,6 +61,8 @@ import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
 import com.asg.shipping.bookingFormSH.util.BookingFormMapper;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
+
+import net.sf.jasperreports.engine.JasperReport;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -85,6 +92,14 @@ class BookingFormServiceImplTest {
 	private BookingFormMapper mapper;
 	@Mock
 	private JdbcTemplate jdbcTemplate;
+	@Mock
+	private PrintService printService;
+	@Mock
+	private DataSource dataSource;
+	@Mock
+	private JasperReport mainReport;
+	@Mock
+	private JasperReport subReport;
 
 	private MockedStatic<UserContext> userContext;
 
@@ -301,6 +316,36 @@ class BookingFormServiceImplTest {
 		mockJdbcCallWithOutParam("DONE");
 		String result = service.processEmptyContainerLoad(TX_POID);
 		assertEquals("DONE", result);
+	}
+
+	@Test
+	void print_shouldGeneratePdfSuccessfully() throws Exception {
+
+		Long transactionPoid = 1L;
+
+		Map<String, Object> params = new HashMap<>();
+
+		byte[] expectedPdf = "PDF_DATA".getBytes();
+
+		when(printService.buildBaseParams(transactionPoid, "100-140")).thenReturn(params);
+
+		when(printService.load("Shipping/SH/Container_mate_receipts.jrxml")).thenReturn(mainReport);
+
+		when(printService.load("Shipping/SH/Container_mate_receipts_subreport1.jrxml")).thenReturn(subReport);
+
+		when(printService.fillReportToPdf(mainReport, params, dataSource)).thenReturn(expectedPdf);
+
+		byte[] result = service.print(transactionPoid);
+
+		assertNotNull(result);
+		assertArrayEquals(expectedPdf, result);
+
+		verify(printService).buildBaseParams(transactionPoid, "100-140");
+		verify(printService).load("Shipping/SH/Container_mate_receipts.jrxml");
+		verify(printService).load("Shipping/SH/Container_mate_receipts_subreport1.jrxml");
+		verify(printService).fillReportToPdf(mainReport, params, dataSource);
+
+		assertEquals(subReport, params.get("CONTAINER_MATE_RECEIPTS_SUBREPORT_1"));
 	}
 
 	private void mockJdbcCall(String returnValue) {

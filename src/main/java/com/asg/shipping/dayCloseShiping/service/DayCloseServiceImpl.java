@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -17,11 +19,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDenominationDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
@@ -35,6 +41,7 @@ import com.asg.shipping.dayCloseShiping.repository.ArShReceiptHdrRepository;
 import com.asg.shipping.dayCloseShiping.util.DayCloseMapper;
 
 import lombok.RequiredArgsConstructor;
+import net.sf.jasperreports.engine.JasperReport;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +55,9 @@ public class DayCloseServiceImpl implements DayCloseService {
 	private final JdbcTemplate jdbcTemplate;
 	private final DocumentSearchService documentService;
 	private final DayCloseMapper mapper;
+	private final PrintService printService;
+    private final DataSource dataSource;
+    private final LoggingService loggingService;
 
 	@Override
 	public DayCloseDto getDayClose(Long transactionPoid, Long groupPoid, Long companyPoid) {
@@ -86,6 +96,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 		callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
 				hdr.getDocRef(), groupPoid, companyPoid, userPoid);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.toString());
 
 		return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
 	}
@@ -114,6 +125,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 		validateAmounts(request);
 
+		ArShDayEndCloseHdr existingData=hdrRepo.findById(transactionPoid).orElseThrow(()->new ResourceNotFoundException("Day close Shipping", "transactionPoid", transactionPoid));
 		ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
 		hdr.setTransactionPoid(transactionPoid);
 
@@ -121,6 +133,8 @@ public class DayCloseServiceImpl implements DayCloseService {
 		hdrRepo.save(hdr);
 
 		saveDenominations(transactionPoid, request.getDenominations());
+		String docId = UserContext.getDocumentId();
+		loggingService.logChanges(existingData, hdr, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
 		return getDayClose(transactionPoid, groupPoid, companyPoid);
 	}
@@ -214,4 +228,14 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 		return BigDecimal.ZERO;
 	}
+	
+	@Override
+    public byte[] print(Long transactionPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-106");
+        params.put("SH_DAY_CLOSE_CASH_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CASH_subreport1.jrxml"));
+        params.put("SH_DAY_CLOSE_CHQ_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CHQ_subreport1.jrxml"));
+        params.put("SH_DAY_CLOSE_SMRY_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_SMRY_subreport1.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/SH_DAY_CLOSE.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
 }

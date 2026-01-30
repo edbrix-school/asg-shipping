@@ -15,6 +15,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -26,8 +29,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCargoDetailDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormChargesDetailDto;
@@ -49,6 +55,7 @@ import com.asg.shipping.exceptions.ValidationException;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JasperReport;
 
 @Service
 @RequiredArgsConstructor
@@ -63,6 +70,9 @@ public class BookingFormServiceImpl implements BookingFormService {
 	private final DocumentSearchService documentService;
 	private final BookingFormMapper mapper;
 	private final JdbcTemplate jdbcTemplate;
+	private final PrintService printService;
+	private final DataSource dataSource;
+	private final LoggingService loggingService;
 
 	@Override
 	@Transactional(readOnly = true)
@@ -145,6 +155,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 		Long userPoid = UserContext.getUserPoid();
 		callProcShipBlPageSaveAfter(groupPoid, companyPoid, entity.getTransactionPoid(), null, "ALLOCATESPLITBOOKING",
 				userPoid);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), entity.toString());
 
 		// Reload and return
 		return getBookingForm(entity.getTransactionPoid());
@@ -158,11 +169,11 @@ public class BookingFormServiceImpl implements BookingFormService {
 		Long groupPoid = UserContext.getGroupPoid();
 		Long companyPoid = UserContext.getCompanyPoid();
 
-		ShipMateHdr entity = headerRepository
+		ShipMateHdr existingData = headerRepository
 				.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
 				.orElseThrow(() -> new ResourceNotFoundException("Booking Form", "transactionPoid", id.toString()));
 
-		if ("Y".equals(entity.getDeleted())) {
+		if ("Y".equals(existingData.getDeleted())) {
 			throw new ResourceNotFoundException("Booking Form", "transactionPoid", id.toString());
 		}
 
@@ -170,6 +181,9 @@ public class BookingFormServiceImpl implements BookingFormService {
 		if (updateDTO.getLinePoid() != null) {
 			validateLineMate(updateDTO.getLinePoid(), id, groupPoid, companyPoid);
 		}
+		
+		ShipMateHdr entity =new ShipMateHdr();
+		BeanUtils.copyProperties(existingData, entity);
 
 		// Update header
 		mapper.mapUpdateDTOToEntity(updateDTO, entity);
@@ -205,6 +219,9 @@ public class BookingFormServiceImpl implements BookingFormService {
 		// Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save
 		Long userPoid = UserContext.getUserPoid();
 		callProcShipBlPageSaveAfter(groupPoid, companyPoid, id, null, "ALLOCATESPLITBOOKING", userPoid);
+		String key = entity.getTransactionPoid().toString();
+		String docId = UserContext.getDocumentId();
+		loggingService.logChanges(existingData, entity, ShipMateHdr.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 	}
 
 	@Override
@@ -487,7 +504,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 		}
 	}
 
-
 	private void enrichLovDetails(BookingFormDto dto) {
 		if (dto.getQuotationTransactionPoid() != null) {
 			lovService.getQuotaionLov(dto.getQuotationTransactionPoid()).stream().findFirst()
@@ -552,6 +568,14 @@ public class BookingFormServiceImpl implements BookingFormService {
 				}
 			});
 		}
+	}
+
+	@Override
+	public byte[] print(Long transactionPoid) throws Exception {
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-140");
+		JasperReport mainReport = printService.load("Shipping/SH/Container_mate_receipts.jrxml");
+		params.put("CONTAINER_MATE_RECEIPTS_SUBREPORT_1", printService.load("Shipping/SH/Container_mate_receipts_subreport1.jrxml"));
+		return printService.fillReportToPdf(mainReport, params, dataSource);
 	}
 
 }

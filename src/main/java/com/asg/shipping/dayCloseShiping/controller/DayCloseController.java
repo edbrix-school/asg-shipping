@@ -1,5 +1,6 @@
 package com.asg.shipping.dayCloseShiping.controller;
 
+import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 
 import java.util.List;
@@ -7,6 +8,8 @@ import java.util.Map;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,8 +22,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjection;
@@ -46,6 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DayCloseController {
 
 	private final DayCloseService dayCloseService;
+	private final LoggingService loggingService;
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@GetMapping("/{transactionPoid}")
@@ -55,6 +61,7 @@ public class DayCloseController {
 
 		DayCloseDto response = dayCloseService.getDayClose(transactionPoid, UserContext.getGroupPoid(),
 				UserContext.getCompanyPoid());
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(),transactionPoid.toString());
 
 		return success("Day close fetched successfully", response);
 	}
@@ -127,4 +134,32 @@ public class DayCloseController {
 		Map<String, Object> response = dayCloseService.searchDayClose(UserContext.getDocumentId(), filters, pageable);
 		return success("Day Close list fetched successfully", response);
 	}
+	
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+    @Operation(
+            summary = "Generate PDF for Day Close Shipping",
+            description = "Generate PDF report for a specific Day Close Shipping",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "PDF generated successfully",
+                            content = @Content(mediaType = "application/pdf")),
+                    @ApiResponse(responseCode = "404", description = "Day Close Shipping not found"),
+                    @ApiResponse(responseCode = "500", description = "Failed to generate PDF")
+            }
+    )
+    @GetMapping("/print/{transactionPoid}")
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = dayCloseService.print(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=day-close-shipping-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
 }

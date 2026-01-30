@@ -1,0 +1,772 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Manifest_Cargo_Export_WithCharges" language="groovy" pageWidth="842" pageHeight="650" orientation="Landscape" columnWidth="828" leftMargin="7" rightMargin="7" topMargin="14" bottomMargin="7" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.2100000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_FREIGHTCARGO" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_IMPORT_EXPORT" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="MARK_INFO_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="CONTAINER_INFO_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="DESCRIPTION_INFO_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="FREIGHT_DETAIL_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString>
+		<![CDATA[SELECT DISTINCT MFHDR.TRANSACTION_POID,
+      COMPANY_NAME,
+      ADDRESS,
+      SHIPPER_POID,
+      BL_TYPE||' '|| DECODE($P{P_FREIGHTCARGO},'TRUE','FREIGHT MANIFEST','CARGO MANIFEST') BL_TYPE,
+      BL_TYPE IMPORT_EXPORT,
+      nvl(SHIPPER_EDI_NAME,GET_ADDRESS_NAME(SHIPPER_POID))||chr(10)||chr(13) ||
+      nvl(SHIPPER_EDI_ADDRESS,GET_ADDRESS_DETAILS_WITH_TYPE(SHIPPER_ADDRESS_POID,NULL)) SHIPPER_ADDRESS,
+      CONSIGNEE_POID,
+      nvl(CONSIGNEE_EDI_NAME,GET_ADDRESS_NAME(CONSIGNEE_POID)) ||chr(10)||chr(13) ||
+      nvl(CONSIGNEE_EDI_ADDRESS,GET_ADDRESS_DETAILS_WITH_TYPE(CONSIGNEE_ADDRESS_POID,NULL)) CONSIGNEE_ADDRESS ,
+      NOTIFY_POID_1
+      NOTIFY_POID_2,
+      GET_ADDRESS_NAME(NOTIFY_POID_2) NOTIFY2,
+      nvl(NOTIFY1_EDI_NAME,GET_ADDRESS_NAME(NOTIFY_POID_1))  ||
+      nvl(NOTIFY1_EDI_ADDRESS,chr(10)||chr(13)||GET_ADDRESS_DETAILS_WITH_TYPE(NOTIFY_ADDRESS_POID_1,'')) NOTIFY_ADDRESS1 ,
+      BL_NUMBER,
+      PLACE_OF_DELIEVERY_POID,
+      nvl(BL_FINAL_DESTINATION,GET_PORT_NAME(PLACE_OF_DELIEVERY_POID)) PLACE_OF_DELIEVERY,
+      PORT_OF_LOADING_POID,
+      nvl(BL_PLACE_LOAD,GET_PORT_NAME(PORT_OF_LOADING_POID)) PORT_OF_LOADING,
+      PORT_OF_DISCHARGE_POID,
+      nvl(BL_PLACE_DISCHARE_DESC,nvl(BL_PLACE_RECEIPT,GET_PORT_NAME(PORT_OF_DISCHARGE_POID))) PORT_OF_DISCHARGE,
+      TYPE_OF_MOVE,
+      VOYAGE.VOYAGE_NO,
+      TO_CHAR(VOYAGE.ARRIVAL_DATE,'DD-MON-YYYY') ARRIVAL_DATE,
+      TO_CHAR(VOYAGE.SAIL_DATE,'DD-MON-YYYY') SAIL_DATE,
+      TO_CHAR(VOYAGE.EXPECTED_DEPARTURE_DATE,'DD-MON-YYYY') EXPECTED_DEPARTURE_DATE,
+      TO_CHAR(VOYAGE.EXPECTED_DATE,'DD-MON-YYYY') EXPECTED_DATE,
+      VMAST.VESSEL_CODE,
+       VMAST.VESSEL_NAME,
+      LNMAST.LINE_CODE,
+      LNMAST.LINE_NAME,
+BL_PLACE_LOAD,
+BL_PLACE_RECEIPT,
+BL_FINAL_DESTINATION,
+NOTIFY1_EDI_NAME, MFHDR.remarks
+ FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_VOYAGE_HDR VOYAGE   ON VOYAGE.TRANSACTION_POID=MFHDR.VOYAGE_TRANSACTION_POID
+INNER JOIN SHIP_VESSEL_MASTER VMAST ON VOYAGE.VESSEL_POID =VMAST.VESSEL_POID
+INNER JOIN SHIP_LINE_MASTER LNMAST  ON LNMAST.LINE_POID  =VOYAGE.LINE_POID
+LEFT JOIN SHIP_BL_MANIFEST_CHARGES_DTL MCHARGE ON MCHARGE.TRANSACTION_POID = MFHDR.TRANSACTION_POID
+LEFT JOIN SHIP_COMODITY_MASTER CMAST ON CMAST.COMODITY_POID = MFHDR.COMODITY_POID
+INNER JOIN GLOBAL_COMPANY_MASTER COMP ON MFHDR.COMPANY_POID= COMP.COMPANY_POID
+WHERE NVL(MFHDR.deleted,'N')='N' and  ((MFHDR.TRANSACTION_POID= $P{DOC_KEY_POID}
+AND   'X'=NVL($P{P_IMPORT_EXPORT},'X')
+)
+ or (VOYAGE.TRANSACTION_POID =$P{DOC_KEY_POID} AND    DECODE(bl_type,'EXPORT','EXPORT','IMPORT') = $P{P_IMPORT_EXPORT} ))
+order by bl_type,bl_number]]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="COMPANY_NAME" class="java.lang.String"/>
+	<field name="ADDRESS" class="java.lang.String"/>
+	<field name="SHIPPER_POID" class="java.math.BigDecimal"/>
+	<field name="BL_TYPE" class="java.lang.String"/>
+	<field name="IMPORT_EXPORT" class="java.lang.String"/>
+	<field name="SHIPPER_ADDRESS" class="java.lang.String"/>
+	<field name="CONSIGNEE_POID" class="java.math.BigDecimal"/>
+	<field name="CONSIGNEE_ADDRESS" class="java.lang.String"/>
+	<field name="NOTIFY_POID_2" class="java.math.BigDecimal"/>
+	<field name="NOTIFY2" class="java.lang.String"/>
+	<field name="NOTIFY_ADDRESS1" class="java.lang.String"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="PLACE_OF_DELIEVERY_POID" class="java.math.BigDecimal"/>
+	<field name="PLACE_OF_DELIEVERY" class="java.lang.String"/>
+	<field name="PORT_OF_LOADING_POID" class="java.math.BigDecimal"/>
+	<field name="PORT_OF_LOADING" class="java.lang.String"/>
+	<field name="PORT_OF_DISCHARGE_POID" class="java.math.BigDecimal"/>
+	<field name="PORT_OF_DISCHARGE" class="java.lang.String"/>
+	<field name="TYPE_OF_MOVE" class="java.lang.String"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="ARRIVAL_DATE" class="java.lang.String"/>
+	<field name="SAIL_DATE" class="java.lang.String"/>
+	<field name="EXPECTED_DEPARTURE_DATE" class="java.lang.String"/>
+	<field name="EXPECTED_DATE" class="java.lang.String"/>
+	<field name="VESSEL_CODE" class="java.lang.String"/>
+	<field name="VESSEL_NAME" class="java.lang.String"/>
+	<field name="LINE_CODE" class="java.lang.String"/>
+	<field name="LINE_NAME" class="java.lang.String"/>
+	<field name="BL_PLACE_LOAD" class="java.lang.String"/>
+	<field name="BL_PLACE_RECEIPT" class="java.lang.String"/>
+	<field name="BL_FINAL_DESTINATION" class="java.lang.String"/>
+	<field name="NOTIFY1_EDI_NAME" class="java.lang.String"/>
+	<field name="REMARKS" class="java.lang.String"/>
+	<pageHeader>
+		<band height="117" splitType="Stretch">
+			<textField>
+				<reportElement x="84" y="46" width="159" height="15" uuid="6e536848-ca9a-4cd0-9d3d-2c76b700656e"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LINE_NAME}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="84" y="64" width="159" height="15" uuid="446b2d0e-60bf-4882-b030-48fb6e34d729"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VESSEL_NAME}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="84" y="81" width="159" height="15" uuid="a03433dd-7dd4-40db-828c-3990e2ca2abe"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PORT_OF_LOADING}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="84" y="97" width="159" height="15" uuid="0dbea045-5613-4a3b-a5c8-e7ab54376a75"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="362" y="64" width="100" height="15" uuid="58b0a864-34c1-4f1c-b29e-2de891148c99"/>
+				<textElement textAlignment="Justified">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VOYAGE_NO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="362" y="80" width="100" height="15" uuid="f0349159-1ade-45a0-bfd7-3c2cbd915a98"/>
+				<textElement textAlignment="Justified">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PORT_OF_DISCHARGE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="458" y="97" width="100" height="15" uuid="03403ffe-748d-42f7-87d7-aa87d9034d9f">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Justified">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TYPE_OF_MOVE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="668" y="64" width="100" height="15" uuid="8b97c110-64b7-41b9-8735-8d14d8d30213">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EXPECTED_DEPARTURE_DATE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="668" y="81" width="100" height="15" uuid="64864da4-cd78-4be8-b0e0-e54b08d9d45d">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SAIL_DATE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="668" y="97" width="100" height="15" uuid="67b0c954-15c6-452a-82aa-8825db548b12"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PLACE_OF_DELIEVERY}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="354" y="29" width="128" height="15" uuid="34c52098-6fe1-4144-b155-30061f9636c7"/>
+				<textElement textAlignment="Center">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[KINGDOM OF BAHRAIN]]></text>
+			</staticText>
+			<line>
+				<reportElement x="1" y="44" width="827" height="1" uuid="d0ba199c-93f5-4587-ab5b-b43b5651817d"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="4" y="46" width="68" height="15" uuid="c7ba4719-9dba-4e54-8758-5506aab7827d"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Line]]></text>
+			</staticText>
+			<line>
+				<reportElement x="1" y="61" width="827" height="1" uuid="241ff529-1a8b-46ec-9156-f62818df6d9a"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="4" y="64" width="68" height="15" uuid="96c83934-335a-4fd1-8184-db93708437a8"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Vessel Name]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="81" width="68" height="15" uuid="f61f921a-1c1a-4444-b2c7-cd8213ca96c5"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Load Port]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="97" width="68" height="15" uuid="7d9a1f1a-c8ec-47ca-9c5b-2c44c4eec726"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[BL NO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="286" y="64" width="72" height="15" uuid="1c5081f8-1df7-4f92-84b0-38b0fa3b971e"/>
+				<textElement textAlignment="Justified">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Voyage #]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="286" y="80" width="72" height="15" uuid="a2cabce6-40f6-4228-b6ed-cf81d69243a3"/>
+				<textElement textAlignment="Justified">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Discharge Port]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="286" y="97" width="169" height="15" uuid="7532a040-4c1a-46cb-9cf8-899cdef00d4b">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Justified">
+					<font size="7" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Routing instructions/Terms of Delivery]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="598" y="64" width="65" height="15" uuid="ba3c3e24-3901-495e-8487-686b300960c3">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EdXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[ETD]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="598" y="81" width="65" height="15" uuid="8feb9a09-eb9b-468d-b74e-055019793c7d">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Sailed On]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="597" y="97" width="66" height="15" uuid="9f3f16ad-2179-4b60-b3a6-73afee6943af">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Final Destination]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="114" width="827" height="1" uuid="c942aba5-4cfe-4dfa-be33-695a3bf81e8a"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<textField>
+				<reportElement x="260" y="0" width="323" height="15" uuid="546d8ab6-78ed-4b90-af57-cabf3e99e417"/>
+				<textElement textAlignment="Center">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{COMPANY_NAME}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="368" y="15" width="100" height="15" uuid="cda91a16-eb35-4974-9708-58c0a4803ad5"/>
+				<textElement textAlignment="Center">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ADDRESS}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="341" y="45" width="158" height="15" uuid="65f81832-f3d8-4025-a812-c6f0808acf24"/>
+				<textElement textAlignment="Center">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_TYPE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="668" y="81" width="100" height="15" uuid="1d740d4c-c96f-46df-969f-70390c9d48e9">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("IMPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ARRIVAL_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="598" y="81" width="65" height="15" uuid="d95dbed2-878a-455c-b75b-ae7464b66d90">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("IMPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Arrival Date]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="599" y="64" width="65" height="15" uuid="b32345cc-9ed5-43f3-8d83-4875ed9c3bcf">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("IMPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[ETA]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="668" y="65" width="100" height="15" uuid="50adc99e-1436-4302-b24a-7ee945614592">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("IMPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EXPECTED_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="598" y="65" width="65" height="15" uuid="40c7fd97-7bfc-42b1-b6f4-6b89f0472aaa">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Remarks]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="670" y="66" width="156" height="15" uuid="bf576e09-c6f6-4852-be30-1d3f0db34cfa">
+					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{REMARKS}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<detail>
+		<band height="333" splitType="Stretch">
+			<staticText>
+				<reportElement x="4" y="0" width="88" height="32" isPrintWhenDetailOverflows="true" uuid="44851f76-d2e2-4a4f-a414-335125c993ea"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[1]Shipper
+2]Consignee
+3]Notify]]></text>
+			</staticText>
+			<line>
+				<reportElement x="3" y="36" width="825" height="1" isPrintWhenDetailOverflows="true" uuid="50b67c68-3c57-402a-949d-7b860ae4f628"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="5" y="35" width="21" height="12" uuid="e603a09d-43d9-4068-a3d3-1b52bbe35e1f"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[SH)]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" mode="Transparent" x="4" y="47" width="88" height="17" isRemoveLineWhenBlank="true" uuid="f5772dc4-8646-42ae-bae8-7c90861eb896"/>
+				<textElement>
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SHIPPER_ADDRESS}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="5" y="66" width="21" height="12" uuid="3809ef25-c4f9-419c-b204-f10cc4858c8d"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[CN)]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="5" y="78" width="87" height="20" isRemoveLineWhenBlank="true" uuid="4322df6f-877c-49e7-80e0-15ba6d0d6b82"/>
+				<textElement>
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONSIGNEE_ADDRESS}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement positionType="Float" x="5" y="101" width="21" height="14" uuid="2028c70f-13ce-4426-99b3-2496cad76a3b"/>
+				<textElement>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[NF)]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement positionType="Float" x="5" y="116" width="85" height="15" isRemoveLineWhenBlank="true" uuid="69fc30ea-8bc9-4731-9a57-00b1b848bfd4"/>
+				<textElement>
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOTIFY_ADDRESS1}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="96" y="1" width="366" height="12" isPrintWhenDetailOverflows="true" uuid="8778d6d0-62e5-4191-b734-c0c58dd52fad"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Container Nos./Size/Marks & Nos.]]></text>
+			</staticText>
+			<line>
+				<reportElement x="613" y="13" width="1" height="24" isPrintWhenDetailOverflows="true" uuid="eb24148f-7ded-4013-bdca-b45db115c2d8"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="585" y="13" width="243" height="1" isPrintWhenDetailOverflows="true" uuid="6e434fc7-b27b-4d51-8cd5-6a0e8b2d5ddd"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement stretchType="RelativeToTallestObject" x="584" y="1" width="1" height="328" isPrintWhenDetailOverflows="true" uuid="9e7aece2-23f4-4a95-b7bd-d52596ab8d66"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="702" y="14" width="1" height="24" isPrintWhenDetailOverflows="true" uuid="768b50cd-0800-4044-8def-38014a43ef74"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="744" y="13" width="1" height="24" isPrintWhenDetailOverflows="true" uuid="e9d615c2-2764-4db2-9653-27c64a54ff85"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="680" y="14" width="22" height="24" isPrintWhenDetailOverflows="true" uuid="a27342c6-ce89-4e12-82ee-fcb3acb3c7fd"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[No of
+Ctrs]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="703" y="14" width="41" height="23" isPrintWhenDetailOverflows="true" uuid="d00daf75-c88a-4dc5-a6ef-c3553d07a824"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Prepaid]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="636" y="14" width="43" height="23" isPrintWhenDetailOverflows="true" uuid="152dc7fb-dcf9-41cf-bab8-15b716c0c7f4"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Rate
+Per 20/40]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="583" y="14" width="31" height="23" isPrintWhenDetailOverflows="true" uuid="7c46331a-73e6-4c0d-9028-63cbb22d3049"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Charge
+code]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="745" y="14" width="45" height="23" isPrintWhenDetailOverflows="true" uuid="c151b466-aa68-4d4c-b19e-8f3e74758bde"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Collect]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="614" y="14" width="21" height="23" isPrintWhenDetailOverflows="true" uuid="63bcd62f-199e-4d06-874d-5b3eec53f151"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Curr]]></text>
+			</staticText>
+			<line>
+				<reportElement x="679" y="14" width="1" height="24" isPrintWhenDetailOverflows="true" uuid="36e0d126-512e-47d6-9a4b-acce9f32cc09"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="635" y="14" width="1" height="24" isPrintWhenDetailOverflows="true" uuid="83e382b1-4b85-4606-abb9-42b23e416de9"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="587" y="1" width="241" height="11" isPrintWhenDetailOverflows="true" uuid="9c4ea17e-c8a1-49a1-b944-0fa26ecc3d90"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Fright Details]]></text>
+			</staticText>
+			<subreport>
+				<reportElement positionType="Float" x="96" y="82" width="366" height="78" uuid="ebd35f17-d4da-4f36-848b-41a12ce14283"/>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_KEY_POID">
+					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_ID"/>
+				<subreportParameter name="LOGIN_USER_POID"/>
+				<subreportParameter name="LOGIN_GROUP_POID"/>
+				<subreportParameter name="LOGIN_COMP_POID"/>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{MARK_INFO_SUBREPORT_1}]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="false">
+				<reportElement x="95" y="37" width="368" height="45" uuid="d2d1fffa-e7b1-4550-9ac6-7c69ac51571b"/>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_KEY_POID">
+					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_ID"/>
+				<subreportParameter name="LOGIN_USER_POID"/>
+				<subreportParameter name="LOGIN_GROUP_POID"/>
+				<subreportParameter name="LOGIN_COMP_POID"/>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{CONTAINER_INFO_SUBREPORT_1}]]></subreportExpression>
+			</subreport>
+			<subreport isUsingCache="false">
+				<reportElement isPrintRepeatedValues="false" x="468" y="37" width="116" height="291" uuid="c24a2f0b-5367-472a-8fe9-cc1324ef77e5"/>
+				<subreportParameter name="SUBREPORT_DIR"/>
+				<subreportParameter name="DOC_KEY_POID">
+					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_ID"/>
+				<subreportParameter name="LOGIN_USER_POID"/>
+				<subreportParameter name="LOGIN_GROUP_POID"/>
+				<subreportParameter name="LOGIN_COMP_POID"/>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{DESCRIPTION_INFO_SUBREPORT_1}]]></subreportExpression>
+			</subreport>
+			<subreport>
+				<reportElement mode="Opaque" x="585" y="37" width="241" height="93" uuid="33c6e599-7723-4eeb-ba18-67e325805912"/>
+				<subreportParameter name="SUBREPORT_DIR"/>
+				<subreportParameter name="DOC_KEY_POID">
+					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_ID"/>
+				<subreportParameter name="LOGIN_USER_POID"/>
+				<subreportParameter name="LOGIN_GROUP_POID"/>
+				<subreportParameter name="LOGIN_COMP_POID"/>
+				<subreportParameter name="P_FREIGHTCARGO">
+					<subreportParameterExpression><![CDATA[$P{P_FREIGHTCARGO}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{FREIGHT_DETAIL_SUBREPORT_1}]]></subreportExpression>
+			</subreport>
+			<line>
+				<reportElement stretchType="RelativeToTallestObject" x="464" y="0" width="1" height="328" isPrintWhenDetailOverflows="true" uuid="b1629a0b-0a10-4a89-b419-b1ff124806d3"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="790" y="14" width="38" height="23" isPrintWhenDetailOverflows="true" uuid="9c71c830-bc2a-43aa-ac0b-10a80f6993ed"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Else
+Where]]></text>
+			</staticText>
+			<line>
+				<reportElement x="789" y="13" width="1" height="24" isPrintWhenDetailOverflows="true" uuid="ea9c2060-9982-4c66-a867-ab7aaa9f46e0"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="410" y="14" width="1" height="22" isPrintWhenDetailOverflows="true" uuid="3ca27ccf-37e3-429e-9b3f-f1ed4a4a212e"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="355" y="14" width="56" height="23" isPrintWhenDetailOverflows="true" uuid="6d5ce094-022f-4b68-80db-4673d5b7e368"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Grs WT
+KGS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="172" y="14" width="45" height="23" isPrintWhenDetailOverflows="true" uuid="937adef1-665c-4c49-81d3-37f4f906b053"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Size
+Type]]></text>
+			</staticText>
+			<line>
+				<reportElement x="308" y="14" width="1" height="22" isPrintWhenDetailOverflows="true" uuid="6ff6deb4-9c4a-4b72-9505-1a42f2c01835"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="170" y="14" width="1" height="22" isPrintWhenDetailOverflows="true" uuid="3f43ec7f-6ff4-40ec-9c29-63e20dd8fdb1"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="272" y="14" width="37" height="23" isPrintWhenDetailOverflows="true" uuid="c31c684c-2845-495e-acd4-544116fa7a86"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Seal#]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="217" y="14" width="54" height="23" isPrintWhenDetailOverflows="true" uuid="8819335e-c360-48fe-af34-d8b90e5a466e"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[No.of
+Packs]]></text>
+			</staticText>
+			<line>
+				<reportElement x="93" y="13" width="372" height="1" isPrintWhenDetailOverflows="true" uuid="7b62d814-af8b-4ce5-98c8-1269535e900f"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="310" y="14" width="46" height="23" isPrintWhenDetailOverflows="true" uuid="241c0646-f9e2-4f1f-aa7c-222a09b6a6a1"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Net WT
+KGS
+]]></text>
+			</staticText>
+			<line>
+				<reportElement x="271" y="14" width="1" height="22" isPrintWhenDetailOverflows="true" uuid="be8171c2-4a64-44fc-b8a4-5f4d24639701"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="412" y="14" width="29" height="23" isPrintWhenDetailOverflows="true" uuid="6accd49a-01b1-407b-9da9-1731087af015"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[MEAS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="92" y="14" width="80" height="23" isPrintWhenDetailOverflows="true" uuid="48e75060-f60e-4ced-97c8-06101359944e"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Container
+Nos.]]></text>
+			</staticText>
+			<line>
+				<reportElement x="354" y="14" width="1" height="22" isPrintWhenDetailOverflows="true" uuid="2b0cf562-f448-4455-8f19-f6e9d80fc968"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<line>
+				<reportElement x="215" y="14" width="1" height="22" isPrintWhenDetailOverflows="true" uuid="f3a2520d-7a32-4b53-bf25-028e3c64727b"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="465" y="1" width="119" height="35" isPrintWhenDetailOverflows="true" uuid="3efd77a1-fdae-4a4d-aa91-3cbb0a579c8b"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Description of
+Goods]]></text>
+			</staticText>
+			<line>
+				<reportElement stretchType="RelativeToTallestObject" x="92" y="0" width="1" height="328" isPrintWhenDetailOverflows="true" uuid="f1b82546-73fe-41c7-a94a-f17fa584550e"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="438" y="15" width="27" height="23" isPrintWhenDetailOverflows="true" uuid="88f0d442-7091-4b48-9e1e-f0f896864f2e"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Temp]]></text>
+			</staticText>
+			<line>
+				<reportElement x="440" y="14" width="1" height="22" isPrintWhenDetailOverflows="true" uuid="59fc14e7-53f6-41da-a916-fb3eb1930188"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="20">
+			<textField>
+				<reportElement style="Column header" x="672" y="3" width="54" height="14" forecolor="#000000" uuid="2f7f9421-8bf8-4b20-87b6-b0a061c7bbbe"/>
+				<textElement>
+					<font size="10" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement style="Column header" x="726" y="3" width="40" height="14" forecolor="#000000" uuid="ac716e6f-7bb5-4229-8af1-632601319a43"/>
+				<textElement>
+					<font size="10" isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="2" y="2" width="825" height="1" isPrintWhenDetailOverflows="true" uuid="d5d0ac20-f7cf-46d6-bbd3-61e18d4e4380"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+		</band>
+	</pageFooter>
+</jasperReport>
