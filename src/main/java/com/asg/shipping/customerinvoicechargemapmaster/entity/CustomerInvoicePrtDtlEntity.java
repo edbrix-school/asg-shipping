@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "CUSTOMER_INVOICE_PRT_DTL", schema = "PRODUCTION")
+@Table(name = "CUSTOMER_INVOICE_PRT_DTL")
 @Getter
 @Setter
 public class CustomerInvoicePrtDtlEntity {
