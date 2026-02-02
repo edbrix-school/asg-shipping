@@ -5,7 +5,7 @@
 	<property name="ireport.y" value="0"/>
 	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
 	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
-	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" pdfFontName="Helvetica-Bold"  isBold="true"/>
 	<style name="Detail" fontName="Arial" fontSize="12"/>
 	<style name="Row" mode="Transparent">
 		<conditionalStyle>
@@ -140,7 +140,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="219" y="0" width="114" height="17" uuid="9843db93-b894-4232-a296-40420fcbc741"/>
 				<textElement textAlignment="Center">
-					<font fontName="Courier New" size="14" isBold="true"/>
+					<font fontName="Courier New" size="14" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[R E C E I P T]]></text>
 			</staticText>
@@ -154,7 +154,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 			<textField isBlankWhenNull="true">
 				<reportElement x="432" y="17" width="121" height="16" uuid="07fad62d-760c-4ad8-9814-6863088d406e"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="Courier New" isBold="true"/>
+					<font fontName="Courier New" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DOC_REF}]]></textFieldExpression>
 			</textField>
@@ -201,7 +201,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 							<staticText>
 								<reportElement x="0" y="0" width="115" height="13" uuid="ccd81182-a988-491e-856d-7693a5daa430"/>
 								<textElement>
-									<font fontName="SansSerif" isBold="true"/>
+									<font fontName="SansSerif" pdfFontName="Helvetica-Bold" isBold="true"/>
 								</textElement>
 								<text><![CDATA[BL No.]]></text>
 							</staticText>
@@ -235,7 +235,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 							<staticText>
 								<reportElement x="0" y="0" width="119" height="13" uuid="7cc0c0f5-e468-4e9a-a662-5140d49a1a7a"/>
 								<textElement>
-									<font fontName="SansSerif" isBold="true"/>
+									<font fontName="SansSerif"  pdfFontName="Helvetica-Bold"isBold="true"/>
 								</textElement>
 								<text><![CDATA[Line]]></text>
 							</staticText>
@@ -255,7 +255,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 							<staticText>
 								<reportElement x="0" y="0" width="138" height="13" uuid="4dd5ef96-c233-4bfa-b8e7-5767b3ae03b2"/>
 								<textElement>
-									<font fontName="SansSerif" isBold="true"/>
+									<font fontName="SansSerif" pdfFontName="Helvetica-Bold" isBold="true"/>
 								</textElement>
 								<text><![CDATA[Vessel/Voy]]></text>
 							</staticText>
@@ -275,7 +275,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 							<staticText>
 								<reportElement x="0" y="0" width="91" height="13" uuid="0592a109-b9e2-4516-95bb-88b820615e10"/>
 								<textElement textAlignment="Right">
-									<font fontName="Courier New" isBold="true"/>
+									<font fontName="Courier New" pdfFontName="Helvetica-Bold" isBold="true"/>
 								</textElement>
 								<text><![CDATA[Amount]]></text>
 							</staticText>
@@ -319,7 +319,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement positionType="Float" x="331" y="4" width="130" height="16" uuid="eef8033b-8c71-439d-a844-755000c4679c"/>
 				<textElement>
-					<font fontName="Courier New" isBold="true"/>
+					<font fontName="Courier New" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[Total Amount(BD) 	:]]></text>
 			</staticText>
@@ -346,7 +346,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 			<textField isStretchWithOverflow="true">
 				<reportElement positionType="Float" x="4" y="36" width="549" height="11" uuid="0ea68266-6f47-42aa-af81-442c960fe747"/>
 				<textElement>
-					<font fontName="Courier New" isBold="true"/>
+					<font fontName="Courier New" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{AMT_IN_WORDS}]]></textFieldExpression>
 			</textField>
@@ -357,7 +357,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 			<textField>
 				<reportElement x="311" y="0" width="242" height="16" uuid="c91f08dd-228b-47df-a3b5-e54feb1d315b"/>
 				<textElement textAlignment="Right">
-					<font fontName="Courier New" isBold="true"/>
+					<font fontName="Courier New" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{COMPANY_NAME}]]></textFieldExpression>
 			</textField>

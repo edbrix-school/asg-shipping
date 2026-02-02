@@ -2,6 +2,7 @@ package com.asg.shipping.receipts.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.receipts.dto.*;
+import com.asg.shipping.receipts.enums.ButtonType;
 import net.sf.jasperreports.engine.JRException;
 import org.springframework.data.domain.Pageable;
 
@@ -23,9 +24,5 @@ public interface ReceiptsService {
 
 	ReceiptCalculateDemurrageResponseDto calculateDemurrage(ReceiptCalculateDemurrageRequestDto requestDto);
 
-    byte[] validityPrint(Long transactionPoid, Long blPoid) throws Exception;
-
-	byte[] receiptAndInvoicePrint(Long transactionPoid, Long blPoid) throws Exception;
-
-	byte[] printInvoiceCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception;
+	byte[] receiptAndInvoicePrint(Long transactionPoid, Long blPoid, ButtonType buttonType) throws Exception;
 }

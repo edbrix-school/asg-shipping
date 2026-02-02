@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.shipping.receipts.dto.*;
+import com.asg.shipping.receipts.enums.ButtonType;
 import com.asg.shipping.receipts.service.ReceiptsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -467,38 +468,20 @@ public class ReceiptsController {
 		}
 	}
 
-	@GetMapping("/validity-print/{transactionPoid}")
-	public ResponseEntity<?> validityPrint(
-			@Parameter(description = "Transaction POID", example = "12345")
-			@PathVariable Long transactionPoid,
-			@Parameter(description = "BL POID", example = "67890")
-			@RequestParam Long blPoid
-	) {
-		try {
-			byte[] pdf = receiptsService.validityPrint(transactionPoid, blPoid);
-			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
-					.contentType(MediaType.APPLICATION_PDF)
-					.body(pdf);
-		} catch (Exception e) {
-			log.error("error",e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
-		}
-	}
-
+	@AllowedAction(UserRolesRightsEnum.PRINT)
 	@GetMapping("/receipt-invoice/{transactionPoid}")
 	public ResponseEntity<?> receiptAndInvoicePrint(
 			@Parameter(description = "Transaction POID", example = "12345")
 			@PathVariable Long transactionPoid,
 			@Parameter(description = "BL POID", example = "67890")
-			@RequestParam Long blPoid
+			@RequestParam Long blPoid,
+			@RequestParam ButtonType buttonType
 	) {
 		try {
-			byte[] pdf = receiptsService.receiptAndInvoicePrint(transactionPoid, blPoid);
+			byte[] pdf = receiptsService.receiptAndInvoicePrint(transactionPoid, blPoid,buttonType);
 			return ResponseEntity.ok()
 					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
+							"attachment; filename=receipts(shipping)" + buttonType.name().toLowerCase() + "-" +  transactionPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF)
 					.body(pdf);
 		} catch (Exception e) {
@@ -507,23 +490,4 @@ public class ReceiptsController {
 		}
 	}
 
-	@GetMapping("/customer-autocharge/{transactionPoid}")
-	public ResponseEntity<?> printInvoiceCustomerAutoCharge(
-			@Parameter(description = "Transaction POID", example = "12345")
-			@PathVariable Long transactionPoid,
-			@Parameter(description = "BL POID", example = "67890")
-			@RequestParam Long blPoid
-	) {
-		try {
-			byte[] pdf = receiptsService.printInvoiceCustomerAutoCharge(transactionPoid, blPoid);
-			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
-					.contentType(MediaType.APPLICATION_PDF)
-					.body(pdf);
-		} catch (Exception e) {
-			log.error("error",e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
-		}
-	}
 }

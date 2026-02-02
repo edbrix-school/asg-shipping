@@ -133,19 +133,6 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
     }
 
     @Override
-    public List<String> findDemurrageContainers(Long blPoid, Long transactionPoid) {
-        try {
-            String sql = "SELECT DISTINCT CONTAINER_NO FROM VW_AR_SH_CONTAINER_DEMG_DTTN WHERE DM_TO_DATE IS NOT NULL AND BL_POID = :blPoid AND TRANSACTION_POID = :transactionPoid";
-            @SuppressWarnings("unchecked")
-            List<String> containers = entityManager.createNativeQuery(sql).setParameter("blPoid", blPoid).setParameter("transactionPoid", transactionPoid).getResultList();
-            return containers;
-        } catch (Exception e) {
-            log.error("Failed to find demurrage containers for BL POID: {}, Transaction POID: {}", blPoid, transactionPoid, e);
-            throw new DataAccessResourceFailureException("Failed to find demurrage containers for BL POID: " + blPoid, e);
-        }
-    }
-
-    @Override
     public List<ReceiptAutoPopulateContainerDto> findAvailableContainersForBl(
             Long blPoid,
             Long currentReceiptId) {
@@ -286,9 +273,5 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
         }
     }
 
-    @Override
-    public TaxConfig findTaxConfig(Long companyPoid) {
-        return null;
-    }
 
 }
