@@ -6,6 +6,7 @@ import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import com.asg.shipping.deliveryorderissuetocustomer.dto.ValidateDocumentDto;
 import com.asg.shipping.deliveryorderissuetocustomer.entity.ShipBlManifestHDR;
 import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
@@ -13,7 +14,6 @@ import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHD
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperReport;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,8 +25,6 @@ import java.io.InputStream;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -161,32 +159,12 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     @Override
     public byte[] print(Long transactionPoid, IssueDeliveryOrderRequestDto requestDto, ButtonType buttonType) throws Exception {
-        Long groupPoid = getGroupPoid();
-        Long companyPoid = getCompanyPoid();
-        String username = getUserName();
-
-        if (requestDto.getDeliverySentTo() == null || requestDto.getDeliverySentTo().trim().isEmpty()) {
-            throw new ValidationException("Delivery sent to is required");
-        }
 
         validateEmailConfiguration(requestDto);
 
-        callProcShipDoCntPrintAfter(
-                groupPoid, companyPoid, transactionPoid, null,
-                "ARSHRCPTPRINTUPDATE", username,
-                requestDto.getDoReleasedIdPerson(),
-                requestDto.getDoReleasedToPerson(),
-                requestDto.getDoReleasedAddressPerson(),
-                requestDto.getOriginalBlReleaseCr(),
-                requestDto.getDoPriority(),
-                requestDto.getDoCntToConsignee(),
-                requestDto.getDoCntToNotify(),
-                requestDto.getDoCntToOthers(),
-                requestDto.getDoCntToOthersMails(),
-                requestDto.getEmailsDo(),
-                requestDto.getDeliverySentTo(),
-                requestDto.getPrincipalDoNumber()
-        );
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        String username = getUserName();
 
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-414");
         params.put("P_TRAN_NO", transactionPoid);
@@ -201,6 +179,45 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                 requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
         );
         return null;
+    }
+
+    @Override
+    public ValidateDocumentDto validateDocument(Long id, IssueDeliveryOrderRequestDto requestDto) {
+
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        String username = getUserName();
+
+        if (requestDto.getDeliverySentTo() == null || requestDto.getDeliverySentTo().trim().isEmpty()) {
+            throw new ValidationException("Delivery sent to is required");
+        }
+
+        validateEmailConfiguration(requestDto);
+
+        callProcShipDoCntPrintAfter(
+                groupPoid, companyPoid, id, null,
+                "ARSHRCPTPRINTUPDATE", username,
+                requestDto.getDoReleasedIdPerson(),
+                requestDto.getDoReleasedToPerson(),
+                requestDto.getDoReleasedAddressPerson(),
+                requestDto.getOriginalBlReleaseCr(),
+                requestDto.getDoPriority(),
+                requestDto.getDoCntToConsignee(),
+                requestDto.getDoCntToNotify(),
+                requestDto.getDoCntToOthers(),
+                requestDto.getDoCntToOthersMails(),
+                requestDto.getEmailsDo(),
+                requestDto.getDeliverySentTo(),
+                requestDto.getPrincipalDoNumber()
+        );
+      String canSendEmail =   viewRepository.getGlobalParameterValue("START_DO_CNT_DIRECT_CUST","START_DO_CNT_CUST","1","N");
+      log.info("canSendEmail :{} ", canSendEmail);
+
+      if ("Y".equalsIgnoreCase(canSendEmail)) {
+          return new ValidateDocumentDto(false,"Verification Completed");
+      }
+      return new ValidateDocumentDto(true,null);
+
     }
 
     private byte[] generatePrintByButtonType(Long transactionPoid, ButtonType buttonType, Map<String, Object> params) throws Exception {

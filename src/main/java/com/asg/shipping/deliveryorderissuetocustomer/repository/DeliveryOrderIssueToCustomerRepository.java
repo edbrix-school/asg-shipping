@@ -1,11 +1,13 @@
 package com.asg.shipping.deliveryorderissuetocustomer.repository;
 
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -225,5 +227,31 @@ public class DeliveryOrderIssueToCustomerRepository {
         }
 
     }
+
+    public String getGlobalParameterValue(
+            String parameterName,
+            String parameterKeyIdType,
+            String parameterKeyId,
+            String defaultValue) {
+
+        String sql =
+                "SELECT PRODUCTION.RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
+
+        try {
+            return jdbcTemplate.queryForObject(
+                    sql,
+                    String.class,
+                    UserContext.getGroupPoid(),
+                    parameterName,
+                    parameterKeyIdType,
+                    parameterKeyId,
+                    defaultValue
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return defaultValue;
+        }
+    }
+
+
 }
 

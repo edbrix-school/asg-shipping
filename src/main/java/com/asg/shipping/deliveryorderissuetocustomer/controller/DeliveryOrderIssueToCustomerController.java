@@ -2,25 +2,16 @@ package com.asg.shipping.deliveryorderissuetocustomer.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
-import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
-import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerPrintRequest;
-import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
-import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import com.asg.shipping.deliveryorderissuetocustomer.dto.*;
 import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import java.io.ByteArrayOutputStream;
-import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -83,9 +74,7 @@ public class DeliveryOrderIssueToCustomerController {
             @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto, @RequestParam ButtonType buttonType) {
         try {
             byte[] pdf = deliveryOrderIssueToCustomerService.print(transactionPoid,requestDto,buttonType);
-            if (pdf ==  null){
-                log.info("PDF is null");
-            }
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=delivery-order-issue-to-customer-"+buttonType.name().toLowerCase()+ "-" + transactionPoid + ".pdf")
@@ -98,6 +87,11 @@ public class DeliveryOrderIssueToCustomerController {
 
     }
 
-
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @PostMapping("/validate-document/{id}")
+    public ResponseEntity<?> validateDocument(@PathVariable Long id,@Valid @RequestBody IssueDeliveryOrderRequestDto requestDto) {
+        ValidateDocumentDto dto = deliveryOrderIssueToCustomerService.validateDocument(id,requestDto);
+        return success("Delivery order retrieved successfully", dto);
+    }
 
 }
