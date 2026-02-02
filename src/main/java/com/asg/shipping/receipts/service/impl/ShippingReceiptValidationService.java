@@ -191,9 +191,6 @@ public class ShippingReceiptValidationService {
 
 
 	private void validateReleaseTypeMatching(ArShReceiptHdr existingReceipt) {
-		if (existingReceipt.getOrignalBlReleaseType() == null) {
-			throw new ValidationException(ValidationMessages.ORIGINAL_RELEASE_TYPE_MISSING);
-		}
 
 		if (!existingReceipt.getBlReleaseTypeOffice().equalsIgnoreCase(
 				existingReceipt.getOrignalBlReleaseType())) {
