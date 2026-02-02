@@ -197,7 +197,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                         .transactionPoid(transactionPoid)
                         .docReference(docRef)
                         .blNumber(blNumber)
-                        .build());
+                        .build(),manifestType);
             } else {
                 log.warn("OFOQ manifest submission returned null functionalRefId for transactionPoid: {}", transactionPoid);
                 OfoqApiDataHdrEntity header = findEntityById(transactionPoid);
@@ -215,7 +215,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
 
 
     @Override
-    public OFOQCheckStatusResponseDto checkStatus(OFOQCheckStatusDto request) {
+    public OFOQCheckStatusResponseDto checkStatus(OFOQCheckStatusDto request,String manifestType) {
         log.debug("Checking status for functionalReference: {}", request.getFunctionalReference());
         try {
             validateCheckStatusRequest(request);
@@ -224,7 +224,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     OFOQApiService.getManifestStatus(request.getFunctionalReference());
             log.debug("Received customs response with statusCode: {}", customsResponse.getStatusCode());
             
-            saveManifestStatusResponse(request.getTransactionPoid(), request.getDocReference(), "M", request.getBlNumber(), customsResponse);
+            saveManifestStatusResponse(request.getTransactionPoid(), request.getDocReference(), manifestType, request.getBlNumber(), customsResponse);
             
             entityManager.clear();
             
@@ -327,6 +327,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                 request.getTransactionPoid(),
                 request.getBlNumber()
         );
+
         List<OFOQManifestAmendmentResponseDtlEntity> ofoqManifestAmendmentResponseDtlEntity =
                 OFOQManifestAmendmentResponseDtlRepository.findByTransactionPoidAndXmlBlNumber(
                         request.getTransactionPoid(),

@@ -18,7 +18,7 @@ public interface ShippingOFOQV2Service {
 
     OFOQCheckStatusResponseDto createShippingOFOQ(ShippingOFOQV2Request request);
 
-    OFOQCheckStatusResponseDto checkStatus(@Valid OFOQCheckStatusDto request);
+    OFOQCheckStatusResponseDto checkStatus(@Valid OFOQCheckStatusDto request,String manifestType);
 
     OFOQCheckStatusResponseDto updateShippingOFOQ(Long transactionPoid, ShippingOFOQV2Request request);
 

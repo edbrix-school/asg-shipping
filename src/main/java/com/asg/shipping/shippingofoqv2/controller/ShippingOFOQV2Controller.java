@@ -152,7 +152,7 @@ public class ShippingOFOQV2Controller {
 			@Valid @RequestBody OFOQCheckStatusDto request
 	) {
 		try {
-			OFOQCheckStatusResponseDto response = shippingOFOQV2Service.checkStatus(request);
+			OFOQCheckStatusResponseDto response = shippingOFOQV2Service.checkStatus(request,"M");
 			return success("Status checked successfully", response);
 		} catch (Exception e) {
 			log.error("Error checking OFOQ status", e);
@@ -210,5 +210,13 @@ public class ShippingOFOQV2Controller {
 		} catch (Exception e) {
 			return internalServerError("Error deleting document: " + e.getMessage());
 		}
+	}
+
+	@PostMapping("/amend-bl")
+	public  ResponseEntity<?> amendDb(@Valid @RequestBody OFOQAmendBlRequestDto request){
+
+			AmendBlDto response = shippingOFOQV2Service.amendBl(request);
+			return success("Amend bl successfully", response);
+
 	}
 }
