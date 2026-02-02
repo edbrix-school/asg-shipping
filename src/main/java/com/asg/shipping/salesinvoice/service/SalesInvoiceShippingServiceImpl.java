@@ -1714,10 +1714,43 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         return rs.wasNull() ? null : value;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getBillCompany(Long blPoid, Long customerPoid) {
+        log.info("Getting bill company for BL POID: {}, Customer POID: {}", blPoid, customerPoid);
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        Long userPoid = getUserPoid();
+        try {
+            String sql = "{call PROC_SH_GET_CUS_BILL_COMPANY(?, ?, ?, ?, ?, ?)}";
+            String billCompanyPoidStr = jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, groupPoid);
+                cs.setLong(2, companyPoid);
+                cs.setLong(3, userPoid);
+                cs.setLong(4, blPoid);
+                cs.setLong(5, customerPoid);
+                cs.registerOutParameter(6, Types.VARCHAR);
+                cs.execute();
+                return cs.getString(6);
+            });
+
+            if (billCompanyPoidStr != null && !billCompanyPoidStr.trim().isEmpty()) {
+                try {
+                    return new BigDecimal(billCompanyPoidStr.trim());
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid bill company POID format: {}", billCompanyPoidStr);
+                }
+            }
+            return companyPoid != null ? new BigDecimal(companyPoid) : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.error("Error calling PROC_SH_GET_CUS_BILL_COMPANY", e);
+            throw new ValidationException("Error getting bill company: " + e.getMessage());
+        }
+    }
+
     private LocalDate getLocalDateOrNull(ResultSet rs, String column) throws java.sql.SQLException {
         java.sql.Date date = rs.getDate(column);
         return date != null ? date.toLocalDate() : null;
     }
 
 }
-
