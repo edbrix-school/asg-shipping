@@ -249,7 +249,7 @@ ORDER BY CHARGE_TYPE_APPLICABLE,CHARGE_APPLICABLE
 			<textField>
 				<reportElement x="6" y="0" width="252" height="12" uuid="c413ea8c-e6f0-4740-a5b6-817e599e188e"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" size="8" isBold="true"/>
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 					<paragraph leftIndent="2"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DEMURRAGE_DETAILS}]]></textFieldExpression>
@@ -257,42 +257,42 @@ ORDER BY CHARGE_TYPE_APPLICABLE,CHARGE_APPLICABLE
 			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
 				<reportElement x="258" y="0" width="44" height="12" uuid="8449e03f-9fef-41d7-b853-ecc5d00b1668"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DEMMURRAGE_BASE_AMT}]]></textFieldExpression>
 			</textField>
 			<textField pattern="" isBlankWhenNull="true">
 				<reportElement x="401" y="0" width="25" height="12" uuid="eb75e911-26f5-4718-8a57-faf5820b0652"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DEMURRAGE_TAX_PERCENT}]]></textFieldExpression>
 			</textField>
 			<textField pattern="###0.000;-###0.000" isBlankWhenNull="true">
 				<reportElement x="428" y="0" width="60" height="12" uuid="b1e3b1ef-9544-48b8-b3ef-3cf35cdc773c"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DEMURRAGE_TAX_AMT}]]></textFieldExpression>
 			</textField>
 			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
 				<reportElement x="499" y="0" width="67" height="12" uuid="38ff2a22-146f-45e9-b637-10a90f53040a"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DEMURRAGE_TOTAL}]]></textFieldExpression>
 			</textField>
 			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
 				<reportElement x="302" y="0" width="44" height="12" uuid="865837f5-30fa-4861-8b5f-35f0f5b254a9"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DISCPER}]]></textFieldExpression>
 			</textField>
 			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
 				<reportElement x="349" y="0" width="47" height="12" uuid="3cf09c29-35cb-40d4-b04b-e65870b5d28e"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{AMTAFTERDISC}]]></textFieldExpression>
 			</textField>

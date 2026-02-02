@@ -347,6 +347,7 @@ public class ImportManifestBlController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @GetMapping("/cargo-arrival-notice/{transactionPoid}")
     public ResponseEntity<?> printCargoArrivalNotice(
             @Parameter(description = "Transaction POID", example = "12345")
@@ -367,6 +368,7 @@ public class ImportManifestBlController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @GetMapping("/uncleared-cargo-notice/{transactionPoid}")
     public ResponseEntity<?> printUnclearedCargoNotice(
             @Parameter(description = "Transaction POID", example = "12345")
@@ -386,6 +388,8 @@ public class ImportManifestBlController {
 
 
     }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @GetMapping("/cargo-manifest-print/{transactionPoid}")
     public ResponseEntity<?> printCargoManifest(
             @Parameter(description = "Transaction POID", example = "12345")

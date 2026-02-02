@@ -62,7 +62,7 @@ where hdr.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="0" y="0" width="788" height="20" uuid="233d7dc3-e1e5-4316-9855-9fe0e8c11a2e"/>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="14" isBold="true"/>
+					<font size="14" pdfFontName="Helvetica-Bold"  isBold="true"/>
 				</textElement>
 				<text><![CDATA[Port Charges Details]]></text>
 			</staticText>

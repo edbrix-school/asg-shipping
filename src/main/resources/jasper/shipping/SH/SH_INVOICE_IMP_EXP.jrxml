@@ -411,14 +411,14 @@ WHERE  HDR.TRANSACTION_POID =  $P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="410" y="121" width="5" height="15" uuid="5f33a798-503f-4f45-ac19-70d03079d066"/>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="9"pdfFontName="Helvetica-Bold" isBold="true"/>
+					<font size="9" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[:]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="410" y="138" width="5" height="15" uuid="a10ea17c-5061-4bab-ba0f-dbb70d2074c1"/>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="9" pdfFontName="Helvetica-Bold"isBold="true"/>
+					<font size="9" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[:]]></text>
 			</staticText>
@@ -933,7 +933,7 @@ WHERE  HDR.TRANSACTION_POID =  $P{DOC_KEY_POID}]]>
 							<staticText>
 								<reportElement x="0" y="0" width="75" height="12" uuid="0401d008-ec72-4b70-b4fc-97848d7caf7c"/>
 								<textElement textAlignment="Right">
-									<font size="9"  pdfFontName="Helvetica-Bold"isBold="true"/>
+									<font size="9"  pdfFontName="Helvetica-Bold" isBold="true"/>
 								</textElement>
 								<text><![CDATA[Amount]]></text>
 							</staticText>
@@ -1089,7 +1089,7 @@ ISO:300-102]]></text>
 			<staticText>
 				<reportElement x="11" y="117" width="25" height="20" uuid="3d468d72-dab8-434a-a77d-3582c9399214"/>
 				<textElement>
-					<font fontName="SansSerif "  pdfFontName="Helvetica-Bold"isBold="true"/>
+					<font fontName="SansSerif"  pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[For]]></text>
 			</staticText>

@@ -235,7 +235,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 							<staticText>
 								<reportElement x="0" y="0" width="119" height="13" uuid="7cc0c0f5-e468-4e9a-a662-5140d49a1a7a"/>
 								<textElement>
-									<font fontName="SansSerif"  pdfFontName="Helvetica-Bold"isBold="true"/>
+									<font fontName="SansSerif"  pdfFontName="Helvetica-Bold" isBold="true"/>
 								</textElement>
 								<text><![CDATA[Line]]></text>
 							</staticText>

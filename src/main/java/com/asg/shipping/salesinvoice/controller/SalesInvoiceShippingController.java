@@ -760,6 +760,7 @@ public class SalesInvoiceShippingController {
         };
     }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @GetMapping("/print-invoice/{transactionPoid}")
     public ResponseEntity<?> printInvoice(
             @Parameter(description = "Transaction POID", example = "12345")
@@ -779,6 +780,8 @@ public class SalesInvoiceShippingController {
         }
 
     }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @GetMapping("/customer-autocharge/{transactionPoid}")
     public ResponseEntity<?> printCustomerAutoCharge(
             @Parameter(description = "Transaction POID", example = "12345")
@@ -799,6 +802,7 @@ public class SalesInvoiceShippingController {
 
     }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @GetMapping("/print/{transactionPoid}")
     public ResponseEntity<?> print(
             @Parameter(description = "Transaction POID", example = "12345")

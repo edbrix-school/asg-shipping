@@ -244,9 +244,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 printService.buildBaseParams(transactionPoid, "100-102");
 
         String lineCode = validationRepository.getLineCode(voyageTransactionPoid);
-
         String jrxmlPath = "shipping/CAN_SHIPPING.jrxml";
-
         if ("MSC".equalsIgnoreCase(lineCode)) {
             jrxmlPath = "shipping/SH/CAN_SHIPPING_msc.jrxml";
         } else if ("COS".equalsIgnoreCase(lineCode)) {
@@ -262,12 +260,12 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     public byte[] printCargoManifest(Long transactionPoid, boolean isCargoManifestPrint) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
         params.put("P_FREIGHTCARGO", isCargoManifestPrint ? "FALSE" : "TRUE");
-        params.put("SUBREPORT_MARK_INFO", printService.load("shipping/cargo/Mark_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("shipping/cargo/Freight_Detail_Subreport1.jrxml"));
-        params.put("SUBREPORT_CONTAINER_INFO", printService.load("shipping/cargo/Container_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("shipping/cargo/Description_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_TOTAL_COUNT", printService.load("shipping/cargo/TotalCount_By_Size.jrxml"));
-        JasperReport mainReport = printService.load("shipping/cargo/Manifest_Cargo_WithCharges.jrxml");
+        params.put("SUBREPORT_MARK_INFO", printService.load("shipping/SH/cargo/Mark_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("shipping/SH/cargo/Freight_Detail_Subreport1.jrxml"));
+        params.put("SUBREPORT_CONTAINER_INFO", printService.load("shipping/SH/cargo/Container_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("shipping/SH/cargo/Description_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_TOTAL_COUNT", printService.load("shipping/SH/cargo/TotalCount_By_Size.jrxml"));
+        JasperReport mainReport = printService.load("shipping/SH/cargo/Manifest_Cargo_WithCharges.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 

@@ -5,7 +5,7 @@
 	<property name="ireport.y" value="182"/>
 	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
 	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
-	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" pdfFontName="Helvetica-Bold" isBold="true"/>
 	<style name="Detail" fontName="Arial" fontSize="12"/>
 	<style name="Row" mode="Transparent">
 		<conditionalStyle>
@@ -307,7 +307,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="0" y="76" width="511" height="30" uuid="6e907084-7e16-42c1-9e50-1ba547c96fd4"/>
 				<textElement textAlignment="Center">
-					<font fontName="SansSerif" size="13" isBold="true" isUnderline="false"/>
+					<font fontName="SansSerif" size="13" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="false"/>
 				</textElement>
 				<text><![CDATA[UNCLEARED CARGO NOTICE]]></text>
 			</staticText>
@@ -478,7 +478,7 @@ Yours faithfully,]]></text>
 			<textField>
 				<reportElement x="2" y="699" width="216" height="20" uuid="96eb1b70-50b8-4062-96d6-969ccd282b57"/>
 				<textElement>
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA["For "+ $V{as agent}]]></textFieldExpression>
 			</textField>
@@ -491,7 +491,7 @@ For and on behalf of
 			<textField>
 				<reportElement x="2" y="757" width="190" height="20" uuid="993b0f78-7bcf-45ed-b650-6b2128baf709"/>
 				<textElement>
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{LINE_SHORT_NAME}]]></textFieldExpression>
 			</textField>
@@ -554,7 +554,7 @@ For and on behalf of
 			<textField pattern="#,##0.000;(-#,##0.000)">
 				<reportElement x="127" y="414" width="148" height="15" uuid="a03e8204-6a22-4303-b658-a07c67769a15"/>
 				<textElement>
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DEM_TOTAL_AMOUNT}]]></textFieldExpression>
 			</textField>
@@ -568,7 +568,7 @@ For and on behalf of
 			<textField pattern="###0.000;(-###0.000)">
 				<reportElement x="127" y="445" width="148" height="15" uuid="0aeb5c14-195c-4257-a87c-0b17acfa6ebc"/>
 				<textElement>
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{OTH_TOTAL_AMOUNT}]]></textFieldExpression>
 			</textField>
@@ -629,28 +629,28 @@ For and on behalf of
 			<staticText>
 				<reportElement x="102" y="414" width="23" height="18" uuid="1eb18b2d-b737-4bc7-b785-c0741f53568e"/>
 				<textElement textAlignment="Right">
-					<font fontName="Serif" isBold="true"/>
+					<font fontName="Serif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[BD]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="102" y="445" width="23" height="18" uuid="c29b6b65-0f25-4aa5-a245-ba29661ed435"/>
 				<textElement textAlignment="Right">
-					<font fontName="Serif" isBold="true"/>
+					<font fontName="Serif" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[BD]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="776" width="204" height="12" uuid="c7a9f029-237e-4113-b040-99caf2b04a29"/>
 				<textElement verticalAlignment="Middle">
-					<font size="8" isBold="true" isItalic="true"/>
+					<font size="8" isBold="true"  pdfFontName="Helvetica-Bold" isItalic="true"/>
 				</textElement>
 				<text><![CDATA[Special Note :]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="786" width="509" height="32" uuid="ff7fb70d-06bf-4988-8b0c-216d330533c2"/>
 				<textElement>
-					<font size="8" isBold="true" isItalic="true"/>
+					<font size="8" isBold="true"  pdfFontName="Helvetica-Bold" isItalic="true"/>
 				</textElement>
 				<text><![CDATA[All prices mentioned in this document are exclusive of any taxes, including (but not limited to) VAT or other indirect taxes that may be imposed by any public or governmental authority in respect of this document. Each Party will bear their respective tax liability, if any, applicable in their country of reporting.]]></text>
 			</staticText>

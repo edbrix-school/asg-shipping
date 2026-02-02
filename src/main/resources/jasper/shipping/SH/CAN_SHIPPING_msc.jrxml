@@ -527,7 +527,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="2" y="637" width="508" height="39" uuid="3822eb60-bed1-4575-b791-f8c5b978da77"/>
 				<textElement textAlignment="Justified">
-					<font isBold="true" isItalic="false"/>
+					<font isBold="true"  pdfFontName="Helvetica-Bold" isItalic="false"/>
 				</textElement>
 				<text><![CDATA[• Return empty container(s) must be free from any and all extraneous foreign matter, be clean, cargo worthy condition. IMCO LABELS if any must be removed - failing which all charges for removal of the IMCO LABEL and/or fine will be debited to the consignee.]]></text>
 			</staticText>
@@ -555,7 +555,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="3" y="728" width="360" height="16" uuid="7e1fbd0f-3196-4f4d-a0be-9aa28f8635bf"/>
 				<textElement>
-					<font isBold="true" isUnderline="false"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold" isUnderline="false"/>
 				</textElement>
 				<text><![CDATA[Terms :]]></text>
 			</staticText>
@@ -620,7 +620,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<textField isBlankWhenNull="true">
 				<reportElement x="341" y="130" width="172" height="27" uuid="817283c8-c680-47e0-89f1-6138c2a60a99"/>
 				<textElement textAlignment="Center">
-					<font size="13" isBold="true"/>
+					<font size="13" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DOC_REF}]]></textFieldExpression>
 			</textField>
@@ -744,7 +744,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 							<staticText>
 								<reportElement style="SubTitle" x="0" y="4" width="178" height="20" forecolor="#FF3333" backcolor="#999999" uuid="9335f2cf-8125-495a-bc5e-73804ce886f6"/>
 								<textElement verticalAlignment="Middle">
-									<font size="12" isBold="true"/>
+									<font size="12" pdfFontName="Helvetica-Bold" isBold="true"/>
 								</textElement>
 								<text><![CDATA[Individual cheque for each B/L]]></text>
 							</staticText>
@@ -771,7 +771,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 							<textField pattern="#,##0;-#,##0" isBlankWhenNull="true">
 								<reportElement x="11" y="1" width="131" height="18" uuid="1068e1e8-64ff-4a9f-8b6f-5f29ffd1d431"/>
 								<textElement textAlignment="Right" verticalAlignment="Middle">
-									<font size="10" isBold="true"/>
+									<font size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$V{Sum_total_Charges}.intValue()]]></textFieldExpression>
 							</textField>
@@ -786,7 +786,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 							<textField pattern="#,##,##0">
 								<reportElement x="37" y="0" width="106" height="13" uuid="bdbeab2b-1ea4-4c1a-a2bd-ee82baca8976"/>
 								<textElement textAlignment="Right">
-									<font isBold="true"/>
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$F{AMOUNT1}]]></textFieldExpression>
 							</textField>
@@ -797,7 +797,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 							<textField pattern="">
 								<reportElement x="0" y="4" width="21" height="15" uuid="66a13b45-9cc0-4039-bd17-b3823ab53aa6"/>
 								<textElement>
-									<font size="10" isBold="true"/>
+									<font size="10" isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$V{Sum_total_Charges_frc}]]></textFieldExpression>
 							</textField>
@@ -815,7 +815,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 							<textField pattern="">
 								<reportElement x="0" y="0" width="87" height="15" uuid="9acc8302-ce3a-4505-8270-7ebd95d9d0ee"/>
 								<textElement>
-									<font isBold="true"/>
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$F{AMOUNT2}]]></textFieldExpression>
 							</textField>
@@ -846,14 +846,14 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<textField>
 				<reportElement x="334" y="742" width="177" height="16" uuid="5a8cae83-edc6-4124-aede-a4c19c44d858"/>
 				<textElement>
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{COMPANY_NAME}]]></textFieldExpression>
 			</textField>
 			<textField>
 				<reportElement x="6" y="802" width="502" height="16" uuid="c7d2c1f3-db95-4059-8955-f2903680b9c5"/>
 				<textElement textAlignment="Center">
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$V{as agent}]]></textFieldExpression>
 			</textField>
@@ -905,7 +905,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 					<printWhenExpression><![CDATA[!$F{DRAFT_YES_NO}.equals( 'X' )]]></printWhenExpression>
 				</reportElement>
 				<textElement rotation="Left">
-					<font size="16" isBold="true"/>
+					<font size="16" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{DRAFT_YES_NO}]]></textFieldExpression>
 			</textField>
@@ -917,14 +917,14 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement mode="Opaque" x="2" y="533" width="509" height="46" backcolor="#CCCCCC" uuid="e9e177ab-5ffe-4c7c-bf1a-9e55c228c903"/>
 				<textElement textAlignment="Justified">
-					<font size="9" isBold="true"/>
+					<font size="9" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[CONSIGNEE’S STAMP ON THE ORIGINAL BILL OF LADING IS REQUIRED.  IF THE B/L IS SURRENDERED OR SEA WAY BILL/EXPRESS RELEASE INSTEAD OF ORIGINAL BILL OF LADING, THEN CONSIGNEE’S STAMP ON THE COPY OF BILL OF LADING (IN CASE OF SURRENDERED) OR ON THE SEA WAY/EXPRESS B/L IS REQUIRED. ALSO PLEASE PRESENT A COPY OF THIS ARRIVAL NOTICE.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="4" y="742" width="334" height="16" uuid="229725f0-0487-4827-8d8f-ad9d27cc37ee"/>
 				<textElement>
-					<font isBold="true" isUnderline="false"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold" isUnderline="false"/>
 				</textElement>
 				<text><![CDATA[        1. All payments must be Account Payee cheques in the name of ]]></text>
 			</staticText>
@@ -960,7 +960,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 							<textField pattern="###0">
 								<reportElement x="54" y="0" width="90" height="13" uuid="82bb4549-2fbc-4023-a2dd-b6013792f44f"/>
 								<textElement textAlignment="Right">
-									<font isBold="true"/>
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$F{AMOUNT1}]]></textFieldExpression>
 							</textField>
@@ -971,7 +971,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 							<textField>
 								<reportElement x="0" y="0" width="90" height="13" uuid="a0e2fbdc-3533-47c6-bfb4-627a97deada5"/>
 								<textElement>
-									<font isBold="true"/>
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$F{AMOUNT2}]]></textFieldExpression>
 							</textField>
@@ -989,21 +989,21 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<textField isBlankWhenNull="true">
 				<reportElement x="6" y="831" width="502" height="16" uuid="7492b648-5a63-4fc1-b5c6-9e9371adae24"/>
 				<textElement textAlignment="Center">
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{ADD_TEXT}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="2" y="498" width="509" height="32" uuid="795b785c-729f-427a-834f-a5c5751d9b4c"/>
 				<textElement>
-					<font size="8" isBold="true" isItalic="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold" isItalic="true"/>
 				</textElement>
 				<text><![CDATA[All prices mentioned in this document are exclusive of any taxes, including (but not limited to) VAT or other indirect taxes that may be imposed by any public or governmental authority in respect of this document. Each Party will bear their respective tax liability, if any, applicable in their country of reporting.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="488" width="204" height="12" uuid="f949883e-2629-4614-b35c-b2894312d7b7"/>
 				<textElement verticalAlignment="Middle">
-					<font size="8" isBold="true" isItalic="true"/>
+					<font size="8" isBold="true"  pdfFontName="Helvetica-Bold" isItalic="true"/>
 				</textElement>
 				<text><![CDATA[Special Note :]]></text>
 			</staticText>

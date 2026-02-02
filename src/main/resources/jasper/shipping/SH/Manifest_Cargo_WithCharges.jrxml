@@ -144,7 +144,7 @@ order by bl_type,bl_number]]>
 			<textField>
 				<reportElement x="84" y="97" width="159" height="15" uuid="0dbea045-5613-4a3b-a5c8-e7ab54376a75"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
 			</textField>
@@ -199,7 +199,7 @@ order by bl_type,bl_number]]>
 			<staticText>
 				<reportElement x="354" y="29" width="128" height="15" uuid="34c52098-6fe1-4144-b155-30061f9636c7"/>
 				<textElement textAlignment="Center">
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[KINGDOM OF BAHRAIN]]></text>
 			</staticText>
