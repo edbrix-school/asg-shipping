@@ -27,9 +27,6 @@ public class ShippingOFOQV2Request {
 
 
     private List<OFOQItemDtlDto> lineDetails;
-    private List<OFOQManifestSubmitResponseDto> manifestResponse;
-    private List<OFOQAmendBLDto> amendBl;
-    private List<OFOQManifestAmendmentResponse> manifestAmendmentResponse;
 
 
 }
