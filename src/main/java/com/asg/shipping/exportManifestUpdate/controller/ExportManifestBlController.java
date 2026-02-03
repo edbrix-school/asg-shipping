@@ -3,6 +3,7 @@ package com.asg.shipping.exportManifestUpdate.controller;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,10 +17,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import static com.asg.common.lib.dto.response.ApiResponse.success;
+import static com.asg.common.lib.dto.response.ApiResponse.error;
 
 /**
  * Controller for Export Manifest Update OPS – BL (100 – 352)
@@ -508,7 +512,18 @@ public class ExportManifestBlController {
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate BL print request", required = true)
             @Valid @RequestBody GenerateBlPrintRequest request) {
-        return success("BL print generated successfully", service.generateBlPrint(transactionPoid, request));
+    	 try {
+    		 String docId=UserContext.getDocumentId();
+             byte[] pdf = service.generateBlPrint(transactionPoid, request,docId);
+             return ResponseEntity.ok()
+                     .header(HttpHeaders.CONTENT_DISPOSITION,
+                             "attachment; filename=bl-print-" + transactionPoid + ".pdf")
+                     .contentType(MediaType.APPLICATION_PDF)
+                     .body(pdf);
+         } catch (Exception e) {
+             log.error("Failed to generate PDF for BL Print: {}", transactionPoid, e);
+             return error("Failed to generate PDF: " + e.getMessage(), 500);
+         }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -536,7 +551,18 @@ public class ExportManifestBlController {
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate manifest request", required = true)
             @Valid @RequestBody GenerateManifestRequest request) {
-        return success("Manifest generated successfully", service.generateManifest(transactionPoid, request));
+        try {
+        	String docId=UserContext.getDocumentId();
+			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
+			String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-" : "freight-manifest-";
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=" + fileName + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -562,8 +588,18 @@ public class ExportManifestBlController {
     @PostMapping("/{transactionPoid}/generate-detention-storage")
     public ResponseEntity<?> generateDetentionStorage(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Detention/Storage report generated successfully", 
-                service.generateDetentionStorage(transactionPoid));
+    	try {
+   		 String docId=UserContext.getDocumentId();
+            byte[] pdf = service.generateDetentionStorage(transactionPoid,docId);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=detention-storage-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for detention or port storage: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)

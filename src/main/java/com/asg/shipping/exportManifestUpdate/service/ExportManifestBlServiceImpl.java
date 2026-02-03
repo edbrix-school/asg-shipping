@@ -1,10 +1,13 @@
 package com.asg.shipping.exportManifestUpdate.service;
 
+import javax.sql.DataSource;
+
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.common.service.LovService;
@@ -25,6 +28,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperReport;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
@@ -51,6 +57,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final ExportManifestBlMapper mapper;
     private final DocumentSearchService documentSearchService;
     private final LovService lovService;
+	private final PrintService printService;
+	private final DataSource dataSource;
 
     // ========== Header Operations ==========
 
@@ -631,21 +639,44 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     }
 
     @Override
-    public Map<String, Object> generateBlPrint(Long transactionPoid, GenerateBlPrintRequest request) {
-        // TODO: Implement BL print generation
-        throw new UnsupportedOperationException("BL print generation not yet implemented");
+    public byte[] generateBlPrint(Long transactionPoid, GenerateBlPrintRequest request,String docId) throws Exception {
+    	
+    	log.info("Bl print : {}", transactionPoid);
+    	
+    	Long groupPoid=UserContext.getGroupPoid();
+    	Long companyPoid=UserContext.getCompanyPoid();
+    	ExportShipBlManifestHdr entity = hdrRepository
+                .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
+                .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
+    	if(entity.getBlOrginalPrint()!=null && entity.getBlOrginalPrint().equalsIgnoreCase("Y")) {
+    		throw new RuntimeException("BL already printed");
+    	}
+    	
+    	String jrxmlFile=customRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
+    	Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-140");
+		JasperReport mainReport = printService.load("Shipping/"+jrxmlFile);
+		params.put("DRAFT_ORIGINAL", request.getDraftOriginal());
+		return printService.fillReportToPdf(mainReport, params, dataSource);
+    	
     }
 
     @Override
-    public Map<String, Object> generateManifest(Long transactionPoid, GenerateManifestRequest request) {
-        // TODO: Implement manifest generation
-        throw new UnsupportedOperationException("Manifest generation not yet implemented");
+    public byte[] generateManifest(Long transactionPoid, GenerateManifestRequest request, String docId) throws Exception {
+    	Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
+		params.put("P_FREIGHTCARGO", request.getFreightCargo().toString().toUpperCase());
+        params.put("MARK_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
+	    params.put("CONTAINER_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+	    params.put("DESCRIPTION_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+	    params.put("FREIGHT_DETAIL_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+	    JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
+	    return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
     @Override
-    public Map<String, Object> generateDetentionStorage(Long transactionPoid) {
-        // TODO: Implement detention/storage report generation
-        throw new UnsupportedOperationException("Detention/storage report generation not yet implemented");
+    public byte[] generateDetentionStorage(Long transactionPoid,String docId) throws Exception {
+    	Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
+		JasperReport mainReport = printService.load("Shipping/SH/Container_Detention_details.jrxml");
+		return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
     @Override

@@ -112,24 +112,20 @@ public class ExportManifestBlCustomRepositoryImpl implements ExportManifestBlCus
 
     @Override
     public String getBlPrintReport(Long groupPoid, Long companyPoid, String docId, Long transactionPoid, String returnType) {
-        StoredProcedureQuery query = entityManager.createStoredProcedureQuery("FUNC_SHIP_GET_BL_PRINT_REPORT");
-        
-        query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_DOC_ID", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_RETURN_TYPE", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("RESULT", String.class, ParameterMode.OUT);
-        
-        query.setParameter("P_GROUP_POID", groupPoid);
-        query.setParameter("P_COMPANY_POID", companyPoid);
-        query.setParameter("P_DOC_ID", docId);
-        query.setParameter("P_DOC_KEY_POID", transactionPoid);
-        query.setParameter("P_RETURN_TYPE", returnType);
-        
-        query.execute();
-        
-        return (String) query.getOutputParameterValue("RESULT");
+    	String sql = """
+				SELECT PRODUCTION.FUNC_SHIP_GET_BL_PRINT_REPORT(
+				    :groupPoid,
+				    :companyPoid,
+				    :docId,
+				    :transactionPoid,
+				    :returnType
+				) FROM DUAL
+				""";
+
+		return (String) entityManager.createNativeQuery(sql).setParameter("groupPoid", groupPoid)
+				.setParameter("companyPoid", companyPoid).setParameter("docId", docId)
+				.setParameter("transactionPoid", transactionPoid).setParameter("returnType", returnType)
+				.getSingleResult();
     }
 }
 

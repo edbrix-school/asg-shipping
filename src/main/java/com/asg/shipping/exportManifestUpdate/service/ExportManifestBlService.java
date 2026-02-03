@@ -50,11 +50,11 @@ public interface ExportManifestBlService {
     // Special Operations
     Map<String, Object> loadBooking(Long transactionPoid, LoadBookingRequest request);
     
-    Map<String, Object> generateBlPrint(Long transactionPoid, GenerateBlPrintRequest request);
+    byte[] generateBlPrint(Long transactionPoid, GenerateBlPrintRequest request, String docId) throws Exception;
     
-    Map<String, Object> generateManifest(Long transactionPoid, GenerateManifestRequest request);
+    byte[] generateManifest(Long transactionPoid, GenerateManifestRequest request,String docId)  throws Exception;
     
-    Map<String, Object> generateDetentionStorage(Long transactionPoid);
+    byte[] generateDetentionStorage(Long transactionPoid, String docId)  throws Exception;
     
     void exportEdi(Long transactionPoid);
     
