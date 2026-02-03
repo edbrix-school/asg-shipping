@@ -1,9 +1,14 @@
 package com.asg.shipping.linetariffs.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.service.LovDataService;
@@ -45,6 +50,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private final DocumentSearchService documentService;
     private final LovDataService lovService;
     private final LineTariffMapper mapper;
+    private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
 
     @Override
     @Transactional(readOnly = true)
@@ -101,6 +108,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Enrich with LOV data - TEMPORARILY DISABLED FOR PERFORMANCE
         // enrichLovData(dto);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
+
         log.info("Successfully retrieved line tariff with id: {}", id);
         return dto;
     }
@@ -117,8 +126,25 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         ShipLineTariffHdr tariff = new ShipLineTariffHdr();
         mapper.mapCreateDTOToEntity(dto, tariff, groupPoid, userPoid);
 
+        // Additional validation just before save to prevent race conditions
+        if (dto.getDocRef() != null && !dto.getDocRef().trim().isEmpty()) {
+            if (tariffHdrRepository.existsByDocRef(dto.getDocRef().trim())) {
+                throw new ValidationException("Document Reference " + dto.getDocRef().trim() + " already exists. Please use a different reference.");
+            }
+        }
+
         // Save header (generates TRANSACTION_POID)
-        ShipLineTariffHdr saved = tariffHdrRepository.save(tariff);
+        ShipLineTariffHdr saved;
+        try {
+            saved = tariffHdrRepository.save(tariff);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            if (e.getMessage().contains("UK_DOCREFFSHIP_LINE_TARIFF_HDR")) {
+                throw new ValidationException("Document Reference " + dto.getDocRef() + " already exists. Please use a different reference.");
+            }
+            throw e;
+        }
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getTransactionPoid().toString());
 
         // Create detail records
         createDetailRecords(saved.getTransactionPoid(), dto);
@@ -148,9 +174,22 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Validate
         validateTariffUpdateDTO(dto, id, groupPoid);
 
+        // Create old entity for logging changes
+        ShipLineTariffHdr oldTariff = new ShipLineTariffHdr();
+        oldTariff.setDescription(tariff.getDescription());
+        oldTariff.setPeriodFrom(tariff.getPeriodFrom());
+        oldTariff.setPeriodTo(tariff.getPeriodTo());
+        oldTariff.setDmgFromSameday(tariff.getDmgFromSameday());
+        oldTariff.setDmgFromNextday(tariff.getDmgFromNextday());
+        oldTariff.setPayableCurrency(tariff.getPayableCurrency());
+        oldTariff.setReceivableCurrency(tariff.getReceivableCurrency());
+        oldTariff.setDocRef(tariff.getDocRef());
+
         // Update header entity
         mapper.mapUpdateDTOToEntity(dto, tariff, groupPoid, userPoid);
         ShipLineTariffHdr saved = tariffHdrRepository.save(tariff);
+
+        loggingService.logChanges(oldTariff, saved, ShipLineTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         // Update detail records
         updateDetailRecords(id, dto);
@@ -170,26 +209,21 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional
-    public void deleteLineTariff(Long id) {
+    public void deleteLineTariff(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting line tariff with id: {}", id);
 
-        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+        Long groupPoid = UserContext.getGroupPoid();
 
         ShipLineTariffHdr tariff = tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Line Tariff", "transactionPoid", id.toString()));
 
-        // Check if already deleted (idempotent)
-        if ("Y".equals(tariff.getDeleted())) {
-            log.info("Line tariff with id: {} is already deleted", id);
-            return;
-        }
-
-        // Soft delete
-        tariff.setDeleted("Y");
-        tariff.setLastModifiedBy(getCurrentUser());
-        tariff.setLastModifiedDate(LocalDateTime.now());
-
-        tariffHdrRepository.save(tariff);
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_LINE_TARIFF_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                null
+        );
 
         log.info("Successfully deleted line tariff with id: {}", id);
     }
@@ -256,6 +290,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         newTariff.setDeleted("N");
 
         ShipLineTariffHdr savedNewTariff = tariffHdrRepository.save(newTariff);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), savedNewTariff.getTransactionPoid().toString());
 
         // Copy all detail records
         copyDetailRecords(id, savedNewTariff.getTransactionPoid());
@@ -775,10 +811,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             }
         }
 
-        // Check if document reference already exists
-        if (dto.getDocRef() != null && !dto.getDocRef().isEmpty()) {
-            if (tariffHdrRepository.existsByDocRef(dto.getDocRef())) {
-                throw new ValidationException("Document reference already exists");
+        // Check if document reference already exists (with trimming)
+        if (dto.getDocRef() != null && !dto.getDocRef().trim().isEmpty()) {
+            String trimmedDocRef = dto.getDocRef().trim();
+            if (tariffHdrRepository.existsByDocRef(trimmedDocRef)) {
+                throw new ValidationException("Document Reference " + trimmedDocRef + " already exists. Please use a different reference.");
             }
         }
 

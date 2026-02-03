@@ -53,11 +53,12 @@ public interface LineTariffsService {
     LineTariffDto updateLineTariff(Long id, LineTariffUpdateDTO dto, Long groupPoid, Long userPoid);
 
     /**
-     * Soft delete a line tariff
+     * Soft delete a line tariff using document delete service
      *
      * @param id TRANSACTION_POID
+     * @param deleteReasonDto Delete reason information
      */
-    void deleteLineTariff(Long id);
+    void deleteLineTariff(Long id, com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto);
 
     /**
      * Copy existing tariff to new period

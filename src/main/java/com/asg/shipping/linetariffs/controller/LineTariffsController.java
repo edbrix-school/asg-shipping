@@ -1,7 +1,9 @@
 package com.asg.shipping.linetariffs.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
@@ -16,6 +18,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -210,7 +214,7 @@ public class LineTariffsController {
     @DeleteMapping("/{id}")
     @Operation(
             summary = "Delete line tariff",
-            description = "Soft delete a line tariff by setting DELETED='Y'",
+            description = "Soft delete a line tariff using document delete service",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -222,16 +226,27 @@ public class LineTariffsController {
                     responseCode = "404",
                     description = "Line tariff not found",
                     content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
             )
     })
     public ResponseEntity<?> deleteLineTariff(
-            @Parameter(description = "Transaction POID", required = true, example = "12345")
-            @PathVariable Long id) {
-
-        log.info("Deleting line tariff with id: {}", id);
-        lineTariffsService.deleteLineTariff(id);
-        log.info("Successfully deleted line tariff with id: {}", id);
-        return ApiResponse.success("Line tariff deleted successfully");
+            @PathVariable @NotNull @Min(1) Long id,
+            @RequestBody(required = false) DeleteReasonDto deleteReasonDto
+    ) {
+        try {
+            lineTariffsService.deleteLineTariff(id, deleteReasonDto);
+            return ApiResponse.success("Line tariff deleted successfully", null);
+        } catch (ResourceNotFoundException e) {
+            log.error("Error deleting line tariff with id {}: {}", id, e.getMessage());
+            return ApiResponse.notFound(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error deleting line tariff with id {}: {}", id, e.getMessage());
+            return ApiResponse.internalServerError("Failed to delete line tariff: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
