@@ -217,6 +217,11 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                 throw new ValidationException("Container Type is required in Container & Rates");
             }
 
+            String action = resolveActionType(containerRate.getActionType(), containerRate.getDetRowId());
+            if (ACTION_IS_DELETED.equals(action)) {
+                continue;
+            }
+
             if (!distinctContainerTypePoids.add(containerTypePoid)) {
                 throw new ValidationException("Duplicate container type(s) not allowed in Container & Rates");
             }
@@ -587,7 +592,7 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         if (StringUtils.isBlank(actionType)) {
             return normalizeDetRowId(detRowId) == null ? ACTION_IS_CREATED : ACTION_IS_UPDATED;
         }
-        return actionType.trim().toUpperCase();
+        return actionType.trim();
     }
 
     private Long normalizeDetRowId(Long detRowId) {
