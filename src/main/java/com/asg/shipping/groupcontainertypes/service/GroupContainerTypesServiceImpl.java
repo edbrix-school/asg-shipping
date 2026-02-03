@@ -174,12 +174,12 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
         containerGroup.setLastModifiedBy(getCurrentUser());
         containerGroup.setLastModifiedDate(LocalDateTime.now());
 
+        containerGroupRepository.save(containerGroup);
+
         loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), id.toString());
         String logDetail = String.format("KeyId = CONTAINER_GRP_POID:%s", id);
         String tableName = ShipContainerTypeGrpMaster.class.getAnnotation(jakarta.persistence.Table.class).name();
         loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Active", currentActive, containerGroup.getActive(), logDetail, tableName);
-
-        containerGroupRepository.save(containerGroup);
 
         log.info("Successfully toggled active status for container group with id: {} to {}", id, containerGroup.getActive());
     }
@@ -214,7 +214,6 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
 
         loggingService.logSimpleFieldChange(ShipContainerTypeGrpMaster.class, docId, key, "deleted", "N", "Y", "ShipContainerTypeGroup soft deleted");
         loggingService.logSimpleFieldChange(ShipContainerTypeGrpMaster.class, docId, key, "active", "Y", "N", "ShipContainerTypeGroup soft deleted");
-
 
         log.info("Successfully deleted container group with id: {}", id);
     }
