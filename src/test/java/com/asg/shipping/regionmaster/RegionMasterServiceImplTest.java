@@ -131,8 +131,6 @@ class RegionMasterServiceImplTest {
 
         lenient().doNothing().when(loggingService)
                 .createLogSummaryEntry(any(String.class), any(), any());
-        doNothing().when(loggingService)
-                .logChanges(any(), any(), any(), any(), any(), any(), any());
 
         RegionMasterResponse result =
                 service.create(request, 10L, "user1", "DOC-1");
