@@ -24,6 +24,7 @@ public class RegionMasterMapper {
         response.setRegionPoid(entity.getRegionPoid());
         response.setRegionCode(entity.getRegionCode());
         response.setRegionName(entity.getRegionName());
+        response.setRegionName2(entity.getRegionName2());
         response.setActive(entity.getActive());
         response.setSeqno(entity.getSeqno());
         response.setCreatedBy(entity.getCreatedBy());
@@ -57,6 +58,12 @@ public class RegionMasterMapper {
         entity.setRegionName(
                 request.getRegionName() != null
                         ? request.getRegionName().trim()
+                        : null
+        );
+
+        entity.setRegionName2(
+                request.getRegionName2() != null
+                        ? request.getRegionName2().trim()
                         : null
         );
 
@@ -100,6 +107,10 @@ public class RegionMasterMapper {
 
         if (request.getRegionName() != null) {
             entity.setRegionName(request.getRegionName().trim());
+        }
+
+        if (request.getRegionName2() != null) {
+            entity.setRegionName2(request.getRegionName2().trim());
         }
 
         if (request.getSeqno() != null) {
