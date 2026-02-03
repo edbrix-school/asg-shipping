@@ -3,8 +3,11 @@ package com.asg.shipping.groupcontainertypes.service;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.groupcontainertypes.dto.ContainerGroupCreateDTO;
@@ -16,6 +19,7 @@ import com.asg.shipping.groupcontainertypes.util.ContainerGroupMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -41,6 +45,8 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
 
     @Autowired
     private ShipContainerTypeGrpMasterRepository containerGroupRepository;
+
+    private final LoggingService loggingService;
 
     @Override
     @Transactional
@@ -87,6 +93,8 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
         ShipContainerTypeGrpMaster containerGroup = containerGroupRepository.findByContainerGrpPoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Container Group", "containerGrpPoid", id.toString()));
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
+
         log.info("Successfully retrieved container group with id: {}", id);
         return mapper.mapToDto(containerGroup);
     }
@@ -107,6 +115,10 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
         // Save entity
         ShipContainerTypeGrpMaster saved = containerGroupRepository.save(containerGroup);
 
+        String docId = UserContext.getDocumentId();
+        String key = saved.getContainerGrpPoid().toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
+
         log.info("Successfully created container group with id: {}", saved.getContainerGrpPoid());
         return mapper.mapToDto(saved);
     }
@@ -123,11 +135,19 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
         // Validate update DTO
         validateContainerGroupUpdateDTO(dto, groupPoid, id);
 
+        ShipContainerTypeGrpMaster oldEntity = new ShipContainerTypeGrpMaster();
+        BeanUtils.copyProperties(containerGroup, oldEntity);
+
         // Update entity
         mapper.mapUpdateDTOToEntity(dto, containerGroup, groupPoid, userPoid);
 
         // Save entity
         ShipContainerTypeGrpMaster saved = containerGroupRepository.save(containerGroup);
+
+        String docId = UserContext.getDocumentId();
+        String key = saved.getContainerGrpPoid().toString();
+        loggingService.logChanges(oldEntity, saved, ShipContainerTypeGrpMaster.class, docId, key, LogDetailsEnum.MODIFIED, "CONTAINER_GRP_POID");
+
 
         log.info("Successfully updated container group with id: {}", id);
         return mapper.mapToDto(saved);
@@ -156,6 +176,11 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
 
         containerGroupRepository.save(containerGroup);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), id.toString());
+        String logDetail = String.format("KeyId = CONTAINER_GRP_POID:%s", id);
+        String tableName = ShipContainerTypeGrpMaster.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Active", currentActive, containerGroup.getActive(), logDetail, tableName);
+
         log.info("Successfully toggled active status for container group with id: {} to {}", id, containerGroup.getActive());
     }
 
@@ -182,6 +207,13 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
         containerGroup.setLastModifiedDate(LocalDateTime.now());
 
         containerGroupRepository.save(containerGroup);
+
+        String docId = UserContext.getDocumentId();
+        String key = id.toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
+
+        loggingService.logSimpleFieldChange(ShipContainerTypeGrpMaster.class, docId, key, "deleted", "N", "Y", "ShipContainerTypeGroup soft deleted");
+        loggingService.logSimpleFieldChange(ShipContainerTypeGrpMaster.class, docId, key, "active", "Y", "N", "ShipContainerTypeGroup soft deleted");
 
         log.info("Successfully deleted container group with id: {}", id);
     }

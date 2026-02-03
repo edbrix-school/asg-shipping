@@ -1,5 +1,6 @@
 package com.asg.shipping.remuneration.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
@@ -17,6 +18,5 @@ public interface RemunerationMasterService {
 
     ShipRemunerationMasterResponseDto getRemunerationById(Long id);
 
-
-    void softDeleteRemuneration(Long id);
+    void softDeleteRemuneration(Long id, DeleteReasonDto deleteReasonDto);
 }

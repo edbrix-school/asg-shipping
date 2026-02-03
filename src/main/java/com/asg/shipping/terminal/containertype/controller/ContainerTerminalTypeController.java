@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.security.util.UserContext;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -187,6 +188,31 @@ public class ContainerTerminalTypeController {
                 "Container terminal type updated successfully",
                 response
         );
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @PutMapping("/{containerTerminalTypePoid}/activate")
+    @Operation(
+            summary = "Toggle Active Status",
+            description = "Toggles the active status of a container terminal type between Y and N",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> toggleActiveStatus(
+            @PathVariable @NotNull @Positive Long containerTerminalTypePoid) {
+
+        Long groupPoid = UserContext.getGroupPoid();
+        String userId = UserContext.getUserId();
+
+        log.info("Toggle Active Status request | poid={}, groupPoid={}, userId={}",
+                containerTerminalTypePoid,
+                groupPoid,
+                userId);
+
+        containerTerminalTypeService.toggleActiveStatus(containerTerminalTypePoid, groupPoid, userId);
+
+        log.info("Toggle Active Status completed successfully | poid={}", containerTerminalTypePoid);
+
+        return success("Container terminal type status toggled successfully");
     }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)

@@ -1,8 +1,11 @@
 package com.asg.shipping.remuneration.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceAlreadyExistsException;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.repository.GlMasterRepository;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
@@ -16,7 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,12 +40,23 @@ class RemunerationMasterServiceImplTest {
     @Mock
     private DocumentSearchService documentService;
 
+    @Mock
+    private DocumentDeleteService documentDeleteService;
+
+    @Mock
+    private LoggingService loggingService;
+
     @InjectMocks
     private RemunerationMasterServiceImpl service;
+
+    private DeleteReasonDto deleteReasonDto;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        
+        deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
     }
 
     @Test
@@ -141,21 +155,20 @@ class RemunerationMasterServiceImplTest {
     void testSoftDeleteRemuneration_Success() {
         ShipRemunerationMaster entity = new ShipRemunerationMaster();
         entity.setRemunerationPoid(1L);
+        entity.setCreatedDate(LocalDateTime.now());
 
         when(repository.findById(anyLong())).thenReturn(Optional.of(entity));
-        when(repository.save(any())).thenReturn(entity);
 
-        service.softDeleteRemuneration(1L);
+        service.softDeleteRemuneration(1L, deleteReasonDto);
 
-        assertEquals("Y", entity.getDeleted());
-        assertEquals("N", entity.getActive());
-        verify(repository, times(1)).save(any());
+        verify(repository, times(1)).findById(eq(1L));
+        verify(documentDeleteService, times(1)).deleteDocument(eq(1L), eq("SHIP_REMUNERATION_MASTER"), eq("REMUNERATION_POID"), eq(deleteReasonDto), any());
     }
 
     @Test
     void testSoftDeleteRemuneration_NotFound() {
         when(repository.findById(anyLong())).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.softDeleteRemuneration(1L));
+        assertThrows(ResourceNotFoundException.class, () -> service.softDeleteRemuneration(1L, deleteReasonDto));
     }
 }

@@ -1,5 +1,6 @@
 package com.asg.shipping.containertypeportchargestariff.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +17,7 @@ public interface PortChargesTariffService {
 
     PortChargesTariffDto updatePortChargesTariff(Long id, PortChargesTariffUpdateDto dto, Long groupPoid, Long userPoid);
 
-    void deletePortChargesTariff(Long id);
+    void deletePortChargesTariff(Long id, DeleteReasonDto deleteReasonDto);
 
     ValidateOverlapResponseDto validateOverlap(ValidateOverlapRequestDto request);
 }
