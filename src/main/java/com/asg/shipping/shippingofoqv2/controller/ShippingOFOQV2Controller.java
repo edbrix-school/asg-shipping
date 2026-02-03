@@ -1,7 +1,10 @@
 package com.asg.shipping.shippingofoqv2.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shippingofoqv2.dto.*;
 import com.asg.shipping.shippingofoqv2.service.ShippingOFOQV2Service;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,8 +23,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.Map;
-
-import static com.asg.common.lib.dto.response.ApiResponse.internalServerError;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 
 @RestController
@@ -31,6 +32,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.success;
 public class ShippingOFOQV2Controller {
 
     private final ShippingOFOQV2Service shippingOFOQV2Service;
+	private final LoggingService loggingService;
 
 
     @PostMapping
@@ -50,15 +52,9 @@ public class ShippingOFOQV2Controller {
     public ResponseEntity<?> saveDocument(
             @Valid @RequestBody ShippingOFOQV2Request request) {
 
-        try {
             OFOQCheckStatusResponseDto response = shippingOFOQV2Service.createShippingOFOQ(request);
 
             return success("Document saved and submitted successfully", response);
-
-
-        } catch (Exception e) {
-            return internalServerError("internal server" + e.getMessage() + e);
-        }
     }
 
     @Operation(
@@ -77,7 +73,8 @@ public class ShippingOFOQV2Controller {
             @PathVariable Long transactionPoid
     ) {
         OFOQVoyageDataResponse result = shippingOFOQV2Service.getShippingOFOQById(transactionPoid);
-        return success("OFOQ API data retrieved successfully", result);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+		return success("OFOQ API data retrieved successfully", result);
     }
 
     @Operation(
@@ -151,13 +148,9 @@ public class ShippingOFOQV2Controller {
 	public ResponseEntity<?> checkStatus(
 			@Valid @RequestBody OFOQCheckStatusDto request
 	) {
-		try {
-			OFOQCheckStatusResponseDto response = shippingOFOQV2Service.checkStatus(request);
+			OFOQCheckStatusResponseDto response = shippingOFOQV2Service.checkStatus(request,"M");
 			return success("Status checked successfully", response);
-		} catch (Exception e) {
-			log.error("Error checking OFOQ status", e);
-			return internalServerError("Error checking status: " + e.getMessage());
-		}
+
 	}
 
         @Operation(
@@ -182,12 +175,9 @@ public class ShippingOFOQV2Controller {
 			@PathVariable Long transactionPoid,
 			@Valid @RequestBody ShippingOFOQV2Request request
 	) {
-		try {
             OFOQCheckStatusResponseDto response = shippingOFOQV2Service.updateShippingOFOQ(transactionPoid, request);
 			return success("Document updated successfully", response);
-		} catch (Exception e) {
-			return internalServerError("Error updating document: " + e.getMessage());
-		}
+
 	}
 
 	@Operation(
@@ -202,13 +192,34 @@ public class ShippingOFOQV2Controller {
 	@DeleteMapping("/{transactionPoid}")
 	public ResponseEntity<?> deleteDocument(
 			@Parameter(description = "Transaction POID", required = true)
-			@PathVariable Long transactionPoid
-	) {
-		try {
-			shippingOFOQV2Service.deleteShippingOFOQ(transactionPoid);
+			@PathVariable Long transactionPoid, @Valid @RequestBody DeleteReasonDto deleteReasonDto
+			) {
+
+			shippingOFOQV2Service.deleteShippingOFOQ(transactionPoid,deleteReasonDto);
 			return success("Document deleted successfully", null);
-		} catch (Exception e) {
-			return internalServerError("Error deleting document: " + e.getMessage());
-		}
+
 	}
+
+@Operation(
+		summary = "Amend Bill of Lading",
+		description = "Amend an existing Bill of Lading in the OFOQ document"
+)
+@io.swagger.v3.oas.annotations.parameters.RequestBody(
+		description = "Bill of Lading amendment request",
+		required = true,
+		content = @Content(schema = @Schema(implementation = OFOQAmendBlRequestDto.class))
+)
+@ApiResponses(value = {
+		@ApiResponse(responseCode = "200", description = "Bill of Lading amended successfully",
+				content = @Content(schema = @Schema(implementation = AmendBlDto.class))),
+		@ApiResponse(responseCode = "400", description = "Invalid request parameters"),
+		@ApiResponse(responseCode = "500", description = "Internal server error")
+})
+@PostMapping("/amend-bl")
+public  ResponseEntity<?> amendBl(@Valid @RequestBody OFOQAmendBlRequestDto request){
+
+		AmendBlDto response = shippingOFOQV2Service.amendBl(request);
+		return success("Amend bl successfully", response);
+
+}
 }
