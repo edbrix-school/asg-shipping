@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LocalShareDto {
     private Long detRowId; // for update
+    private String actionType;
 
     @NotNull(message = "chargePoid is required")
     private Long chargePoid;
