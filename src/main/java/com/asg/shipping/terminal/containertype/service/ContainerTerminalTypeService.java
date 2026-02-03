@@ -28,6 +28,12 @@ public interface ContainerTerminalTypeService {
             String userId,
             String docId);
 
+    void toggleActiveStatus(
+            Long poid,
+            Long groupPoid,
+            String userId
+    );
+
     void delete(
             Long poid,
             Long groupPoid,

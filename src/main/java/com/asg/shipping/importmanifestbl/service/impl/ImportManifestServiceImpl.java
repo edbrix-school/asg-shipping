@@ -5,8 +5,14 @@ import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.entity.*;
 import com.asg.shipping.importManifestUpdate.respository.*;
 import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
+import com.asg.shipping.importmanifestbl.dto.CommodityDTO;
+import com.asg.shipping.importmanifestbl.dto.ContainerTypeDTO;
+import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
+import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
+import com.asg.shipping.importmanifestbl.repository.ContainerDropdownRepository;
 import com.asg.shipping.importmanifestbl.service.ImportManifestBlService;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
+import com.asg.shipping.importmanifestbl.util.ImportManifestDropdownMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +44,7 @@ public class ImportManifestServiceImpl implements ImportManifestBlService {
     private final com.asg.shipping.importManifestUpdate.service.ImportManifestBlServiceImpl updateService;
     private final ImportManifestBlMapper mapper;
     private final DocumentSearchService documentService;
+    private final ContainerDropdownRepository containerDropdownRepository;
 
     @Override
     public ImportManifestBlRequestDto getImportManifest(Long transactionPoId) {
@@ -171,6 +178,40 @@ public class ImportManifestServiceImpl implements ImportManifestBlService {
     public ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid) {
         return updateService.updateImportManifestBl(id,dto,companyPoid,groupPoid);
     }
+
+    @Override
+    public ContainersDropDownDto getContainerTypesByVoyage(Long voyageTransPoid) {
+
+        List<ContainerTypeDTO> containerTypes =
+                containerDropdownRepository.findContainerTypes(voyageTransPoid)
+                        .stream()
+                        .map(ImportManifestDropdownMapper::mapContainer)
+                        .toList();
+
+        List<CommodityDTO> commodities =
+                containerDropdownRepository.findAllCommodities()
+                        .stream()
+                        .map(ImportManifestDropdownMapper::mapCommodity)
+                        .toList();
+
+        return ContainersDropDownDto.builder()
+                .containerTypes(containerTypes)
+                .commodities(commodities)
+                .build();
+    }
+
+    @Override
+    public DefaultValueDto getDefaultValues(String docId) {
+        return procRepository.callDefaultGetValue(
+                UserContext.getGroupPoid(),
+                UserContext.getCompanyPoid(),
+                UserContext.getUserPoid(),
+                docId
+        );
+        
+
+    }
+
 
 
     @Override

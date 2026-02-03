@@ -35,9 +35,6 @@ public class CustomerAutoChargeExportBLUpdateDTO {
     @Schema(description = "Document Reference", example = "DOC-001")
     private String docRef;
 
-    @Schema(description = "Sequence Number", example = "1")
-    private Integer seqno;
-
     @Valid
     @Schema(description = "List of charge details")
     private List<CustomerAutoChargeDetailDto> chargeDetails;
