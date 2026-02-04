@@ -1,12 +1,14 @@
 package com.asg.shipping.remuneration.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.service.RemunerationMasterService;
+import jakarta.validation.Valid;
 import jakarta.xml.bind.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -48,8 +50,9 @@ public class RemunerationMasterController {
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @DeleteMapping("/{remunerationPoid}")
-    public ResponseEntity<?> delete(@PathVariable Long remunerationPoid) {
-        service.softDeleteRemuneration(remunerationPoid);
+    public ResponseEntity<?> delete(@PathVariable Long remunerationPoid,
+                                    @Valid @RequestBody DeleteReasonDto deleteReasonDto) {
+        service.softDeleteRemuneration(remunerationPoid, deleteReasonDto);
         return ApiResponse.success("Remuneration soft deleted successfully");
     }
 }

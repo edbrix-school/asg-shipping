@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
-import java.util.Date;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "OFOQ_API_DATA_HDR")
@@ -26,19 +26,16 @@ public class OfoqApiDataHdrEntity {
     private String docRef;
 
     @Column(name = "TRANSACTION_DATE")
-    @Temporal(TemporalType.DATE)
-    private Date transactionDate;
+    private LocalDate transactionDate;
 
     @Column(name = "COMPANY_POID")
     private Long companyPoid;
 
     @Column(name = "ARRIVAL_DATE_FROM")
-    @Temporal(TemporalType.DATE)
-    private Date arrivalDateFrom;
+    private LocalDate arrivalDateFrom;
 
     @Column(name = "ARRIVAL_DATE_TO")
-    @Temporal(TemporalType.DATE)
-    private Date arrivalDateTo;
+    private LocalDate arrivalDateTo;
 
     @Column(name = "CREATED_BY", length = 20)
     private String createdBy;
@@ -59,8 +56,7 @@ public class OfoqApiDataHdrEntity {
     private String voyageNo;
 
     @Column(name = "ARRIVAL_DATE")
-    @Temporal(TemporalType.DATE)
-    private Date arrivalDate;
+    private LocalDate arrivalDate;
 
     @Column(name = "VESSEL_POID")
     private Long vesselPoid;
