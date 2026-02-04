@@ -2,12 +2,19 @@ package com.asg.shipping.dayCloseShiping.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.sql.DataSource;
 
+import com.asg.common.lib.dto.request.LogRequestDto;
+import com.asg.shipping.bookingFormSH.dto.BookingFormContainerDetailDto;
+import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -160,16 +167,73 @@ public class DayCloseServiceImpl implements DayCloseService {
 			return;
 		}
 
+        String currentUser = getCurrentUser();
+        LocalDateTime now = LocalDateTime.now();
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+
 		Long maxDetRowId = dtlRepo.getMaxDetRowId(transactionPoid);
 
-		for (DayCloseDenominationDto dto : details) {
-			ArShDayEndCloseDtl entity = mapper.mapDtlFromDto(dto, transactionPoid, null);
+        List<ArShDayEndCloseDtl> toSave = new ArrayList<>();
+        List<ArShDayEndCloseDtl> toUpdate = new ArrayList<>();
+        List<Long> toDelete = new ArrayList<>();
+        List<LogRequestDto<ArShDayEndCloseDtl>> logRequests = new ArrayList<>();
 
-			if (entity.getDetRowId() == null) {
-				entity.setDetRowId(++maxDetRowId);
-			}
-			dtlRepo.save(entity);
+		for (DayCloseDenominationDto dto : details) {
+
+            String action = dto.getAction().toUpperCase();
+
+            switch (action) {
+
+                case "ISCREATED":
+                    ArShDayEndCloseDtl entity = mapper.mapDtlFromDto(dto, transactionPoid, null);
+                    entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
+                    entity.setCreatedBy(currentUser);
+                    entity.setCreatedDate(now);
+                    toSave.add(entity);
+                    break;
+
+                case "ISUPDATED":
+                    ArShDayEndCloseDtl existingData = dtlRepo
+                            .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
+                            .orElseThrow(() -> new com.asg.shipping.exceptions.ValidationException(
+                                    "Container detail not found for detRowId: " + dto.getDetRowId()));
+                    ArShDayEndCloseDtl oldEntity = new ArShDayEndCloseDtl();
+                    BeanUtils.copyProperties(existingData, oldEntity);
+
+                    ArShDayEndCloseDtl existing = new ArShDayEndCloseDtl();
+                    BeanUtils.copyProperties(existingData, existing);
+
+                    mapDayCloseDtlFromDto(dto, existing, transactionPoid);
+                    existing.setLastModifiedBy(currentUser);
+                    existing.setLastModifiedDate(now);
+                    toUpdate.add(existing);
+                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ArShDayEndCloseDtl.class, docId,
+                            docKeyPoid, "DAYENDCLOSE DET_ROW_ID: " + dto.getDetRowId()));
+                    break;
+
+                case "ISDELETED":
+                    toDelete.add(dto.getDetRowId());
+                    loggingService.logDelete(dto, docId, docKeyPoid);
+                    break;
+            }
 		}
+
+        if (!toSave.isEmpty()) {
+            List<ArShDayEndCloseDtl> saved = dtlRepo.saveAll(toSave);
+            saved.forEach(e -> loggingService.createLogSummaryEntry(docId, docKeyPoid,
+                    "DayEndClose detail created with detRowId: " + e.getDetRowId()));
+        }
+        if (!toUpdate.isEmpty()) {
+            dtlRepo.saveAll(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
+            }
+        }
+
+        if (!toDelete.isEmpty()) {
+            dtlRepo.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
+        }
 	}
 
 	private String callProcGlChoIntoChqMainShip(Long transactionPoid, LocalDate transactionDate, String docId,
@@ -228,6 +292,19 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 		return BigDecimal.ZERO;
 	}
+
+    private String getCurrentUser() {
+        return UserContext.getUserId() != null ? String.valueOf(UserContext.getUserId()) : "SYSTEM";
+    }
+
+    private void mapDayCloseDtlFromDto(DayCloseDenominationDto dto,ArShDayEndCloseDtl entity,Long transactionPoid){
+        entity.setTransactionPoid(transactionPoid);
+        entity.setCurrencyAmount(dto.getDenomination());
+        entity.setDetRowId(dto.getDetRowId());
+        entity.setCurrencyType(dto.getCurrencyType());
+        entity.setNoOfTran(dto.getNoOfTran());
+        entity.setCashAmount(dto.getCashAmount());
+    }
 	
 	@Override
     public byte[] print(Long transactionPoid) throws Exception {

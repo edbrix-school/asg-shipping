@@ -101,9 +101,9 @@ public class DayCloseController {
 			@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error") })
 	public ResponseEntity<?> createdayClose(
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Day close details to be created", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = DayCloseDto.class))) @Valid @RequestBody DayCloseDto request) {
-
-		DayCloseDto response = dayCloseService.createDayClose(request, UserContext.getGroupPoid(),
-				UserContext.getCompanyPoid(), UserContext.getUserPoid());
+        Long groupPoid =request.getHeader().getGroupPoid();
+        Long companyPoid=request.getHeader().getCompanyPoid();
+		DayCloseDto response = dayCloseService.createDayClose(request, groupPoid, companyPoid, UserContext.getUserPoid());
 		return success("Day Close created successfully", response);
 	}
 

@@ -1,11 +1,16 @@
 package com.asg.shipping.shippingofoqv2.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.common.lib.utility.ASGHelperUtils;
 import com.asg.shipping.shippingofoqv2.dto.*;
@@ -49,6 +54,8 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
     private final OFOQValidationService validationService;
     private final OFOQApiService OFOQApiService;
     private final EntityManager entityManager;
+    private final DocumentDeleteService documentDeleteService;
+    private final LoggingService loggingService;
 
     @Override
     public Map<String, Object> listShippingOFOQ(String documentId, FilterRequestDto filters, LocalDate startDate, LocalDate endDate, Pageable pageable) {
@@ -140,11 +147,11 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                                     .arrivalDate(
                                             request.getArrivalDate() == null
                                                     ? null
-                                                    : java.sql.Date.valueOf(request.getArrivalDate())
+                                                    : request.getArrivalDate()
                                     )
                                     .rotationNumber(request.getRotationNumber())
                                     .remarks(request.getRemarks())
-                                    .transactionDate(new java.sql.Date(System.currentTimeMillis()))
+                                    .transactionDate(LocalDate.now())
                                     .deleted("N")
                                     .createdBy(ASGHelperUtils.getCurrentUser())
                                     .createdDate(Timestamp.valueOf(LocalDateTime.now()))
@@ -157,10 +164,8 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
             if (request.getLineDetails() != null) {
                 saveItemDetails(request.getLineDetails(),transactionPoid);
             }
-
-            if (request.getAmendBl() != null) {
-                saveAmendBl(request.getAmendBl(),transactionPoid);
-            }
+            String key = savedHeader.getTransactionPoid().toString();
+            loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), key);
             log.debug("OFOQ header created with transactionPoid: {}", transactionPoid);
 
             return submitAndCheckOFOQManifest(transactionPoid,"M",null,request.getDocRef(),request.getVesselPoid());
@@ -197,7 +202,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                         .transactionPoid(transactionPoid)
                         .docReference(docRef)
                         .blNumber(blNumber)
-                        .build());
+                        .build(),manifestType);
             } else {
                 log.warn("OFOQ manifest submission returned null functionalRefId for transactionPoid: {}", transactionPoid);
                 OfoqApiDataHdrEntity header = findEntityById(transactionPoid);
@@ -212,10 +217,8 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
         }
     }
 
-
-
     @Override
-    public OFOQCheckStatusResponseDto checkStatus(OFOQCheckStatusDto request) {
+    public OFOQCheckStatusResponseDto checkStatus(OFOQCheckStatusDto request,String manifestType) {
         log.debug("Checking status for functionalReference: {}", request.getFunctionalReference());
         try {
             validateCheckStatusRequest(request);
@@ -224,7 +227,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     OFOQApiService.getManifestStatus(request.getFunctionalReference());
             log.debug("Received customs response with statusCode: {}", customsResponse.getStatusCode());
             
-            saveManifestStatusResponse(request.getTransactionPoid(), request.getDocReference(), "M", request.getBlNumber(), customsResponse);
+            saveManifestStatusResponse(request.getTransactionPoid(), request.getDocReference(), manifestType, request.getBlNumber(), customsResponse);
             
             entityManager.clear();
             
@@ -286,7 +289,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
             
             existingEntity.setVoyageNo(request.getVoyageNo());
             existingEntity.setVesselPoid(request.getVesselPoid());
-            existingEntity.setArrivalDate(request.getArrivalDate() != null ? java.sql.Date.valueOf(request.getArrivalDate()) : null);
+            existingEntity.setArrivalDate(request.getArrivalDate() != null ? (request.getArrivalDate()) : null);
             existingEntity.setRotationNumber(request.getRotationNumber());
             existingEntity.setLastModifiedBy(ASGHelperUtils.getCurrentUser());
             existingEntity.setLastModifiedDate(Timestamp.valueOf(LocalDateTime.now()));
@@ -303,14 +306,17 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
 
     @Override
     @Transactional
-    public void deleteShippingOFOQ(Long transactionPoid) {
+    public void deleteShippingOFOQ(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting OFOQ manifest for transactionPoid: {}", transactionPoid);
         try {
             OfoqApiDataHdrEntity entity = findEntityById(transactionPoid);
-            entity.setDeleted("Y");
-            entity.setLastModifiedBy(ASGHelperUtils.getCurrentUser());
-            entity.setLastModifiedDate(Timestamp.valueOf(LocalDateTime.now()));
-            ofoqApiDataHdrRepository.save(entity);
+            documentDeleteService.deleteDocument(
+                    transactionPoid,
+                    "OFOQ_API_DATA_HDR",
+                    "TRANSACTION_POID",
+                    deleteReasonDto,
+                    entity.getTransactionDate()
+            );
             log.info("OFOQ manifest deleted successfully for transactionPoid: {}", transactionPoid);
         } catch (Exception e) {
             log.error("Error deleting OFOQ manifest for transactionPoid: {}", transactionPoid, e);
@@ -327,6 +333,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                 request.getTransactionPoid(),
                 request.getBlNumber()
         );
+
         List<OFOQManifestAmendmentResponseDtlEntity> ofoqManifestAmendmentResponseDtlEntity =
                 OFOQManifestAmendmentResponseDtlRepository.findByTransactionPoidAndXmlBlNumber(
                         request.getTransactionPoid(),

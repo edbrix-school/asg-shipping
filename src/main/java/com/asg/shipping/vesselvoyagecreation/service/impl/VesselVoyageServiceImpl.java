@@ -226,7 +226,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         String docId = UserContext.getDocumentId();
         String key = fresh.getTransactionPoid().toString();
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
-        loggingService.logChanges(null, fresh, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.CREATED, "TRANSACTION_POID");
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(fresh.getLinePoid()).orElse(null);
         return voyageMapper.toResponse(fresh, lineCode);
@@ -261,7 +260,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         // Add logging
         String docId = UserContext.getDocumentId();
         String key = entity.getTransactionPoid().toString();
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
         loggingService.logChanges(oldEntity, entity, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(entity.getLinePoid()).orElse(null);

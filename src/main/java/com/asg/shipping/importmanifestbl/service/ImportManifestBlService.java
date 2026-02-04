@@ -3,6 +3,8 @@ package com.asg.shipping.importmanifestbl.service;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.*;
 
+import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
+import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 
@@ -30,4 +32,8 @@ public interface ImportManifestBlService {
 
 
     ImportManifestBlRequestDto updateImportManifestBl(Long id, @Valid ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid);
+
+    ContainersDropDownDto getContainerTypesByVoyage(Long voyageTransPoid);
+
+    DefaultValueDto getDefaultValues(String docId);
 }

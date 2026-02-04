@@ -1,10 +1,15 @@
 package com.asg.shipping.MafiTrailerDateUpdateForm.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.asg.common.lib.dto.request.LogRequestDto;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtlId;
+import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtl;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -105,6 +110,11 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 		Map<Long, ShipBlMafiDtl> detailMap = existingDetails.stream()
 				.collect(Collectors.toMap(d -> d.getId().getDetRowId(), d -> d));
 
+        List<LogRequestDto<ShipBlMafiDtl>> logRequests = new ArrayList<>();
+
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+
 		for (MafiDetailDto dto : request.getMafiDetails()) {
 
 			ShipBlMafiDtl entity = detailMap.get(dto.getDetRowId());
@@ -120,13 +130,31 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 				detailRepository.updateByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId(),
 						dto.getRemarks(), dto.getBackLoadDate(), dto.getMafiEmptyDate(), userId);
 				anyUpdateDone = true;
+                ShipBlMafiDtl newEntity=new ShipBlMafiDtl();
+                ShipBlMafiDtlId id=new ShipBlMafiDtlId();
+                id.setTransactionPoid(transactionPoid);
+                id.setDetRowId(dto.getDetRowId());
+                newEntity.setId(id);
+                newEntity.setBlPoid(dto.getBlPoid());
+                newEntity.setMafiRef(dto.getMafiRef());
+                newEntity.setMafiSize(dto.getMafiSize());
+                newEntity.setMafiFreeDays(dto.getMafiFreeDays());
+                newEntity.setBackLoadDate(dto.getBackLoadDate());
+                newEntity.setMafiEmptyDate(dto.getMafiEmptyDate());
+                newEntity.setRemarks(dto.getRemarks());
+                newEntity.setCreatedBy(entity.getCreatedBy());
+                newEntity.setCreatedDate(entity.getCreatedDate());
+                newEntity.setLastModifiedBy(userId);
+                newEntity.setLastModifiedDate(LocalDateTime.now());
+                logRequests.add(new LogRequestDto<>(entity, newEntity, ShipBlMafiDtl.class, docId,
+                        docKeyPoid, "BLMAFIDTL DET_ROW_ID: " + dto.getDetRowId()));
 			}
 		}
 
 		if (!anyUpdateDone) {
 			throw new IllegalStateException("No data to update.");
 		}
-		String docId = UserContext.getDocumentId();
+        loggingService.createLogBatch(logRequests);
 		loggingService.logChanges(existingEntity, headerEntity, ShipBlMafiHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 		
 	}

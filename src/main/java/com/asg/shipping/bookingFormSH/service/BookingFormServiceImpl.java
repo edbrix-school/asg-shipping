@@ -151,7 +151,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
 		// Save detail tables
 		saveDetailTables(entity.getTransactionPoid(), createDTO.getCargoDetails(), createDTO.getChargesDetails(),
-				createDTO.getContainerDetails(), true);
+				createDTO.getContainerDetails());
 
 		// Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save (for split booking allocation)
 		Long userPoid = UserContext.getUserPoid();
@@ -214,7 +214,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
 		// Save updated detail tables
 		saveDetailTables(id, updateDTO.getCargoDetails(), updateDTO.getChargesDetails(),
-				updateDTO.getContainerDetails(), false);
+				updateDTO.getContainerDetails());
 		headerRepository.save(entity);
 
 		// Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save
@@ -468,8 +468,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 	 * Save detail tables
 	 */
 	private void saveDetailTables(Long transactionPoid, List<BookingFormCargoDetailDto> cargoDetails,
-			List<BookingFormChargesDetailDto> chargesDetails, List<BookingFormContainerDetailDto> containerDetails,
-			boolean isCreated) {
+			List<BookingFormChargesDetailDto> chargesDetails, List<BookingFormContainerDetailDto> containerDetails) {
 
 		String currentUser = getCurrentUser();
 		LocalDateTime now = LocalDateTime.now();
@@ -484,24 +483,25 @@ public class BookingFormServiceImpl implements BookingFormService {
 
 			List<ShipMateCargoDtl> toSave = new ArrayList<>();
 			List<ShipMateCargoDtl> toUpdate = new ArrayList<>();
+            List<Long> toDelete = new ArrayList<>();
 			List<LogRequestDto<ShipMateCargoDtl>> logRequests = new ArrayList<>();
 
 			for (BookingFormCargoDetailDto dto : cargoDetails) {
 
-				String action = isCreated ? "ISCREATED" : "ISUPDATED";
+				String action = dto.getAction().toUpperCase();
 
 				switch (action) {
 
-				case "ISCREATED": {
+				case "ISCREATED":
 					ShipMateCargoDtl newEntity = mapper.mapCargoDtlFromDto(dto, transactionPoid);
 					newEntity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
 					newEntity.setCreatedBy(currentUser);
 					newEntity.setCreatedDate(now);
 					toSave.add(newEntity);
 					break;
-				}
 
-				case "ISUPDATED": {
+
+				case "ISUPDATED":
 					ShipMateCargoDtl existingData = cargoDtlRepository
 							.findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
 							.orElseThrow(() -> new ValidationException(
@@ -522,7 +522,11 @@ public class BookingFormServiceImpl implements BookingFormService {
 					logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateCargoDtl.class, docId, docKeyPoid,
 							"CARGO DET_ROW_ID: " + dto.getDetRowId()));
 					break;
-				}
+
+                 case "ISDELETED":
+                     toDelete.add(dto.getDetRowId());
+                     loggingService.logDelete(dto, docId, docKeyPoid);
+                     break;
 				}
 			}
 
@@ -539,6 +543,10 @@ public class BookingFormServiceImpl implements BookingFormService {
 				}
 			}
 
+            if (!toDelete.isEmpty()) {
+                cargoDtlRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
+            }
+
 		}
 
 		/* -------------------- CHARGES DETAILS -------------------- */
@@ -549,11 +557,12 @@ public class BookingFormServiceImpl implements BookingFormService {
 
 			List<ShipMateChargesDtl> toSave = new ArrayList<>();
 			List<ShipMateChargesDtl> toUpdate = new ArrayList<>();
+            List<Long> toDelete = new ArrayList<>();
 			List<LogRequestDto<ShipMateChargesDtl>> logRequests = new ArrayList<>();
 
 			for (BookingFormChargesDetailDto dto : chargesDetails) {
 
-				String action = isCreated ? "ISCREATED" : "ISUPDATED";
+                String action = dto.getAction().toUpperCase();
 
 				switch (action) {
 
@@ -565,7 +574,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 					toSave.add(entity);
 					break;
 
-				case "ISUPDATED": {
+				case "ISUPDATED":
 					ShipMateChargesDtl existingData = chargesDtlRepository
 							.findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
 							.orElseThrow(() -> new ValidationException(
@@ -583,7 +592,11 @@ public class BookingFormServiceImpl implements BookingFormService {
 					logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateChargesDtl.class, docId,
 							docKeyPoid, "CHARGES DET_ROW_ID: " + dto.getDetRowId()));
 					break;
-				}
+
+                case "ISDELETED":
+                    toDelete.add(dto.getDetRowId());
+                    loggingService.logDelete(dto, docId, docKeyPoid);
+                    break;
 				}
 			}
 
@@ -599,6 +612,10 @@ public class BookingFormServiceImpl implements BookingFormService {
 					loggingService.createLogBatch(logRequests);
 				}
 			}
+
+            if (!toDelete.isEmpty()) {
+                chargesDtlRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
+            }
 		}
 
 		/* -------------------- CONTAINER DETAILS -------------------- */
@@ -609,23 +626,24 @@ public class BookingFormServiceImpl implements BookingFormService {
 
 			List<ShipMateContainerDtl> toSave = new ArrayList<>();
 			List<ShipMateContainerDtl> toUpdate = new ArrayList<>();
+            List<Long> toDelete = new ArrayList<>();
 			List<LogRequestDto<ShipMateContainerDtl>> logRequests = new ArrayList<>();
 
 			for (BookingFormContainerDetailDto dto : containerDetails) {
 
-				String action = isCreated ? "ISCREATED" : "ISUPDATED";
+                String action = dto.getAction().toUpperCase();
 
 				switch (action) {
 
-				case "ISCREATED": {
+				case "ISCREATED":
 					ShipMateContainerDtl entity = mapper.mapContainerDtlFromDto(dto, transactionPoid);
 					entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
 					entity.setCreatedBy(currentUser);
 					entity.setCreatedDate(now);
 					toSave.add(entity);
 					break;
-				}
-				case "ISUPDATED": {
+
+				case "ISUPDATED":
 					ShipMateContainerDtl existingData = containerDtlRepository
 							.findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
 							.orElseThrow(() -> new ValidationException(
@@ -643,7 +661,11 @@ public class BookingFormServiceImpl implements BookingFormService {
 					logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateContainerDtl.class, docId,
 							docKeyPoid, "CONTAINER DET_ROW_ID: " + dto.getDetRowId()));
 					break;
-				}
+
+                case "ISDELETED":
+                    toDelete.add(dto.getDetRowId());
+                    loggingService.logDelete(dto, docId, docKeyPoid);
+                    break;
 				}
 			}
 
@@ -659,6 +681,9 @@ public class BookingFormServiceImpl implements BookingFormService {
 				}
 			}
 
+            if (!toDelete.isEmpty()) {
+                containerDtlRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
+            }
 		}
 	}
 
