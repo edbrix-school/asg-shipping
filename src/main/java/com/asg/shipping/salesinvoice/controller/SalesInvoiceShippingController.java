@@ -792,7 +792,7 @@ public class SalesInvoiceShippingController {
             byte[] pdf = service.printCustomerAutoCharge(transactionPoid,blPoid);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=sales-invoice-shipping-" + transactionPoid + ".pdf")
+                            "attachment; filename=sales-invoice-shipping-customer-autocharge" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -814,7 +814,7 @@ public class SalesInvoiceShippingController {
             byte[] pdf = service.print(transactionPoid, blPoid);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=receipts(shipping)" + transactionPoid + ".pdf")
+                            "attachment; filename=sales-invoice-shipping" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {

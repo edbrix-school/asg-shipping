@@ -359,7 +359,7 @@ public class ImportManifestBlController {
             byte[] pdf = manifestService.printCargoArrivalNotice(voyageTransactionPoid, transactionPoid);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-cargo-arrival-notice-" + transactionPoid + ".pdf")
+                            "attachment; filename=import-manifest-update-bl-cargo-arrival-notice-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -378,7 +378,7 @@ public class ImportManifestBlController {
             byte[] pdf = manifestService.printUnclearedCargoNotice(transactionPoid);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-" + transactionPoid + ".pdf")
+                            "attachment; filename=import-manifest-update-bl-uncleared-cargo-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -401,7 +401,7 @@ public class ImportManifestBlController {
             byte[] pdf = manifestService.printCargoManifest(transactionPoid, isCargoManifestPrint);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-cargo-manifest-" + transactionPoid + ".pdf")
+                            "attachment; filename=import-manifest-update-bl-cargo-manifest-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {

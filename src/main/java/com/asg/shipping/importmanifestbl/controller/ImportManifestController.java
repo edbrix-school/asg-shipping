@@ -337,7 +337,7 @@ public class ImportManifestController {
             byte[] pdf = importManifestService.printUnclearedCargoNotice(transactionPoid);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-" + transactionPoid + ".pdf")
+                            "attachment; filename=import-manifest-bl-cargo-notice-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -361,7 +361,7 @@ public class ImportManifestController {
             byte[] pdf = importManifestService.printProformaInvoice(transactionPoid,demChargesTill,percentage);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-" + transactionPoid + ".pdf")
+                            "attachment; filename=import-manifest-bl-performa-invoice-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
