@@ -282,7 +282,7 @@ public class VesselVoyageController {
 							"attachment; filename=" + fileName + transactionPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
-			log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
+			log.error("Failed to generate PDF for Manifest PDF: {}", transactionPoid, e);
 			return ApiResponse.error("Failed to generate PDF: " + e.getMessage(), 500);
 		}
 	}
