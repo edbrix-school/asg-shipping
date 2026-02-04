@@ -19,12 +19,11 @@ public class OFOQMapper {
         return OFOQApiDataHdrDto.builder()
                 .transactionPoid(entity.getTransactionPoid())
                 .docRef(entity.getDocRef())
-                .transactionDate(entity.getTransactionDate() != null ? new java.util.Date(entity.getTransactionDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
+                .transactionDate(entity.getTransactionDate() != null ? entity.getTransactionDate(): null)
                 .voyageNo(entity.getVoyageNo())
                 .vesselPoid(entity.getVesselPoid())
-                .arrivalDate(entity.getArrivalDate() != null ? new java.util.Date(entity.getArrivalDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
+                .arrivalDate(entity.getArrivalDate() != null ? entity.getArrivalDate() : null)
                 .rotationNumber(entity.getRotationNumber())
-                .apiProvisionalMfNo(entity.getApiProvisionalMfNo())
                 .apiProvisionalStatus(entity.getApiProvisionalStatus())
                 .manifestNo(entity.getManifestNo())
                 .manifestStatus(entity.getManifestStatus())
@@ -54,6 +53,7 @@ public class OFOQMapper {
     }
 
     public OFOQManifestAmendmentResponse toAmendmentResponseDto(OFOQManifestAmendmentResponseDtlEntity entity) {
+        if (entity == null) return null;
         return OFOQManifestAmendmentResponse.builder()
                 .detRowId(entity.getDetRowId())
                 .date(entity.getResponseDate() != null ? new java.util.Date(entity.getResponseDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
@@ -68,6 +68,9 @@ public class OFOQMapper {
 
 
     public OFOQAmendBLDto toAmendBLDto(OFOQAmendBlDtlEntity entity) {
+        if (entity == null){
+            return  null;
+        }
         return OFOQAmendBLDto.builder()
                 .detRowId(entity.getDetRowId())
                 .blNumber(entity.getBlNumber())

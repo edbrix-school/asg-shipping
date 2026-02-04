@@ -187,17 +187,6 @@ class ContainerTerminalTypeServiceImplTest {
                         eq("1")
                 );
 
-        doNothing().when(loggingService)
-                .logChanges(
-                        isNull(),
-                        any(ContainerTerminalTypeEntity.class),
-                        eq(ContainerTerminalTypeEntity.class),
-                        eq("000-001"),
-                        eq("1"),
-                        eq(LogDetailsEnum.CREATED),
-                        eq("CONTAINER_TMNL_TYPE_POID")
-                );
-
         ContainerTerminalTypeResponse result =
                 service.create(request, 10L, "user1", "000-001");
 
@@ -240,24 +229,6 @@ class ContainerTerminalTypeServiceImplTest {
                 .thenReturn(Optional.of(entity));
         when(mapper.toResponse(entity)).thenReturn(response);
         // Mock logging service void methods
-        doNothing().when(loggingService)
-                .createLogSummaryEntry(
-                        eq(LogDetailsEnum.MODIFIED),
-                        eq("000-001"),
-                        eq("1")
-                );
-
-        doNothing().when(loggingService)
-                .logChanges(
-                        any(ContainerTerminalTypeEntity.class),
-                        any(ContainerTerminalTypeEntity.class),
-                        eq(ContainerTerminalTypeEntity.class),
-                        eq("000-001"),
-                        eq("1"),
-                        eq(LogDetailsEnum.MODIFIED),
-                        eq("CONTAINER_TMNL_TYPE_POID")
-                );
-
         ContainerTerminalTypeResponse result =
                 service.update(1L, request, 10L, "user1", "000-001");
 
