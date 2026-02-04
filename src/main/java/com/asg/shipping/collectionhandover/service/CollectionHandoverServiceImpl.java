@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -44,12 +45,18 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchCollectionHandovers(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
-        log.info("Searching collection handovers with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
+    public Map<String, Object> searchCollectionHandovers(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
+        log.info("Searching collection handovers with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = documentService.resolveFilters(request);
+        
+        // Add date filters if provided
+        if (startDate != null && endDate != null) {
+            // Add date range filter for TRANSACTION_DATE field
+            filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        }
 
         RawSearchResult raw = documentService.search(
                 docId,

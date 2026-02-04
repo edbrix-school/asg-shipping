@@ -28,6 +28,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
@@ -78,15 +79,25 @@ public class LineTariffsController {
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction (e.g., 'description,asc')", example = "description,asc")
-            @RequestParam(required = false) String sort) {
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
 
-        log.info("Searching line tariffs with page: {}, size: {}, sort: {}", page, size, sort);
+        log.info("Searching line tariffs with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}", page, size, sort, startDate, endDate);
 
-        Pageable pageable = createPageable(page, size, sort);
-        Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable);
+        try {
+            if((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+                return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
+            }
 
-        log.info("Successfully retrieved line tariffs");
-        return ApiResponse.success("Line tariffs retrieved successfully", result);
+            Pageable pageable = createPageable(page, size, sort);
+            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, startDate, endDate);
+
+            log.info("Successfully retrieved line tariffs");
+            return ApiResponse.success("Line tariffs retrieved successfully", result);
+        } catch (Exception e) {
+            return ApiResponse.internalServerError("Unable to fetch line tariffs: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)

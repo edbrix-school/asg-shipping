@@ -17,12 +17,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 public interface VesselVoyageService {
 
-    Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId);
+    Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId, LocalDate startDate, LocalDate endDate);
 
     VoyageResponse getVoyage(Long voyagePoid);
 

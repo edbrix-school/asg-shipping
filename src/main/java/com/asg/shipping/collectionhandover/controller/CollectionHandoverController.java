@@ -23,6 +23,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
@@ -48,12 +49,23 @@ public class CollectionHandoverController {
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction", example = "docRef,asc")
-            @RequestParam(required = false) String sort) {
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
 
-        log.info("Searching collection handovers with page: {}, size: {}, sort: {}", page, size, sort);
-        Pageable pageable = createPageable(page, size, sort);
-        Map<String, Object> result = collectionHandoverService.searchCollectionHandovers(DOC_ID, request, pageable);
-        return ApiResponse.success("Collection handovers retrieved successfully", result);
+        log.info("Searching collection handovers with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}", page, size, sort, startDate, endDate);
+        
+        try {
+            if((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+                return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
+            }
+            
+            Pageable pageable = createPageable(page, size, sort);
+            Map<String, Object> result = collectionHandoverService.searchCollectionHandovers(DOC_ID, request, pageable, startDate, endDate);
+            return ApiResponse.success("Collection handovers retrieved successfully", result);
+        } catch (Exception e) {
+            return ApiResponse.internalServerError("Unable to fetch collection handovers: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)

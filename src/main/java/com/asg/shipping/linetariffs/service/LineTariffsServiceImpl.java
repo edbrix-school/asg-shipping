@@ -55,13 +55,19 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
-        log.info("Searching line tariffs with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
+    public Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
+        log.info("Searching line tariffs with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
 
         // Resolve filter components from FilterRequestDto
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = documentService.resolveFilters(request);
+        
+        // Add date filters if provided
+        if (startDate != null && endDate != null) {
+            // Add date range filter for TRANSACTION_DATE field
+            filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        }
 
         // Call documentService.search with docId, filters, operator, pageable, isDeleted
         // Label field: "DESCRIPTION" (display field)
