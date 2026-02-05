@@ -1,11 +1,15 @@
 package com.asg.shipping.shippingmanifestcorrector.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.shippingmanifestcorrector.dto.*;
@@ -52,6 +56,8 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     private final ShipBlReprintChargeDtlRepository chargeDtlRepository;
     private final ShipBlReprintContainerDtlRepository containerDtlRepository;
     private final DocumentSearchService documentSearchService;
+    private final DocumentDeleteService documentDeleteService;
+    private final LoggingService loggingService;
     private final JdbcTemplate jdbcTemplate;
     private final ManifestCorrectorMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
@@ -102,6 +108,8 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         dto.setContainerDetails(mapper.mapContainerDtlListToDto(containers));
 //        enrichLovData(dto);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+
         log.info("Successfully retrieved Shipping Manifest Corrector with id: {}", transactionPoid);
         return dto;
     }
@@ -129,6 +137,8 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         ManifestCorrectorDto result = mapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
 //        enrichLovData(result);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
 
         log.info("Successfully created Shipping Manifest Corrector with id: {}", saved.getTransactionPoid());
         return result;
@@ -162,23 +172,35 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         loadDetailTables(result, saved.getTransactionPoid());
 //        enrichLovData(result);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+
         log.info("Successfully updated Shipping Manifest Corrector with id: {}", transactionPoid);
         return result;
     }
 
     @Override
     @Transactional
-    public void deleteManifestCorrector(Long transactionPoid) {
+    public void deleteManifestCorrector(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting Shipping Manifest Corrector with id: {}", transactionPoid);
 
         ShipBlReprintHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipping Manifest Corrector", "transactionPoid", transactionPoid.toString()));
+
+        documentDeleteService.deleteDocument(
+                transactionPoid,
+                "SHIP_BL_REPRINT_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                java.time.LocalDate.now()
+        );
 
         entity.setDeleted("Y");
         hdrRepository.saveAndFlush(entity);
 
         chargeDtlRepository.deleteByTransactionPoid(transactionPoid);
         containerDtlRepository.deleteByTransactionPoid(transactionPoid);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
         log.info("Successfully deleted Shipping Manifest Corrector with id: {}", transactionPoid);
     }
@@ -639,7 +661,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorChargeDtlDto chargeDto : dto.getChargesDetails()) {
                 detRowId++;
                 ShipBlReprintChargeDtl chargeDtl = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
-                chargeDtlRepository.saveAndFlush(chargeDtl);
+                ShipBlReprintChargeDtl saved = chargeDtlRepository.saveAndFlush(chargeDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Charge Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
 
@@ -650,7 +676,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorContainerDtlDto containerDto : dto.getContainerDetails()) {
                 detRowId++;
                 ShipBlReprintContainerDtl containerDtl = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
-                containerDtlRepository.saveAndFlush(containerDtl);
+                ShipBlReprintContainerDtl saved = containerDtlRepository.saveAndFlush(containerDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Container Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
     }
@@ -659,6 +689,14 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
      * Update detail tables from DTO
      */
     private void updateDetailTables(ManifestCorrectorUpdateDTO dto, Long transactionPoid) {
+        // Get existing details for logging deletions
+        List<ShipBlReprintChargeDtl> existingCharges = chargeDtlRepository.findByTransactionPoid(transactionPoid);
+        List<ShipBlReprintContainerDtl> existingContainers = containerDtlRepository.findByTransactionPoid(transactionPoid);
+        
+        // Log deletions
+        existingCharges.forEach(deleted -> loggingService.logDelete(deleted, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString()));
+        existingContainers.forEach(deleted -> loggingService.logDelete(deleted, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString()));
+        
         // Delete existing details
         chargeDtlRepository.deleteByTransactionPoid(transactionPoid);
         containerDtlRepository.deleteByTransactionPoid(transactionPoid);
@@ -669,7 +707,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorChargeDtlDto chargeDto : dto.getChargesDetails()) {
                 detRowId++;
                 ShipBlReprintChargeDtl chargeDtl = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
-                chargeDtlRepository.saveAndFlush(chargeDtl);
+                ShipBlReprintChargeDtl saved = chargeDtlRepository.saveAndFlush(chargeDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Charge Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
 
@@ -678,7 +720,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorContainerDtlDto containerDto : dto.getContainerDetails()) {
                 detRowId++;
                 ShipBlReprintContainerDtl containerDtl = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
-                containerDtlRepository.saveAndFlush(containerDtl);
+                ShipBlReprintContainerDtl saved = containerDtlRepository.saveAndFlush(containerDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Container Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
     }

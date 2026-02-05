@@ -26,6 +26,9 @@ class LineMasterThirdPartyControllerTest {
     @Mock
     private LineMasterThirdPartyService lineService;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private LineMasterThirdPartyController controller;
 

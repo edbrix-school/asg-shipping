@@ -3,6 +3,9 @@ package com.asg.shipping.agentMaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.agentMaster.dto.ShipAgentMasterRequestDto;
 import com.asg.shipping.agentMaster.dto.ShipAgentMasterResponseDto;
@@ -40,6 +43,7 @@ import java.util.Map;
 public class ShipAgentMasterController {
 
     private final ShipAgentMasterService shipAgentMasterService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @PostMapping
@@ -78,6 +82,7 @@ public class ShipAgentMasterController {
 
         ShipAgentMasterResponseDto response =
                 shipAgentMasterService.findByIdAgentMaster(agentPoid);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), agentPoid.toString());
 
         return ApiResponse.success("Agent Master retrieved successfully", response
         );

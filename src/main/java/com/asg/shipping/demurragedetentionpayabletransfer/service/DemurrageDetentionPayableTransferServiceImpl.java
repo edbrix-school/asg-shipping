@@ -1,10 +1,14 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.service;
 
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.service.LovDataService;
@@ -48,8 +52,10 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     private final ShipDemDetnTransferDtlRepository transferDtlRepository;
     private final ShipDemDtnTransferBillDtlRepository billDtlRepository;
     private final DocumentSearchService documentService;
+    private final DocumentDeleteService documentDeleteService;
     private final LovDataService lovService;
     private final DemurrageDetentionPayableTransferMapper mapper;
+    private final LoggingService loggingService;
     private final EntityManager entityManager;
     private final JdbcTemplate jdbcTemplate;
 
@@ -112,6 +118,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         dto.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
 
         enrichLovData(dto);
+
+
 
         log.info("Successfully retrieved demurrage/detention payable transfer with id: {}", id);
         return dto;
@@ -183,6 +191,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
+
         log.info("Successfully created demurrage/detention payable transfer with id: {}", saved.getTransactionPoid());
         return result;
     }
@@ -244,13 +254,15 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
+
         log.info("Successfully updated demurrage/detention payable transfer with id: {}", id);
         return result;
     }
 
     @Override
     @Transactional
-    public void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid) {
+    public void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting demurrage/detention payable transfer with id: {}", id);
 
         ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
@@ -261,11 +273,24 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             return;
         }
 
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_DEM_DETN_TRANSFER_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                LocalDate.now()
+        );
+
         entity.setDeleted("Y");
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
 
         headerRepository.save(entity);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
+        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", id);
+        String tableName = ShipDemDetnTransferHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
 
         log.info("Successfully deleted demurrage/detention payable transfer with id: {}", id);
     }
@@ -640,6 +665,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     private void createDetailRecords(Long transactionPoid,
                                      List<DemurrageDetentionTransferDetailDto> transferDetails,
                                      List<DemurrageDetentionTransferBillDetailDto> billDetails) {
+        String docId = "100-151";
+        
         // Create transfer details
         if (transferDetails != null && !transferDetails.isEmpty()) {
             Long maxDetRowId = transferDtlRepository.getMaxDetRowId(transactionPoid);
@@ -650,7 +677,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 ShipDemDetnTransferDtl detail = mapper.mapTransferDtlFromDto(detailDto, transactionPoid);
                 detail.setDetRowId(currentDetRowId);
                 detail.setTransactionPoid(transactionPoid);
-                transferDtlRepository.save(detail);
+                ShipDemDetnTransferDtl saved = transferDtlRepository.save(detail);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Demurrage Detention Transfer Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(docId, transactionPoid.toString(), logDetail);
             }
         }
 
@@ -664,7 +695,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 ShipDemDtnTransferBillDtl detail = mapper.mapBillDtlFromDto(detailDto, transactionPoid);
                 detail.setDetRowId(currentDetRowId);
                 detail.setTransactionPoid(transactionPoid);
-                billDtlRepository.save(detail);
+                ShipDemDtnTransferBillDtl saved = billDtlRepository.save(detail);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Demurrage Detention Bill Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(docId, transactionPoid.toString(), logDetail);
             }
         }
     }
@@ -672,6 +707,16 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     private void updateDetailRecords(Long transactionPoid,
                                      List<DemurrageDetentionTransferDetailDto> transferDetails,
                                      List<DemurrageDetentionTransferBillDetailDto> billDetails) {
+        String docId = "100-151";
+        
+        // Get existing details for logging deletions
+        List<ShipDemDetnTransferDtl> existingTransferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        List<ShipDemDtnTransferBillDtl> existingBillDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        
+        // Log deletions
+        existingTransferDetails.forEach(deleted -> loggingService.logDelete(deleted, docId, transactionPoid.toString()));
+        existingBillDetails.forEach(deleted -> loggingService.logDelete(deleted, docId, transactionPoid.toString()));
+        
         // Delete existing details
         transferDtlRepository.deleteByTransactionPoid(transactionPoid);
         billDtlRepository.deleteByTransactionPoid(transactionPoid);
