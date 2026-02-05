@@ -1,15 +1,11 @@
 package com.asg.shipping.shippingofoqv2.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,10 +13,10 @@ public class OFOQApiDataHdrDto {
     
     private Long transactionPoid;
     private String docRef;
-    private LocalDate transactionDate;
+    private LocalDateTime transactionDate;
     private String voyageNo;
     private Long vesselPoid;
-    private LocalDate arrivalDate;
+    private LocalDateTime arrivalDate;
     private Long rotationNumber;
     private String apiProvisionalMfNo;
     private String apiProvisionalStatus;

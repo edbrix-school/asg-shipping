@@ -16,4 +16,7 @@ public interface OFOQItemDtlRepository extends JpaRepository<OFOQItemDtlEntity, 
     List<OFOQItemDtlEntity> findByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
     void deleteByTransactionPoid(Long transactionPoid);
+
+    void deleteByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
+
 }
