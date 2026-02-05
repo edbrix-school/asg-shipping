@@ -62,6 +62,9 @@ class LineCommissionServiceImplTest {
     @Mock
     private LineCommissionMapper mapper;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
 
     @InjectMocks
     private LineCommissionServiceImpl service;
