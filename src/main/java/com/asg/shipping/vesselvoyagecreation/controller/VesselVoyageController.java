@@ -84,6 +84,7 @@ public class VesselVoyageController {
                 UserContext.getUserPoid());
         
         try {
+			
             if((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
                 return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
             }

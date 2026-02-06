@@ -232,7 +232,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         if (!validatePrintDocument(transactionPoid, "DO")) {
             return null;
         }
-        JasperReport mainReport = printService.load("shipping/SH/DO_SH.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/DO_SH.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
@@ -242,12 +242,12 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
         String pLineCode = viewRepository.getPlineCode(transactionPoid);
         String templatePath = "HANJN".equalsIgnoreCase(pLineCode) ?
-                "shipping/SH/Container_Delivery_ValidityHJS_Currently_not.jrxml" :
-                "shipping/SH/Container_Delivery_Validity.jrxml";
+                "Shipping/SH/Container_Delivery_ValidityHJS_Currently_not.jrxml" :
+                "Shipping/SH/Container_Delivery_Validity.jrxml";
         JasperReport mainReport = printService.load(templatePath);
         
         try {
-            InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/shipping/jpg/FSL_STAMP.jpg");
+            InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/FSL_STAMP.jpg");
             if (stampStream == null) {
                 log.warn("FSL_STAMP.jpg not found in classpath");
                 params.put("FSL_STAMP", null);
@@ -263,7 +263,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
         
         if ("HANJN".equalsIgnoreCase(pLineCode)) {
-            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("jasper/shipping/jpg/hidd_map4.jpg");
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/hidd_map4.jpg");
             if (imageStream != null) {
                 params.put("IMAGE_MAP", imageStream);
             }
@@ -276,7 +276,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         if (!validatePrintDocument(transactionPoid, "RTNCNT")) {
             return null;
         }
-        JasperReport mainReport = printService.load("shipping/SH/Container_Return_Validity.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/Container_Return_Validity.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
