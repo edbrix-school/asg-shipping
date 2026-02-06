@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
@@ -15,8 +14,8 @@ import java.time.LocalDate;
 public class ContainerRequestDto {
 
     private Long detRowId;
+    private String actionType; 
     private Long mateTransactionPoid;
-    //private LovItem mateTransactionPoidDet; // LOV data
     private String containerNo;
     private String equipmentShipperOwn;
     private String cargoDescription;
@@ -33,9 +32,7 @@ public class ContainerRequestDto {
     private Long noOfPacks;
     private String packUnit;
     private Long comodityPoid;
-   // private LovItem comodityPoidDet; // LOV data
     private Long destinationPortPoid;
-   // private LovItem destinationPortPoidDet; // LOV data
     private String imo;
     private String oogL;
     private String oogB;
