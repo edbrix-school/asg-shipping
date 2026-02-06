@@ -222,7 +222,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     @Override
     public byte[] printUnclearedCargoNotice(Long transactionPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
-        JasperReport mainReport = printService.load("shipping/SH/CAN_SHIPPING_UNCLEARED.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/CAN_SHIPPING_UNCLEARED.jrxml");
         return printService.fillReportToPdf(mainReport,params,dataSource);
     }
 
@@ -231,9 +231,9 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
         params.put("P_DEMURRAGE_DATE", demChargesTill != null ? demChargesTill : LocalDate.now());
         params.put("P_DISCOUNT", percentage != null ? percentage : 0);
-        params.put("SUBREPORT2",printService.load("shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT2.jrxml"));
-        params.put("SUBREPORT3",printService.load("shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT3.jrxml"));
-        JasperReport mainReport = printService.load("shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL.jrxml");
+        params.put("SUBREPORT2",printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT2.jrxml"));
+        params.put("SUBREPORT3",printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT3.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
@@ -244,11 +244,11 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 printService.buildBaseParams(transactionPoid, "100-102");
 
         String lineCode = validationRepository.getLineCode(voyageTransactionPoid);
-        String jrxmlPath = "shipping/CAN_SHIPPING.jrxml";
+        String jrxmlPath = "Shipping/CAN_SHIPPING.jrxml";
         if ("MSC".equalsIgnoreCase(lineCode)) {
-            jrxmlPath = "shipping/SH/CAN_SHIPPING_msc.jrxml";
+            jrxmlPath = "Shipping/SH/CAN_SHIPPING_msc.jrxml";
         } else if ("COS".equalsIgnoreCase(lineCode)) {
-            jrxmlPath = "shipping/SH/CAN_SHIPPING_COS.jrxml";
+            jrxmlPath = "Shipping/SH/CAN_SHIPPING_COS.jrxml";
         }
 
         JasperReport mainReport = printService.load(jrxmlPath);
@@ -260,12 +260,12 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     public byte[] printCargoManifest(Long transactionPoid, boolean isCargoManifestPrint) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
         params.put("P_FREIGHTCARGO", isCargoManifestPrint ? "FALSE" : "TRUE");
-        params.put("SUBREPORT_MARK_INFO", printService.load("shipping/SH/cargo/Mark_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("shipping/SH/cargo/Freight_Detail_Subreport1.jrxml"));
-        params.put("SUBREPORT_CONTAINER_INFO", printService.load("shipping/SH/cargo/Container_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("shipping/SH/cargo/Description_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_TOTAL_COUNT", printService.load("shipping/SH/cargo/TotalCount_By_Size.jrxml"));
-        JasperReport mainReport = printService.load("shipping/SH/cargo/Manifest_Cargo_WithCharges.jrxml");
+        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/cargo/Mark_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/cargo/Freight_Detail_Subreport1.jrxml"));
+        params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/cargo/Container_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/cargo/Description_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_TOTAL_COUNT", printService.load("Shipping/SH/cargo/TotalCount_By_Size.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/cargo/Manifest_Cargo_WithCharges.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
@@ -273,9 +273,9 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     public byte[] printCheckPortCharges(Long transactionPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
         params.put("P_TILL_DATE", LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
-        params.put("SUBREPORT_PORT_STORAGE", printService.load("shipping/SH/PORT_STORAGE_IMP_FULL.jrxml"));
-        params.put("SUBREPORT_PORT_STORAGE_EMPTY", printService.load("shipping/SH/PORT_STORAGE_IMP_FULL_EMPTY_subreport1.jrxml"));
-        JasperReport mainReport = printService.load("shipping/SH/PORT_STORAGE_CALC.jrxml");
+        params.put("SUBREPORT_PORT_STORAGE", printService.load("Shipping/SH/PORT_STORAGE_IMP_FULL.jrxml"));
+        params.put("SUBREPORT_PORT_STORAGE_EMPTY", printService.load("Shipping/SH/PORT_STORAGE_IMP_FULL_EMPTY_subreport1.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/PORT_STORAGE_CALC.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 

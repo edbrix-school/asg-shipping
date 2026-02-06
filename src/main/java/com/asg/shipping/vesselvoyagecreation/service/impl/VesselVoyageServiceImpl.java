@@ -6,6 +6,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -34,6 +35,8 @@ import com.asg.shipping.vesselvoyagecreation.util.DateValidationUtil;
 import com.asg.shipping.vesselvoyagecreation.util.VoyageMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JasperReport;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -57,6 +60,8 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import javax.sql.DataSource;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -72,6 +77,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private final VoyageBillsRepository voyageBillsRepository;
     private final VoyageMapper voyageMapper;
     private final LoggingService loggingService;
+    private final PrintService printService;
+    private final DataSource dataSource;
 
     @Value("${vvc.edi.upload-dir:./uploads/edi}")
     private String ediUploadDir;
@@ -583,6 +590,22 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         log.info("Successfully deleted vessel voyage with id: {}", voyagePoid);
     }
+    
+    
+    @Override
+    public byte[] print(Long transactionPoid, String freightCargo, String importExport) throws Exception {
+
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-101");
+		params.put("P_FREIGHTCARGO", freightCargo);
+        params.put("P_IMPORT_EXPORT", importExport);
+        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+	    JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
+	    return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
 }
 
 

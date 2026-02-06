@@ -18,4 +18,5 @@ public class DayCloseDenominationDto {
 	private BigDecimal denomination;
 	private Long noOfTran;
 	private BigDecimal cashAmount;
+    private String action; // ISCREATE, ISUPDATE,ISDELETE
 }

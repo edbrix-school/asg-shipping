@@ -69,5 +69,7 @@ public interface CollectionHandoverService {
      * @param mainOfcRemarks Optional remarks
      */
     void toggleVerifyStatus(Long id, String verifiedRcvd, String mainOfcRemarks);
+    
+    byte[] print(Long transactionPoid) throws Exception;
 }
 

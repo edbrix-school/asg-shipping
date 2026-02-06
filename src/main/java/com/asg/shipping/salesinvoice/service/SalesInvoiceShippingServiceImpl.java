@@ -319,7 +319,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     public byte[] print(Long transactionPoid, Long blPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
         params.put("DOC_BL_POID",blPoid);
-        JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
         return printService.fillReportToPdf(mainReport,params,dataSource);
     }
 
@@ -543,7 +543,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     public byte[] printInvoice(Long transactionPoid,Long blPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
         params.put("DOC_BL_POID",blPoid);
-        JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP_USD.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP_USD.jrxml");
         return printService.fillReportToPdf(mainReport,params,dataSource);
 
     }
@@ -552,7 +552,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     public byte[] printCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
         params.put("DOC_BL_POID",blPoid);
-        JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP_CUSTOMER.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP_CUSTOMER.jrxml");
         return printService.fillReportToPdf(mainReport,params,dataSource);
 
     }

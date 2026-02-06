@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Manifest_SitaraShipping_Hdr" language="groovy" pageWidth="595" pageHeight="842" columnWidth="595" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.2100000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<subDataset name="ContainerDetail" uuid="e61b57ce-fea1-426d-ab27-647df0613851">
+		<parameter name="ROW_COUNT" class="java.lang.String"/>
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[select CONTAINER_NO,EQUIPMENT_SEAL_NO,CONTAINER_TYPE_SIZE from(
+SELECT  distinct CONTAINER_NO||' '||CONTAINER_TYPE_CODE as CONTAINER_NO,EQUIPMENT_SEAL_NO,CONTAINER_TYPE_SIZE,
+(SELECT  count(CONTAINER_NO)
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CNTDTL ON MFHDR.TRANSACTION_POID =CNTDTL.TRANSACTION_POID
+inner join ship_container_type_master type
+on EQUIPMENT_ISO_TYPE = CONTAINER_TYPE_CODE
+WHERE MFHDR.TRANSACTION_POID = $P{DOC_KEY_POID})  Container_count
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CNTDTL ON MFHDR.TRANSACTION_POID =CNTDTL.TRANSACTION_POID
+inner join ship_container_type_master type
+on EQUIPMENT_ISO_TYPE = CONTAINER_TYPE_CODE
+WHERE MFHDR.TRANSACTION_POID = $P{DOC_KEY_POID})
+where Container_count = 1]]>
+		</queryString>
+		<field name="CONTAINER_NO" class="java.lang.String"/>
+		<field name="EQUIPMENT_SEAL_NO" class="java.lang.String"/>
+		<field name="CONTAINER_TYPE_SIZE" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="MarksDetail" uuid="b60fb08f-1215-44ac-a725-acf2098be090">
+		<parameter name="ROW_COUNT" class="java.lang.String"/>
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT  CARGODTL.CARGO_DESCRIPTION
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_BL_MANIFEST_CARGO_DTL CARGODTL   ON MFHDR.TRANSACTION_POID =CARGODTL.TRANSACTION_POID
+WHERE DESCRIPTION_TYPE='MARK' AND
+MFHDR.TRANSACTION_POID =$P{DOC_KEY_POID}  AND rownum <= $P{ROW_COUNT} - (SELECT  count(CONTAINER_NO) container_count
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CNTDTL ON MFHDR.TRANSACTION_POID =CNTDTL.TRANSACTION_POID
+WHERE MFHDR.TRANSACTION_POID =$P{DOC_KEY_POID})]]>
+		</queryString>
+		<field name="CARGO_DESCRIPTION" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="CargoDetail" uuid="875f3cee-4fbb-4191-8caf-40fc43906dc3">
+		<parameter name="ROW_COUNT" class="java.lang.String"/>
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT NVL(RECORD_ORDER,DET_ROW_ID) SEQNO, CARGODTL.CARGO_DESCRIPTION
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_BL_MANIFEST_CARGO_DTL CARGODTL   ON MFHDR.TRANSACTION_POID =CARGODTL.TRANSACTION_POID
+WHERE DESCRIPTION_TYPE='CARGO'
+AND  MFHDR.TRANSACTION_POID =$P{DOC_KEY_POID} AND ROWNUM <= $P{ROW_COUNT}
+ORDER BY NVL(RECORD_ORDER,DET_ROW_ID)]]>
+		</queryString>
+		<field name="SEQNO" class="java.math.BigDecimal"/>
+		<field name="CARGO_DESCRIPTION" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="FreightDetail" uuid="4bd79e79-e16c-486a-bdf7-638e947fd62e">
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<parameter name="ROW_COUNT" class="java.lang.String"/>
+		<queryString language="SQL">
+			<![CDATA[select DISTINCT 'FREIGHT'||' '||decode(FREIGHT_TYPE,'P','PREPAID','C','TO COLLECT','E','ELSE WHERE','OTHERS') freight_type   from SHIP_BL_MANIFEST_CHARGES_DTL WHERE TRANSACTION_POID=1]]>
+		</queryString>
+		<field name="FREIGHT_TYPE" class="java.lang.String"/>
+	</subDataset>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String"/>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DRAFT_ORIGINAL" class="java.lang.String">
+		<defaultValueExpression><![CDATA["N"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT DISTINCT MFHDR.TRANSACTION_POID,
+       SHIPPER_POID,
+      NVL(SHIPPER_EDI_NAME,GET_ADDRESS_NAME(SHIPPER_POID)) SHIPPER,
+      nvl(SHIPPER_EDI_ADDRESS,GET_ADDRESS_DETAILS_WITH_TYPE(SHIPPER_ADDRESS_POID,NULL)) SHIPPER_ADDRESS,
+      CONSIGNEE_POID,
+      CONSIGNEE_EDI_NAME CONSIGNEE,
+      CONSIGNEE_EDI_ADDRESS CONSIGNEE_ADDRESS ,
+      NOTIFY_POID_1,
+      NOTIFY1_EDI_NAME NOTIFY1,
+      NOTIFY1_EDI_ADDRESS NOTIFY_ADDRESS1,
+	  NOTIFY2_EDI_NAME,
+      NOTIFY2_EDI_ADDRESS,
+      BL_NUMBER,
+      to_char(DATE_OF_ISSUE,'DD-MON-YYYY') DATE_OF_ISSUE,
+      PLACE_OF_ISSUE_POID,
+             DECODE(GET_PORT_NAME(PLACE_OF_ISSUE_POID),'KHALIFA BIN SALMAN PORT, BAHRAIN','BAHRAIN',GET_PORT_NAME(PLACE_OF_ISSUE_POID)) PLACE_OF_ISSUE,
+      LAST_TRANSSHIP_PORT_POID,
+      GET_PORT_NAME(LAST_TRANSSHIP_PORT_POID) LAST_TRANSSHIP_PORT,
+      PLACE_OF_RECIEPT_POID,
+      GET_PORT_NAME(PLACE_OF_RECIEPT_POID) PLACE_OF_RECIEPT,
+      PLACE_OF_DELIEVERY_POID,
+      GET_PORT_NAME(PLACE_OF_DELIEVERY_POID) PLACE_OF_DELIEVERY,
+      PORT_OF_LOADING_POID,
+      GET_PORT_NAME(PORT_OF_LOADING_POID) PORT_OF_LOADING,
+      PORT_OF_DISCHARGE_POID,
+      GET_PORT_NAME(PORT_OF_DISCHARGE_POID) PORT_OF_DISCHARGE,
+      NO_OF_ORGNL_BLS,
+      TYPE_OF_MOVE,
+      VOYAGE.VOYAGE_NO,
+      VMAST.VESSEL_name,
+      AGENT_REFERENCE,
+	decode(TOTAL_WEIGHT,null,null,0,null,to_char(TOTAL_WEIGHT,'9999999.999')) GRS_WEIGHT,decode(TOTAL_NET_VOLUME,null,null,0,null,to_char(TOTAL_NET_VOLUME,'9999999.999')) NEW_VOLUMN,
+MFHDR.BL_PLACE_RECEIPT,
+MFHDR.BL_PLACE_LOAD,
+MFHDR.BL_FINAL_DESTINATION,
+BL_REMARKS_COUNT,
+ DECODE(GET_PORT_NAME(MCHARGE.PAID_AT_PORT_POID),'KHALIFA BIN SALMAN PORT, BAHRAIN','BAHRAIN',GET_PORT_NAME(MCHARGE.PAID_AT_PORT_POID)) PAID_AT_PORT_POID,
+decode(freight_status,1,'FREIGHT PREPAID',2,'FREIGHT COLLECT',3,'ELSE WHERE','OTHER') freight_status,
+'('||nvl(WEIGHT_UNIT,'KGS')||')' WEIGHT_UNIT,BL_ORGINAL_PRINT,RTN_DRAFT_BL_CLAUSE BL_CLAUSE
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_VOYAGE_HDR VOYAGE   ON VOYAGE.TRANSACTION_POID=MFHDR.VOYAGE_TRANSACTION_POID
+INNER JOIN SHIP_VESSEL_MASTER VMAST ON VOYAGE.VESSEL_POID =VMAST.VESSEL_POID
+INNER JOIN SHIP_LINE_MASTER LNMAST  ON LNMAST.LINE_POID  =VOYAGE.LINE_POID
+INNER JOIN SHIP_BL_MANIFEST_CHARGES_DTL MCHARGE ON MCHARGE.TRANSACTION_POID = MFHDR.TRANSACTION_POID
+WHERE MFHDR.TRANSACTION_POID= $P{DOC_KEY_POID} AND
+decode(freight_status,1,'P',2,'C',3,'E') = MCHARGE.freight_type]]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="SHIPPER_POID" class="java.math.BigDecimal"/>
+	<field name="SHIPPER" class="java.lang.String"/>
+	<field name="SHIPPER_ADDRESS" class="java.lang.String"/>
+	<field name="CONSIGNEE_POID" class="java.math.BigDecimal"/>
+	<field name="CONSIGNEE" class="java.lang.String"/>
+	<field name="CONSIGNEE_ADDRESS" class="java.lang.String"/>
+	<field name="NOTIFY_POID_1" class="java.math.BigDecimal"/>
+	<field name="NOTIFY1" class="java.lang.String"/>
+	<field name="NOTIFY_ADDRESS1" class="java.lang.String"/>
+	<field name="NOTIFY2_EDI_NAME" class="java.lang.String"/>
+	<field name="NOTIFY2_EDI_ADDRESS" class="java.lang.String"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="DATE_OF_ISSUE" class="java.lang.String"/>
+	<field name="PLACE_OF_ISSUE_POID" class="java.math.BigDecimal"/>
+	<field name="PLACE_OF_ISSUE" class="java.lang.String"/>
+	<field name="LAST_TRANSSHIP_PORT_POID" class="java.math.BigDecimal"/>
+	<field name="LAST_TRANSSHIP_PORT" class="java.lang.String"/>
+	<field name="PLACE_OF_RECIEPT_POID" class="java.math.BigDecimal"/>
+	<field name="PLACE_OF_RECIEPT" class="java.lang.String"/>
+	<field name="PLACE_OF_DELIEVERY_POID" class="java.math.BigDecimal"/>
+	<field name="PLACE_OF_DELIEVERY" class="java.lang.String"/>
+	<field name="PORT_OF_LOADING_POID" class="java.math.BigDecimal"/>
+	<field name="PORT_OF_LOADING" class="java.lang.String"/>
+	<field name="PORT_OF_DISCHARGE_POID" class="java.math.BigDecimal"/>
+	<field name="PORT_OF_DISCHARGE" class="java.lang.String"/>
+	<field name="NO_OF_ORGNL_BLS" class="java.math.BigDecimal"/>
+	<field name="TYPE_OF_MOVE" class="java.lang.String"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="VESSEL_NAME" class="java.lang.String"/>
+	<field name="AGENT_REFERENCE" class="java.lang.String"/>
+	<field name="GRS_WEIGHT" class="java.lang.String"/>
+	<field name="NEW_VOLUMN" class="java.lang.String"/>
+	<field name="BL_PLACE_RECEIPT" class="java.lang.String"/>
+	<field name="BL_PLACE_LOAD" class="java.lang.String"/>
+	<field name="BL_FINAL_DESTINATION" class="java.lang.String"/>
+	<field name="BL_REMARKS_COUNT" class="java.math.BigDecimal"/>
+	<field name="PAID_AT_PORT_POID" class="java.lang.String"/>
+	<field name="FREIGHT_STATUS" class="java.lang.String"/>
+	<field name="WEIGHT_UNIT" class="java.lang.String"/>
+	<field name="BL_ORGINAL_PRINT" class="java.lang.String"/>
+	<field name="BL_CLAUSE" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="345">
+			<textField isBlankWhenNull="true">
+				<reportElement x="306" y="310" width="127" height="15" uuid="eb98b853-60cb-405f-9bc9-0faf5fa0fe93"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TYPE_OF_MOVE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToTallestObject" x="38" y="284" width="106" height="22" uuid="e073fb77-00d0-451d-97a1-7138df20b962"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PLACE_OF_RECIEPT}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="463" y="330" width="129" height="15" uuid="ad356dd9-e848-45c0-891f-360bf2452244"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_PLACE_RECEIPT}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="36" y="67" width="236" height="15" uuid="78855832-d5c1-42a2-90c7-8c32c80c441a"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SHIPPER}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="457" y="53" width="100" height="17" uuid="aa517266-f308-4d34-99f6-bf7207911962"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="36" y="147" width="237" height="15" uuid="80e52cbe-d135-4200-a07a-7dc899c923d5"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONSIGNEE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="460" y="311" width="129" height="15" uuid="347c37f9-aef4-4be5-b459-09b5700d94b8"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LAST_TRANSSHIP_PORT}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="305" y="330" width="148" height="15" uuid="543139c8-8fd5-4d25-8239-1a6783000a9d"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_PLACE_LOAD}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="36" y="79" width="236" height="48" uuid="d68877e4-e9c9-4f08-980b-a6f482c583a0"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SHIPPER_ADDRESS}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="36" y="225" width="236" height="15" uuid="a384ad09-c29d-4a58-93ef-58bb7f595bc7"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOTIFY1}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="37" y="239" width="236" height="31" uuid="f28e465e-bc39-435e-b53b-d2bb07b4a6af"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOTIFY_ADDRESS1}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="204" y="284" width="80" height="15" uuid="ef169506-2310-45bc-b475-103d4149abab"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DATE_OF_ISSUE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="36" y="162" width="236" height="56" uuid="5da554a9-224a-48c2-b954-45411d111234"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONSIGNEE_ADDRESS}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="38" y="322" width="106" height="15" uuid="c4ef3004-7ef9-4455-a105-e2e9d06151a1"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_PLACE_RECEIPT}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="361" y="74" width="191" height="208" forecolor="#999999" uuid="a2f270cd-74ea-4b19-92e1-798026321db4">
+					<printWhenExpression><![CDATA[$F{BL_ORGINAL_PRINT} == 'N']]></printWhenExpression>
+				</reportElement>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="30"/>
+				</textElement>
+				<text><![CDATA[DRAFT]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="319" y="127" width="227" height="138" uuid="36d81e8e-dbdf-47ec-9c3b-07897816dc98">
+					<printWhenExpression><![CDATA[$F{BL_ORGINAL_PRINT} == 'N']]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="6"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_CLAUSE}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<detail>
+		<band height="88" splitType="Stretch">
+			<componentElement>
+				<reportElement key="table" x="32" y="42" width="160" height="14" uuid="f08ddbb6-ff9a-4ef3-bfc2-d0369cebd7f0"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="ContainerDetail" uuid="ad6f84ec-6142-49e2-8210-4915b052e3b7">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="ROW_COUNT">
+							<datasetParameterExpression><![CDATA[$F{BL_REMARKS_COUNT}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="80" uuid="dd486073-693c-43f1-adc5-b2be9f1e9bae">
+						<jr:detailCell height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="80" height="20" uuid="7a9d82d8-b488-40b8-8c3e-4c8307652be2"/>
+								<textElement>
+									<font size="8"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="84" uuid="7ec81ffa-0086-4080-b053-853f85b8f5ce">
+						<jr:detailCell height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="84" height="20" uuid="790e74e7-a12f-40d8-9fa1-d2fe41070fe6"/>
+								<textElement>
+									<font size="8"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{EQUIPMENT_SEAL_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<componentElement>
+				<reportElement key="table" positionType="Float" x="32" y="56" width="160" height="15" uuid="3abcda59-db44-4325-81d8-1a5261194309"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="MarksDetail" uuid="45cac562-cee9-4069-b20b-ff4710d9c36b">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="ROW_COUNT">
+							<datasetParameterExpression><![CDATA[$F{BL_REMARKS_COUNT}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="167" uuid="03bebc18-7a61-4dcb-abb5-dcf8e11125eb">
+						<jr:detailCell height="17" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="167" height="15" uuid="da14190c-c425-4134-8207-cce88802e751"/>
+								<textElement>
+									<font size="8"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CARGO_DESCRIPTION}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<componentElement>
+				<reportElement key="table" x="234" y="52" width="193" height="15" uuid="5739127b-0cb2-448b-8584-e4069075fe1d"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="CargoDetail" uuid="750daa6a-d662-4a41-b430-4c74e17686f5">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="ROW_COUNT">
+							<datasetParameterExpression><![CDATA[$F{BL_REMARKS_COUNT}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="207" uuid="bc45fe8f-e573-44bd-b81d-2a32eb0ec2ff">
+						<jr:detailCell height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="207" height="15" uuid="f12fec7a-b8d6-429c-a255-46aa1dc89ac2"/>
+								<textElement>
+									<font size="8"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CARGO_DESCRIPTION}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<textField>
+				<reportElement x="431" y="39" width="59" height="14" uuid="891c77d4-357f-47d8-8249-c3c9af620b62"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{GRS_WEIGHT}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="499" y="39" width="54" height="15" uuid="0b61a47c-ef57-4b1c-bb69-94ab4f9c33ba"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NEW_VOLUMN}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="503" y="53" width="31" height="15" uuid="03f5c918-7461-4d15-8ca8-aa39d2b214d2"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[(CBM)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="234" y="40" width="189" height="12" uuid="0486d298-df70-4e35-8ad0-dcc786453ceb"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[SHIPPER LOAD,SROWAGE & COUNT]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="453" y="71" width="100" height="15" uuid="c14baff1-5c8c-4f49-8c55-9aeccbc0a22c"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FREIGHT_STATUS}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="40" y="28" width="132" height="12" uuid="ee0d99c4-5678-4e0d-bf36-38b2bd964094"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<text><![CDATA[Container #   Seal #]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="432" y="54" width="58" height="14" uuid="a4fb7890-be17-4472-b4fd-960a250d73b4"/>
+				<textElement textAlignment="Center">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{WEIGHT_UNIT}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="129" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="319" y="26" width="88" height="16" uuid="f7da0942-b6bd-401e-afdc-5ebf330e40a7"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NO_OF_ORGNL_BLS}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="523" y="25" width="65" height="15" uuid="06017b4f-4690-40c7-b8bd-9243125e4a9f">
+					<printWhenExpression><![CDATA[$V{PAGE_NUMBER} == 1]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DATE_OF_ISSUE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="427" y="25" width="89" height="15" uuid="c623183c-0364-41f1-ad74-4a27bdf9c69d">
+					<printWhenExpression><![CDATA[$V{PAGE_NUMBER} == 1]]></printWhenExpression>
+				</reportElement>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PLACE_OF_ISSUE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="172" y="26" width="100" height="16" uuid="0a7d1c24-11b4-4588-b37d-4905b1de3b64"/>
+				<textElement>
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PAID_AT_PORT_POID}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

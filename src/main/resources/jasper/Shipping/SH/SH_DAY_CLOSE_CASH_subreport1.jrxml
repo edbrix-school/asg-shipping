@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SH_DAY_CLOSE_CASH_subreport1" language="groovy" pageWidth="360" pageHeight="360" columnWidth="360" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="73f529bb-2017-43e4-8d9a-bc9fac4af2ac">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="DOC_KEY_POID_DNO" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT ROWNUM SRNO,TRANSACTION_POID,CURRENCY_AMOUNT,CURRENCY_TYPE,NO_OF_TRAN,CASH_AMOUNT
+FROM AR_SH_DAY_END_CLOSE_DTL WHERE TRANSACTION_POID=$P{DOC_KEY_POID_DNO}
+AND NVL(NO_OF_TRAN,0)<>0
+ORDER BY DET_ROW_ID]]>
+	</queryString>
+	<field name="SRNO" class="java.math.BigDecimal"/>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="CURRENCY_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="CURRENCY_TYPE" class="java.lang.String"/>
+	<field name="NO_OF_TRAN" class="java.math.BigDecimal"/>
+	<field name="CASH_AMOUNT" class="java.math.BigDecimal"/>
+	<variable name="CASH_AMOUNT_1" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{CASH_AMOUNT}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band height="2" splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="23" splitType="Stretch">
+			<staticText>
+				<reportElement x="24" y="0" width="131" height="20" uuid="f3d31632-09b8-4d7b-834f-12c478d89c2d"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Denomination]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="155" y="0" width="62" height="20" uuid="8e25edfe-1988-4ccd-98e7-8e8aa43fa50d"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Count]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="217" y="0" width="100" height="20" uuid="7fbac040-ba18-40b6-ab26-95b125a6397a"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Amount]]></text>
+			</staticText>
+			<line>
+				<reportElement x="6" y="21" width="310" height="1" uuid="e0325a7f-7c5f-4677-87bc-232e617b298e"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="17" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="36" y="0" width="69" height="14" uuid="4fd89ee2-c0c4-427b-aa40-ab6172c017c6"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{CURRENCY_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="6" y="0" width="26" height="14" uuid="ef753f8c-8ca5-4742-bfd9-0d139c511f3c"/>
+				<box>
+					<pen lineStyle="Double"/>
+					<topPen lineStyle="Double"/>
+					<leftPen lineStyle="Double"/>
+					<bottomPen lineStyle="Double"/>
+					<rightPen lineWidth="0.5" lineStyle="Double"/>
+				</box>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{SRNO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="109" y="0" width="46" height="14" uuid="83af65bc-ddf2-4209-8224-185c631035be"/>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{CURRENCY_TYPE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="155" y="0" width="62" height="14" uuid="76da74a0-7313-4aa3-83fb-eed4e384f761"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{NO_OF_TRAN}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="217" y="0" width="100" height="14" uuid="9b5ae709-c5b4-40e3-865c-374dc2ac0442"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{CASH_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="6" y="16" width="311" height="1" uuid="48b39509-5531-443a-b737-8d7b39ccb799"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band height="25" splitType="Stretch">
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="192" y="0" width="124" height="20" uuid="d9362672-4603-4d02-b75a-ab1faea1d79e"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{CASH_AMOUNT_1}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="192" y="23" width="123" height="1" uuid="efa41882-b9ba-4579-8b57-e8c9b4c1b67b"/>
+			</line>
+		</band>
+	</summary>
+</jasperReport>

@@ -303,10 +303,10 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		params.put("DOC_BL_POID",blPoid);
 		JasperReport mainReport;
 		if (ButtonType.Invoice.equals(buttonType)){
-			 mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
+			 mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
 
         }else {
-			mainReport = printService.load("shipping/SH/SH_ALL_BILL_RECEIPT.jrxml");
+			mainReport = printService.load("Shipping/SH/SH_ALL_BILL_RECEIPT.jrxml");
         }
         return printService.fillReportToPdf(mainReport,params,dataSource);
 

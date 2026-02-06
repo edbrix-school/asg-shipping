@@ -68,6 +68,9 @@ public interface VesselVoyageService {
     Resource downloadManifestReport(Long voyagePoid, String freightCargo, String importExport);
 
     void deleteVoyage(Long voyagePoid);
+    
+    byte[] print(Long transactionPoid, String freightCargo, String importExport) throws Exception;
+    
 }
 
 

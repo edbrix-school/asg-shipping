@@ -5,7 +5,7 @@
 	<property name="ireport.y" value="0"/>
 	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
 	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
-	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
 	<style name="Detail" fontName="Arial" fontSize="12"/>
 	<style name="Row" mode="Transparent">
 		<conditionalStyle>
@@ -148,7 +148,7 @@ order by bl_type,bl_number]]>
 			<textField>
 				<reportElement x="84" y="97" width="159" height="15" uuid="0dbea045-5613-4a3b-a5c8-e7ab54376a75"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
 			</textField>
@@ -203,7 +203,7 @@ order by bl_type,bl_number]]>
 			<staticText>
 				<reportElement x="354" y="29" width="128" height="15" uuid="34c52098-6fe1-4144-b155-30061f9636c7"/>
 				<textElement textAlignment="Center">
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[KINGDOM OF BAHRAIN]]></text>
 			</staticText>
@@ -216,7 +216,7 @@ order by bl_type,bl_number]]>
 			<staticText>
 				<reportElement x="4" y="46" width="68" height="15" uuid="c7ba4719-9dba-4e54-8758-5506aab7827d"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Line]]></text>
 			</staticText>
@@ -229,35 +229,35 @@ order by bl_type,bl_number]]>
 			<staticText>
 				<reportElement x="4" y="64" width="68" height="15" uuid="96c83934-335a-4fd1-8184-db93708437a8"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Vessel Name]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="4" y="81" width="68" height="15" uuid="f61f921a-1c1a-4444-b2c7-cd8213ca96c5"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Load Port]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="4" y="97" width="68" height="15" uuid="7d9a1f1a-c8ec-47ca-9c5b-2c44c4eec726"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[BL NO]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="286" y="64" width="72" height="15" uuid="1c5081f8-1df7-4f92-84b0-38b0fa3b971e"/>
 				<textElement textAlignment="Justified">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Voyage #]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="286" y="80" width="72" height="15" uuid="a2cabce6-40f6-4228-b6ed-cf81d69243a3"/>
 				<textElement textAlignment="Justified">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Discharge Port]]></text>
 			</staticText>
@@ -266,7 +266,7 @@ order by bl_type,bl_number]]>
 					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
 				</reportElement>
 				<textElement textAlignment="Justified">
-					<font size="7" isBold="true"/>
+					<font size="7" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Routing instructions/Terms of Delivery]]></text>
 			</staticText>
@@ -275,7 +275,7 @@ order by bl_type,bl_number]]>
 					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EdXPORT")]]></printWhenExpression>
 				</reportElement>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[ETD]]></text>
 			</staticText>
@@ -284,7 +284,7 @@ order by bl_type,bl_number]]>
 					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
 				</reportElement>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Sailed On]]></text>
 			</staticText>
@@ -293,7 +293,7 @@ order by bl_type,bl_number]]>
 					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
 				</reportElement>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Final Destination]]></text>
 			</staticText>
@@ -306,21 +306,21 @@ order by bl_type,bl_number]]>
 			<textField>
 				<reportElement x="260" y="0" width="323" height="15" uuid="546d8ab6-78ed-4b90-af57-cabf3e99e417"/>
 				<textElement textAlignment="Center">
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{COMPANY_NAME}]]></textFieldExpression>
 			</textField>
 			<textField>
 				<reportElement x="368" y="15" width="100" height="15" uuid="cda91a16-eb35-4974-9708-58c0a4803ad5"/>
 				<textElement textAlignment="Center">
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{ADDRESS}]]></textFieldExpression>
 			</textField>
 			<textField>
 				<reportElement x="341" y="45" width="158" height="15" uuid="65f81832-f3d8-4025-a812-c6f0808acf24"/>
 				<textElement textAlignment="Center">
-					<font isBold="true"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{BL_TYPE}]]></textFieldExpression>
 			</textField>
@@ -338,7 +338,7 @@ order by bl_type,bl_number]]>
 					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("IMPORT")]]></printWhenExpression>
 				</reportElement>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Arrival Date]]></text>
 			</staticText>
@@ -347,7 +347,7 @@ order by bl_type,bl_number]]>
 					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("IMPORT")]]></printWhenExpression>
 				</reportElement>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[ETA]]></text>
 			</staticText>
@@ -365,7 +365,7 @@ order by bl_type,bl_number]]>
 					<printWhenExpression><![CDATA[$F{IMPORT_EXPORT}.equals("EXPORT")]]></printWhenExpression>
 				</reportElement>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Remarks]]></text>
 			</staticText>
@@ -400,7 +400,7 @@ order by bl_type,bl_number]]>
 			<staticText>
 				<reportElement x="5" y="35" width="21" height="12" uuid="e603a09d-43d9-4068-a3d3-1b52bbe35e1f"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[SH)]]></text>
 			</staticText>
@@ -414,7 +414,7 @@ order by bl_type,bl_number]]>
 			<staticText>
 				<reportElement positionType="Float" x="5" y="66" width="21" height="12" uuid="3809ef25-c4f9-419c-b204-f10cc4858c8d"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[CN)]]></text>
 			</staticText>
@@ -428,7 +428,7 @@ order by bl_type,bl_number]]>
 			<staticText>
 				<reportElement positionType="Float" x="5" y="101" width="21" height="14" uuid="2028c70f-13ce-4426-99b3-2496cad76a3b"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[NF)]]></text>
 			</staticText>

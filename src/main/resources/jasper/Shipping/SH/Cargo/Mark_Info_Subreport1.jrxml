@@ -5,7 +5,7 @@
 	<property name="ireport.y" value="0"/>
 	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
 	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
-	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
 	<style name="Detail" fontName="Arial" fontSize="12"/>
 	<style name="Row" mode="Transparent">
 		<conditionalStyle>
@@ -44,7 +44,7 @@ order by nvl(CARGODTL.RECORD_ORDER,CARGODTL.DET_ROW_ID)]]>
 			<staticText>
 				<reportElement x="0" y="0" width="100" height="15" isPrintWhenDetailOverflows="true" uuid="9fd4322e-0f32-4937-8198-afe26f47692b"/>
 				<textElement>
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Marks:]]></text>
 			</staticText>
