@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OtherRemunerationDto {
     private Long detRowId; // for update
+    private String actionType;
     private Long remunerationPoid;
     private LovGetListDto remunerationDet;
     private Long currencyPoid;

@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class GeneralCargoRequestDto {
     private Long detRowId;
+    private String actionType; 
     private Long comodityPoid;
     private String cargoDescription;
     private Long quantity;

@@ -23,6 +23,9 @@ public class RegionMasterRequest {
     @Size(max = 100, message = "Region name must not exceed 100 characters")
     private String regionName;
 
+    @Size(max = 100, message = "Region name2 must not exceed 100 characters")
+    private String regionName2;
+
     @Size(max = 1, message = "Active flag must be Y or N")
     private String active;
 

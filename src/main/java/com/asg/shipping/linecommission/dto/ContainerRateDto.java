@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ContainerRateDto {
     private Long detRowId; // for update
+    private String actionType;
 
     @NotNull(message = "containerTypePoid is required")
     private Long containerTypePoid;

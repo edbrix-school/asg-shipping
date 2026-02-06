@@ -3,9 +3,12 @@ package com.asg.shipping.containertypes.service;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.containertypes.dto.ContainerTypeCreateDTO;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
@@ -16,6 +19,7 @@ import com.asg.shipping.containertypes.util.ContainerTypeMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -44,6 +48,8 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
 
     @Autowired
     private ShipContainerTypeMasterRepository containerTypeRepository;
+
+    private final LoggingService loggingService;
 
     @Override
     @Transactional
@@ -89,6 +95,8 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
         ShipContainerTypeMaster containerType = containerTypeRepository.findByContainerTypePoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Container Type", "containerTypePoid", id.toString()));
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
+
         log.info("Successfully retrieved container type with id: {}", id);
         return mapper.mapToDto(containerType);
     }
@@ -108,6 +116,10 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
         // Save entity
         ShipContainerTypeMaster saved = containerTypeRepository.save(containerType);
 
+        String key = saved.getContainerTypePoid().toString();
+        String docId = UserContext.getDocumentId();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
+
         log.info("Successfully created container type with id: {}", saved.getContainerTypePoid());
         return mapper.mapToDto(saved);
     }
@@ -124,11 +136,18 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
         // Validate update DTO
         validateContainerTypeUpdateDTO(dto, groupPoid, id);
 
+        ShipContainerTypeMaster oldEntity = new ShipContainerTypeMaster();
+        BeanUtils.copyProperties(containerType, oldEntity);
+
         // Update entity
         mapper.mapUpdateDTOToEntity(dto, containerType, groupPoid, userPoid);
 
         // Save entity
         ShipContainerTypeMaster saved = containerTypeRepository.save(containerType);
+
+        String key = saved.getContainerTypePoid().toString();
+        String docId = UserContext.getDocumentId();
+        loggingService.logChanges(oldEntity, saved, ShipContainerTypeMaster.class, docId, key, LogDetailsEnum.MODIFIED, "CONTAINER_TYPE_POID");
 
         log.info("Successfully updated container type with id: {}", id);
         return mapper.mapToDto(saved);
@@ -157,6 +176,12 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
 
         containerTypeRepository.save(containerType);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), id.toString());
+        String logDetail = String.format("KeyId = CONTAINER_TYPE_POID:%s", id);
+        String tableName = ShipContainerTypeMaster.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Active",
+                currentActive, containerType.getActive(), logDetail, tableName);
+
         log.info("Successfully toggled active status for container type with id: {} to {}", id, containerType.getActive());
     }
 
@@ -183,6 +208,14 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
         containerType.setLastModifiedDate(LocalDateTime.now());
 
         containerTypeRepository.save(containerType);
+
+        String docId = UserContext.getDocumentId();
+        String key = id.toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
+
+        loggingService.logSimpleFieldChange(ShipContainerTypeMaster.class, docId, key, "deleted", "N", "Y", "ContainerType soft deleted");
+        loggingService.logSimpleFieldChange(ShipContainerTypeMaster.class, docId, key, "active", "Y", "N", "ContainerType soft deleted");
+
 
         log.info("Successfully deleted container type with id: {}", id);
     }

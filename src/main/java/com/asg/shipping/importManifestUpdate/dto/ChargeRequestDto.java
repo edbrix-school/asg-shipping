@@ -5,14 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ChargeRequestDto {
     private Long detRowId;
+    private String actionType; 
     private Long chargePoid;
 
     private Long currencyExchange;

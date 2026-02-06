@@ -6,6 +6,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -87,6 +88,8 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         
         log.info("Successfully retrieved region master with id: {}", regionPoid);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), regionPoid.toString());
+
         return mapper.toResponse(entity);
     }
 
@@ -125,8 +128,6 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         String key = saved.getRegionPoid().toString();
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
-        loggingService.logChanges(null, saved, ShipRegionMasterEntity.class, docId, key,
-                LogDetailsEnum.CREATED, "REGION_POID");
 
         log.info("Successfully created region master with id: {}", saved.getRegionPoid());
         return mapper.toResponse(saved);
@@ -184,7 +185,6 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         repository.save(entity);
         String key = entity.getRegionPoid().toString();
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
         loggingService.logChanges(oldEntity, entity, ShipRegionMasterEntity.class, docId, key,
                 LogDetailsEnum.MODIFIED, "REGION_POID");
 
@@ -220,7 +220,12 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         entity.setLastModifiedDate(LocalDateTime.now());
         
         repository.save(entity);
-        
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), regionPoid.toString());
+        String logDetail = String.format("KeyId = REGION_POID:%s", regionPoid);
+        String tableName = ShipRegionMasterEntity.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), regionPoid.toString(), "Active", currentActive, entity.getActive(), logDetail, tableName);
+
         log.info("Successfully toggled active status for region master with id: {} from {} to {}", 
                 regionPoid, currentActive, newActive);
     }
@@ -257,7 +262,14 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         entity.setLastModifiedDate(LocalDateTime.now());
         
         repository.save(entity);
-        
+
+        String docId = UserContext.getDocumentId();
+        String key = regionPoid.toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
+
+        loggingService.logSimpleFieldChange(ShipRegionMasterEntity.class, docId, key, "deleted", "N", "Y", "ShipRegionMaster soft deleted");
+        loggingService.logSimpleFieldChange(ShipRegionMasterEntity.class, docId, key, "active", "Y", "N", "ShipRegionMaster soft deleted");
+
         log.info("Successfully deleted region master with id: {}", regionPoid);
     }
 }

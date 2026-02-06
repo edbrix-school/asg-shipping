@@ -36,7 +36,6 @@ public class CustomerAutoChargeExportBLMapper {
                 .description(entity.getDescription())
                 .periodFrom(toLocalDate(entity.getPeriodFrom()))
                 .periodTo(toLocalDate(entity.getPeriodTo()))
-                .seqno(entity.getSeqNo())
                 .deleted(entity.getDeleted())
                 .createdBy(entity.getCreatedBy())
                 .createdDate(entity.getCreatedDate())
@@ -55,7 +54,6 @@ public class CustomerAutoChargeExportBLMapper {
         entity.setPeriodFrom(java.sql.Date.valueOf(dto.getPeriodFrom()));
         entity.setPeriodTo(java.sql.Date.valueOf(dto.getPeriodTo()));
         entity.setTransactionDate(dto.getTransactionDate() != null ? java.sql.Date.valueOf(dto.getTransactionDate()) : java.sql.Date.valueOf(java.time.LocalDate.now()));
-        entity.setSeqNo(dto.getSeqno());
         entity.setDocRef(dto.getDocRef());
         entity.setCreatedBy(getCurrentUser());
         entity.setCreatedDate(new Timestamp(System.currentTimeMillis()));
@@ -82,9 +80,6 @@ public class CustomerAutoChargeExportBLMapper {
         }
         if (dto.getTransactionDate() != null) {
             entity.setTransactionDate(java.sql.Date.valueOf(dto.getTransactionDate()));
-        }
-        if (dto.getSeqno() != null) {
-            entity.setSeqNo(dto.getSeqno());
         }
         if (dto.getDocRef() != null) {
             entity.setDocRef(dto.getDocRef());
