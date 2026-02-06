@@ -69,9 +69,6 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                         .map(this::mapToDetailDto)
                         .toList()
         );
-
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), customerPoid.toString());
-
         log.info("Successfully retrieved customer invoice charge mapping with customerPoid: {}", customerPoid);
         return response;
     }
