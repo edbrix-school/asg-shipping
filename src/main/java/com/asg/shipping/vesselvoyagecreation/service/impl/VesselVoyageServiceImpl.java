@@ -51,6 +51,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -79,7 +80,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private String exportsDir;
 
     @Override
-    public Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId) {
+    public Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId, LocalDate startDate, LocalDate endDate) {
         String effectiveDocId = docId != null ? docId : UserContext.getDocumentId();
         if (effectiveDocId == null || effectiveDocId.isBlank()) {
             throw new IllegalArgumentException("X-Document-Id header is required for list endpoint");
@@ -91,11 +92,17 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             lineStatus = storedProcedureRepository.procGlobUserLineListing(userPoid);
         }
 
-        log.info("List voyages | docId={} page={} size={} lineStatus={}", effectiveDocId, pageable.getPageNumber(), pageable.getPageSize(), lineStatus);
+        log.info("List voyages | docId={} page={} size={} startDate={} endDate={} lineStatus={}", effectiveDocId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate, lineStatus);
 
         String operator = documentSearchService.resolveOperator(request);
         String isDeleted = documentSearchService.resolveIsDeleted(request);
         var filters = documentSearchService.resolveFilters(request);
+        
+        // Add date filters if provided
+        if (startDate != null && endDate != null) {
+            // Add date range filter for TRANSACTION_DATE field
+            filters = documentSearchService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        }
 
         RawSearchResult raw = documentSearchService.search(
                 effectiveDocId,

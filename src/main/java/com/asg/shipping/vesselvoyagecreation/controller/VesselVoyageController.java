@@ -27,6 +27,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/v1/vessel-voyage-creation-line-edi")
@@ -42,17 +44,30 @@ public class VesselVoyageController {
     public ResponseEntity<?> list(
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters,
-            @RequestHeader(value = "X-Document-Id", required = false) String docId
+            @RequestHeader(value = "X-Document-Id", required = false) String docId,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
     ) {
-        log.info("Action={} | List voyages | page={} size={} docId={} groupPoid={} companyPoid={} userPoid={}",
+        log.info("Action={} | List voyages | page={} size={} docId={} startDate={} endDate={} groupPoid={} companyPoid={} userPoid={}",
                 UserContext.getActionRequested(),
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
                 docId != null ? docId : UserContext.getDocumentId(),
+                startDate,
+                endDate,
                 UserContext.getGroupPoid(),
                 UserContext.getCompanyPoid(),
                 UserContext.getUserPoid());
-        return ApiResponse.success("Vessel voyages fetched successfully", vesselVoyageService.listVoyages(filters, pageable, docId));
+        
+        try {
+            if((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+                return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
+            }
+            
+            return ApiResponse.success("Vessel voyages fetched successfully", vesselVoyageService.listVoyages(filters, pageable, docId, startDate, endDate));
+        } catch (Exception e) {
+            return ApiResponse.internalServerError("Unable to fetch vessel voyages: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
