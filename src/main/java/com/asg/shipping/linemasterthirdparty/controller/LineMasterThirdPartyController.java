@@ -3,7 +3,10 @@ package com.asg.shipping.linemasterthirdparty.controller;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.response.ApiResponse;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.linemasterthirdparty.dto.*;
 import com.asg.shipping.linemasterthirdparty.service.LineMasterThirdPartyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,6 +38,7 @@ import java.util.Map;
 public class LineMasterThirdPartyController {
 
     private final LineMasterThirdPartyService lineService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/search")
@@ -105,6 +109,7 @@ public class LineMasterThirdPartyController {
             @PathVariable Long id) {
         log.info("Getting third party line with id: {}", id);
         LineMasterThirdPartyDto line = lineService.getThirdPartyLine(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved third party line with id: {}", id);
         return ApiResponse.success("Third party line retrieved successfully", line);
     }

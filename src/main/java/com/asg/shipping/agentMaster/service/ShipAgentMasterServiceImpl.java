@@ -2,9 +2,11 @@ package com.asg.shipping.agentMaster.service;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.agentMaster.dto.ShipAgentMasterRequestDto;
 import com.asg.shipping.agentMaster.dto.ShipAgentMasterResponseDto;
@@ -13,6 +15,7 @@ import com.asg.shipping.agentMaster.repository.ShipAgentMasterRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -30,10 +33,12 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
 
     private final ShipAgentMasterRepository repository;
     private final DocumentSearchService documentService;
+    private final LoggingService loggingService;
 
 
     @Override
     public ShipAgentMasterResponseDto createAgentMaster(ShipAgentMasterRequestDto request) {
+        log.info("Creating agent master with name: {}", request.getAgentName());
 
         ShipAgentMasterEntity entity = ShipAgentMasterEntity.builder()
                 .groupPoid(UserContext.getGroupPoid())
@@ -57,14 +62,24 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .createdDate(LocalDateTime.now())
                 .build();
 
-        return mapToResponse(repository.save(entity));
+        ShipAgentMasterEntity saved = repository.save(entity);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getAgentPoid().toString());
+        log.debug("Create action logged for agent master id: {}", saved.getAgentPoid());
+
+        log.info("Successfully created agent master with id: {}", saved.getAgentPoid());
+        return mapToResponse(saved);
     }
 
     @Override
     public ShipAgentMasterResponseDto updateAgentMaster(Long agentPoid, ShipAgentMasterRequestDto request) {
+        log.info("Updating agent master with id: {}", agentPoid);
 
         ShipAgentMasterEntity entity = repository.findById(agentPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent not found with","AgentPoid",agentPoid));
+
+        ShipAgentMasterEntity oldEntity = new ShipAgentMasterEntity();
+        BeanUtils.copyProperties(entity, oldEntity);
 
         entity.setAgentName(request.getAgentName());
         entity.setAgentName2(request.getAgentName2());
@@ -82,26 +97,59 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
 
+        ShipAgentMasterEntity shipAgentMasterEntity =  repository.save(entity);
+
+        log.debug("Logging changes for agent master update");
+        loggingService.logChanges(oldEntity, shipAgentMasterEntity, ShipAgentMasterEntity.class, UserContext.getDocumentId(), agentPoid.toString(), LogDetailsEnum.MODIFIED, "AGENT_POID");
+        log.debug("Changes logged successfully");
+
+        log.info("Successfully updated agent master with id: {}", agentPoid);
         return mapToResponse(entity);
     }
 
     @Override
     @Transactional
     public ShipAgentMasterResponseDto findByIdAgentMaster(Long agentPoid) {
-        return repository.findById(agentPoid)
+        log.info("Getting agent master with id: {}", agentPoid);
+        ShipAgentMasterResponseDto response = repository.findById(agentPoid)
                 .map(this::mapToResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent not found with","AgentPoid",agentPoid));
+
+        log.debug("View action logged for agent master id: {}", agentPoid);
+
+        log.info("Successfully retrieved agent master with id: {}", agentPoid);
+        return response;
     }
 
 
     @Override
     public void deleteAgentMaster(Long agentPoid) {
+        log.info("Deleting agent master with id: {}", agentPoid);
+
         ShipAgentMasterEntity entity = repository.findById(agentPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent not found with","AgentPoid",agentPoid));
+
+        if ("Y".equals(entity.getDeleted())) {
+            log.info("Agent master with id: {} is already deleted", agentPoid);
+            return;
+        }
+
         entity.setDeleted("Y");
         entity.setActive("N");
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
+
+        repository.save(entity);
+
+        log.debug("Logging delete action for agent master");
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), agentPoid.toString());
+        String logDetail = String.format("KeyId = AGENT_POID:%s", agentPoid);
+        String tableName = ShipAgentMasterEntity.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), agentPoid.toString(), "Deleted", "N", "Y", logDetail, tableName);
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), agentPoid.toString(), "Active", "Y", "N", logDetail, tableName);
+        log.debug("Delete action logged successfully");
+
+        log.info("Successfully deleted agent master with id: {}", agentPoid);
     }
 
     private ShipAgentMasterResponseDto mapToResponse(ShipAgentMasterEntity e) {

@@ -1,7 +1,13 @@
 package com.asg.shipping.shippingmanifestcorrector.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.shippingmanifestcorrector.dto.*;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorChargeDtlDto;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorDto;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorUpdateDTO;
+import com.asg.shipping.shippingmanifestcorrector.dto.ValidateRefundAmountRequest;
+import com.asg.shipping.shippingmanifestcorrector.dto.ValidateRefundAmountResponse;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
@@ -35,7 +41,7 @@ public interface ManifestCorrectorService {
     /**
      * Delete (soft delete) a Shipping Manifest Corrector record
      */
-    void deleteManifestCorrector(Long transactionPoid);
+    void deleteManifestCorrector(Long transactionPoid, DeleteReasonDto deleteReasonDto);
 
     /**
      * Load demurrage refund charges for a BL

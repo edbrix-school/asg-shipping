@@ -1,5 +1,6 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 
@@ -35,7 +36,7 @@ public interface DemurrageDetentionPayableTransferService {
     /**
      * Delete (soft delete) a Demurrage/Detention Payable Transfer record
      */
-    void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid);
+    void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid, DeleteReasonDto deleteReasonDto);
 
     /**
      * Process and load available containers based on Line and BL Type (BEFORE create)
