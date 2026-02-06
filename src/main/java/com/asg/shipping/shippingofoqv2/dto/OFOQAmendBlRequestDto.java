@@ -6,8 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -20,7 +19,7 @@ public class OFOQAmendBlRequestDto {
     @NotNull(message = "Vessel POID is required")
     private Long vesselPoid;
     @NotNull(message = "Arrival Date is required")
-    private LocalDate arrivalDate;
+    private LocalDateTime arrivalDate;
     @NotNull(message = "Rotation Number is required")
     private Long rotationNumber;
     private String functionalReference;
