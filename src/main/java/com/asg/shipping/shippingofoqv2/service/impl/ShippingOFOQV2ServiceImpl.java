@@ -34,6 +34,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
@@ -261,6 +262,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
         }
     }
 
+    @Transactional
     private void updateAmendBl(List<OFOQRequestAmendBlDto> amendBl, Long transactionPoid) {
         amendBl.forEach(dto -> {
                 OFOQAmendBlDtlEntity entity = OFOQAmendBlDtlEntity.builder()
@@ -364,18 +366,24 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
         });
     }
 
+    @Transactional
     private void saveItemDetails(List<OFOQItemDtlDto> lineDetails, Long transactionPoid) {
+
+        AtomicLong detRowIdCounter =
+                new AtomicLong(OFOQItemDtlRepository.findMaxDetRowId(transactionPoid));
         lineDetails.forEach(dto -> {
+
+            Long detRowId = detRowIdCounter.incrementAndGet();
             OFOQItemDtlEntity entity = OFOQItemDtlEntity.builder()
                     .transactionPoid(transactionPoid)
-                    .detRowId(dto.getDetRowId())
+                    .detRowId(detRowId)
                     .vesselVoyagePoid(dto.getVesselVoyagePoid())
                     .lineName(dto.getLineName())
                     .vesselName(dto.getVesselName())
                     .voyageNo(dto.getVoyageNo())
                     .jobNo(dto.getJobNo())
-                    .arrivalDate(dto.getArrivalDate().atStartOfDay())
-                    .sailDate(dto.getSailDate().atStartOfDay())
+                    .arrivalDate(dto.getArrivalDate() != null ? dto.getArrivalDate().atStartOfDay() : null)
+                    .sailDate(dto.getSailDate() != null ? dto.getSailDate().atStartOfDay() : null)
                     .drilldownLinkInfo(dto.getDrillDownLinkInfo())
                     .checked(dto.getChecked())
                     .createdBy(ASGHelperUtils.getCurrentUser())
@@ -383,10 +391,19 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .lastModifiedBy(ASGHelperUtils.getCurrentUser())
                     .lastModifiedDate(LocalDateTime.now())
                     .build();
-          OFOQItemDtlRepository.save(entity);
-            String logDetail = String.format("Row Created on items detail with DetRowId: %s", entity.getDetRowId());
-            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString() , logDetail);
 
+            OFOQItemDtlRepository.save(entity);
+
+            String logDetail = String.format(
+                    "Row Created on items detail with DetRowId: %s",
+                    detRowId
+            );
+
+            loggingService.createLogSummaryEntry(
+                    UserContext.getDocumentId(),
+                    transactionPoid.toString(),
+                    logDetail
+            );
         });
     }
 
@@ -411,8 +428,8 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
     }
 
 
+    @Transactional
     private void updateItemDetails(List<OFOQItemDtlDto> lineDetails, Long transactionPoid) {
-
         for (OFOQItemDtlDto dto : lineDetails) {
             String action = dto.getActionType() != null
                     ? dto.getActionType().toUpperCase()
