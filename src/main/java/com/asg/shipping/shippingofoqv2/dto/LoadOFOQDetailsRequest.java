@@ -5,7 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
+
 
 @Data
 @Builder
@@ -20,7 +22,7 @@ public class LoadOFOQDetailsRequest {
     private Long vesselPoid;
     
     @NotNull(message = "Arrival date is required")
-    private LocalDateTime arrivalDate;
+    private LocalDate arrivalDate;
     
     private String docRef;
     private Long transactionPoid;

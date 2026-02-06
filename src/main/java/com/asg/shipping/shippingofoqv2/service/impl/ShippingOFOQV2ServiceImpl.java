@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -139,7 +140,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                                     .arrivalDate(
                                             request.getArrivalDate() == null
                                                     ? null
-                                                    : request.getArrivalDate().atStartOfDay()
+                                                    : request.getArrivalDate().atTime(LocalTime.now())
                                     )
                                     .rotationNumber(request.getRotationNumber())
                                     .remarks(request.getRemarks())
@@ -239,7 +240,11 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
             existingEntity.setVoyageNo(request.getVoyageNo());
             existingEntity.setRemarks(request.getRemarks());
             existingEntity.setVesselPoid(request.getVesselPoid());
-            existingEntity.setArrivalDate(request.getArrivalDate().atStartOfDay());
+            existingEntity.setArrivalDate(
+                    request.getArrivalDate() != null
+                            ? request.getArrivalDate().atTime(LocalTime.now())
+                            : null
+            );
             existingEntity.setRotationNumber(request.getRotationNumber());
             existingEntity.setLastModifiedBy(ASGHelperUtils.getCurrentUser());
             existingEntity.setLastModifiedDate(LocalDateTime.now());
@@ -288,12 +293,17 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
         log.info("Deleting OFOQ manifest for transactionPoid: {}", transactionPoid);
         try {
             OfoqApiDataHdrEntity entity = findEntityById(transactionPoid);
+            LocalDate transactionDate =
+                    entity.getTransactionDate() != null
+                            ? entity.getTransactionDate().toLocalDate()
+                            : null;
+
             documentDeleteService.deleteDocument(
                     transactionPoid,
                     "OFOQ_API_DATA_HDR",
                     "TRANSACTION_POID",
                     deleteReasonDto,
-                    LocalDate.from(entity.getTransactionDate())
+                    transactionDate
             );
             log.info("OFOQ manifest deleted successfully for transactionPoid: {}", transactionPoid);
         } catch (Exception e) {
@@ -382,8 +392,11 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .vesselName(dto.getVesselName())
                     .voyageNo(dto.getVoyageNo())
                     .jobNo(dto.getJobNo())
-                    .arrivalDate(dto.getArrivalDate() != null ? dto.getArrivalDate().atStartOfDay() : null)
-                    .sailDate(dto.getSailDate() != null ? dto.getSailDate().atStartOfDay() : null)
+                    .arrivalDate(
+                    dto.getArrivalDate() != null
+                            ? dto.getArrivalDate().atTime(LocalTime.now())
+                            : null)
+                    .sailDate(dto.getSailDate() != null ? dto.getSailDate().atTime(LocalTime.now()) : null)
                     .drilldownLinkInfo(dto.getDrillDownLinkInfo())
                     .checked(dto.getChecked())
                     .createdBy(ASGHelperUtils.getCurrentUser())
