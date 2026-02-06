@@ -3,8 +3,7 @@ package com.asg.shipping.shippingofoqv2.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "OFOQ_API_AMEND_RESPONSE_DTL")
@@ -34,8 +33,7 @@ public class OFOQManifestAmendmentResponseDtlEntity {
     private String functionalRef;
 
     @Column(name = "RESPONSE_DATE")
-    @Temporal(TemporalType.DATE)
-    private Date responseDate;
+    private LocalDateTime responseDate;
 
     @Column(name = "STATUS_CODE")
     private Long statusCode;
@@ -62,13 +60,13 @@ public class OFOQManifestAmendmentResponseDtlEntity {
     private String createdBy;
 
     @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "LASTMODIFIED_BY", length = 20)
     private String lastModifiedBy;
 
     @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastModifiedDate;
+    private LocalDateTime lastModifiedDate;
 
     @Column(name = "XML_BL_NUMBER", length = 100)
     private String xmlBlNumber;

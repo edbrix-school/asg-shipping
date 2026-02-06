@@ -10,6 +10,7 @@ import com.asg.shipping.shippingofoqv2.service.ShippingOFOQV2Service;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -45,7 +46,7 @@ public class ShippingOFOQV2Controller {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Document saved and submitted successfully",
-                    content = @Content(schema = @Schema(implementation = OFOQManifestStatusResponseDto.class))),
+                    content = @Content(schema = @Schema(implementation = OFOQCheckStatusResponseDto.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request parameters"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
@@ -129,6 +130,7 @@ public class ShippingOFOQV2Controller {
     }
 
 
+	@PostMapping("/check-status")
 	@Operation(
 			summary = "Check OFOQ Status",
 			description = "Check the current status of an OFOQ document"
@@ -136,24 +138,98 @@ public class ShippingOFOQV2Controller {
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "OFOQ status check request",
 			required = true,
-			content = @Content(schema = @Schema(implementation = OFOQCheckStatusDto.class))
+			content = @Content(
+					mediaType = "application/json",
+					examples = @ExampleObject(
+							name = "Check Status Request",
+							summary = "Check OFOQ document status",
+							value = """
+                        {
+                          "functionalReference": "MSTR250128",
+                          "transactionPoid": 37284,
+                          "docReference": "ASG00006"
+                        }
+                        """
+					)
+			)
 	)
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", description = "Successfully checked OFOQ status",
-				content = @Content(schema = @Schema(implementation = OFOQCheckStatusResponseDto.class))),
+	@ApiResponses({
+			@ApiResponse(
+					responseCode = "200",
+					description = "Successfully checked OFOQ status",
+					content = @Content(
+							mediaType = "application/json",
+							examples = @ExampleObject(
+									name = "Check Status Success Response",
+									summary = "OFOQ status with manifest responses",
+									value = """
+                                {
+                                  "message": "Status checked successfully",
+                                  "statusCode": 200,
+                                  "success": true,
+                                  "result": {
+                                    "data": {
+                                      "header": {
+                                        "transactionPoid": 37953,
+                                        "docRef": "ASG00115",
+                                        "transactionDate": "2026-02-05T15:08:27",
+                                        "voyageNo": "442",
+                                        "vesselPoid": 27961,
+                                        "arrivalDate": "2024-10-18T00:00:00",
+                                        "rotationNumber": 240000495045646,
+                                        "apiProvisionalMfNo": null,
+                                        "apiProvisionalStatus": "FAILED",
+                                        "manifestNo": "NIL",
+                                        "manifestStatus": "NIL",
+                                        "remarks": "Test OFOQ creation 234",
+                                        "functionalReference": "MSTR260088",
+                                        "deleted": "N",
+                                        "createdBy": "DEVUSER2",
+                                        "createdDate": "2026-02-05T15:08:27.682237",
+                                        "lastModifiedBy": "DEVUSER2",
+                                        "lastModifiedDate": "2026-02-05T16:20:41.214516"
+                                      },
+                                      "manifestResponses": [
+                                        {
+                                          "transactionPoid": 37953,
+                                          "detRowId": 1,
+                                          "date": "2026-02-05T12:38:33",
+                                          "functionalReference": "MSTR260088",
+                                          "StatusCode": "200 OK",
+                                          "responseMessage": "Manifest Consignment is Mandatory ",
+                                          "processingStatus": "FAILED"
+                                        },
+                                        {
+                                          "transactionPoid": 37953,
+                                          "detRowId": 2,
+                                          "date": "2026-02-05T13:31:50",
+                                          "functionalReference": "MSTR260088",
+                                          "StatusCode": "200 OK",
+                                          "responseMessage": "Manifest Consignment is Mandatory ",
+                                          "processingStatus": "FAILED"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                }
+                                """
+							)
+					)
+			),
 			@ApiResponse(responseCode = "400", description = "Invalid request parameters"),
 			@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
-	@PostMapping("/check-status")
 	public ResponseEntity<?> checkStatus(
 			@Valid @RequestBody OFOQCheckStatusDto request
 	) {
-			OFOQCheckStatusResponseDto response = shippingOFOQV2Service.checkStatus(request,"M");
-			return success("Status checked successfully", response);
+		OFOQCheckStatusResponseDto response =
+				shippingOFOQV2Service.checkStatus(request, "M");
 
+		return success("Status checked successfully", response);
 	}
 
-        @Operation(
+
+	@Operation(
 			summary = "Update OFOQ Document",
 			description = "Update an existing OFOQ document and submit to external API"
 	)
@@ -164,7 +240,7 @@ public class ShippingOFOQV2Controller {
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Document updated successfully",
-					content = @Content(schema = @Schema(implementation = OFOQManifestStatusResponseDto.class))),
+					content = @Content(schema = @Schema(implementation = OFOQCheckStatusResponseDto.class))),
 			@ApiResponse(responseCode = "404", description = "Document not found"),
 			@ApiResponse(responseCode = "400", description = "Invalid request parameters"),
 			@ApiResponse(responseCode = "500", description = "Internal server error")
