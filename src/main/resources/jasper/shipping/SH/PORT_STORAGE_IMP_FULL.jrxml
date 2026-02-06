@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="PORT_STORAGE_IMP_FULL" language="groovy" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="345"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_TILL_DATE" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[select distinct LINE,BL_NUMBER,CONTAINER_NO,ISO_CODE,to_date(ARRIVAL_DATE)ARRIVAL_DATE,to_date(TILL_TODAY) TILL_TODAY,FREE_DAYS,Storage,total_chares,
+case when ((to_date(TILL_TODAY) - to_date(ARRIVAL_DATE)) + 1) > FREE_DAYS then round((((to_date(TILL_TODAY) - to_date(ARRIVAL_DATE)) + 1) - FREE_DAYS)) end  paid_days from(
+select distinct GET_LINE_NAME(LINE_POID) LINE, BL_NUMBER,condtl.CONTAINER_NO,CONTAINER_TYPE_CODE ISO_CODE,TO_DATE( NVL(ARRIVAL_DATE,EXPECTED_DATE)) Arrival_Date,to_char(TO_DATE($P{P_TILL_DATE}),'DD-MON-YYYY') Till_Today
+,(SELECT FREE_DAYS
+FROM SHIP_PORT_TARIFF_HDR THDR
+INNER JOIN SHIP_PORT_TARIFF_DTL TIDTL ON  TIDTL.TRANSACTION_POID=THDR.TRANSACTION_POID
+WHERE  to_date(SAIL_DATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
+and TARIFF_TYPE='FULL' and CONTAINER_SIZE=TMAST.CONTAINER_TYPE_SIZE) FREE_DAYS,
+round((to_date(TO_DATE($P{P_TILL_DATE})) - to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE))) + 1) Storage,
+FUNC_RTN_port_storage
+( hdr.GROUP_POID,hdr.company_poid,-999, hdr.transaction_poid,condtl.CONTAINER_NO,
+TMAST.CONTAINER_TYPE_POID,voyhdr.line_poid, TO_DATE( NVL(ARRIVAL_DATE,EXPECTED_DATE)),TO_DATE($P{P_TILL_DATE}),'FULL') total_chares
+from SHIP_BL_MANIFEST_HDR hdr
+inner join SHIP_BL_MANIFEST_CONTAINER_DTL condtl
+on hdr.transaction_poid = condtl.transaction_poid and hdr.bl_type = 'IMPORT'
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER TMAST
+ON condtl.EQUIPMENT_ISO_TYPE = TMAST.CONTAINER_TYPE_CODE
+inner join ship_voyage_Hdr voyhdr
+on hdr.VOYAGE_TRANSACTION_POID = voyhdr.TRANSACTION_POID
+where
+ISSUE_TO_CONSIGNEE IS NULL AND NVL(ARRIVAL_DATE,EXPECTED_DATE)>='1-APR-2016' AND TO_DATE( NVL(ARRIVAL_DATE,EXPECTED_DATE))<=TO_DATE($P{P_TILL_DATE})
+ and hdr.TRANSACTION_POID =$P{DOC_KEY_POID}
+) order by LINE]]>
+	</queryString>
+	<field name="LINE" class="java.lang.String"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="CONTAINER_NO" class="java.lang.String"/>
+	<field name="ISO_CODE" class="java.lang.String"/>
+	<field name="ARRIVAL_DATE" class="java.sql.Timestamp"/>
+	<field name="TILL_TODAY" class="java.sql.Timestamp"/>
+	<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+	<field name="STORAGE" class="java.math.BigDecimal"/>
+	<field name="TOTAL_CHARES" class="java.math.BigDecimal"/>
+	<field name="PAID_DAYS" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band height="22" splitType="Stretch">
+			<staticText>
+				<reportElement x="3" y="0" width="305" height="20" uuid="653fb5b3-72b7-42a2-afc1-a78f5d351138"/>
+				<textElement verticalAlignment="Middle">
+					<font size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Import Full Container Details:]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="54" splitType="Stretch">
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="26" width="788" height="1" uuid="9ec55f57-eda0-48ce-a06e-ffab81edbcc6"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+			<textField>
+				<reportElement x="42" y="5" width="281" height="20" uuid="cddaf982-841b-430b-bf51-772f283bc960"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="true" isUnderline="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LINE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="1" y="33" width="130" height="20" uuid="83cd7f34-c8ea-4d49-93c6-d4e062a9e813"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[BL NUMBER]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="131" y="33" width="100" height="20" uuid="89044db6-448c-4629-88d7-670f94dc87db"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[CONTAINER]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="230" y="33" width="47" height="20" uuid="b8794504-1a20-45ae-b44d-62512044cc72"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[ISO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="277" y="33" width="97" height="20" uuid="acd8595c-0a73-4744-9c3f-7dfeca857842"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[ARRIVAL DATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="374" y="33" width="91" height="20" uuid="399e7148-8113-4878-ad25-5147c8f684f0"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[TILL DATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="465" y="33" width="70" height="20" uuid="5ea444df-c9d4-4588-b777-cf73cc4fe800"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[FREE DAYS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="535" y="33" width="80" height="20" uuid="09d814a0-c976-4931-93b3-3bc3c8d170f0"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[TOTAL DAYS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="699" y="33" width="89" height="20" uuid="76999d61-997c-4d24-b16b-f2d3bd9f3ecc"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[TOTAL CHARES]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="615" y="33" width="84" height="20" uuid="236df049-0214-4917-b55d-bf53f159efc9"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[STORAGE DAYS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="3" y="5" width="37" height="20" uuid="9ed54024-39b5-463c-9930-1b37bf0ba27e"/>
+				<textElement verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Line :]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="23" splitType="Stretch">
+			<textField pattern="" isBlankWhenNull="true">
+				<reportElement x="1" y="2" width="130" height="20" uuid="077ee395-705c-49d5-9a02-edb3848cada4"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="131" y="2" width="100" height="20" uuid="a11c2392-efb6-4bc0-9cfc-70495e59685b"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="230" y="2" width="47" height="20" uuid="7ccfd1bb-4793-419f-87c8-e8921a78d3e4"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{ISO_CODE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd/MM/yyyy" isBlankWhenNull="true">
+				<reportElement x="277" y="2" width="97" height="20" uuid="ca1c1d98-bd3c-4d52-a146-65f1a4d8f487"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{ARRIVAL_DATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd/MM/yyyy" isBlankWhenNull="true">
+				<reportElement x="374" y="2" width="91" height="20" uuid="8a4a91b8-b073-4a88-9493-5a06f2f8dd05"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{TILL_TODAY}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="465" y="2" width="70" height="20" uuid="03ff090f-ae99-4b3a-bf40-7e47eb28203b"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{FREE_DAYS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="535" y="2" width="80" height="20" uuid="41898694-f264-410c-a87d-0822f6d8828e"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{STORAGE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="699" y="2" width="89" height="20" uuid="fc410352-5288-4c7d-a44f-07a76779ac88"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{TOTAL_CHARES}]]></textFieldExpression>
+			</textField>
+			<textField pattern="###0" isBlankWhenNull="true">
+				<reportElement x="615" y="2" width="84" height="20" uuid="62847cff-ee69-4f30-a4d5-4d4325f561ed"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{PAID_DAYS}]]></textFieldExpression>
+			</textField>
+		</band>
+		<band height="5"/>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

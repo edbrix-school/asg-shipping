@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="PORT_STORAGE_CALC" language="groovy" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="66"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_TILL_DATE" class="java.lang.String"/>
+	<parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUBREPORT_PORT_STORAGE" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUBREPORT_PORT_STORAGE_EMPTY" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString>
+		<![CDATA[SELECT hdr.GROUP_POID,hdr.company_poid,hdr.transaction_poid,voyhdr.line_poid
+from SHIP_BL_MANIFEST_HDR hdr
+inner join ship_voyage_Hdr voyhdr
+on hdr.VOYAGE_TRANSACTION_POID = voyhdr.TRANSACTION_POID
+where hdr.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="GROUP_POID" class="java.math.BigDecimal"/>
+	<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="LINE_POID" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="69" splitType="Stretch">
+			<subreport>
+				<reportElement x="0" y="0" width="788" height="66" uuid="11dd97b8-4c92-45fe-85bb-3b9358474446"/>
+				<subreportParameter name="LOGIN_COMP_POID">
+					<subreportParameterExpression><![CDATA[$P{LOGIN_COMP_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUB_HEADER}]]></subreportExpression>
+			</subreport>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="23" splitType="Stretch">
+			<staticText>
+				<reportElement x="0" y="0" width="788" height="20" uuid="233d7dc3-e1e5-4316-9855-9fe0e8c11a2e"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="14" pdfFontName="Helvetica-Bold"  isBold="true"/>
+				</textElement>
+				<text><![CDATA[Port Charges Details]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="65" splitType="Stretch">
+			<subreport>
+				<reportElement x="11" y="2" width="777" height="61" uuid="8cc440c3-c9de-442a-abd4-d2f42f675011"/>
+				<subreportParameter name="LOGIN_GROUP_POID">
+					<subreportParameterExpression><![CDATA[$P{LOGIN_GROUP_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="LOGIN_COMP_POID">
+					<subreportParameterExpression><![CDATA[$P{LOGIN_COMP_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="LOGIN_USER_POID">
+					<subreportParameterExpression><![CDATA[$P{LOGIN_USER_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_ID">
+					<subreportParameterExpression><![CDATA[$P{DOC_ID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_KEY_POID">
+					<subreportParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="SUBREPORT_DIR">
+					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="P_TILL_DATE">
+					<subreportParameterExpression><![CDATA[$P{P_TILL_DATE}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_PORT_STORAGE}]]></subreportExpression>
+			</subreport>
+		</band>
+		<band height="72">
+			<subreport>
+				<reportElement x="11" y="0" width="777" height="72" uuid="98969480-3074-42c8-aa81-612c7476d1f7"/>
+				<subreportParameter name="P_TILL_EDATE">
+					<subreportParameterExpression><![CDATA[$P{P_TILL_DATE}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="DOC_KEY_EPOID">
+					<subreportParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_PORT_STORAGE_EMPTY}]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>
