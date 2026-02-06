@@ -54,6 +54,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -86,7 +87,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private String exportsDir;
 
     @Override
-    public Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId) {
+    public Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId, LocalDate startDate, LocalDate endDate) {
         String effectiveDocId = docId != null ? docId : UserContext.getDocumentId();
         if (effectiveDocId == null || effectiveDocId.isBlank()) {
             throw new IllegalArgumentException("X-Document-Id header is required for list endpoint");
@@ -98,11 +99,17 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             lineStatus = storedProcedureRepository.procGlobUserLineListing(userPoid);
         }
 
-        log.info("List voyages | docId={} page={} size={} lineStatus={}", effectiveDocId, pageable.getPageNumber(), pageable.getPageSize(), lineStatus);
+        log.info("List voyages | docId={} page={} size={} startDate={} endDate={} lineStatus={}", effectiveDocId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate, lineStatus);
 
         String operator = documentSearchService.resolveOperator(request);
         String isDeleted = documentSearchService.resolveIsDeleted(request);
         var filters = documentSearchService.resolveFilters(request);
+        
+        // Add date filters if provided
+        if (startDate != null && endDate != null) {
+            // Add date range filter for TRANSACTION_DATE field
+            filters = documentSearchService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        }
 
         RawSearchResult raw = documentSearchService.search(
                 effectiveDocId,
@@ -591,10 +598,10 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-101");
 		params.put("P_FREIGHTCARGO", freightCargo);
         params.put("P_IMPORT_EXPORT", importExport);
-        params.put("MARK_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
-	    params.put("CONTAINER_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
-	    params.put("DESCRIPTION_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
-	    params.put("FREIGHT_DETAIL_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
 	    JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
 	    return printService.fillReportToPdf(mainReport, params, dataSource);
     }

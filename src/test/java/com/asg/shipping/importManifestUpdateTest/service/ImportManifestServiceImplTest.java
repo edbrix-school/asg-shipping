@@ -35,7 +35,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ImportManifestBlServiceImplTest {
+public class ImportManifestServiceImplTest {
 
     @Mock
     private ShipBlManifestHdrRepository repository;

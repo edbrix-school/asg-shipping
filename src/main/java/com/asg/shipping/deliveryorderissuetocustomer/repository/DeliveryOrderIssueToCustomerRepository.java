@@ -1,21 +1,32 @@
 package com.asg.shipping.deliveryorderissuetocustomer.repository;
 
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class DeliveryOrderIssueToCustomerRepository {
 
     private final JdbcTemplate jdbcTemplate;
+    @PersistenceContext
+    private final EntityManager entityManager;
 
     /**
      * Find delivery order by transaction POID
@@ -82,4 +93,165 @@ public class DeliveryOrderIssueToCustomerRepository {
                     .build();
         }
     }
+
+    @SuppressWarnings("unchecked")
+    public List<Object[]> fetchShipLineDetails(Long pBLPoid) {
+
+        String sql =
+                "SELECT DISTINCT " +
+                        " CONTAINER_FORM_VHENT, " +
+                        " CONTAINER_FORM_RTN, " +
+                        " DO_PRINT_LINE, " +
+                        " LINE_CODE, " +
+                        " RCPT_PRINT_LINE " +
+                        "FROM SHIP_LINE_MASTER " +
+                        "WHERE LINE_POID IN ( " +
+                        "   SELECT LINE_POID " +
+                        "   FROM SHIP_VOYAGE_HDR " +
+                        "   WHERE TRANSACTION_POID IN ( " +
+                        "       SELECT VOYAGE_TRANSACTION_POID " +
+                        "       FROM SHIP_BL_MANIFEST_HDR " +
+                        "       WHERE TRANSACTION_POID = :pBLPoid " +
+                        "   ) " +
+                        ")";
+
+        Query query = entityManager.createNativeQuery(sql);
+        query.setParameter("pBLPoid", pBLPoid);
+
+        return query.getResultList();
+    }
+
+    public String printDocumentAlreadyPrinted(String pTypeRequest, Long transactionPoid) {
+        try {
+
+
+            String pendingAmountQuery =
+                    " SELECT NVL(SUM(PER_QUANTITY_AMOUNT),0) PENDING_AMOUNT FROM SHIP_BL_MANIFEST_HDR MHDR " +
+                            " INNER JOIN SHIP_BL_MANIFEST_CHARGES_DTL MCDTL ON MHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
+                            " WHERE MCDTL.TRANSACTION_POID IN (SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_CHARGES_DTL " +
+                            " WHERE FREIGHT_TYPE='C' AND RECEIPT_INVOICE_POID IS NOT NULL " +
+                            " AND TRANSACTION_POID IN (SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_HDR WHERE BL_TYPE<>'EXPORT')) " +
+                            " AND FREIGHT_TYPE='C' AND RECEIPT_INVOICE_POID IS NULL " +
+                            " AND NVL(PER_QUANTITY_AMOUNT,0)<>0 AND MHDR.TRANSACTION_POID=?";
+
+            BigDecimal pendingAmount =
+                    jdbcTemplate.queryForObject(
+                            pendingAmountQuery,
+                            BigDecimal.class,
+                            transactionPoid
+                    );
+
+            if (pendingAmount != null && pendingAmount.compareTo(BigDecimal.ZERO) > 0) {
+                return "Y";
+            }
+            String printStatusQuery =
+                    " select DO_PRINTED ,CNT_FORM_DLV_PRINTED,CNT_FORM_RTN_PRINTED " +
+                            " FROM DO_sh_PRINTING_DTL WHERE TRANSACTION_POID=?";
+
+            List<Map<String, Object>> rows =
+                    jdbcTemplate.queryForList(printStatusQuery, transactionPoid);
+
+            if (rows.isEmpty()) {
+                return "N";
+            }
+
+            Map<String, Object> row = rows.get(0);
+
+            String doPrinted =
+                    row.get("DO_PRINTED") != null
+                            ? row.get("DO_PRINTED").toString()
+                            : "N";
+
+            String dlvCntPrinted =
+                    row.get("CNT_FORM_DLV_PRINTED") != null
+                            ? row.get("CNT_FORM_DLV_PRINTED").toString()
+                            : "N";
+
+            String rtnCntPrinted =
+                    row.get("CNT_FORM_RTN_PRINTED") != null
+                            ? row.get("CNT_FORM_RTN_PRINTED").toString()
+                            : "N";
+
+            /* ===============================
+             * 3. Return strictly Y / N
+             * =============================== */
+            if ("DO".equalsIgnoreCase(pTypeRequest)) {
+                return "Y".equalsIgnoreCase(doPrinted) ? "Y" : "N";
+            }
+
+            if ("DLVCNT".equalsIgnoreCase(pTypeRequest)) {
+                return "Y".equalsIgnoreCase(dlvCntPrinted) ? "Y" : "N";
+            }
+
+            if ("RTNCNT".equalsIgnoreCase(pTypeRequest)) {
+                return "Y".equalsIgnoreCase(rtnCntPrinted) ? "Y" : "N";
+            }
+
+            return "N";
+
+        } catch (Exception e) {
+            return "Y";
+        }
+    }
+
+
+    public String getPlineCode(Long pBLPoid) {
+
+        String sql =
+                " select distinct " +
+                        "CONTAINER_FORM_VHENT," +
+                        "CONTAINER_FORM_RTN," +
+                        "DO_PRINT_LINE," +
+                        "LINE_CODE," +
+                        "RCPT_PRINT_LINE from SHIP_LINE_MASTER where line_poid in " +
+                        "(select line_poid from SHIP_VOYAGE_HDR where transaction_poid in " +
+                        "(select voyage_transaction_poid from SHIP_BL_MANIFEST_HDR where transaction_poid=" +
+                        pBLPoid.toString() + "))";
+
+        try {
+            @SuppressWarnings("unchecked")
+            List<Object[]> result = entityManager
+                    .createNativeQuery(sql)
+                    .getResultList();
+
+            if (!result.isEmpty()) {
+                Object lineCode = result.get(0)[3];
+                return lineCode != null ? lineCode.toString() : "ALL";
+            }
+
+            return "ALL";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "ALL";
+        }
+
+    }
+
+    public String getGlobalParameterValue(
+            String parameterName,
+            String parameterKeyIdType,
+            String parameterKeyId,
+            String defaultValue) {
+
+        String sql =
+                "SELECT PRODUCTION.RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
+
+        try {
+            return jdbcTemplate.queryForObject(
+                    sql,
+                    String.class,
+                    UserContext.getGroupPoid(),
+                    parameterName,
+                    parameterKeyIdType,
+                    parameterKeyId,
+                    defaultValue
+            );
+        } catch (EmptyResultDataAccessException e) {
+            return defaultValue;
+        }
+    }
+
+
 }
+

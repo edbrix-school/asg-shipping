@@ -40,6 +40,18 @@ import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 
 @RestController
 @RequiredArgsConstructor
@@ -50,19 +62,37 @@ public class VesselVoyageController {
 
 	private final VesselVoyageService vesselVoyageService;
 
-	@AllowedAction(UserRolesRightsEnum.VIEW)
-	@PostMapping("/list")
-	@Operation(summary = "List Vessel Voyages (List of Records)", description = "Uses DocumentSearchService (doc_master) and applies user line access via PROC_GLOB_USER_LINE_LISTING")
-	public ResponseEntity<?> list(@ParameterObject Pageable pageable,
-			@RequestBody(required = false) FilterRequestDto filters,
-			@RequestHeader(value = "X-Document-Id", required = false) String docId) {
-		log.info("Action={} | List voyages | page={} size={} docId={} groupPoid={} companyPoid={} userPoid={}",
-				UserContext.getActionRequested(), pageable.getPageNumber(), pageable.getPageSize(),
-				docId != null ? docId : UserContext.getDocumentId(), UserContext.getGroupPoid(),
-				UserContext.getCompanyPoid(), UserContext.getUserPoid());
-		return ApiResponse.success("Vessel voyages fetched successfully",
-				vesselVoyageService.listVoyages(filters, pageable, docId));
-	}
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @PostMapping("/list")
+    @Operation(summary = "List Vessel Voyages (List of Records)", description = "Uses DocumentSearchService (doc_master) and applies user line access via PROC_GLOB_USER_LINE_LISTING")
+    public ResponseEntity<?> list(
+            @ParameterObject Pageable pageable,
+            @RequestBody(required = false) FilterRequestDto filters,
+            @RequestHeader(value = "X-Document-Id", required = false) String docId,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
+    ) {
+        log.info("Action={} | List voyages | page={} size={} docId={} startDate={} endDate={} groupPoid={} companyPoid={} userPoid={}",
+                UserContext.getActionRequested(),
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                docId != null ? docId : UserContext.getDocumentId(),
+                startDate,
+                endDate,
+                UserContext.getGroupPoid(),
+                UserContext.getCompanyPoid(),
+                UserContext.getUserPoid());
+        
+        try {
+            if((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+                return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
+            }
+            
+            return ApiResponse.success("Vessel voyages fetched successfully", vesselVoyageService.listVoyages(filters, pageable, docId, startDate, endDate));
+        } catch (Exception e) {
+            return ApiResponse.internalServerError("Unable to fetch vessel voyages: " + e.getMessage());
+        }
+    }
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@GetMapping("/{voyagePoid}")

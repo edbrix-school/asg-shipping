@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Container_Return_ValidityHJS" language="groovy" pageWidth="595" pageHeight="842" columnWidth="532" leftMargin="43" rightMargin="20" topMargin="20" bottomMargin="20" uuid="fa8fe9d4-300e-42f1-981b-34c84a9c7273">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<subDataset name="dataset1" uuid="eb748215-7563-48d2-b201-700dcf700541">
+		<parameter name="P_BLPOID" class="java.lang.String">
+			<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+		</parameter>
+		<parameter name="P_CONTAINERNO" class="java.lang.String">
+			<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+		</parameter>
+		<queryString>
+			<![CDATA[select DM_TO_DATE validity_date from AR_SH_RECEIPT_CONTAINER_DTL
+WHERE BL_POID=$P{P_BLPOID} AND CONTAINER_NO=$P{P_CONTAINERNO}
+ order by DM_TO_DATE]]>
+		</queryString>
+		<field name="VALIDITY_DATE" class="java.sql.Timestamp"/>
+	</subDataset>
+	<parameter name="P_TRAN_NO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FSL_STAMP" class="java.io.InputStream"/>
+	<parameter name="SUB_FOOTER" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString>
+		<![CDATA[SELECT ROWNUM SEQNO ,D.CONTAINER_NO,CONTAINER_TYPE_SIZE ||' ' ||CONTAINER_TYPE_ISO_NAME   CNTSIZE,D.QUANTITY,NVL(D.GRS_WEIGHT,0)/1000 DWT,
+D.GRS_VOLUME,D.PACK_UNIT,D.NO_OF_PACKS,
+upper(GET_COMPANY_NAME(H.COMPANY_POID))COMPANY,H.BL_NUMBER,H.DO_NO ,H.SHIPPER_POID,get_address_Name(H.SHIPPER_POID)SHIPPER,
+get_LINE_NAME(VY.LINE_POID)LINE,VY.VOYAGE_NO,VY.ARRIVAL_DATE,GET_VESSEL_NAME(VY.VESSEL_POID) VESSEL,FREE_DAYS,EXTRA_FREE_DAYS,(VY.ARRIVAL_DATE+decode(nvl(EXTRA_FREE_DAYS,0),0, FREE_DAYS ,EXTRA_FREE_DAYS))-1 first_validity,H.TRANSACTION_POID,
+TO_CHAR(sysdate,'DD-MON-YYYY') current_date,
+H.COMPANY_POID
+FROM SHIP_BL_MANIFEST_CONTAINER_DTL D ,SHIP_BL_MANIFEST_HDR H, SHIP_VOYAGE_HDR VY
+, SHIP_CONTAINER_TYPE_MASTER CONTTYP,
+SHIP_LINE_TARIFF_HDR shlinetHD ,
+SHIP_LINE_TARIFF_IMP_DTL shlinetrf
+WHERE
+shlinetHD.TRANSACTION_POID=shlinetrf.TRANSACTION_POID
+AND
+D.TRANSACTION_POID=H.TRANSACTION_POID AND VY.TRANSACTION_POID=H.VOYAGE_TRANSACTION_POID
+and CONTAINER_TYPE_CODE=EQUIPMENT_ISO_TYPE
+and shlinetrf.CONTAINER_TYPE_POID=GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE)
+and H.TRANSACTION_POID=$P{P_TRAN_NO}
+AND to_date(NVL(ARRIVAL_DATE,EXPECTED_DATE)) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) and shlinetHD.LINE_POID=VY.line_poid AND NVL(print_return_form_dEFAULT,'N') IN ('Y','MANUALLYPRINT')]]>
+	</queryString>
+	<field name="SEQNO" class="java.math.BigDecimal"/>
+	<field name="CONTAINER_NO" class="java.lang.String"/>
+	<field name="CNTSIZE" class="java.lang.String"/>
+	<field name="QUANTITY" class="java.math.BigDecimal"/>
+	<field name="DWT" class="java.math.BigDecimal"/>
+	<field name="GRS_VOLUME" class="java.math.BigDecimal"/>
+	<field name="PACK_UNIT" class="java.lang.String"/>
+	<field name="NO_OF_PACKS" class="java.math.BigDecimal"/>
+	<field name="COMPANY" class="java.lang.String"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="DO_NO" class="java.lang.String"/>
+	<field name="SHIPPER_POID" class="java.math.BigDecimal"/>
+	<field name="SHIPPER" class="java.lang.String"/>
+	<field name="LINE" class="java.lang.String"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="ARRIVAL_DATE" class="java.sql.Timestamp"/>
+	<field name="VESSEL" class="java.lang.String"/>
+	<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+	<field name="EXTRA_FREE_DAYS" class="java.math.BigDecimal"/>
+	<field name="FIRST_VALIDITY" class="java.sql.Timestamp"/>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="CURRENT_DATE" class="java.lang.String"/>
+	<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<pageHeader>
+		<band height="94" splitType="Stretch">
+			<textField>
+				<reportElement x="0" y="7" width="532" height="16" uuid="ee553aec-12a9-4677-be84-82e19aa15207"/>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="11" isBold="true"  pdfFontName="Helvetica-Bold" isItalic="false" isUnderline="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{COMPANY}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="0" y="24" width="532" height="19" uuid="d6556836-2881-45ec-be33-3dac25cf9292"/>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="15" isBold="true" pdfFontName="Helvetica-Bold" isItalic="false"/>
+				</textElement>
+				<text><![CDATA[CONTAINER RETURN FORM]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="4" y="46" width="528" height="20" uuid="7b9a7a17-2c95-4e7c-b796-e08d20cbf1cb"/>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="14"  pdfFontName="Helvetica-Bold" isBold="true"/>
+				</textElement>
+				<text><![CDATA[PLEASE REMOVE  IMCO LABELS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="2" y="66" width="528" height="28" uuid="7c1fc67b-16df-4e9a-ae4a-865486a1e99a"/>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="20" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[ONLY HANJIN]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="4" splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="578" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="156" y="62" width="148" height="20" uuid="fa1c0e7b-8432-4661-96f2-e5d1f870d5e6"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="13" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="2" y="62" width="176" height="20" uuid="4ce2161d-392a-48b4-bee7-e63e30abae9d"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[PLEASE ACCEPT CONTAINER NO :]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="89" y="82" width="123" height="20" uuid="9907a842-f8b1-402f-837b-0ec76e88d857"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VESSEL}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="1" y="82" width="117" height="20" uuid="003f9898-c163-4216-b3f1-1a4e544c7517"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[DISCHARGED EX :]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="356" y="62" width="54" height="20" uuid="6c02e1c0-516f-4c74-80c2-062d4201c8d2"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNTSIZE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="315" y="62" width="35" height="20" uuid="dd0dde10-753b-4f91-aca8-45c70f8f13ba"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Size  :]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="255" y="82" width="36" height="20" uuid="1d59931b-6220-4132-b7b4-36ef89e5f74a"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VOYAGE_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="212" y="82" width="46" height="20" uuid="3e1cacf9-4b3d-47a6-8cf7-f8ae7870a151"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Voyage #]]></text>
+			</staticText>
+			<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="332" y="82" width="81" height="20" uuid="2b53f7f5-c35f-4536-aa0f-ae92c4805d32"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ARRIVAL_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="292" y="82" width="40" height="20" uuid="fac58522-767a-4d1f-bfe8-9a3131546f2d"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Arrival : ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="431" y="20" width="101" height="20" uuid="a14e4866-97ca-4345-878f-4bb63f4eb470"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="3" y="1" width="403" height="20" uuid="1c32d62f-5397-49c1-a565-5b6c84ed782a"/>
+				<textElement>
+					<font fontName="SansSerif" size="14" isBold="true" isUnderline="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[TO :  Alsharif Group Container Yard Hidd.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="419" y="65" width="112" height="20" uuid="42206426-f65a-47da-ba43-2d0b7093ba33"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[VALIDITY:]]></text>
+			</staticText>
+			<line>
+				<reportElement x="3" y="60" width="529" height="1" uuid="97333738-84c9-4175-b462-f2c6489de7e9"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="359" y="20" width="72" height="20" uuid="2b4779a9-5f2e-4d1a-b12b-934ec6ef25c9"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[BL Number  : ]]></text>
+			</staticText>
+			<line>
+				<reportElement x="2" y="102" width="530" height="1" uuid="02ea500a-9041-48c3-925c-8b42d20bf05b"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+			<textField pattern="dd-MMM-yyyy">
+				<reportElement x="426" y="89" width="100" height="14" uuid="654283fb-fb64-460e-bb58-aeec623edefd"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[$F{FIRST_VALIDITY}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="359" y="1" width="72" height="20" uuid="5cb050bd-4273-4e8c-857f-b1b17b32e879"/>
+				<textElement textAlignment="Right"/>
+				<text><![CDATA[Date :]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="432" y="1" width="100" height="20" uuid="c9e29afb-7569-478a-9d1e-4e95eb14682a"/>
+				<textFieldExpression><![CDATA[$F{CURRENT_DATE}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="2" y="575" width="528" height="1" uuid="649a5d4f-7ad0-4d8c-a8cc-f388f67c2e08"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="8" y="20" width="403" height="20" uuid="9098785e-478b-43ae-90c5-8248b3a05d06"/>
+				<textElement>
+					<font fontName="SansSerif" size="12" isBold="false" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Avenue-17, After BDB Building ,near to BIC Building, Hidd.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="5" y="40" width="440" height="20" uuid="2bd790a4-82e8-4e16-b470-5bd72b73fe13"/>
+				<textElement>
+					<font fontName="SansSerif" size="12" isBold="false" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Contact persons : Mr. Enasu (33921422) & Mr. Yaasin (39724661).]]></text>
+			</staticText>
+			<image>
+				<reportElement x="0" y="106" width="526" height="472" uuid="89aef777-0412-41c6-a8ce-0b87e40fe945"/>
+				<imageExpression><![CDATA[$P{FSL_STAMP}]]></imageExpression>
+			</image>
+			<staticText>
+				<reportElement x="67" y="430" width="403" height="20" uuid="000651ab-5bd8-4333-8350-8f83d1873078"/>
+				<textElement>
+					<font fontName="SansSerif" size="14" isBold="true" pdfFontName="Helvetica-Bold" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Avenue-17, After BDB Building,]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="69" y="458" width="403" height="20" uuid="e9a98634-13f1-4bf4-a46b-ac8f6d9ef45e"/>
+				<textElement>
+					<font fontName="SansSerif" size="14" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Near to BIC Building, Hidd.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="70" y="492" width="440" height="20" uuid="7df9983f-6d87-40ec-bb2d-05d5e173afc4"/>
+				<textElement>
+					<font fontName="SansSerif" size="14" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Contact persons : Mr. Enasu (33921422) & Mr. Yaasin (39724661).]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="7" y="405" width="403" height="20" uuid="ddf4f82f-75af-4fac-afb9-8c32ebdd1c56"/>
+				<textElement>
+					<font fontName="SansSerif" size="14" isBold="true"  pdfFontName="Helvetica-Bold" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Address :-]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="7" y="522" width="440" height="20" uuid="ac90d45e-e085-42c4-bf7e-dbe7177828ff"/>
+				<textElement>
+					<font fontName="SansSerif" size="14" isBold="true" pdfFontName="Helvetica-Bold" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Return Timing 6 Am To 5 Pm.]]></text>
+			</staticText>
+		</band>
+	</detail>
+	<pageFooter>
+		<band height="126" splitType="Stretch">
+			<rectangle>
+				<reportElement x="0" y="2" width="89" height="75" uuid="a500f3a6-be3a-4ed7-89d2-52ba5a7c4323"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle>
+				<reportElement x="89" y="2" width="89" height="75" uuid="c405b3d2-19ce-41e4-8f1c-7ccf8465c9ac"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle>
+				<reportElement x="178" y="2" width="89" height="75" uuid="1be4679e-806d-4bb4-9a5d-becfbfb24549"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle>
+				<reportElement x="267" y="2" width="89" height="75" uuid="5ff3c7d9-2520-4487-9dd5-c568c21b4552"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle>
+				<reportElement x="445" y="2" width="86" height="75" uuid="58c1d971-45da-4e90-b091-3af64c4ca142"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle>
+				<reportElement x="356" y="2" width="89" height="75" uuid="f91353c4-2883-4760-bf8d-5614dfddb436"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<staticText>
+				<reportElement x="0" y="2" width="89" height="20" uuid="1128ce5d-d65d-4598-ab25-eb43afa2b753"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[EXTENDED-1]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="89" y="2" width="89" height="20" uuid="666838c2-c0ff-4987-b616-d4e8346f03bd"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[EXTENDED-2]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="178" y="2" width="89" height="20" uuid="00b46a2a-c1d8-4c46-a5ba-f58e7675b7f5"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[EXTENDED-3]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="267" y="2" width="89" height="20" uuid="611f82c0-fafd-45cd-b8f8-9d853c656197"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[EXTENDED-4]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="356" y="2" width="89" height="20" uuid="86ea9350-9309-4c92-a693-47a72207e180"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[EXTENDED-5]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="445" y="2" width="86" height="20" uuid="72300f06-8bb2-4fa2-9577-19b7b2674741"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[EXTENDED-6]]></text>
+			</staticText>
+			<frame>
+				<reportElement x="2" y="22" width="530" height="55" uuid="7c86c4e8-c1da-4727-a391-69830ef510b4"/>
+				<componentElement>
+					<reportElement x="3" y="11" width="93" height="29" uuid="d9cb094d-6133-41e4-889d-4ece72020f66"/>
+					<jr:list xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd" printOrder="Horizontal" ignoreWidth="true">
+						<datasetRun subDataset="dataset1" uuid="064b11e5-6e93-422d-ac22-bd0b3e28e959">
+							<datasetParameter name="P_BLPOID">
+								<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+							</datasetParameter>
+							<datasetParameter name="P_CONTAINERNO">
+								<datasetParameterExpression><![CDATA[$F{CONTAINER_NO}]]></datasetParameterExpression>
+							</datasetParameter>
+							<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+						</datasetRun>
+						<jr:listContents height="29" width="93">
+							<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+								<reportElement x="1" y="5" width="89" height="20" uuid="3cc81ae2-d4e0-4fe0-83b8-9c9ff05f6149"/>
+								<textFieldExpression><![CDATA[$F{VALIDITY_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:listContents>
+					</jr:list>
+				</componentElement>
+			</frame>
+			<subreport>
+				<reportElement x="1" y="82" width="530" height="44" uuid="e1352d10-4cb4-4897-83cf-16de44c484b5"/>
+				<subreportParameter name="DOC_ID">
+					<subreportParameterExpression><![CDATA["100-212"]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="LOGIN_COMP_POID">
+					<subreportParameterExpression><![CDATA[$F{COMPANY_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUB_FOOTER}]]></subreportExpression>
+			</subreport>
+		</band>
+	</pageFooter>
+</jasperReport>

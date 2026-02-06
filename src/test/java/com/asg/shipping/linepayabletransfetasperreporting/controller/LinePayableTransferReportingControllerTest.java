@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -31,6 +32,9 @@ class LinePayableTransferReportingControllerTest {
 
     @Mock
     private LinePayableTransferReportingService service;
+
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
 
     @InjectMocks
     private LinePayableTransferReportingController controller;
@@ -118,6 +122,8 @@ class LinePayableTransferReportingControllerTest {
 
     @Test
     void deleteLinePayableTransfer_Success() throws Exception {
+        doNothing().when(service).deleteLinePayableTransfer(eq(1L), any());
+        
         mockMvc.perform(delete("/v1/line-payable-transfer-reporting/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));

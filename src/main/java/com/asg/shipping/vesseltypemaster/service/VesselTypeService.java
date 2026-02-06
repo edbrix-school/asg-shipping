@@ -1,7 +1,7 @@
 package com.asg.shipping.vesseltypemaster.service;
 
 
-
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeCreateDTO;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeDto;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeUpdateDTO;
@@ -63,7 +63,10 @@ public interface VesselTypeService {
     /**
      * Soft delete a vessel type
      *
-     * @param id Vessel Type POID
+     * @param groupPoid Group POID from UserContext
+     * @param vesselTypeId Vessel Type POID
+     * @param companyPoid Company POID from UserContext
+     * @param deleteReasonDto Delete reason information
      */
-    void deleteVesselType(Long id);
+    void deleteVesselType(Long groupPoid, Long vesselTypeId, Long companyPoid, DeleteReasonDto deleteReasonDto);
 }

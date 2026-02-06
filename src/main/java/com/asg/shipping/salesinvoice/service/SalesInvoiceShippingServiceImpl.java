@@ -7,6 +7,7 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LovDataService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceChargDtl;
@@ -18,6 +19,8 @@ import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceHdrRepository;
 import com.asg.shipping.salesinvoice.util.SalesInvoiceMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperReport;
 import oracle.jdbc.OracleTypes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -26,6 +29,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.ResultSet;
@@ -54,8 +58,8 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final DocumentSearchService documentService;
     private final SalesInvoiceMapper mapper;
     private final JdbcTemplate jdbcTemplate;
-    private final LovDataService lovService;
-
+    private final DataSource dataSource;
+    private final PrintService printService;
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> searchSalesInvoice(String docId, FilterRequestDto request, Pageable pageable) {
@@ -310,6 +314,16 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         log.info("Successfully verified invoice: {}", id);
     }
 
+
+    @Override
+    public byte[] print(Long transactionPoid, Long blPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
+        params.put("DOC_BL_POID",blPoid);
+        JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
+        return printService.fillReportToPdf(mainReport,params,dataSource);
+    }
+
+
     @Override
     @Transactional
     public CreateFFJobResponseDTO createFFJob(Long id, Long blPoid) {
@@ -523,6 +537,24 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             log.error("Error calling PROC_SHIP_BL_PRINT_LOAD", e);
             throw new ValidationException("Error loading print data: " + e.getMessage());
         }
+    }
+
+    @Override
+    public byte[] printInvoice(Long transactionPoid,Long blPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
+        params.put("DOC_BL_POID",blPoid);
+        JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP_USD.jrxml");
+        return printService.fillReportToPdf(mainReport,params,dataSource);
+
+    }
+
+    @Override
+    public byte[] printCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
+        params.put("DOC_BL_POID",blPoid);
+        JasperReport mainReport = printService.load("shipping/SH/SH_INVOICE_IMP_EXP_CUSTOMER.jrxml");
+        return printService.fillReportToPdf(mainReport,params,dataSource);
+
     }
 
     private void enrichCompanyFields(Long companyPoid, Consumer<String> setName, Consumer<String> setCode) {

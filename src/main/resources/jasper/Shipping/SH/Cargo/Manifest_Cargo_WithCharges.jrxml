@@ -33,10 +33,10 @@
 	<parameter name="P_IMPORT_EXPORT" class="java.lang.String">
 		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
 	</parameter>
-	<parameter name="MARK_INFO_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
-	<parameter name="CONTAINER_INFO_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
-	<parameter name="DESCRIPTION_INFO_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
-	<parameter name="FREIGHT_DETAIL_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUBREPORT_MARK_INFO" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUBREPORT_FREIGHT_DETAIL" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUBREPORT_CONTAINER_INFO" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUBREPORT_DESCRIPTION_INFO" class="net.sf.jasperreports.engine.JasperReport"/>
 	<queryString>
 		<![CDATA[SELECT DISTINCT MFHDR.TRANSACTION_POID,
       COMPANY_NAME,
@@ -553,7 +553,7 @@ code]]></text>
 				<subreportParameter name="LOGIN_GROUP_POID"/>
 				<subreportParameter name="LOGIN_COMP_POID"/>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-				<subreportExpression><![CDATA[$P{MARK_INFO_SUBREPORT_1}]]></subreportExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_MARK_INFO}]]></subreportExpression>
 			</subreport>
 			<subreport isUsingCache="false">
 				<reportElement x="95" y="37" width="368" height="45" uuid="d2d1fffa-e7b1-4550-9ac6-7c69ac51571b"/>
@@ -568,7 +568,7 @@ code]]></text>
 				<subreportParameter name="LOGIN_GROUP_POID"/>
 				<subreportParameter name="LOGIN_COMP_POID"/>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-				<subreportExpression><![CDATA[$P{CONTAINER_INFO_SUBREPORT_1}]]></subreportExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_CONTAINER_INFO}]]></subreportExpression>
 			</subreport>
 			<subreport isUsingCache="false">
 				<reportElement isPrintRepeatedValues="false" x="468" y="37" width="116" height="291" uuid="c24a2f0b-5367-472a-8fe9-cc1324ef77e5"/>
@@ -581,7 +581,7 @@ code]]></text>
 				<subreportParameter name="LOGIN_GROUP_POID"/>
 				<subreportParameter name="LOGIN_COMP_POID"/>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-				<subreportExpression><![CDATA[$P{DESCRIPTION_INFO_SUBREPORT_1}]]></subreportExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_DESCRIPTION_INFO}]]></subreportExpression>
 			</subreport>
 			<subreport>
 				<reportElement mode="Opaque" x="585" y="37" width="241" height="93" uuid="33c6e599-7723-4eeb-ba18-67e325805912"/>
@@ -597,7 +597,7 @@ code]]></text>
 					<subreportParameterExpression><![CDATA[$P{P_FREIGHTCARGO}]]></subreportParameterExpression>
 				</subreportParameter>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-				<subreportExpression><![CDATA[$P{FREIGHT_DETAIL_SUBREPORT_1}]]></subreportExpression>
+				<subreportExpression><![CDATA[$P{SUBREPORT_FREIGHT_DETAIL}]]></subreportExpression>
 			</subreport>
 			<line>
 				<reportElement stretchType="RelativeToTallestObject" x="464" y="0" width="1" height="328" isPrintWhenDetailOverflows="true" uuid="b1629a0b-0a10-4a89-b419-b1ff124806d3"/>

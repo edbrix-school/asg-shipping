@@ -1,9 +1,12 @@
 package com.asg.shipping.linepayabletransfetasperreporting.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
 import com.asg.shipping.linepayabletransfetasperreporting.service.LinePayableTransferReportingService;
@@ -35,6 +38,7 @@ import java.util.Map;
 public class LinePayableTransferReportingController {
 
     private final LinePayableTransferReportingService service;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/search")
@@ -172,6 +176,7 @@ public class LinePayableTransferReportingController {
             @PathVariable Long transactionPoid) {
         log.info("Getting line payable transfer with id: {}", transactionPoid);
         LinePayableTransferReportingDto dto = service.getLinePayableTransferById(transactionPoid);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
         log.info("Successfully retrieved line payable transfer with id: {}", transactionPoid);
         return ApiResponse.success("Line payable transfer retrieved successfully", dto);
     }
@@ -283,9 +288,10 @@ public class LinePayableTransferReportingController {
     })
     public ResponseEntity<?> deleteLinePayableTransfer(
             @Parameter(description = "Transaction POID", required = true, example = "12345")
-            @PathVariable Long transactionPoid) {
+            @PathVariable Long transactionPoid,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting line payable transfer with id: {}", transactionPoid);
-        service.deleteLinePayableTransfer(transactionPoid);
+        service.deleteLinePayableTransfer(transactionPoid, deleteReasonDto);
         log.info("Successfully deleted line payable transfer with id: {}", transactionPoid);
         return ApiResponse.success("Line payable transfer deleted successfully");
     }

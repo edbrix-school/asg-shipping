@@ -3,8 +3,7 @@ package com.asg.shipping.shippingofoqv2.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "OFOQ_API_RESPONSE_DTL")
@@ -48,13 +47,13 @@ public class OFOQManifestResponseDtlEntity {
     private String createdBy;
 
     @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "LASTMODIFIED_BY", length = 20)
     private String lastModifiedBy;
 
     @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastModifiedDate;
+    private LocalDateTime lastModifiedDate;
 
     @Column(name = "XML_RESPONSE", length = 4000)
     private String xmlResponse;
@@ -66,7 +65,6 @@ public class OFOQManifestResponseDtlEntity {
     private String manifestStatus;
 
     @Column(name = "RESPONSE_DATE")
-    @Temporal(TemporalType.DATE)
-    private Date responseDate;
+    private LocalDateTime responseDate;
 
 }

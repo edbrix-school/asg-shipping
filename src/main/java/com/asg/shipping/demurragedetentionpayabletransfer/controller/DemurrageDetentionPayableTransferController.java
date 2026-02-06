@@ -1,6 +1,11 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
+
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.service.DemurrageDetentionPayableTransferService;
@@ -28,6 +33,7 @@ import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 public class DemurrageDetentionPayableTransferController {
 
     private final DemurrageDetentionPayableTransferService service;
+    private final LoggingService loggingService;
 
     /**
      * Search/list Demurrage/Detention Payable Transfer records
@@ -50,6 +56,7 @@ public class DemurrageDetentionPayableTransferController {
             @PathVariable Long id) {
         log.info("Get request for id: {}", id);
         DemurrageDetentionPayableTransferDto result = service.getDemurrageDetentionPayableTransfer(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         return ApiResponse.success("Demurrage/Detention Payable Transfer retrieved successfully", result);
     }
 
@@ -84,11 +91,13 @@ public class DemurrageDetentionPayableTransferController {
      * Delete (soft delete) a Demurrage/Detention Payable Transfer record
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteDemurrageDetentionPayableTransfer(@PathVariable Long id) {
+    public ResponseEntity<?> deleteDemurrageDetentionPayableTransfer(
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Delete request for id: {}", id);
         Long companyPoid = getCompanyPoid();
         Long groupPoid = getGroupPoid();
-        service.deleteDemurrageDetentionPayableTransfer(id, companyPoid, groupPoid);
+        service.deleteDemurrageDetentionPayableTransfer(id, companyPoid, groupPoid, deleteReasonDto);
         return ApiResponse.success("Demurrage/Detention Payable Transfer deleted successfully");
     }
 
