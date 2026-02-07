@@ -1,14 +1,12 @@
 package com.asg.shipping.importManifestUpdate.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,4 +18,5 @@ public class MafiRequestDto {
     private Long mafiSize;
     private LocalDate mafiEmptyDate;
     private LocalDate backLoadDate;
+    private String actionType;
 }

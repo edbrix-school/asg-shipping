@@ -1,12 +1,16 @@
 package com.asg.shipping.tradelanemaster.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.tradelanemaster.dto.request.ShipTradelaneRequest;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
@@ -15,6 +19,7 @@ import com.asg.shipping.tradelanemaster.repository.ShipTradeLaneMasterRepository
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -37,7 +42,8 @@ public class ShipTradeLaneServiceImpl implements ShipTradeLaneService {
 
     private final ShipTradeLaneMasterRepository shipTradelaneMasterRepository;
     private final DocumentSearchService documentService;
-
+    private final DocumentDeleteService deleteService;
+    private final LoggingService loggingService;
     private static final String FLAG_YES = "Y";
     private static final String FLAG_NO = "N";
 
@@ -60,6 +66,7 @@ public class ShipTradeLaneServiceImpl implements ShipTradeLaneService {
         entity.setCreatedDate(LocalDateTime.now());
 
         entity = shipTradelaneMasterRepository.save(entity);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED,UserContext.getDocumentId(),entity.getTradeLanePoid().toString());
         return mapToResponse(entity);
     }
 
@@ -72,25 +79,27 @@ public class ShipTradeLaneServiceImpl implements ShipTradeLaneService {
         }
 
 
-        ShipTradelaneMaster entity = findEntityById(tradeLanePoid);
+        ShipTradelaneMaster existingEntity = findEntityById(tradeLanePoid);
 
-        if (FLAG_YES.equals(entity.getDeleted())) {
-            throw new IllegalStateException("Cannot update deleted record");
-        }
+        ShipTradelaneMaster oldEntity =  new ShipTradelaneMaster();
+        BeanUtils.copyProperties(existingEntity, oldEntity);
 
-        validateUpdateRequest(request, entity);
 
-        entity.setTradeLaneCode(request.getTradeLaneCode());
-        entity.setTradeLaneName(request.getTradeLaneName());
-        entity.setTradeLaneName2(request.getTradeLaneName2());
-        entity.setRegionPoid(request.getRegionPoid());
-        entity.setActive(Boolean.TRUE.equals(request.getActive()) ? FLAG_YES : FLAG_NO);
-        entity.setSeqNo(request.getSeqNo().longValue());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
+        validateUpdateRequest(request, existingEntity);
 
-        entity = shipTradelaneMasterRepository.save(entity);
-        return mapToResponse(entity);
+        existingEntity.setTradeLaneCode(request.getTradeLaneCode());
+        existingEntity.setTradeLaneName(request.getTradeLaneName());
+        existingEntity.setTradeLaneName2(request.getTradeLaneName2());
+        existingEntity.setRegionPoid(request.getRegionPoid());
+        existingEntity.setActive(Boolean.TRUE.equals(request.getActive()) ? FLAG_YES : FLAG_NO);
+        existingEntity.setSeqNo(request.getSeqNo().longValue());
+        existingEntity.setLastModifiedBy(getCurrentUser());
+        existingEntity.setLastModifiedDate(LocalDateTime.now());
+
+        existingEntity = shipTradelaneMasterRepository.save(existingEntity);
+        loggingService.logChanges(oldEntity,existingEntity, ShipTradelaneMaster.class,UserContext.getDocumentId(),tradeLanePoid.toString(),LogDetailsEnum.MODIFIED,"TRADELANE_POID");
+
+        return mapToResponse(existingEntity);
     }
 
     @Override
@@ -101,13 +110,11 @@ public class ShipTradeLaneServiceImpl implements ShipTradeLaneService {
 
     @Override
     @Transactional
-    public void delete(Long tradeLanePoid) {
+    public void delete(Long tradeLanePoid, DeleteReasonDto deleteReasonDto) {
         ShipTradelaneMaster entity = findEntityById(tradeLanePoid);
 
-        entity.setDeleted(FLAG_YES);
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-        shipTradelaneMasterRepository.save(entity);
+        deleteService.deleteDocument(tradeLanePoid,"SHIP_TRADELANE_MASTER",
+                "TRADELANE_POID",deleteReasonDto,null);
     }
 
     @Override
