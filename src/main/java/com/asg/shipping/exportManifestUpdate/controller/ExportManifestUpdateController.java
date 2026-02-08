@@ -85,7 +85,7 @@ public class ExportManifestUpdateController {
                     schema = @Schema(type = "string", example = "VIEW")
             )
     })
-    @PostMapping("/search")
+    @PostMapping("/list")
     public ResponseEntity<?> searchExportBls(
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters) {
