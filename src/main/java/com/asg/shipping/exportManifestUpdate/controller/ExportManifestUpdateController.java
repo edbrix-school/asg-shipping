@@ -33,7 +33,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.error;
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 @Slf4j
-public class ExportManifestBlController {
+public class ExportManifestUpdateController {
 
     private final ExportManifestBlService service;
 

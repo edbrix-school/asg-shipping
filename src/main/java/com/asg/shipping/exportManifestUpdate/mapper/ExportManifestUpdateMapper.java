@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
  * Mapper utility for converting between Entity and DTO for Export Manifest BL
  */
 @Component
-public class ExportManifestBlMapper {
+public class ExportManifestUpdateMapper {
 
     /**
      * Convert Header Entity to Response DTO

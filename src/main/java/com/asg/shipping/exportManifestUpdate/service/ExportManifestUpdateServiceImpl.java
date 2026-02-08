@@ -13,7 +13,7 @@ import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.common.service.LovService;
 import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.entity.*;
-import com.asg.shipping.exportManifestUpdate.mapper.ExportManifestBlMapper;
+import com.asg.shipping.exportManifestUpdate.mapper.ExportManifestUpdateMapper;
 import com.asg.shipping.exportManifestUpdate.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +44,7 @@ import static com.asg.common.lib.security.util.UserContext.getUserPoid;
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
-public class ExportManifestBlServiceImpl implements ExportManifestBlService {
+public class ExportManifestUpdateServiceImpl implements ExportManifestBlService {
 
     private static final String DOC_ID = "100-352";
 
@@ -54,7 +54,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final ExportShipBlManifestCargoDtlRepository cargoDtlRepository;
     private final ExportShipBlManifestChargesDtlRepository chargesDtlRepository;
     private final ExportManifestBlCustomRepository customRepository;
-    private final ExportManifestBlMapper mapper;
+    private final ExportManifestUpdateMapper mapper;
     private final DocumentSearchService documentSearchService;
     private final LovService lovService;
 	private final PrintService printService;
