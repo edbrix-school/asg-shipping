@@ -40,6 +40,9 @@ public class ShipAgentMasterServiceTest {
     @Mock
     private DocumentSearchService documentService;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private ShipAgentMasterServiceImpl service;
 

@@ -56,6 +56,9 @@ class PortStorageTariffsServiceImplTest {
     @Mock
     private LoggingService loggingService;
 
+    @Mock
+    private com.asg.common.lib.service.DocumentDeleteService documentDeleteService;
+
     @InjectMocks
     private PortStorageTariffsServiceImpl service;
 
@@ -341,7 +344,7 @@ class PortStorageTariffsServiceImplTest {
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testTariffHdr));
             when(tariffHdrRepository.save(any(ShipPortTariffHdr.class))).thenReturn(testTariffHdr);
 
-            service.deleteTariff(1L);
+            service.deleteTariff(1L, 1L, 1L, null);
 
             verify(tariffHdrRepository).save(argThat(tariff -> "Y".equals(tariff.getDeleted())));
         }
@@ -355,7 +358,8 @@ class PortStorageTariffsServiceImplTest {
             testTariffHdr.setDeleted("Y");
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testTariffHdr));
 
-            service.deleteTariff(1L);
+            assertThrows(com.asg.shipping.exceptions.CustomException.class, 
+                () -> service.deleteTariff(1L, 1L, 1L, null));
 
             verify(tariffHdrRepository, never()).save(any(ShipPortTariffHdr.class));
         }
@@ -368,7 +372,7 @@ class PortStorageTariffsServiceImplTest {
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> service.deleteTariff(1L));
+            assertThrows(ResourceNotFoundException.class, () -> service.deleteTariff(1L, 1L, 1L, null));
         }
     }
 }

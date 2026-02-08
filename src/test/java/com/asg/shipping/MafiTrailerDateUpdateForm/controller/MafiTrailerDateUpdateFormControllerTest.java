@@ -2,10 +2,7 @@ package com.asg.shipping.MafiTrailerDateUpdateForm.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,7 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
 import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormResponse;
 import com.asg.shipping.MafiTrailerDateUpdateForm.service.MafiTrailerDateUpdateFormService;
@@ -42,6 +41,9 @@ class MafiTrailerDateUpdateFormControllerTest {
 
     @Mock
     private MafiTrailerDateUpdateFormService service;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private MafiTrailerDateUpdateFormController controller;
@@ -69,10 +71,14 @@ class MafiTrailerDateUpdateFormControllerTest {
         }
     }
 
+    // ------------------------------------------------------
+    // LIST
+    // ------------------------------------------------------
     @Test
     void getAll_Success() throws Exception {
 
-        FilterRequestDto filters = new FilterRequestDto("OR", "false", List.of());
+        FilterRequestDto filters =
+                new FilterRequestDto("OR", "false", List.of());
 
         Map<String, Object> response =
                 Map.of("content", List.of(), "totalElements", 0);
@@ -85,9 +91,13 @@ class MafiTrailerDateUpdateFormControllerTest {
                 .content(objectMapper.writeValueAsString(filters)))
                 .andExpect(status().isOk());
 
-        verify(service).getAll(eq("DOC123"), eq(filters), any(Pageable.class));
+        verify(service)
+                .getAll(eq("DOC123"), eq(filters), any(Pageable.class));
     }
 
+    // ------------------------------------------------------
+    // GET BY ID
+    // ------------------------------------------------------
     @Test
     void getById_Success() throws Exception {
 
@@ -100,8 +110,15 @@ class MafiTrailerDateUpdateFormControllerTest {
                 .andExpect(status().isOk());
 
         verify(service).getById(1001L, 2001L, 3001L);
+        verify(loggingService).createLogSummaryEntry(
+                LogDetailsEnum.VIEWED,
+                "DOC123",
+                "1001");
     }
 
+    // ------------------------------------------------------
+    // UPDATE
+    // ------------------------------------------------------
     @Test
     void update_Success() throws Exception {
 

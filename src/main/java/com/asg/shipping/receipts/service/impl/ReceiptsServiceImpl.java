@@ -7,6 +7,7 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.receipts.dto.*;
 import com.asg.shipping.receipts.entity.ArShReceiptChargesDtl;
@@ -14,17 +15,21 @@ import com.asg.shipping.receipts.entity.ArShReceiptContainerDtl;
 import com.asg.shipping.receipts.entity.ArShReceiptHdr;
 import com.asg.shipping.receipts.entity.ArShReceiptPymtDetails;
 import com.asg.shipping.receipts.entity.TransactionDtlId;
+import com.asg.shipping.receipts.enums.ButtonType;
 import com.asg.shipping.receipts.repository.*;
 import com.asg.shipping.receipts.service.ReceiptsService;
 import com.asg.shipping.receipts.util.ReceiptsMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JRException;
+import net.sf.jasperreports.engine.JasperReport;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -53,6 +58,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private final TransactionDateService transactionDateService;
 	private final ShipReceiptProcRepository procRepository;
 	private final ReceiptAutoPopulateRepository autoPopulateRepository;
+	private final PrintService printService;
+	private final DataSource dataSource;
 
 	@Override
 	public ReceiptsBlDetailsDto getReceipt(Long transactionPoid) {
@@ -289,6 +296,22 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 				.totalAmount(totalAmount)
 				.build();
 	}
+
+	@Override
+	public byte[] receiptAndInvoicePrint(Long transactionPoid, Long blPoid, ButtonType buttonType) throws Exception {
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-103");
+		params.put("DOC_BL_POID",blPoid);
+		JasperReport mainReport;
+		if (ButtonType.Invoice.equals(buttonType)){
+			 mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
+
+        }else {
+			mainReport = printService.load("Shipping/SH/SH_ALL_BILL_RECEIPT.jrxml");
+        }
+        return printService.fillReportToPdf(mainReport,params,dataSource);
+
+    }
+
 
 	private ReceiptCalculateDemurrageResponseDto.ChargeDetail processCharge(ChargeDto charge, String containerSize) {
 		String chargeApplicable = charge.getChargeApplicable();

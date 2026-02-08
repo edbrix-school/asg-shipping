@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Container_Return_Validity_Extension" language="groovy" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="f48174d2-f814-4f03-aeb5-0b201a8e64d1">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="CONTAINER_NO_CODE" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[
+SELECT
+  CASE WHEN EXT_COUNT = 1 THEN DM_TO_DATE
+       WHEN EXT_COUNT = 2 THEN 'XXXXXXXX'
+       ELSE NULL END AS EXT1,
+
+  CASE WHEN EXT_COUNT = 2 THEN DM_TO_DATE
+       WHEN EXT_COUNT = 3 THEN 'XXXXXXXX'
+       ELSE NULL END AS EXT2,
+
+  CASE WHEN EXT_COUNT = 3 THEN DM_TO_DATE
+       WHEN EXT_COUNT = 4 THEN 'XXXXXXXX'
+       ELSE NULL END AS EXT3,
+
+  CASE WHEN EXT_COUNT = 4 THEN DM_TO_DATE
+       WHEN EXT_COUNT = 5 THEN 'XXXXXXXX'
+       ELSE NULL END AS EXT4,
+
+  CASE WHEN EXT_COUNT = 5 THEN DM_TO_DATE
+       WHEN EXT_COUNT = 6 THEN 'XXXXXXXX'
+       ELSE NULL END AS EXT5,
+
+  CASE WHEN EXT_COUNT = 6 THEN DM_TO_DATE
+       WHEN EXT_COUNT = 7 THEN 'XXXXXXXX'
+       ELSE NULL END AS EXT6,
+
+  CASE WHEN EXT_COUNT = 1 THEN SUBSTR($P{CONTAINER_NO_CODE},5)
+       WHEN EXT_COUNT = 2 THEN 'XXXXXXXX'
+       ELSE NULL END AS CNT1,
+
+  CASE WHEN EXT_COUNT = 2 THEN SUBSTR($P{CONTAINER_NO_CODE},5)
+       WHEN EXT_COUNT = 3 THEN 'XXXXXXXX'
+       ELSE NULL END AS CNT2,
+
+  CASE WHEN EXT_COUNT = 3 THEN SUBSTR($P{CONTAINER_NO_CODE},5)
+       WHEN EXT_COUNT = 4 THEN 'XXXXXXXX'
+       ELSE NULL END AS CNT3,
+
+  CASE WHEN EXT_COUNT = 4 THEN SUBSTR($P{CONTAINER_NO_CODE},5)
+       WHEN EXT_COUNT = 5 THEN 'XXXXXXXX'
+       ELSE NULL END AS CNT4,
+
+  CASE WHEN EXT_COUNT = 5 THEN SUBSTR($P{CONTAINER_NO_CODE},5)
+       WHEN EXT_COUNT = 6 THEN 'XXXXXXXX'
+       ELSE NULL END AS CNT5,
+
+  CASE WHEN EXT_COUNT = 6 THEN SUBSTR($P{CONTAINER_NO_CODE},5)
+       WHEN EXT_COUNT = 7 THEN 'XXXXXXXX'
+       ELSE NULL END AS CNT6
+FROM (
+  SELECT DO_NO,
+         TO_CHAR(DM_TO_DATE) DM_TO_DATE,
+         FREE_DAYS,
+         CASE WHEN FREE_DAYS > 0 THEN EXT_COUNT + 1 ELSE EXT_COUNT END AS EXT_COUNT
+  FROM (
+    SELECT MAX(DO_NO) DO_NO,
+           MAX(DM_TO_DATE) DM_TO_DATE,
+           NVL(MAX(FREE_DAYS),0) FREE_DAYS,
+           COUNT(*) EXT_COUNT
+    FROM VW_AR_SH_CONTAINER_DEMG_DTTN VWDMTN
+    INNER JOIN SHIP_BL_MANIFEST_HDR MHDR
+      ON MHDR.TRANSACTION_POID = VWDMTN.BL_POID
+    WHERE BL_POID = $P{DOC_KEY_POID}
+      AND CONTAINER_NO = $P{CONTAINER_NO_CODE}
+  )
+)
+]]>
+
+	</queryString>
+	<field name="EXT1" class="java.lang.String"/>
+	<field name="EXT2" class="java.lang.String"/>
+	<field name="EXT3" class="java.lang.String"/>
+	<field name="EXT4" class="java.lang.String"/>
+	<field name="EXT5" class="java.lang.String"/>
+	<field name="EXT6" class="java.lang.String"/>
+	<field name="CNT1" class="java.lang.String"/>
+	<field name="CNT2" class="java.lang.String"/>
+	<field name="CNT3" class="java.lang.String"/>
+	<field name="CNT4" class="java.lang.String"/>
+	<field name="CNT5" class="java.lang.String"/>
+	<field name="CNT6" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="127" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="466" y="62" width="87" height="20" uuid="dab00157-6ece-47a4-863f-164d69d2d204"/>
+				<textElement rotation="UpsideDown"/>
+				<textFieldExpression><![CDATA[$F{EXT1}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="375" y="62" width="86" height="20" uuid="3b4c9d36-2762-4a1e-ad23-1157bf95131a"/>
+				<textElement rotation="UpsideDown"/>
+				<textFieldExpression><![CDATA[$F{EXT2}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="281" y="62" width="89" height="20" uuid="51ec0bd5-7f07-4557-ba87-1cecfeada8a0"/>
+				<textElement rotation="UpsideDown"/>
+				<textFieldExpression><![CDATA[$F{EXT3}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="188" y="62" width="88" height="20" uuid="a2e9427a-810d-46e3-b6a6-23d7a43946fe"/>
+				<textElement rotation="UpsideDown"/>
+				<textFieldExpression><![CDATA[$F{EXT4}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="96" y="62" width="87" height="20" uuid="a5355fc2-7bbf-4a3f-8b0b-52f313f73b9a"/>
+				<textElement rotation="UpsideDown"/>
+				<textFieldExpression><![CDATA[$F{EXT5}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="1" y="62" width="90" height="20" uuid="5667edf5-6ab5-465b-be03-849c2111e379"/>
+				<textElement rotation="UpsideDown"/>
+				<textFieldExpression><![CDATA[$F{EXT6}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="466" y="41" width="87" height="20" uuid="511a2bbf-1fd0-4f43-9a6c-2129ad1c2c9b"/>
+				<textElement rotation="UpsideDown">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT1}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="373" y="41" width="87" height="20" uuid="8fd11b9e-d216-4c36-b478-ebedad2b49f3"/>
+				<textElement rotation="UpsideDown">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT2}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="282" y="41" width="87" height="20" uuid="f8710bf7-fe16-40a6-821b-d98822edefca"/>
+				<textElement rotation="UpsideDown">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT3}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="188" y="41" width="87" height="20" uuid="ba06e3dc-c880-4182-a0e6-567e9e6990d9"/>
+				<textElement rotation="UpsideDown">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT4}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="96" y="41" width="87" height="20" uuid="b02b1c09-1d8f-49e9-ad1c-19b4915e8f5a"/>
+				<textElement rotation="UpsideDown">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT5}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="4" y="41" width="87" height="20" uuid="f36937a8-4aaa-4929-9007-7b2451a57df6"/>
+				<textElement rotation="UpsideDown">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT6}]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="35" splitType="Stretch"/>
+	</pageHeader>
+</jasperReport>

@@ -1,0 +1,778 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="DO_SH" language="groovy" pageWidth="600" pageHeight="800" columnWidth="537" leftMargin="43" rightMargin="20" topMargin="20" bottomMargin="20" uuid="697f4a45-2e06-4a70-b840-a9cc05f732f1">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="113"/>
+	<style name="table">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_CH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TD" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_CH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TD" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2_TH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2_CH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2_TD" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3_TH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3_CH" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3_TD" mode="Opaque">
+		<box>
+			<pen lineWidth="0.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<subDataset name="BL_MANIFEST_CONTAINER" uuid="be4ebc8f-ad50-4712-8a99-cc914e20089c">
+		<parameter name="P_CONT_TRAN_NO" class="java.math.BigDecimal"/>
+		<queryString>
+			<![CDATA[select CONTAINER_NO,EQUIPMENT_ISO_TYPE,CONTAINER_TYPE_SIZE,CONTAINER_TYPE_ISO_NAME,EQUIPMENT_SEAL_NO,NO_OF_PACKS,PACK_UNIT,NET_WEIGHT,GRS_VOLUME,
+GRS_weight,NET_VOLUME
+ from SHIP_BL_MANIFEST_CONTAINER_DTL CONTDTL
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER CONTTYP ON CONTAINER_TYPE_CODE=EQUIPMENT_ISO_TYPE
+where CONTDTL.transaction_poid=$P{P_CONT_TRAN_NO}
+union all
+select CARGO_DESCRIPTION,null, to_char(QUANTITY),null, null,NO_OF_PACKS, PACK_UNIT, NET_WEIGHT,GRS_VOLUME,GRS_weight,NET_VOLUME
+from  SHIP_BL_MANIFEST_GENERAL_DTL genldtl
+where genldtl.transaction_poid=$P{P_CONT_TRAN_NO}]]>
+		</queryString>
+		<field name="CONTAINER_NO" class="java.lang.String"/>
+		<field name="EQUIPMENT_ISO_TYPE" class="java.lang.String"/>
+		<field name="CONTAINER_TYPE_SIZE" class="java.lang.String"/>
+		<field name="CONTAINER_TYPE_ISO_NAME" class="java.lang.String"/>
+		<field name="EQUIPMENT_SEAL_NO" class="java.lang.String"/>
+		<field name="NO_OF_PACKS" class="java.math.BigDecimal"/>
+		<field name="PACK_UNIT" class="java.lang.String"/>
+		<field name="NET_WEIGHT" class="java.math.BigDecimal"/>
+		<field name="GRS_VOLUME" class="java.math.BigDecimal"/>
+		<field name="GRS_WEIGHT" class="java.math.BigDecimal"/>
+		<field name="NET_VOLUME" class="java.math.BigDecimal"/>
+	</subDataset>
+	<subDataset name="CARGO_DESCRIPTION" uuid="56b7e88d-b35d-4421-946a-c59c025286eb">
+		<parameter name="P_CARGO_TRAN_NO" class="java.math.BigDecimal"/>
+		<queryString>
+			<![CDATA[select CARGO_DESCRIPTION,DESCRIPTION_TYPE from SHIP_BL_MANIFEST_CARGO_DTL CARGODTL where DESCRIPTION_TYPE='CARGO'
+and CARGODTL.transaction_poid=$P{P_CARGO_TRAN_NO} and CARGO_DESCRIPTION is not null
+UNION ALL
+select MAX(CARGO_DESCRIPTION),'CARGO' from SHIP_BL_MANIFEST_CONTAINER_DTL scdtl where scdtl.TRANSACTION_POID= $P{P_CARGO_TRAN_NO}
+GROUP BY TRANSACTION_POID
+UNION ALL
+select MAX(CARGO_DESCRIPTION),'CARGO' from SHIP_BL_MANIFEST_GENERAL_DTL scdtl where scdtl.TRANSACTION_POID= $P{P_CARGO_TRAN_NO}
+GROUP BY TRANSACTION_POID]]>
+		</queryString>
+		<field name="CARGO_DESCRIPTION" class="java.lang.String"/>
+		<field name="DESCRIPTION_TYPE" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="MARK_NOS" uuid="90528a2b-eccc-4e33-a40a-0c6a42aa5165">
+		<parameter name="P_MARKS_TRAN_NO" class="java.math.BigDecimal"/>
+		<queryString>
+			<![CDATA[select CARGO_DESCRIPTION,DESCRIPTION_TYPE from SHIP_BL_MANIFEST_CARGO_DTL CARGODTL where DESCRIPTION_TYPE='MARK' and
+CARGODTL.transaction_poid=$P{P_MARKS_TRAN_NO} and CARGO_DESCRIPTION is not null]]>
+		</queryString>
+		<field name="CARGO_DESCRIPTION" class="java.lang.String"/>
+		<field name="DESCRIPTION_TYPE" class="java.lang.String"/>
+	</subDataset>
+	<subDataset name="COMPANY_LOG" uuid="58fa9fd2-59c4-44b7-87f9-810d102e5728">
+		<parameter name="LOGIN_COMP_POID_L" class="java.lang.String" isForPrompting="false"/>
+		<parameter name="LOGIN_DIV_POID_L" class="java.lang.String" isForPrompting="false"/>
+		<queryString>
+			<![CDATA[SELECT CM.COMPANY_POID, CM.COMPANY_NAME, CM.ADDRESS, CM.LOGO_IMAGE, CMD.REMARKS, CMD.COMPANY_DIV_LOGO, CMD.COMPANY_DIV_ADDRESS
+FROM GLOBAL_COMPANY_MASTER CM
+INNER JOIN GLOBAL_COMPANY_MASTER_DIV_DTL CMD ON CM.COMPANY_POID = CMD.COMPANY_POID
+WHERE CM.COMPANY_POID = $P{LOGIN_COMP_POID_L}
+AND CMD.DIV_POID = $P{LOGIN_DIV_POID_L}]]>
+		</queryString>
+		<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+		<field name="COMPANY_NAME" class="java.lang.String"/>
+		<field name="ADDRESS" class="java.lang.String"/>
+		<field name="LOGO_IMAGE" class="java.io.InputStream"/>
+		<field name="REMARKS" class="java.lang.String"/>
+		<field name="COMPANY_DIV_LOGO" class="java.io.InputStream"/>
+		<field name="COMPANY_DIV_ADDRESS" class="java.lang.String"/>
+	</subDataset>
+	<parameter name="P_TRAN_NO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="DOC_ID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_DEBUG" class="java.lang.String">
+		<defaultValueExpression><![CDATA["N"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[select MHDR.TRANSACTION_POID,BL_NUMBER,
+NVL((select DISTINCT DECODE(GET_ADDRESS_DETAILS (PRINT_CUSTOMER_POID),'N/A',CONSIGNEE_EDI_NAME,GET_ADDRESS_DETAILS (PRINT_CUSTOMER_POID)) from AR_SH_RECEIPT_HDR
+WHERE BL_POID=MHDR.TRANSACTION_POID),(CASE WHEN upper(GET_ADDRESS_NAME(NOTIFY_POID_1)) like '%ORDER%' or (upper(GET_ADDRESS_NAME(NOTIFY_POID_1)) like '%N/A%') THEN gET_ADDRESS_NAME(DECODE( DO_PRIORITY,'C',CONSIGNEE_POID,'N',NOTIFY_POID_1,CONSIGNEE_POID))
+   ELSE GET_ADDRESS_NAME(DECODE( DO_PRIORITY,'C',CONSIGNEE_POID,'N',NOTIFY_POID_1,NOTIFY_POID_1)) END)) CONSIGNEE_EDI_NAME
+,NOTIFY1_EDI_NAME,
+NOTIFY2_EDI_NAME,nvl(MHDR.DOCUMENT_COMPANY_POID,nvl(MHDR.COMPANY_POID,1)) DOCUMENT_COMPANY_POID ,nvl(MHDR.DOCUMENT_COMPANY_DIVISION_POID,nvl(MHDR.DOCUMENT_COMPANY_DIVISION_POID,1)) DOCUMENT_COMPANY_DIVISION_POID,
+CUSTOM_REGNO,GET_PORT_NAME(DESTINATION_PORT_POID) DESTINATION_PORT,GET_PORT_NAME(PORT_OF_LOADING_POID)  PORT_OF_LOADING,GET_LINE_NAME(vhdr.LINE_POID) LINE_NAME,VOYAGE_NO,GET_VESSEL_NAME(VESSEL_POID) VESSEL_NAME, to_char(NVL(ARRIVAL_DATE,EXPECTED_DATE),'DD-MON-YYYY') ETA,PRE_CARRIED_BY ,JOB_NO,
+GET_COMPANY_NAME(nvl(DOCUMENT_COMPANY_POID,mhdr.COMPANY_POID)) Print_Company,
+(select max(DO_DATE) from DO_sh_PRINTING_DTL dodtl where dodtl.TRANSACTION_POID=mhdr.TRANSACTION_POID) do_date,
+(select max(DO_no) from DO_sh_PRINTING_DTL dodtl where dodtl.TRANSACTION_POID=mhdr.TRANSACTION_POID) do_no,
+RTN_GLOBAL_PARAMETER(1, 'GLOBAL_COMPANY_STAMP', DECODE(nvl($P{P_DEBUG},'N') ,'Y','STAMP_TEST','STAMP'), mHDR.COMPANY_POID, NULL)  STAMP_DISPLAY
+
+from SHIP_BL_MANIFEST_HDR MHDR
+INNER JOIN  SHIP_VOYAGE_HDR VHDR
+ON VHDR.TRANSACTION_POID = MHDR.VOYAGE_TRANSACTION_POID
+INNER JOIN SHIP_LINE_MASTER SLN
+ON   SLN.LINE_POID=VHDR.LINE_POID
+WHERE MHDR.TRANSACTION_POID =
+$P{P_TRAN_NO} AND    NVL(HOLD_REASON,'5') NOT IN('1','3','5')
+AND NVL(SLN.DO_PRINT_LINE,'N')='Y']]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="CONSIGNEE_EDI_NAME" class="java.lang.String"/>
+	<field name="NOTIFY1_EDI_NAME" class="java.lang.String"/>
+	<field name="NOTIFY2_EDI_NAME" class="java.lang.String"/>
+	<field name="DOCUMENT_COMPANY_POID" class="java.math.BigDecimal"/>
+	<field name="DOCUMENT_COMPANY_DIVISION_POID" class="java.math.BigDecimal"/>
+	<field name="CUSTOM_REGNO" class="java.lang.String"/>
+	<field name="DESTINATION_PORT" class="java.lang.String"/>
+	<field name="PORT_OF_LOADING" class="java.lang.String"/>
+	<field name="LINE_NAME" class="java.lang.String"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="VESSEL_NAME" class="java.lang.String"/>
+	<field name="ETA" class="java.lang.String"/>
+	<field name="PRE_CARRIED_BY" class="java.lang.String"/>
+	<field name="JOB_NO" class="java.lang.String"/>
+	<field name="PRINT_COMPANY" class="java.lang.String"/>
+	<field name="DO_DATE" class="java.sql.Timestamp"/>
+	<field name="DO_NO" class="java.lang.String"/>
+	<field name="STAMP_DISPLAY" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band height="332" splitType="Stretch">
+			<rectangle radius="10">
+				<reportElement mode="Transparent" x="280" y="231" width="256" height="100" uuid="d3de5a85-2428-4838-a348-2ce83d0d7ab1"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle radius="10">
+				<reportElement mode="Transparent" x="0" y="231" width="275" height="100" uuid="a4746f0a-5473-4e77-be74-308f84ceff48"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</rectangle>
+			<rectangle radius="10">
+				<reportElement mode="Transparent" x="309" y="130" width="227" height="80" uuid="3a2edce5-f2f4-452d-b4fc-46a35eea22e6"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</rectangle>
+			<staticText>
+				<reportElement x="165" y="97" width="192" height="26" uuid="0891fc75-4de0-4719-b6a3-35c5acae103c"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="19" isBold="true"  isUnderline="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[DELIVERY ORDER]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="130" width="252" height="45" uuid="448a4902-139e-4df1-a7b4-62b37b2dfa98"/>
+				<textElement>
+					<font fontName="SansSerif" size="11" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[To,
+The Manager,
+Import Yard,]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="412" y="157" width="115" height="20" uuid="1bb6fcc9-e37e-4892-b70e-6c8b3a6175a8"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DO_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="359" y="157" width="53" height="20" uuid="77fb8baf-4d80-4208-87d3-db12263f1661"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[D/O No.]]></text>
+			</staticText>
+			<textField pattern="dd-MMM-yy" isBlankWhenNull="true">
+				<reportElement x="412" y="178" width="115" height="20" uuid="c9b4b8d6-861e-4d3e-9799-b44630e1098e"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DO_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="359" y="178" width="53" height="20" uuid="f9a648a3-ccd1-413e-8613-db0e5407d18d"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Date]]></text>
+			</staticText>
+			<textField evaluationTime="Report">
+				<reportElement x="478" y="85" width="40" height="20" uuid="a7eb1c3f-ab7f-422b-aebd-df5958f53144"/>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="403" y="85" width="75" height="20" uuid="3d4b8565-6383-4ffd-995f-fe79b8737b84"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="40" y="210" width="342" height="20" uuid="5b3f5a20-b7b5-4456-ac63-28e4fbb62dfd"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONSIGNEE_EDI_NAME}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="8" y="210" width="29" height="20" uuid="3fb44fe9-539b-45b1-a632-4edc93db1bb6"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[M/S. ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="73" y="243" width="196" height="20" uuid="4ccb768a-947a-48d3-bc39-6368cf196e97"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PORT_OF_LOADING}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="5" y="243" width="59" height="20" uuid="37120796-af83-4d8b-8396-b54f7e8abef4"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Loaded At]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="73" y="263" width="196" height="20" uuid="3fe06930-3141-4ade-b181-d17def7391c6"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LINE_NAME}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="5" y="263" width="59" height="20" uuid="61d0755c-ad82-4fde-aecf-54d757eff0c1"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Line]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="119" y="283" width="150" height="20" uuid="d5789513-7ef6-4131-bee1-de5dc316a41c"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VESSEL_NAME}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="79" y="283" width="36" height="20" uuid="be69af76-de28-4045-ae17-dc193a9a206e"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VOYAGE_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="5" y="283" width="85" height="20" uuid="78cdf856-4e6e-4a39-ab1f-3dc5872867df"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Voy.& Vessel]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="376" y="241" width="148" height="20" uuid="409d7c55-9fdf-416a-b592-81533e9481ea"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{ETA}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="376" y="261" width="148" height="20" uuid="62c4af7d-f9be-45a1-a2f1-73b8f5873791"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="376" y="281" width="148" height="20" uuid="13d72d0f-2bf0-4bb6-8264-c1bdb5b4c8ea"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PRE_CARRIED_BY}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="376" y="301" width="148" height="20" uuid="c7a4d091-8060-495a-b5a0-f6b133c60e25"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{JOB_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="305" y="241" width="65" height="20" uuid="35708f49-0a15-4b1d-b665-7452276e4fba"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[E.T.A.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="305" y="261" width="65" height="20" uuid="00c96f94-5f56-4232-bfa2-e3914f6ac228"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[B/L No.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="305" y="281" width="65" height="20" uuid="b0592ea7-838b-49c9-9196-8d95a1be155c"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Ex.Voy,& Vsl.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="305" y="301" width="65" height="20" uuid="34f8eaec-bbb7-499d-a3ac-3ec8c2586b69"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Job No.]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="413" y="137" width="115" height="20" uuid="a7ea5d72-923b-446b-9fe8-e46dadd40aab"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CUSTOM_REGNO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="329" y="137" width="84" height="20" uuid="231db1a3-28a5-4b80-ac51-4befa147bdbf"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[OFOQ Reg No.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="191" width="246" height="20" uuid="1a5a81bc-f12c-42e6-ad10-22b202337d3f"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[Please deliver the undermentioned packages to]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="175" width="254" height="16" uuid="7dc869d4-b647-4214-b4f8-ec0118bcaeb5"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[KHALIFA BIN SALMAN PORT,KINGDOM OF BAHRAIN]]></text>
+			</staticText>
+			<componentElement>
+				<reportElement key="table 4" x="3" y="2" width="534" height="60" uuid="8e3d84da-f9d8-4303-96ac-62d8e5097eb5"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="COMPANY_LOG" uuid="f4a7cf31-c49b-4cfc-bebc-c1f20a52f956">
+						<datasetParameter name="LOGIN_COMP_POID_L">
+							<datasetParameterExpression><![CDATA[$F{DOCUMENT_COMPANY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="LOGIN_DIV_POID_L">
+							<datasetParameterExpression><![CDATA[$F{DOCUMENT_COMPANY_DIVISION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="507" uuid="6f2dfd10-a887-4af9-b5ef-bc56c31d0bf7">
+						<jr:detailCell height="86" rowSpan="1">
+							<image hAlign="Center">
+								<reportElement x="0" y="0" width="507" height="62" forecolor="#FFFFFF" uuid="dd8a3461-a403-4327-85d2-73d4a073d95a"/>
+								<imageExpression><![CDATA[$F{COMPANY_DIV_LOGO}]]></imageExpression>
+							</image>
+							<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+								<reportElement x="0" y="66" width="507" height="15" isPrintWhenDetailOverflows="true" uuid="5945a983-cbf2-47f1-81a5-0ea3f5bcdc9c"/>
+								<textElement textAlignment="Center" verticalAlignment="Middle">
+									<font fontName="SansSerif" size="8"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{COMPANY_DIV_ADDRESS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+		</band>
+	</pageHeader>
+	<detail>
+		<band height="57" splitType="Stretch">
+			<componentElement>
+				<reportElement key="table" style="table" x="3" y="0" width="272" height="53" uuid="84f44930-e6c1-4d74-a83e-fd8da744e8b6"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="BL_MANIFEST_CONTAINER" uuid="d94cf956-79c0-4886-b7f0-9ccd22dfd02f">
+						<datasetParameter name="P_CONT_TRAN_NO">
+							<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="88" uuid="a9392fa0-8ecf-4d91-85d7-e64b800d2898">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement style="table_CH" x="0" y="0" width="88" height="28" uuid="983feadc-f3be-4024-bb6e-80e4e9d808f4"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Container No
+Marks & Numbers]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="88" height="1" uuid="739b8584-4fd4-4288-9345-3607ca3e0b15"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="75" height="20" uuid="efecd1d1-2a37-47cc-b751-92265ca23382"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="32" uuid="1592c182-f76e-4569-8be0-6193ee6d66f3">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="30" height="28" uuid="2fd605f2-7bac-4ca0-8663-57938e48eaf3"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Type]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="32" height="1" uuid="9a9936fb-b7f0-4f39-bea4-beb623c62d38"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="30" height="20" uuid="535d563f-4bb5-418a-abb4-e64289534382"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_TYPE_ISO_NAME}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="37" uuid="23753254-c943-4062-8b43-72254d591ddb">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="1" width="37" height="27" uuid="a542184b-b1e8-456c-9a38-6b1cf9f0072d"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Size]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="37" height="1" uuid="0f8db58e-4474-43bd-b1e8-a54b7644f65b"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="37" height="20" uuid="e390c845-5a12-400f-b1ae-9ad51b37f448"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_TYPE_SIZE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="39" uuid="8bdce0d0-fff3-46a7-bc47-6198d5124df8">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="39" height="28" uuid="27241f91-b483-43a2-897f-cca20930d668"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[No  Of
+Packs]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="39" height="1" uuid="7a9e93a9-7322-43ff-87d5-ea1faae58ff5"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="37" height="20" uuid="fdaeda32-7e52-4641-8f16-fe3b6e6c7157"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{NO_OF_PACKS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="29" uuid="1d1fe701-7016-4e1e-82d0-abbd9a5e0274">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="29" height="28" uuid="1ce4d26f-0dd8-4cdb-8b78-5320519d8559"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Unit
+Pack]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="29" height="1" uuid="ff0b7c60-fb27-4e4b-8a70-788b1d2dfcb3"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="29" height="20" uuid="cecd5050-2d95-440d-9019-8e1a99e830d6"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{PACK_UNIT}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="64" uuid="d434b291-cb64-4199-8324-7e10dad5b52b">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="3" y="0" width="61" height="28" uuid="76eea0d8-5696-4a14-81d6-447e49333e46"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Weight Kgs]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="64" height="1" uuid="0155f978-0600-420c-855b-776d21872d46"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField pattern="" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="64" height="20" uuid="e0db10d3-140d-4225-8113-ab6d09935404"/>
+								<textFieldExpression><![CDATA[$F{GRS_WEIGHT}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="65" uuid="d33b0aea-39f0-4c9b-88cd-b73fd0c30ab9">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="3" y="0" width="62" height="28" uuid="b9f0db74-c876-43d4-ac1a-bb41da9f4967"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Measure
+CBM]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="65" height="1" uuid="682103d0-f53e-4912-be3d-f3b962537dc3"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="20" rowSpan="1">
+							<textField pattern="" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="65" height="20" uuid="139e3674-7374-4d56-ad71-ad14c3ed7684"/>
+								<textFieldExpression><![CDATA[$F{NET_VOLUME}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<componentElement>
+				<reportElement key="table 1" style="table 1" stretchType="RelativeToTallestObject" x="357" y="0" width="177" height="50" uuid="0664b188-2f76-42f4-88b7-760c0a1cbf18"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="CARGO_DESCRIPTION" uuid="2e88e003-ca32-4e43-9996-56392ee9c48b">
+						<datasetParameter name="P_CARGO_TRAN_NO">
+							<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="177" uuid="9ddbe549-87a2-434a-9968-a082cb0f3015">
+						<jr:columnHeader style="table 1_CH" height="29" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="177" height="27" uuid="cd68c1fc-83de-4dc0-890e-5593623a16fb"/>
+								<textElement>
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Cargo Description]]></text>
+							</staticText>
+							<line>
+								<reportElement x="0" y="28" width="153" height="1" uuid="a14dbe3f-a92a-42c3-a9f1-1a49c455c454"/>
+								<graphicElement>
+									<pen lineWidth="0.25"/>
+								</graphicElement>
+							</line>
+						</jr:columnHeader>
+						<jr:detailCell style="table 1_TD" height="20" rowSpan="1">
+							<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+								<reportElement stretchType="RelativeToTallestObject" x="0" y="0" width="177" height="20" uuid="a82dcd60-87d4-46cb-b1be-323221b41c99"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CARGO_DESCRIPTION}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+		</band>
+		<band height="55">
+			<componentElement>
+				<reportElement key="table 2" style="table 2" x="3" y="0" width="416" height="50" uuid="71f7d79d-bea9-4bd5-af6a-70ecfb19f386"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="MARK_NOS" uuid="40103107-2816-40d5-b1c2-f1d89449a641">
+						<datasetParameter name="P_MARKS_TRAN_NO">
+							<datasetParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="358" uuid="e13a62e5-7402-44be-8e19-5f741f215ee4">
+						<jr:detailCell style="table 2_TD" height="20" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="358" height="20" uuid="50916308-3651-4c0f-9be4-c2b494340614"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CARGO_DESCRIPTION}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<line>
+				<reportElement positionType="Float" x="-1" y="54" width="519" height="1" uuid="7b84733f-e0d6-45b7-adc3-e561e6f2210d"/>
+				<graphicElement>
+					<pen lineWidth="0.25"/>
+				</graphicElement>
+			</line>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="139" splitType="Stretch">
+			<staticText>
+				<reportElement x="8" y="5" width="508" height="30" uuid="9dcf40d3-2c33-4ccf-8beb-840505b83795"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<text><![CDATA[The Delivery Order is issued subject to the safe arrival of the vessel  at the port of discharge and to the terms and conditions on the Bill of Lading.  ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="39" width="45" height="20" uuid="c1a0a9d1-1aa8-4b0f-ba74-fde49ca49c00"/>
+				<textElement>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[For: ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="10" y="79" width="100" height="20" uuid="eaa1e242-5338-4a17-8772-f1efbbddd087"/>
+				<textElement>
+					<font fontName="SansSerif" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[As Agents]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="56" y="39" width="193" height="20" uuid="0affccb7-00eb-4b8a-a5e2-41ccb21b3e25"/>
+				<textElement>
+					<font fontName="SansSerif"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{PRINT_COMPANY}]]></textFieldExpression>
+			</textField>
+<!--			<image>-->
+<!--				<reportElement x="285" y="23" width="249" height="74" uuid="849020d2-646c-420c-8e64-30adaad41e54"/>-->
+<!--				<imageExpression><![CDATA[$F{STAMP_DISPLAY}]]></imageExpression>-->
+<!--			</image>-->
+			<staticText>
+				<reportElement x="12" y="113" width="508" height="16" forecolor="#999999" uuid="99558d7f-ad35-48cb-90b7-4d0ff429fca5"/>
+				<textElement textAlignment="Justified" verticalAlignment="Middle">
+					<font size="8" isBold="false" isUnderline="false"/>
+				</textElement>
+				<text><![CDATA[ISO : 100-207                                                  This is a computer-generated document and it does not require a signature.]]></text>
+			</staticText>
+		</band>
+	</pageFooter>
+</jasperReport>

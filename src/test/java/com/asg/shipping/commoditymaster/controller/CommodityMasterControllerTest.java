@@ -29,6 +29,9 @@ class CommodityMasterControllerTest {
     @Mock
     private CommodityMapper mapper;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private CommodityMasterController controller;
 

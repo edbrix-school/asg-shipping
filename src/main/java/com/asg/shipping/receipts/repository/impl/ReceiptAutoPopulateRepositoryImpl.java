@@ -273,9 +273,5 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
         }
     }
 
-    @Override
-    public TaxConfig findTaxConfig(Long companyPoid) {
-        return null;
-    }
 
 }

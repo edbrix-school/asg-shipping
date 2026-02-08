@@ -4,6 +4,7 @@ import com.asg.shipping.collectionhandover.dto.CollectionHandoverCreateDTO;
 import com.asg.shipping.collectionhandover.dto.CollectionHandoverDto;
 import com.asg.shipping.collectionhandover.dto.CollectionHandoverUpdateDTO;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -18,9 +19,11 @@ public interface CollectionHandoverService {
      * @param docId Document ID (e.g., "300-106" for Collection Handover)
      * @param request FilterRequestDto containing filters, operator, isDeleted
      * @param pageable Pagination and sorting information
+     * @param startDate Optional start date for filtering
+     * @param endDate Optional end date for filtering
      * @return Map containing paginated results and display fields
      */
-    Map<String, Object> searchCollectionHandovers(String docId, com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchCollectionHandovers(String docId, com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable, LocalDate startDate, LocalDate endDate);
 
     /**
      * Get collection handover by ID
@@ -66,5 +69,7 @@ public interface CollectionHandoverService {
      * @param mainOfcRemarks Optional remarks
      */
     void toggleVerifyStatus(Long id, String verifiedRcvd, String mainOfcRemarks);
+    
+    byte[] print(Long transactionPoid) throws Exception;
 }
 

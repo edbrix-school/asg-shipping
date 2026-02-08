@@ -1,0 +1,1148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Container_Detention_details" language="groovy" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="4d170049-c0d5-4749-9b81-dd1beb3f84dc">
+	<property name="ireport.zoom" value="1.6105100000000008"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="163"/>
+	<style name="table">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 1_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 2_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3">
+		<box>
+			<pen lineWidth="1.0" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3_TH" mode="Opaque" backcolor="#F0F8FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3_CH" mode="Opaque" backcolor="#BFE1FF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<style name="table 3_TD" mode="Opaque" backcolor="#FFFFFF">
+		<box>
+			<pen lineWidth="0.5" lineColor="#000000"/>
+		</box>
+	</style>
+	<subDataset name="Detention_details" uuid="a9bfd83b-7870-40fe-978d-ecdcf016eca7">
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[select distinct condtl.CONTAINER_NO,to_char(ISSUE_TO_SHIPPER,'DD-MON-YYYY') ISSUE_DATE,TO_CHAR(RETURN_FROM_SHIPPER,'DD-MON-YYYY') RECEIVED_DATE
+,decode(nvl(EXTRA_FREE_DAYS,0),0,TIDTL.FREE_DAYS,EXTRA_FREE_DAYS) FREE_DAYS,
+round(((to_date(RETURN_FROM_SHIPPER) - to_date(ISSUE_TO_SHIPPER)) + 1)) dentention_days,
+case when round(((to_date(RETURN_FROM_SHIPPER) - to_date(ISSUE_TO_SHIPPER)) + 1)) > decode(nvl(EXTRA_FREE_DAYS,0),0,TIDTL.FREE_DAYS,EXTRA_FREE_DAYS) then round(round(((to_date(RETURN_FROM_SHIPPER) - to_date(ISSUE_TO_SHIPPER)) + 1)) - decode(nvl(EXTRA_FREE_DAYS,0),0,TIDTL.FREE_DAYS,EXTRA_FREE_DAYS)) else 0 end  paid_days,
+FUNC_RTN_DEM_DETTN_FULL( hdr.GROUP_POID,hdr.company_poid,invsales.transaction_poid, hdr.transaction_poid,condtl.CONTAINER_NO,TMAST.CONTAINER_TYPE_POID,voyhdr.line_poid,ISSUE_TO_SHIPPER,RETURN_FROM_SHIPPER,'DETN',
+decode(nvl(EXTRA_FREE_DAYS,0),0,0,EXTRA_FREE_DAYS)) total_charge,TO_CHAR(SAIL_DATE,'DD-MON-YYYY') SAIL_DATE,null detn_collected
+from SHIP_BL_MANIFEST_HDR hdr
+inner join SHIP_BL_MANIFEST_CONTAINER_DTL condtl
+on hdr.transaction_poid = condtl.transaction_poid and hdr.bl_type = 'EXPORT'
+left join AR_SH_SALES_INVOICE_CONTNR_DTL invsales on  hdr.TRANSACTION_POID=invsales.bl_poid
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER TMAST
+ON condtl.EQUIPMENT_ISO_TYPE = TMAST.CONTAINER_TYPE_CODE
+inner join ship_voyage_Hdr voyhdr
+on hdr.VOYAGE_TRANSACTION_POID = voyhdr.TRANSACTION_POID
+inner join ship_mate_hdr matehdr
+on condtl.MATE_TRANSACTION_POID = matehdr.TRANSACTION_POID
+inner join SHIP_MATE_CONTAINER_DTL matecondtl
+on matehdr.TRANSACTION_POID = matecondtl.TRANSACTION_POID
+and condtl.container_no=matecondtl.container_no
+inner join SHIP_LINE_TARIFF_HDR trarif on voyhdr.line_poid = trarif.line_poid and trarif.COMPANY_POID = hdr.company_poid
+and to_date(SAIL_DATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
+INNER JOIN SHIP_LINE_TARIFF_exp_DTL TIDTL ON  TIDTL.TRANSACTION_POID=trarif.TRANSACTION_POID
+and TIDTL.CONTAINER_TYPE_POID=TMAST.CONTAINER_TYPE_POID
+where hdr.transaction_poid =  $P{DOC_KEY_POID} AND EXTRA_TARIFF='N']]>
+		</queryString>
+		<field name="CONTAINER_NO" class="java.lang.String"/>
+		<field name="ISSUE_DATE" class="java.lang.String"/>
+		<field name="RECEIVED_DATE" class="java.lang.String"/>
+		<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+		<field name="DENTENTION_DAYS" class="java.math.BigDecimal"/>
+		<field name="PAID_DAYS" class="java.math.BigDecimal"/>
+		<field name="TOTAL_CHARGE" class="java.math.BigDecimal"/>
+		<field name="SAIL_DATE" class="java.lang.String"/>
+		<field name="DETN_COLLECTED" class="java.lang.String"/>
+		<variable name="TOTAL" class="java.math.BigDecimal">
+			<variableExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></variableExpression>
+			<initialValueExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></initialValueExpression>
+		</variable>
+		<variable name="Total_sum" class="java.math.BigDecimal" calculation="Sum">
+			<variableExpression><![CDATA[$V{TOTAL}]]></variableExpression>
+			<initialValueExpression><![CDATA[$V{TOTAL}]]></initialValueExpression>
+		</variable>
+	</subDataset>
+	<subDataset name="Port_storage_Collection_details" uuid="4e3c67a4-5eda-4208-8be9-794c266fdb0b">
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[select distinct CONTAINER_NO,ISO_CODE,received_from_shipper,Export_load_date,FREE_DAYS,Storage,total_chares,SAIL_DATE,
+case when ((to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER)) + 1) > FREE_DAYS then round((((to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER)) + 1) - FREE_DAYS)) end  paid_days from(
+select distinct condtl.CONTAINER_NO,CONTAINER_TYPE_CODE ISO_CODE,to_char(RETURN_FROM_SHIPPER,'DD-MON-YYYY') received_from_shipper,to_char(SAIL_DATE,'DD-MON-YYYY') Export_load_date
+,(SELECT FREE_DAYS
+FROM SHIP_PORT_TARIFF_HDR THDR
+INNER JOIN SHIP_PORT_TARIFF_DTL TIDTL ON  TIDTL.TRANSACTION_POID=THDR.TRANSACTION_POID
+WHERE  to_date(SAIL_DATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
+and TARIFF_TYPE='FULL' and CONTAINER_SIZE=TMAST.CONTAINER_TYPE_SIZE) FREE_DAYS,
+round((to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER)) + 1) Storage,
+FUNC_RTN_port_storage
+( hdr.GROUP_POID,hdr.company_poid,-999, hdr.transaction_poid,condtl.CONTAINER_NO,
+TMAST.CONTAINER_TYPE_POID,voyhdr.line_poid,RETURN_FROM_SHIPPER,SAIL_DATE,'FULL') total_chares
+,SAIL_DATE,RETURN_FROM_SHIPPER
+from SHIP_BL_MANIFEST_HDR hdr
+inner join SHIP_BL_MANIFEST_CONTAINER_DTL condtl
+on hdr.transaction_poid = condtl.transaction_poid and hdr.bl_type = 'EXPORT'
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER TMAST
+ON condtl.EQUIPMENT_ISO_TYPE = TMAST.CONTAINER_TYPE_CODE
+inner join ship_voyage_Hdr voyhdr
+on hdr.VOYAGE_TRANSACTION_POID = voyhdr.TRANSACTION_POID
+inner join ship_mate_hdr matehdr
+on condtl.MATE_TRANSACTION_POID = matehdr.TRANSACTION_POID
+inner join SHIP_MATE_CONTAINER_DTL matecondtl
+on matehdr.TRANSACTION_POID = matecondtl.TRANSACTION_POID
+and condtl.container_no=matecondtl.container_no
+where hdr.transaction_poid = $P{DOC_KEY_POID} and to_date(SAIL_DATE)<='30-APR-2017')
+UNION ALL
+select distinct CONTAINER_NO,ISO_CODE,received_from_shipper,Export_load_date,FREE_DAYS,Storage,total_chares,SAIL_DATE,
+case when ((to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER)) + 1) > FREE_DAYS then round((((to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER)) + 1) - FREE_DAYS)) end  paid_days from(
+select distinct condtl.CONTAINER_NO,CONTAINER_TYPE_CODE ISO_CODE,to_char(RETURN_FROM_SHIPPER,'DD-MON-YYYY') received_from_shipper,to_char(SAIL_DATE,'DD-MON-YYYY') Export_load_date
+,(SELECT FREE_DAYS
+FROM SHIP_PORT_TARIFF_HDR THDR
+INNER JOIN SHIP_PORT_TARIFF_DTL TIDTL ON  TIDTL.TRANSACTION_POID=THDR.TRANSACTION_POID
+WHERE  to_date(SAIL_DATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
+and TARIFF_TYPE='EXPORTFULL' and CONTAINER_SIZE=TMAST.CONTAINER_TYPE_SIZE) FREE_DAYS,
+round((to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER)) + 1) Storage,
+FUNC_RTN_port_storage
+( hdr.GROUP_POID,hdr.company_poid,-999, hdr.transaction_poid,condtl.CONTAINER_NO,
+TMAST.CONTAINER_TYPE_POID,voyhdr.line_poid,RETURN_FROM_SHIPPER,SAIL_DATE,'EXPORTFULL') total_chares
+,SAIL_DATE,RETURN_FROM_SHIPPER
+from SHIP_BL_MANIFEST_HDR hdr
+inner join SHIP_BL_MANIFEST_CONTAINER_DTL condtl
+on hdr.transaction_poid = condtl.transaction_poid and hdr.bl_type = 'EXPORT'
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER TMAST
+ON condtl.EQUIPMENT_ISO_TYPE = TMAST.CONTAINER_TYPE_CODE
+inner join ship_voyage_Hdr voyhdr
+on hdr.VOYAGE_TRANSACTION_POID = voyhdr.TRANSACTION_POID
+inner join ship_mate_hdr matehdr
+on condtl.MATE_TRANSACTION_POID = matehdr.TRANSACTION_POID
+inner join SHIP_MATE_CONTAINER_DTL matecondtl
+on matehdr.TRANSACTION_POID = matecondtl.TRANSACTION_POID
+and condtl.container_no=matecondtl.container_no
+where hdr.transaction_poid = $P{DOC_KEY_POID} and to_date(SAIL_DATE)>'30-APR-2017')]]>
+		</queryString>
+		<field name="CONTAINER_NO" class="java.lang.String"/>
+		<field name="ISO_CODE" class="java.lang.String"/>
+		<field name="RECEIVED_FROM_SHIPPER" class="java.lang.String"/>
+		<field name="EXPORT_LOAD_DATE" class="java.lang.String"/>
+		<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+		<field name="STORAGE" class="java.math.BigDecimal"/>
+		<field name="TOTAL_CHARES" class="java.math.BigDecimal"/>
+		<field name="SAIL_DATE" class="java.sql.Timestamp"/>
+		<field name="PAID_DAYS" class="java.math.BigDecimal"/>
+		<variable name="Sum_Charges" class="java.math.BigDecimal" calculation="Sum">
+			<variableExpression><![CDATA[$F{TOTAL_CHARES}]]></variableExpression>
+			<initialValueExpression><![CDATA[$F{TOTAL_CHARES}]]></initialValueExpression>
+		</variable>
+	</subDataset>
+	<subDataset name="YML_Detention_details" uuid="d75c7299-2939-456f-94d8-98b31e1f5220">
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[select distinct condtl.CONTAINER_NO,to_char(RETURN_FROM_SHIPPER,'DD-MON-YYYY') recevied_from_shipper,TO_CHAR(SAIL_DATE,'DD-MON-YYYY') export_load_date
+,decode(nvl(EXTRA_FREE_DAYS,0),0,FREE_DAYS,FREE_DAYS) FREE_DAYS,
+round((to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER) ) + 1 ) dentention_days,
+case when ( ( to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER)) + 1) > FREE_DAYS then round( ( (to_date(SAIL_DATE) - to_date(RETURN_FROM_SHIPPER))+1) - FREE_DAYS) end  paid_days,
+FUNC_RTN_DEM_DETTN_FULL
+( hdr.GROUP_POID,hdr.company_poid,-999, hdr.transaction_poid,condtl.CONTAINER_NO,
+TMAST.CONTAINER_TYPE_POID,voyhdr.line_poid,RETURN_FROM_SHIPPER,SAIL_DATE,'DETN',
+decode(nvl(EXTRA_FREE_DAYS,0),0,0,0),'Y') total_charge
+from SHIP_BL_MANIFEST_HDR hdr
+inner join SHIP_BL_MANIFEST_CONTAINER_DTL condtl
+on hdr.transaction_poid = condtl.transaction_poid and hdr.bl_type = 'EXPORT'
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER TMAST
+ON condtl.EQUIPMENT_ISO_TYPE = TMAST.CONTAINER_TYPE_CODE
+inner join ship_voyage_Hdr voyhdr
+on hdr.VOYAGE_TRANSACTION_POID = voyhdr.TRANSACTION_POID
+inner join ship_mate_hdr matehdr
+on condtl.MATE_TRANSACTION_POID = matehdr.TRANSACTION_POID
+inner join SHIP_MATE_CONTAINER_DTL matecondtl
+on matehdr.TRANSACTION_POID = matecondtl.TRANSACTION_POID and CONDTL.CONTAINER_NO= matecondtl.CONTAINER_NO
+inner join SHIP_LINE_TARIFF_HDR trarif on voyhdr.line_poid = trarif.line_poid and trarif.COMPANY_POID = hdr.company_poid
+and to_date(SAIL_DATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
+INNER JOIN SHIP_LINE_TARIFF_exp_DTL TIDTL ON  TIDTL.TRANSACTION_POID=trarif.TRANSACTION_POID
+and TIDTL.CONTAINER_TYPE_POID=TMAST.CONTAINER_TYPE_POID
+where hdr.transaction_poid = $P{DOC_KEY_POID} AND EXTRA_TARIFF='Y']]>
+		</queryString>
+		<field name="CONTAINER_NO" class="java.lang.String"/>
+		<field name="RECEVIED_FROM_SHIPPER" class="java.lang.String"/>
+		<field name="EXPORT_LOAD_DATE" class="java.lang.String"/>
+		<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+		<field name="DENTENTION_DAYS" class="java.math.BigDecimal"/>
+		<field name="PAID_DAYS" class="java.math.BigDecimal"/>
+		<field name="TOTAL_CHARGE" class="java.math.BigDecimal"/>
+		<variable name="YML_Sum_Charges" class="java.math.BigDecimal" calculation="Sum">
+			<variableExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></variableExpression>
+			<initialValueExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></initialValueExpression>
+		</variable>
+		<variable name="YML_TOTAL_CHARGE" class="java.math.BigDecimal">
+			<variableExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></variableExpression>
+			<initialValueExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></initialValueExpression>
+		</variable>
+	</subDataset>
+	<subDataset name="Detention_details_ESL" uuid="3d2cab23-800c-4a45-b667-fbe40070c931">
+		<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT DISTINCT CONDTL.CONTAINER_NO, TO_CHAR(ISSUE_TO_SHIPPER, 'DD-MON-YYYY')ISSUE_DATE,
+TO_CHAR(TO_DATE(SAIL_DATE), 'DD-MON-YYYY')RECEIVED_DATE,
+DECODE(NVL(EXTRA_FREE_DAYS, 0), 0, TIDTL.FREE_DAYS, EXTRA_FREE_DAYS) FREE_DAYS,
+    ROUND(((TO_DATE(SAIL_DATE)- TO_DATE(ISSUE_TO_SHIPPER))+ 1))DENTENTION_DAYS,
+    CASE
+    WHEN ROUND(((TO_DATE(SAIL_DATE)- TO_DATE(ISSUE_TO_SHIPPER))+ 1))> DECODE(NVL(EXTRA_FREE_DAYS, 0), 0, TIDTL.FREE_DAYS, EXTRA_FREE_DAYS)
+        THEN ROUND(ROUND(((TO_DATE(SAIL_DATE)- TO_DATE(ISSUE_TO_SHIPPER))+ 1))- DECODE(NVL(EXTRA_FREE_DAYS, 0), 0, TIDTL.FREE_DAYS, EXTRA_FREE_DAYS))
+    ELSE 0 END PAID_DAYS, FUNC_RTN_DEM_DETTN_FULL(HDR.GROUP_POID, HDR.COMPANY_POID, INVSALES.TRANSACTION_POID, HDR.TRANSACTION_POID, CONDTL.CONTAINER_NO,
+    TMAST.CONTAINER_TYPE_POID, VOYHDR.LINE_POID, ISSUE_TO_SHIPPER, TO_DATE(SAIL_DATE), 'DETN', DECODE(NVL(EXTRA_FREE_DAYS, 0), 0, 0, EXTRA_FREE_DAYS))TOTAL_CHARGE,
+    TO_CHAR(SAIL_DATE, 'DD-MON-YYYY')SAIL_DATE, NULL DETN_COLLECTED
+  FROM SHIP_BL_MANIFEST_HDR HDR
+ INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONDTL ON HDR.TRANSACTION_POID = CONDTL.TRANSACTION_POID AND HDR.BL_TYPE = 'EXPORT'
+ LEFT JOIN AR_SH_SALES_INVOICE_CONTNR_DTL INVSALES ON HDR.TRANSACTION_POID = INVSALES.BL_POID
+ INNER JOIN SHIP_CONTAINER_TYPE_MASTER TMAST ON CONDTL.EQUIPMENT_ISO_TYPE = TMAST.CONTAINER_TYPE_CODE
+ INNER JOIN SHIP_VOYAGE_HDR VOYHDR ON HDR.VOYAGE_TRANSACTION_POID = VOYHDR.TRANSACTION_POID
+ INNER JOIN SHIP_MATE_HDR MATEHDR ON CONDTL.MATE_TRANSACTION_POID = MATEHDR.TRANSACTION_POID
+ INNER JOIN SHIP_MATE_CONTAINER_DTL MATECONDTL ON MATEHDR.TRANSACTION_POID = MATECONDTL.TRANSACTION_POID AND CONDTL.CONTAINER_NO = MATECONDTL.CONTAINER_NO
+ INNER JOIN SHIP_LINE_TARIFF_HDR TRARIF ON VOYHDR.LINE_POID = TRARIF.LINE_POID AND TRARIF.COMPANY_POID = HDR.COMPANY_POID AND TO_DATE(SAIL_DATE)BETWEEN TO_DATE(PERIOD_FROM)AND TO_DATE(PERIOD_TO)
+ INNER JOIN SHIP_LINE_TARIFF_EXP_DTL TIDTL ON TIDTL.TRANSACTION_POID = TRARIF.TRANSACTION_POID AND TIDTL.CONTAINER_TYPE_POID = TMAST.CONTAINER_TYPE_POID
+ LEFT JOIN SHIP_LINE_MASTER LM ON LM.LINE_POID = VOYHDR.LINE_POID
+where hdr.transaction_poid =  $P{DOC_KEY_POID} AND EXTRA_TARIFF='N']]>
+		</queryString>
+		<field name="CONTAINER_NO" class="java.lang.String"/>
+		<field name="ISSUE_DATE" class="java.lang.String"/>
+		<field name="RECEIVED_DATE" class="java.lang.String"/>
+		<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+		<field name="DENTENTION_DAYS" class="java.math.BigDecimal"/>
+		<field name="PAID_DAYS" class="java.math.BigDecimal"/>
+		<field name="TOTAL_CHARGE" class="java.math.BigDecimal"/>
+		<field name="SAIL_DATE" class="java.lang.String"/>
+		<field name="DETN_COLLECTED" class="java.lang.String"/>
+		<variable name="TOTAL" class="java.math.BigDecimal">
+			<variableExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></variableExpression>
+			<initialValueExpression><![CDATA[$F{TOTAL_CHARGE} < BigDecimal.ZERO ? 0 :$F{TOTAL_CHARGE}]]></initialValueExpression>
+		</variable>
+		<variable name="Total_sum" class="java.math.BigDecimal" calculation="Sum">
+			<variableExpression><![CDATA[$V{TOTAL}]]></variableExpression>
+			<initialValueExpression><![CDATA[$V{TOTAL}]]></initialValueExpression>
+		</variable>
+	</subDataset>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\10.100.100.200\\erp_reports\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString>
+		<![CDATA[select bl_number,line_name,line_code,hdr.company_poid from
+SHIP_BL_MANIFEST_HDR hdr
+inner join ship_voyage_Hdr voyhdr
+on hdr.VOYAGE_TRANSACTION_POID = voyhdr.TRANSACTION_POID
+inner join ship_line_master lmast on
+voyhdr.line_poid = lmast.line_poid
+where hdr.bl_type = 'EXPORT' and hdr.transaction_poid = $P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="LINE_NAME" class="java.lang.String"/>
+	<field name="LINE_CODE" class="java.lang.String"/>
+	<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="131" splitType="Stretch">
+			<staticText>
+				<reportElement x="5" y="110" width="75" height="20" uuid="d6bfef52-ce21-4787-8123-ffd580ca41cd"/>
+				<textElement>
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[BL Number :]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="85" y="110" width="295" height="20" uuid="48aa75af-3ed6-4309-a1a3-3620e27d011e"/>
+				<textElement>
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="454" y="110" width="46" height="20" uuid="0b49b0ff-6a34-4d2c-b986-4d0a375c4dd3"/>
+				<textElement>
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Line :]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="500" y="110" width="301" height="20" uuid="ab347e3c-1788-4e1e-a9e0-a7606e2d4f56"/>
+				<textElement>
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LINE_NAME}]]></textFieldExpression>
+			</textField>
+			<subreport>
+				<reportElement x="85" y="0" width="649" height="82" uuid="26833c96-4d92-41de-a3bf-abcb24f99483"/>
+				<subreportParameter name="LOGIN_DIV_POID"/>
+				<subreportParameter name="LOGIN_COMP_POID">
+					<subreportParameterExpression><![CDATA[$F{COMPANY_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUB_HEADER}]]></subreportExpression>
+			</subreport>
+			<staticText>
+				<reportElement x="289" y="82" width="207" height="28" uuid="c850a8fb-fd5b-48d1-a5af-c4d50ec50c18"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="14" isBold="true" pdfFontName="Helvetica-Bold" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[Container Detention]]></text>
+			</staticText>
+		</band>
+	</title>
+	<detail>
+		<band height="73" splitType="Stretch">
+			<componentElement>
+				<reportElement key="table" style="table" x="3" y="0" width="796" height="25" uuid="a6e83516-aa15-4c4d-943c-900d5ab00ff8">
+					<printWhenExpression><![CDATA[$F{LINE_CODE} != "EMIR"]]></printWhenExpression>
+				</reportElement>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Detention_details" uuid="30a997db-7ca2-4cc0-9cd5-1d0eb54035d7">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="90" uuid="c90bcb9f-72a3-437d-86c2-aacc8741877a">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="6113e474-6830-4d3b-9005-5ef642c37fba"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Container No]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="2" y="0" width="88" height="16" uuid="c03fae66-a0ec-45b4-96ff-6d2c5b26a2f2"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="85" uuid="6a4e7047-fcfd-4f3f-aaf2-eeec0bb883c3">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="78" height="16" uuid="baa57388-e82f-494f-8849-cdb7d0bbc98a"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Issue Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="78" height="16" uuid="c82b6845-d1b6-443b-add5-fb79c43300c6"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{ISSUE_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="0e14e57e-e628-4d2d-bb3d-9ee2c864ceb0">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="098aefdb-ba7d-4525-9f70-c3644b7d2f69"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Received Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="143adcdd-5928-494d-9465-6bc29bddd947"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{RECEIVED_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="87" uuid="7100dbc3-1827-42a2-b9bc-7831560ddd36">
+						<jr:tableFooter height="17" rowSpan="1"/>
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="85" height="30" uuid="6c830d42-0674-4dae-b61f-0a8d2e8ace63"/>
+								<text><![CDATA[Detn Collected]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="85" height="16" uuid="2478dfae-2cfe-498d-8571-efdeb0a42d96"/>
+								<textElement textAlignment="Center"/>
+								<textFieldExpression><![CDATA[$F{DETN_COLLECTED}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="cf0ec1b8-8a5a-44f4-8ace-6504877650b0">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="5" y="0" width="80" height="16" uuid="9c805683-1b53-4be2-ac49-6befc898be9d"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Free Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="5" y="0" width="80" height="16" uuid="7fba3856-25fd-4a26-bd17-6c83e500f21d"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{FREE_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="105" uuid="47718542-fd00-4e2e-a3aa-83bb83a300fb">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="105" height="16" uuid="06b940f5-b7f1-4425-a8e4-99207b900d71"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Detention Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="7" y="0" width="90" height="16" uuid="dd0626c4-8889-40bd-8079-f2d8fb9b1aae"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{DENTENTION_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="83" uuid="31c2b6e4-42b8-4e90-b772-125a52d0d82a">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="7" y="0" width="75" height="16" uuid="6b020ab7-1c9a-40e5-92ba-e5099c42539a"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Paid days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="7" y="0" width="75" height="16" uuid="3c9029af-f5f2-4715-b4c8-8fc1fce3fc65"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{PAID_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="8bdd0db8-b03d-4680-9ac6-7bfc61fb8379">
+						<jr:tableFooter height="17" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="589729b9-94b9-42bd-9729-cb2a744bfc0a"/>
+								<textElement textAlignment="Right" verticalAlignment="Middle">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Detention Charge :]]></text>
+							</staticText>
+						</jr:tableFooter>
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="5" y="0" width="85" height="16" uuid="4dd52f86-c20a-425a-913f-5dd08189ddff"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Sail Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="5" y="0" width="85" height="16" uuid="2a8bfaee-2bf3-4a72-88bc-f5b89899dc44"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{SAIL_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="66d17ab1-2dfd-4ab7-8124-0b14d977cadf">
+						<jr:tableFooter height="17" rowSpan="1">
+							<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="89" height="16" uuid="f8a71308-dd18-450c-a031-c069b6085da2"/>
+								<textElement textAlignment="Right">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$V{Total_sum}]]></textFieldExpression>
+							</textField>
+						</jr:tableFooter>
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="7be4f5b7-246d-4717-bf72-d2b2c2678871"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Total Charges]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField pattern="###,###,###,##0.000">
+								<reportElement x="0" y="0" width="89" height="16" uuid="e60eebb8-01f2-492c-802f-9ad1920ede65"/>
+								<textElement textAlignment="Right">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$V{TOTAL}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<componentElement>
+				<reportElement key="table 3" style="table 3" positionType="Float" x="3" y="25" width="796" height="13" isRemoveLineWhenBlank="true" uuid="912fa042-80c1-4100-94d9-4e757788ed3d">
+					<printWhenExpression><![CDATA[$F{LINE_CODE} == "YML"]]></printWhenExpression>
+				</reportElement>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="YML_Detention_details" uuid="ace2fd96-609c-421b-96f6-ee418292a8e4">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="90" uuid="028ee253-2c6d-40bc-8f80-eb782addd4a7">
+						<jr:columnHeader style="table 3_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="0fc9fd7d-e641-4e05-adb2-74d14ec9c521"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Container No]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 3_TD" height="17" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="2" y="0" width="88" height="16" uuid="d33721a3-842e-40df-b59a-f735811a5395"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="a5663ccd-8923-468e-9304-7f55888b1d80">
+						<jr:columnHeader style="table 3_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="f480e4a3-e81d-4e98-8893-8747dc6d0c05"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Rcvd From
+Shipper]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 3_TD" height="17" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="b061d08e-52fb-45d0-bffc-4934b94868ed"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{RECEVIED_FROM_SHIPPER}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="8a1005f3-f1f6-46ea-b1b8-396b296a05a5">
+						<jr:columnHeader style="table 3_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="785908e8-27ab-43cb-b5e6-d7317975a51f"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Export Load Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 3_TD" height="17" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="61e30268-b600-49ac-9215-7c7e11e60815"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{EXPORT_LOAD_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="36afd2d8-7f43-4919-9d29-bcb09bfa7311">
+						<jr:columnHeader style="table 3_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="9c75c8ee-f6e1-4ce2-94d4-11789178a4dc"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Free Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 3_TD" height="17" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="36a47b3a-c3f6-4b64-94e8-e21b695080bd"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{FREE_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="9d77320c-e162-4010-a0fe-7bd31e6d4ab1">
+						<jr:columnHeader style="table 3_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="417a36d2-b356-4b75-b2d3-ebd2c83f414f"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Detention Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 3_TD" height="17" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="2ed40f49-5a4f-4e4f-b85b-3175c0770211"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{DENTENTION_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="ffc865ad-7041-4d22-81c5-87b7e09500cc">
+						<jr:columnHeader style="table 3_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="f8c85dbb-c096-4dc7-99e9-681fb8a06e94"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Paid days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:columnFooter height="17" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="836573c3-b94b-4274-b179-47c837fb7151"/>
+								<textElement textAlignment="Right" verticalAlignment="Middle">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Detention Charge :]]></text>
+							</staticText>
+						</jr:columnFooter>
+						<jr:detailCell style="table 3_TD" height="17" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="78a1d438-f048-46b6-bb3e-90f5bb727858"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{PAID_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="d6e9d895-62f8-4c45-909c-07effd4c520d">
+						<jr:columnHeader style="table 3_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="99c700cb-8932-4ba3-9b9c-b8326a8edfe2"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Total Charges]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:columnFooter height="17" rowSpan="1">
+							<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="87" height="16" uuid="414643db-1ca0-4141-a74a-5c44468be49c"/>
+								<textElement textAlignment="Right">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$V{YML_Sum_Charges}]]></textFieldExpression>
+							</textField>
+						</jr:columnFooter>
+						<jr:detailCell style="table 3_TD" height="17" rowSpan="1">
+							<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="88" height="17" uuid="ad67e80b-1d64-493b-9a93-cda951b2e201"/>
+								<textElement textAlignment="Right">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$V{YML_TOTAL_CHARGE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<componentElement>
+				<reportElement key="table" style="table" x="4" y="43" width="796" height="25" uuid="6426d944-6d86-4e5a-9e7d-fd842eb93b29">
+					<printWhenExpression><![CDATA[$F{LINE_CODE} == "EMIR"]]></printWhenExpression>
+				</reportElement>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Detention_details_ESL" uuid="d305a142-6713-4ceb-b4b1-0f73d8a76172">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="90" uuid="ac06a7d6-e4f0-473e-95d3-f96b6ef1a2c9">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="0bdba981-8eab-4127-a53a-978e1a2eb125"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Container No]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="2" y="0" width="88" height="16" uuid="e65b55be-7b79-4b17-ae10-3006a3e59cc4"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="85" uuid="a76e4477-3880-4e99-8a48-23572590062c">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="78" height="16" uuid="0a2b5bd1-056e-40b8-a781-6285667dfe15"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Issue Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="78" height="16" uuid="ffe432cb-2e82-43a6-b3fe-b3d4127203b2"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{ISSUE_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="ae7426b2-ac95-41b1-b99f-61c21ffc0d28">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="bacdfc66-ff78-42e6-a181-0935fc2dab6d"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Received Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="c3ff5121-03b7-495c-b283-fed5129a42ce"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{RECEIVED_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="87" uuid="47339fe0-c6bd-4619-9f0c-984369b450e7">
+						<jr:tableFooter height="17" rowSpan="1"/>
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="85" height="30" uuid="aa966fc3-89bc-4629-9c92-217d9bafa84a"/>
+								<text><![CDATA[Detn Collected]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="85" height="16" uuid="23f17bd5-1005-4e68-a8bf-f17baa347574"/>
+								<textElement textAlignment="Center"/>
+								<textFieldExpression><![CDATA[$F{DETN_COLLECTED}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="4912ac52-0838-4718-8eed-63903220f9d4">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="5" y="0" width="80" height="16" uuid="0dc77e4b-bd09-4572-960a-fc6e4b5869b3"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Free Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="5" y="0" width="80" height="16" uuid="c0b11b93-1f84-43e1-8b8e-bd35fe36423a"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{FREE_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="105" uuid="f1df6443-e340-4fa9-8617-8fada0ee0e77">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="105" height="16" uuid="d5425a9a-ca68-4eac-81a1-44f31987cdca"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Detention Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="7" y="0" width="90" height="16" uuid="f9f5e6fe-ea79-40b7-9392-10736037b787"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{DENTENTION_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="83" uuid="1f44dfe5-b037-4172-a218-b98f6db85a38">
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="7" y="0" width="75" height="16" uuid="8986b180-7064-4a94-b5f6-6dab34bebda1"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Paid days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="7" y="0" width="75" height="16" uuid="0600de18-5716-45e5-9b79-2f5447b4ec41"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{PAID_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="957f6c72-1ff2-4c59-b96b-f5c3159b5599">
+						<jr:tableFooter height="17" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="5d32c5e6-ddea-43dd-85b3-d6512b0a86a5"/>
+								<textElement textAlignment="Right" verticalAlignment="Middle">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Detention Charge :]]></text>
+							</staticText>
+						</jr:tableFooter>
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="5" y="0" width="85" height="16" uuid="662da73c-5792-4b58-8dcd-d010324b72e5"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Sail Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="5" y="0" width="85" height="16" uuid="9cfc77db-6580-4e4c-a421-81a5202db5cc"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{SAIL_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="12189225-6f10-4d0d-a075-8e218c510b1d">
+						<jr:tableFooter height="17" rowSpan="1">
+							<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="89" height="16" uuid="ddde1d3a-b347-4f15-af84-ee2e558b6787"/>
+								<textElement textAlignment="Right">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$V{Total_sum}]]></textFieldExpression>
+							</textField>
+						</jr:tableFooter>
+						<jr:columnHeader style="table_CH" height="30" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="eb7064d6-33f0-442a-bcb4-1cb0c9b8aaf4"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Total Charges]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table_TD" height="16" rowSpan="1">
+							<textField pattern="###,###,###,##0.000">
+								<reportElement x="0" y="0" width="89" height="16" uuid="9859cfef-eaba-441a-a138-5e962a76c559"/>
+								<textElement textAlignment="Right">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$V{TOTAL}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+		</band>
+		<band height="67">
+			<componentElement>
+				<reportElement key="table 2" style="table 2" positionType="Float" x="5" y="20" width="796" height="34" uuid="52bdf61f-2231-4c8c-9959-695e06ddc776"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="Port_storage_Collection_details" uuid="a0d277ff-9cc2-402b-a370-4c1574e24447">
+						<datasetParameter name="DOC_KEY_POID">
+							<datasetParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="90" uuid="1814f9b0-37d2-4f49-93a7-c352a093e699">
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="3d80efb2-cd60-4dbd-a72b-850273c1f8da"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Container No]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="2" y="0" width="88" height="16" uuid="f9932734-85f3-4bb2-b546-23e71abe29b4"/>
+								<textElement>
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="a094fc12-94db-4345-8e49-42d723868b5b">
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="76c1ace1-4206-494c-94d3-b13d744819f2"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[ISO Code]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="67b06ce6-40c9-4bd7-a441-37e24d372862"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{ISO_CODE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="209bd846-467e-46b4-9084-61fa36cfdb2d">
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="cb89d4cd-b1b1-4cc0-88dc-2b3855ffc775"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Rcvd From
+Shipper]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="51f89399-2f40-4434-91a8-a6518a171613"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{RECEIVED_FROM_SHIPPER}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="005d0daa-6e31-42f6-b224-015b5351e200">
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="57a7493f-c033-4e3a-ab49-797c265d6aad"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Export Load Date]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="93587a12-1ac5-4ae8-988b-8ba232832575"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{EXPORT_LOAD_DATE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="f9e0436b-a035-4ca4-ae14-3145c08ae9a1">
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="81d1b1ab-3ee3-4e91-b4fd-7d4bccbd0fb5"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Free Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="15bc423e-1b89-4c31-8b2a-9f8cd71eeccc"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{FREE_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="d5907057-f28b-48fb-b3b4-8ddc0f33c219">
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="ec9066c1-4d83-43ca-8cc8-a81c3117569e"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Storage Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="bbb31c3f-c37e-4ccd-b54d-1f8df870f215"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{STORAGE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="b8cf49cd-dd18-454a-857d-cd2b08f3b6a1">
+						<jr:tableFooter height="17" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="ec1c597b-2418-4841-8c2d-61a95ccd7c08"/>
+								<textElement verticalAlignment="Middle">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Storage Total :]]></text>
+							</staticText>
+						</jr:tableFooter>
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="19aa1b6a-578f-440d-a47c-767ced089f4a"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Paid Days]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="0f663276-11ef-4f7e-9774-3f8278756f7f"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{PAID_DAYS}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="99eadaa8-2e22-4332-b587-8bde49553966">
+						<jr:tableFooter height="17" rowSpan="1">
+							<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="17" uuid="3ebcd901-0798-425b-83e7-e16b4bcdc041"/>
+								<textElement textAlignment="Right">
+									<font size="9" isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$V{Sum_Charges}]]></textFieldExpression>
+							</textField>
+						</jr:tableFooter>
+						<jr:columnHeader style="table 2_CH" height="16" rowSpan="1">
+							<staticText>
+								<reportElement x="0" y="0" width="90" height="16" uuid="dafdb74d-fcac-45aa-882e-eb6d796563e3"/>
+								<textElement textAlignment="Center">
+									<font size="9"/>
+								</textElement>
+								<text><![CDATA[Total Charges]]></text>
+							</staticText>
+						</jr:columnHeader>
+						<jr:detailCell style="table 2_TD" height="16" rowSpan="1">
+							<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+								<reportElement x="0" y="0" width="90" height="16" uuid="1b3f1238-b982-473e-959b-015aaef8bd2d"/>
+								<textElement textAlignment="Right">
+									<font size="9"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{TOTAL_CHARES}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<staticText>
+				<reportElement positionType="Float" x="6" y="0" width="206" height="20" uuid="f5cd5540-9a36-4199-8ce6-b7081270e058"/>
+				<textElement>
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Port Storage Collection]]></text>
+			</staticText>
+		</band>
+	</detail>
+</jasperReport>

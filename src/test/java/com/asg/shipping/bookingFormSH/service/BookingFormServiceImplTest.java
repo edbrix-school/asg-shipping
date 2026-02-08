@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -278,10 +279,19 @@ class BookingFormServiceImplTest {
 
 	@Test
 	void generateCoprarBooking_success() {
+		BookingFormServiceImpl spyService = Mockito.spy(service);
+
 		mockJdbcCallWithOutParam("Copran generated, Sent Mail...");
-		String result = service.generateCoprarBooking(TX_POID);
+
+		doReturn("Copran generated, Sent Mail...")
+				.when(spyService)
+				.generateCoprarFile(anyLong(), anyLong());
+
+		String result = spyService.generateCoprarBooking(TX_POID);
+
 		assertEquals("Copran generated, Sent Mail...", result);
 	}
+
 
 	@Test
 	void generateCoprarBooking_exception() {

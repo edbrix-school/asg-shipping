@@ -56,12 +56,18 @@ public class OFOQApiServiceImpl implements OFOQApiService {
     }
 
     @Override
-    public OFOQManifestSubmitResponseDto callOFOQApi(String xmlData, String manifestType,
-                                                     String blNumber, Long transactionPoId, String docRef) {
+    public OFOQManifestSubmitResponseDto callOFOQApi(
+            String xmlData,
+            String manifestType,
+            String blNumber,
+            Long transactionPoId,
+            String docRef) {
+
         log.info("Submitting OFOQ manifest for transactionPoid: {}, docRef: {}", transactionPoId, docRef);
+
+        validateOFOQConfiguration();
+
         try {
-            validateOFOQConfiguration();
-            
             HttpHeaders headers = createHeaders();
             HttpEntity<String> requestEntity = new HttpEntity<>(xmlData, headers);
 
@@ -73,47 +79,52 @@ public class OFOQApiServiceImpl implements OFOQApiService {
             );
 
             log.debug("OFOQ API response status: {}", response.getStatusCode());
+
             String message = extractMessage(response.getBody());
             String functionalRefId = null;
 
             try {
-                functionalRefId =  procRepository.saveOFOQApiResponse(transactionPoId, docRef, manifestType,
-                        response.getStatusCode().value(), message, response.getBody());
-                log.info("OFOQ API response saved with functionalRefId: {}", functionalRefId);
+                functionalRefId = procRepository.saveOFOQApiResponse(
+                        transactionPoId,
+                        docRef,
+                        manifestType,
+                        response.getStatusCode().value(),
+                        message,
+                        response.getBody()
+                );
             } catch (Exception e) {
-                log.warn("Failed to save OFOQ API response to DB: {}", e.getMessage());
-                functionalRefId = null;
+                log.warn("Failed to save OFOQ API response to DB", e);
             }
 
             return OFOQManifestSubmitResponseDto.builder()
                     .functionalRefId(functionalRefId)
-                    .status(String.valueOf(response.getStatusCode()))
+                    .status(response.getStatusCode().toString())
                     .message(message)
                     .build();
 
-        } catch (HttpClientErrorException | HttpServerErrorException ex) {
-            log.error("OFOQ API call failed with status {}: {}", ex.getStatusCode(), ex.getResponseBodyAsString());
-            return OFOQManifestSubmitResponseDto.builder()
-                    .functionalRefId(null)
-                    .status(String.valueOf(ex.getStatusCode()))
-                    .message(ex.getResponseBodyAsString())
-                    .build();
-        } catch (Exception e) {
-            log.error("Unexpected error calling OFOQ API for transactionPoid: {}", transactionPoId, e);
-            return OFOQManifestSubmitResponseDto.builder()
-                    .functionalRefId(null)
-                    .status("ERROR")
-                    .message(e.getMessage())
-                    .build();
+        }
+        catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error(
+                    "Customs API failed | status={} | response={}",
+                    ex.getStatusCode(),
+                    ex.getResponseBodyAsString()
+            );
+            throw ex;
+        }
+        catch (Exception e) {
+            log.error("Unexpected error calling customs API", e);
+            throw new RuntimeException("Error while calling customs API", e);
         }
     }
+
 
     @Override
     public OFOQCheckStatusCustomsResponseDto getManifestStatus(String functionalRefId) {
         log.debug("Fetching OFOQ manifest status for functionalRefId: {}", functionalRefId);
+
+        validateOFOQConfiguration();
+
         try {
-            validateOFOQConfiguration();
-            
             Thread.sleep(3000);
 
             HttpHeaders headers = createHeaders();
@@ -128,8 +139,8 @@ public class OFOQApiServiceImpl implements OFOQApiService {
             );
 
             log.debug("OFOQ manifest status response code: {}", response.getStatusCode());
+
             String message = extractMessage(response.getBody());
-            log.info("OFOQ manifest status retrieved for functionalRefId: {} with statusCode: {}", functionalRefId, response.getStatusCode());
 
             return OFOQCheckStatusCustomsResponseDto.builder()
                     .functionalReference(functionalRefId)
@@ -138,22 +149,26 @@ public class OFOQApiServiceImpl implements OFOQApiService {
                     .responseBody(response.getBody())
                     .build();
 
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Interrupted while fetching manifest status for functionalRefId: {}", functionalRefId, e);
+            log.error("Interrupted while fetching manifest status for {}", functionalRefId, e);
             throw new RuntimeException("Interrupted while fetching manifest status", e);
-        } catch (HttpClientErrorException | HttpServerErrorException ex) {
-            log.error("OFOQ manifest status fetch failed with status {}: {}", ex.getStatusCode(), ex.getResponseBodyAsString());
-            return OFOQCheckStatusCustomsResponseDto.builder()
-                    .functionalReference(functionalRefId)
-                    .statusCode(String.valueOf(ex.getStatusCode()))
-                    .responseMessage(ex.getResponseBodyAsString())
-                    .build();
-        } catch (Exception e) {
-            log.error("Unexpected error fetching OFOQ manifest status for functionalRefId: {}", functionalRefId, e);
-            throw new RuntimeException("Failed to fetch manifest status: " + e.getMessage(), e);
+        }
+        catch (HttpClientErrorException | HttpServerErrorException ex) {
+            log.error(
+                    "Customs status API failed | status={} | response={}",
+                    ex.getStatusCode(),
+                    ex.getResponseBodyAsString()
+            );
+            throw ex;
+        }
+        catch (Exception e) {
+            log.error("Unexpected error fetching manifest status for {}", functionalRefId, e);
+            throw new RuntimeException("Failed to fetch manifest status", e);
         }
     }
+
 
     private String extractMessage(String xmlData) {
         if (xmlData == null) return null;

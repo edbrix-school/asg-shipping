@@ -44,7 +44,9 @@ public class DayCloseMapper {
 				.cashAmount(entity.getCashAmount()).chequeAmount(entity.getChequeAmount())
 				.outstandingAmount(entity.getOutstandingAmount()).totalAmount(entity.getTotalAmount())
 				.noOfCheques(entity.getNoOfCheques()).locRemarks(entity.getLocRemarks())
-				.verifiedRcvd(entity.getVerifiedRcvd()).mainOfcRemarks(entity.getMainOfcRemarks()).build();
+				.verifiedRcvd(entity.getVerifiedRcvd()).mainOfcRemarks(entity.getMainOfcRemarks())
+				.createdBy(entity.getCreatedBy()).createdDate(entity.getCreatedDate())
+				.build();
 		return DayCloseDto.builder().header(header).build();
 	}
 

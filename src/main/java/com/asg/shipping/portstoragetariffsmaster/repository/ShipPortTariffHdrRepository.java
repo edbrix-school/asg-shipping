@@ -43,7 +43,7 @@ public interface ShipPortTariffHdrRepository extends JpaRepository<ShipPortTarif
             "AND t.groupPoid = :groupPoid " +
             "AND t.deleted = 'N' " +
             "AND (:excludePoid IS NULL OR t.transactionPoid != :excludePoid) " +
-            "AND ((t.periodFrom <= :periodTo AND t.periodTo >= :periodFrom))")
+            "AND NOT (t.periodTo < :periodFrom OR t.periodFrom > :periodTo)")
     boolean existsOverlappingPeriod(
             @Param("portPoid") Long portPoid,
             @Param("tariffType") String tariffType,

@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SH_DAY_CLOSE_SMRY_subreport1" language="groovy" pageWidth="600" pageHeight="200" columnWidth="600" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="070e92f9-0d6a-403f-95db-8fe190d234da">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="P_TRN_DT" class="java.sql.Timestamp">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String"/>
+	<parameter name="DOC_KEY_POID_DNOS" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT MAX(TRANSACTION_DATE)TRANSACTION_DATE,GET_COMPANY_CODE( (COMPANY_POID))||line COMPANY ,SUM(CASH_AMOUNT)CASH_AMOUNT,SUM(CHQ_AMOUNT) CHQ_AMOUNT, SUM(IMCOCASH) IMCO_CASH_AMOUNT,SUM(IMCOCHEQUE) IMCO_CHQ_AMOUNT,
+SUM(NOOFCHQ)NOOFCHQ,NVL(SUM(CASH_AMOUNT),0)+NVL(SUM(CHQ_AMOUNT),0)+NVL(SUM(IMCOCASH),0)+NVL(SUM(IMCOCHEQUE),0) TOTAL FROM (
+        SELECT SUM(PY.AMOUNT) CASH_AMOUNT,0 CHQ_AMOUNT,0 NOOFCHQ ,RC.TRANSACTION_DATE,RC.COMPANY_POID,0 IMCOCASH,0 IMCOCHEQUE,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS') LINE
+        FROM AR_SH_RECEIPT_PYMT_DETAILS PY,AR_SH_RECEIPT_HDR RC WHERE
+                      PY.TRANSACTION_POID=RC.TRANSACTION_POID AND TRUNC(RC.TRANSACTION_DATE)=$P{P_TRN_DT}
+                  AND PY.PYMT_TYPE='CASH' AND NVL(RC.DELETED,'N')='N'
+GROUP BY RC.TRANSACTION_DATE,RC.COMPANY_POID,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS')
+                  UNION
+                SELECT 0,SUM(PY.AMOUNT)CHQ_AMOUNT,COUNT(CHQ_CARDNO)NOOFCHQ,RC.TRANSACTION_DATE,RC.COMPANY_POID,0 IMCOCASH,0 IMCOCHEQUE,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS') LINE
+                FROM AR_SH_RECEIPT_PYMT_DETAILS PY,AR_SH_RECEIPT_HDR RC WHERE
+                      PY.TRANSACTION_POID=RC.TRANSACTION_POID AND NVL(RC.DELETED,'N')='N' AND PY.PYMT_TYPE='CHEQUE' AND TRUNC(RC.TRANSACTION_DATE)=$P{P_TRN_DT}
+ GROUP BY RC.TRANSACTION_DATE,RC.COMPANY_POID,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS')
+  UNION
+               SELECT 0 CASH_AMOUNT,0 CHQ_AMOUNT,0 NOOFCHQ ,RC.TRANSACTION_DATE,RC.COMPANY_POID,SUM(PY.AMOUNT) IMCOCASH,0 IMCOCHEQUE,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS') LINE
+               FROM AR_SH_RECEIPT_PYMT_DETAILS PY,AR_SH_RECEIPT_HDR RC WHERE
+                      PY.TRANSACTION_POID=RC.TRANSACTION_POID AND NVL(RC.DELETED,'N')='N' AND TRUNC(RC.TRANSACTION_DATE)=$P{P_TRN_DT}
+                  AND PY.PYMT_TYPE='IMCOCASH'
+GROUP BY RC.TRANSACTION_DATE,RC.COMPANY_POID,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS')
+  UNION
+                SELECT 0,0 CHQ_AMOUNT,COUNT(CHQ_CARDNO)NOOFCHQ,RC.TRANSACTION_DATE,RC.COMPANY_POID,0 IMCOCASH,SUM(PY.AMOUNT) IMCOCHEQUE,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS') LINE
+                FROM AR_SH_RECEIPT_PYMT_DETAILS PY,AR_SH_RECEIPT_HDR RC WHERE
+                      PY.TRANSACTION_POID=RC.TRANSACTION_POID AND NVL(RC.DELETED,'N')='N'  AND PY.PYMT_TYPE='IMCOCHEQUE' AND TRUNC(RC.TRANSACTION_DATE)=$P{P_TRN_DT}
+ GROUP BY RC.TRANSACTION_DATE,RC.COMPANY_POID,DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTHERS')
+                  )
+GROUP BY GET_COMPANY_CODE( (COMPANY_POID)),line
+order by GET_COMPANY_CODE( (COMPANY_POID))]]>
+	</queryString>
+	<field name="TRANSACTION_DATE" class="java.sql.Timestamp"/>
+	<field name="COMPANY" class="java.lang.String"/>
+	<field name="CASH_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="CHQ_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="IMCO_CASH_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="IMCO_CHQ_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="NOOFCHQ" class="java.math.BigDecimal"/>
+	<field name="TOTAL" class="java.math.BigDecimal"/>
+	<variable name="sum_cash" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{CASH_AMOUNT}]]></variableExpression>
+	</variable>
+	<variable name="sum_cheque" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{CHQ_AMOUNT}]]></variableExpression>
+	</variable>
+	<variable name="sum_imco_cash" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{IMCO_CASH_AMOUNT}]]></variableExpression>
+	</variable>
+	<variable name="sum_imco_cheque" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{IMCO_CHQ_AMOUNT}]]></variableExpression>
+	</variable>
+	<variable name="total_summary_amount" class="java.lang.Double" calculation="Sum">
+		<variableExpression><![CDATA[$F{TOTAL}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band height="21" splitType="Stretch">
+			<staticText>
+				<reportElement x="12" y="0" width="257" height="20" uuid="101f53f3-632e-4e2c-b684-e32e50e7988c"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Shipping Company wise Summery]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="26" splitType="Stretch">
+			<staticText>
+				<reportElement x="11" y="2" width="57" height="20" uuid="e3b7ddaf-2cd5-4608-87b6-2d4b4c8178af"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<text><![CDATA[Company]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="69" y="2" width="84" height="20" uuid="8695c9d7-9d56-4dd4-bc9e-3c24965df5d1"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<text><![CDATA[Cash]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="234" y="2" width="100" height="20" uuid="323f0e9e-c2ff-4538-bd79-c1aafcc219df"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<text><![CDATA[Cheque]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="416" y="2" width="100" height="20" uuid="aeebc740-d56e-40d1-af36-c52ac026eb92"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<text><![CDATA[Total]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="153" y="2" width="81" height="20" uuid="b3ca0c92-8f16-4136-856d-c128da75ebd9"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<text><![CDATA[Imco Cash]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="334" y="2" width="81" height="20" uuid="3e2bcd54-9e6a-48fb-bb55-f7a7c9b7767f"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<text><![CDATA[Imco Cheque]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="22" splitType="Stretch">
+			<textField>
+				<reportElement x="11" y="0" width="57" height="18" uuid="288504e9-a620-41ad-bdef-1e5b22840470"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{COMPANY}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="68" y="0" width="84" height="18" uuid="6368f722-02ea-40f4-acd9-36b342fd97e7"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CASH_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="234" y="0" width="100" height="18" uuid="cb49d259-9c41-4bbf-b29d-f5a13817b1ec"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CHQ_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="416" y="0" width="100" height="18" uuid="eed3bcc5-1da0-4768-abd8-30612b1bc10d"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="153" y="0" width="80" height="18" uuid="777ab172-3f84-4eaf-af67-b21e93a4c1b5"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{IMCO_CASH_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="334" y="0" width="81" height="18" uuid="49fac34a-3919-4f53-8f51-f57e86b2d2dc"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{IMCO_CHQ_AMOUNT}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band height="22" splitType="Stretch">
+			<textField evaluationTime="Report" pattern="#,##0.000;(-#,##0.000)">
+				<reportElement x="67" y="0" width="85" height="20" uuid="acda8452-4399-4021-8ddd-d9d4e34292b3"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{sum_cash}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="10" y="1" width="56" height="20" uuid="4df15bd4-63cf-49a7-8e0c-1b377b555e7f"/>
+				<text><![CDATA[Summary]]></text>
+			</staticText>
+			<textField evaluationTime="Report" pattern="#,##0.000;(-#,##0.000)">
+				<reportElement x="151" y="0" width="85" height="20" uuid="b65a1704-b806-4c31-8061-bb5f1d8e0046"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{sum_imco_cash}]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report" pattern="#,##0.000;(-#,##0.000)">
+				<reportElement x="236" y="0" width="85" height="20" uuid="4d72288b-2a79-4e9e-9f1f-5cf00e8fa302"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{sum_cheque}]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report" pattern="#,##0.000;(-#,##0.000)">
+				<reportElement x="332" y="2" width="85" height="20" uuid="06a00a15-4a50-4652-b33a-a476fed07812"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{sum_imco_cheque}]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report" pattern="#,##0.000;(-#,##0.000)">
+				<reportElement x="417" y="2" width="97" height="20" uuid="bbfbc3ee-f91a-45c6-9ede-7c00bf7c5782"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$V{total_summary_amount}]]></textFieldExpression>
+			</textField>
+		</band>
+	</summary>
+</jasperReport>

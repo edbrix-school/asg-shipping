@@ -8,12 +8,16 @@ import com.asg.shipping.importManifestUpdate.dto.ResendCanResponseDto;
 import com.asg.shipping.importManifestUpdate.dto.SendEdiEmailsResponseDto;
 import com.asg.shipping.importManifestUpdate.dto.BlStatusResponseDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlCreateDto;
+import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 @Repository
 @Slf4j
@@ -208,5 +212,88 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
             throw new ValidationException("Quotation validation failed");
         }
     }
+
+    @Override
+    public DefaultValueDto callDefaultGetValue(Long loginGroupPoid, Long loginCompanyPoid, Long loginUserPoid, String docId) {
+
+            StoredProcedureQuery query = entityManager
+                    .createStoredProcedureQuery("PRODUCTION.PROC_DEFAULT_GETVALUE");
+
+            query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DOC_ID", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("OUTDATA", void.class, ParameterMode.REF_CURSOR);
+
+            query.setParameter("P_LOGIN_GROUP_POID", loginGroupPoid);
+            query.setParameter("P_LOGIN_COMPANY_POID", loginCompanyPoid);
+            query.setParameter("P_LOGIN_USER_POID", loginUserPoid);
+            query.setParameter("P_DOC_ID", docId);
+
+            query.execute();
+
+            ResultSet rs = (ResultSet) query.getOutputParameterValue("OUTDATA");
+            log.info("Default values ResultSet: {}", rs);
+
+            DefaultValueDto dto = null;
+
+            try {
+                if (rs != null && rs.next()) {
+
+                    if (hasColumn(rs, "NO_RECORD")) {
+                        return null;
+                    }
+
+                    dto = DefaultValueDto.builder()
+                            .blType(rs.getString("BL_TYPE"))
+                            .salesmanPoid(rs.getString("SALESMAN_POID"))
+                            .cargoType(rs.getString("CARGO_TYPE"))
+                            .blIssueType(rs.getString("BL_ISSUE_TYPE"))
+                            .freightStatus(rs.getString("FREIGHT_STATUS"))
+                            .holdReason(rs.getString("HOLD_REASON"))
+                            .holdCanDo(rs.getString("HOLD_CAN_DO"))
+                            .canSentQueue(rs.getString("CAN_SENT_QUEUE"))
+                            .bookedByPp(rs.getString("BOOKED_BY_PP"))
+                            .manuallyCanSend(rs.getString("MANUALLY_CAN_SEND"))
+                            .allInOneFreight(rs.getString("ALL_IN_ONE_FREIGHT"))
+                            .issueManualInvoice(rs.getString("ISSUE_MANUAL_INVOICE"))
+                            .deliverySentTo(rs.getString("DELIVERY_SENT_TO"))
+                            .manifestEmailVerified(rs.getString("MANIFEST_EMAIL_VERIFIED"))
+                            .emailVerifiedWithSpecialC(rs.getString("EMAIL_VERIFIED_WITH_SPECIAL_C"))
+                            .stopUcanAlert(rs.getString("STOP_UCAN_ALERT"))
+                            .transactionDate(
+                                    rs.getDate("TRANSACTION_DATE") != null
+                                            ? String.valueOf(rs.getDate("TRANSACTION_DATE").toLocalDate())
+                                            : null
+                            )
+                            .printFreightDetails(rs.getString("PRINT_FREIGHT_DETAILS"))
+                            .portOfDischargePoid(rs.getString("PORT_OF_DISCHARGE_POID"))
+                            .placeOfDeliveryPoid(rs.getString("PLACE_OF_DELIEVERY_POID"))
+                            .blStatus(rs.getString("BL_STATUS"))
+                            .blOriginalPrint(rs.getString("BL_ORGINAL_PRINT"))
+                            .releasedStatus(rs.getString("RELEASED_STATUS"))
+                            .build();
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException(
+                        "Error fetching default values from PROC_DEFAULT_GETVALUE: " + e.getMessage(),
+                        e
+                );
+            }
+
+            return dto;
+        }
+
+    private boolean hasColumn(ResultSet rs, String columnName) {
+        try {
+            rs.findColumn(columnName);
+            return true;
+        } catch ( SQLException e) {
+            return false;
+        }
+    }
+
+
 
 }

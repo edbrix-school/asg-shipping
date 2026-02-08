@@ -10,6 +10,8 @@ import java.util.Map;
 
 import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.service.ExcelExportService;
+import com.asg.common.lib.service.LoggingService;
+
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
@@ -54,6 +57,7 @@ public class BookingFormController {
 
 	private final BookingFormService bookingFormService;
     private final ExcelExportService excelExportService;
+    private final LoggingService loggingService;
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@Operation(summary = "Get all Booking Form SH", description = "Fetches all Booking Form SH records for the given group", responses = {
@@ -78,6 +82,7 @@ public class BookingFormController {
 			@Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
 		log.info("Get request for Booking Form with id: {}", id);
 		BookingFormDto dto = bookingFormService.getBookingForm(id);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(),id.toString());
 		return success("Booking Form retrieved successfully.", dto);
 	}
 
@@ -120,6 +125,7 @@ public class BookingFormController {
 			@Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
 		log.info("Delete request for Booking Form with id: {}", id);
 		bookingFormService.deleteBookingForm(id);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(),id.toString());
 		return success("Booking Form deleted successfully");
 	}
 
@@ -180,6 +186,24 @@ public class BookingFormController {
         } catch (Exception e) {
             log.error("Failed to generate Excel", e);
             return error("Failed to generate Excel: " + e.getMessage(), 500);
+        }
+    }
+
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@GetMapping("/print/{transactionPoid}")
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", example = "21")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = bookingFormService.print(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=booking-form-sh-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
 }

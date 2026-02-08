@@ -1,11 +1,13 @@
 package com.asg.shipping.vesseltypemaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceAlreadyExistsException;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -23,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,7 @@ public class VesselTypeServiceImpl implements VesselTypeService {
 
     private final ShipVesselTypeMasterRepository vesselTypeRepository;
     private final DocumentSearchService documentSearchService;
+    private final DocumentDeleteService documentDeleteService;
     private final VesselTypeMapper mapper;
     private final LoggingService loggingService;
     private final com.asg.common.lib.service.LovDataService lovService;
@@ -85,7 +89,6 @@ public class VesselTypeServiceImpl implements VesselTypeService {
         VesselTypeDto dto = mapper.mapToDto(vesselType);
         enrichDtoWithLovData(dto, vesselType, groupPoid);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully retrieved vessel type with id: {}", id);
         return dto;
@@ -169,19 +172,31 @@ public class VesselTypeServiceImpl implements VesselTypeService {
 
     @Override
     @Transactional
-    public void deleteVesselType(Long id) {
-        log.info("Deleting vessel type with id: {}", id);
+    public void deleteVesselType(Long groupPoid, Long vesselTypeId, Long companyPoid, DeleteReasonDto deleteReasonDto) {
+        log.info("deleteVesselType started for vesselTypeId={} companyPoid={} groupPoid={}", 
+            vesselTypeId, companyPoid, groupPoid);
 
-        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+        // 1. Validate entity exists
+        ShipVesselTypeMaster vesselType = vesselTypeRepository
+                .findByVesselTypePoidAndGroupPoid(vesselTypeId, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Vessel Type", "vesselTypePoid", vesselTypeId));
 
-        ShipVesselTypeMaster vesselType = vesselTypeRepository.findByVesselTypePoidAndGroupPoid(id, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Vessel Type", "vesselTypePoid", id.toString()));
-
+        // 2. Check if already deleted
         if ("Y".equals(vesselType.getDeleted())) {
-            log.info("Vessel type with id: {} is already deleted", id);
-            return;
+            log.warn("deleteVesselType found companyPoid={} vesselTypeId={} already deleted", companyPoid, vesselTypeId);
+            throw new com.asg.common.lib.exception.CustomException("Cannot delete vessel type. It is already deleted.");
         }
 
+        // 3. Use DocumentDeleteService to handle delete reason
+        documentDeleteService.deleteDocument(
+                vesselTypeId,
+                "SHIP_VESSEL_TYPE_MASTER",
+                "VESSEL_TYPE_POID",
+                deleteReasonDto,
+                LocalDate.now()
+        );
+
+        // 4. Soft delete the vessel type
         vesselType.setDeleted("Y");
         vesselType.setActive("N");
         vesselType.setLastModifiedBy(getCurrentUser());
@@ -189,13 +204,13 @@ public class VesselTypeServiceImpl implements VesselTypeService {
 
         vesselTypeRepository.save(vesselType);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
-        String logDetail = String.format("KeyId = VESSEL_TYPE_POID:%s", id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), vesselTypeId.toString());
+        String logDetail = String.format("KeyId = VESSEL_TYPE_POID:%s", vesselTypeId);
         String tableName = ShipVesselTypeMaster.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Active", "Y", "N", logDetail, tableName);
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), vesselTypeId.toString(), "Deleted", "N", "Y", logDetail, tableName);
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), vesselTypeId.toString(), "Active", "Y", "N", logDetail, tableName);
 
-        log.info("Successfully deleted vessel type with id: {}", id);
+        log.info("deleteVesselType completed for vesselTypeId={} companyPoid={}", vesselTypeId, companyPoid);
     }
 
     /**

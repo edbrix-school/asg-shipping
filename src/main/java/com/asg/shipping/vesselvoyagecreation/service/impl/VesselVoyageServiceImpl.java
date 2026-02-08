@@ -6,6 +6,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -34,6 +35,8 @@ import com.asg.shipping.vesselvoyagecreation.util.DateValidationUtil;
 import com.asg.shipping.vesselvoyagecreation.util.VoyageMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JasperReport;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -51,10 +54,13 @@ import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+
+import javax.sql.DataSource;
 
 @Service
 @RequiredArgsConstructor
@@ -71,6 +77,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private final VoyageBillsRepository voyageBillsRepository;
     private final VoyageMapper voyageMapper;
     private final LoggingService loggingService;
+    private final PrintService printService;
+    private final DataSource dataSource;
 
     @Value("${vvc.edi.upload-dir:./uploads/edi}")
     private String ediUploadDir;
@@ -79,7 +87,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private String exportsDir;
 
     @Override
-    public Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId) {
+    public Map<String, Object> listVoyages(FilterRequestDto request, Pageable pageable, String docId, LocalDate startDate, LocalDate endDate) {
         String effectiveDocId = docId != null ? docId : UserContext.getDocumentId();
         if (effectiveDocId == null || effectiveDocId.isBlank()) {
             throw new IllegalArgumentException("X-Document-Id header is required for list endpoint");
@@ -91,11 +99,17 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             lineStatus = storedProcedureRepository.procGlobUserLineListing(userPoid);
         }
 
-        log.info("List voyages | docId={} page={} size={} lineStatus={}", effectiveDocId, pageable.getPageNumber(), pageable.getPageSize(), lineStatus);
+        log.info("List voyages | docId={} page={} size={} startDate={} endDate={} lineStatus={}", effectiveDocId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate, lineStatus);
 
         String operator = documentSearchService.resolveOperator(request);
         String isDeleted = documentSearchService.resolveIsDeleted(request);
         var filters = documentSearchService.resolveFilters(request);
+        
+        // Add date filters if provided
+        if (startDate != null && endDate != null) {
+            // Add date range filter for TRANSACTION_DATE field
+            filters = documentSearchService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        }
 
         RawSearchResult raw = documentSearchService.search(
                 effectiveDocId,
@@ -219,7 +233,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         String docId = UserContext.getDocumentId();
         String key = fresh.getTransactionPoid().toString();
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
-        loggingService.logChanges(null, fresh, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.CREATED, "TRANSACTION_POID");
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(fresh.getLinePoid()).orElse(null);
         return voyageMapper.toResponse(fresh, lineCode);
@@ -254,7 +267,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         // Add logging
         String docId = UserContext.getDocumentId();
         String key = entity.getTransactionPoid().toString();
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
         loggingService.logChanges(oldEntity, entity, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(entity.getLinePoid()).orElse(null);
@@ -578,6 +590,22 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         log.info("Successfully deleted vessel voyage with id: {}", voyagePoid);
     }
+    
+    
+    @Override
+    public byte[] print(Long transactionPoid, String freightCargo, String importExport) throws Exception {
+
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-101");
+		params.put("P_FREIGHTCARGO", freightCargo);
+        params.put("P_IMPORT_EXPORT", importExport);
+        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+	    JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
+	    return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
 }
 
 

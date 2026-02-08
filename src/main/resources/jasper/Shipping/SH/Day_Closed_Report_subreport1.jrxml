@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Day_Closed_Report_subreport1" language="groovy" pageWidth="802" pageHeight="555" orientation="Landscape" columnWidth="802" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="51"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="FROM_DATE" class="java.lang.String"/>
+	<parameter name="TO_DATE" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT COMPANY_POID,CASH,CHEQUE,SPLIT,IMCOCASH,IMCOCHEQUE,ROUNDOFF FROM (
+           select company_poid,rcpt_type,sum(AMOUNT) AMOUNT from (
+           select hdr.TRANSACTION_POID,hdr.company_poid,
+           case when PYMT_TYPE = 'CHEQUE' and CHQ_CARDNO is not null
+           then 'CHEQUE'
+           when PYMT_TYPE = 'SPLIT' and (AMOUNT is not null or AMOUNT != 0)
+            then 'SPLIT'
+            when PYMT_TYPE = 'CASH' and (AMOUNT is not null or AMOUNT != 0)
+            then 'CASH'
+            when PYMT_TYPE = 'IMCOCASH' and (AMOUNT is not null or AMOUNT != 0)
+            then 'IMCOCASH'
+            when PYMT_TYPE = 'IMCOCHEQUE' and  CHQ_CARDNO is not null
+            then 'IMCOCHEQUE'
+             when PYMT_TYPE = 'ROUNDOFF' and (AMOUNT is not null or AMOUNT != 0)
+            then 'ROUNDOFF'
+           end rcpt_type,
+          AMOUNT from
+           AR_SH_RECEIPT_HDR hdr
+           inner join ar_sh_receipt_pymt_details paydtl  on paydtl.TRANSACTION_POID = hdr.TRANSACTION_POID
+           where to_date(TRUNC(hdr.TRANSACTION_DATE)) BETWEEN $P{FROM_DATE} AND  $P{TO_DATE}
+           and NVL(hdr.DELETED,'N') = 'N'  and hdr.bl_poid is not null and hdr.company_poid =$P{LOGIN_COMP_POID}
+           order by hdr.company_poid)
+           where rcpt_type is not null
+           group by rcpt_type,company_poid
+           order by company_poid )
+           PIVOT ( SUM(AMOUNT) FOR (rcpt_type) IN ('CASH' AS CASH, 'CHEQUE' AS CHEQUE, 'SPLIT' AS SPLIT,'IMCOCASH' as IMCOCASH,'IMCOCHEQUE' as IMCOCHEQUE,'ROUNDOFF' as ROUNDOFF))
+           ORDER BY company_poid]]>
+	</queryString>
+	<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+	<field name="CASH" class="java.math.BigDecimal"/>
+	<field name="CHEQUE" class="java.math.BigDecimal"/>
+	<field name="SPLIT" class="java.math.BigDecimal"/>
+	<field name="IMCOCASH" class="java.math.BigDecimal"/>
+	<field name="IMCOCHEQUE" class="java.math.BigDecimal"/>
+	<field name="ROUNDOFF" class="java.math.BigDecimal"/>
+	<variable name="Company_filter" class="java.lang.String">
+		<variableExpression><![CDATA[$P{LOGIN_COMP_POID} == "ALL" ? "%" : $P{LOGIN_COMP_POID}]]></variableExpression>
+		<initialValueExpression><![CDATA[$P{LOGIN_COMP_POID} == "ALL" ? "%" : $P{LOGIN_COMP_POID}]]></initialValueExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<columnHeader>
+		<band height="17">
+			<staticText>
+				<reportElement x="2" y="1" width="86" height="16" uuid="f0e97ab5-07d7-4378-9413-22a724c0f91a"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Cash/IMCO Cash:]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="88" y="1" width="64" height="16" uuid="1f4fc394-9a96-420a-a828-58fde57e4054"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$F{CASH}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="213" y="0" width="76" height="16" uuid="a8b3ac46-5efb-4006-a068-31c0d4561f61"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Cheque/IMCO :]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="291" y="0" width="51" height="16" uuid="4abe8f32-0eed-4af0-94bf-9d5a0f9e1182"/>
+				<textElement textAlignment="Right">
+					<font isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CHEQUE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="508" y="0" width="44" height="16" uuid="80006e31-bd63-4d05-9612-31779b778adf"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Split :]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="552" y="0" width="79" height="16" uuid="89410b49-4c5d-48ea-a6d1-e4ee8486ee30"/>
+				<textFieldExpression><![CDATA[$F{SPLIT}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="0" y="0" width="802" height="1" uuid="89d7f77b-d8b0-41f4-94a5-9d7771181a39"/>
+			</line>
+			<line>
+				<reportElement x="0" y="15" width="802" height="1" uuid="2e63e8fc-6bb8-4ed8-823e-17f45c75930f"/>
+			</line>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="159" y="1" width="47" height="15" uuid="8f6ef507-e6d8-4172-b3f8-047339e00abf"/>
+				<textFieldExpression><![CDATA[$F{IMCOCASH}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="153" y="1" width="3" height="15" uuid="ebc19747-c152-4134-912b-ad77e6b792c3"/>
+				<text><![CDATA[/]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="342" y="0" width="3" height="15" uuid="151ebd9e-4c42-45af-8198-3dd3d23ecfed"/>
+				<text><![CDATA[/]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="348" y="0" width="54" height="15" uuid="d82e2c00-f3cc-4f3d-acfc-c1908eb69c22"/>
+				<textFieldExpression><![CDATA[$F{IMCOCHEQUE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="412" y="0" width="52" height="15" uuid="7b8e2bd8-3719-4c4f-992f-43bc923d5d9f"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Roundoff :]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="464" y="1" width="37" height="15" uuid="b221ea2e-4465-47eb-b0d8-b0fc839cfd26"/>
+				<textFieldExpression><![CDATA[$F{ROUNDOFF}]]></textFieldExpression>
+			</textField>
+		</band>
+	</columnHeader>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>
