@@ -1,6 +1,9 @@
 package com.asg.shipping.deliveryorderissuetocustomer.service;
 
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
@@ -13,11 +16,13 @@ import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
+import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,12 +50,13 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final JdbcTemplate jdbcTemplate;
     private final PrintService printService;
     private final DataSource dataSource;
+    private final LoggingService loggingService;
 
 
     @Override
     @Transactional(readOnly = true)
     public DeliveryOrderIssueToCustomerDto getDeliveryOrderIssueToCustomer(Long transactionPoid) {
-        log.info("Getting delivery order with transactionPoid: {}", transactionPoid);
+        log.info("Getting delivery order with transactionPoid: {}, company poid: {}", transactionPoid,getCompanyPoid());
 
         DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, getCompanyPoid())
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery Order", "transactionPoid", transactionPoid.toString()));
@@ -130,6 +136,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         blManifest.setLastModifiedBy(username);
         blManifest.setLastModifiedDate(LocalDateTime.now());
         blManifestRepository.save(blManifest);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
 
         // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 18 parameters
         // In legacy, this is called before printing. NOT_UPDATE is called AFTER printing all documents.
@@ -154,6 +161,9 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString()));
 
+        ShipBlManifestHDR oldBlManifest = new ShipBlManifestHDR();
+        BeanUtils.copyProperties(blManifest, oldBlManifest);
+
         if (StringUtils.isNotBlank(request.getDoPriority())) {
             blManifest.setDoPriority(request.getDoPriority());
         }
@@ -176,9 +186,13 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         blManifest.setLastModifiedBy(username);
         blManifest.setLastModifiedDate(LocalDateTime.now());
         blManifestRepository.save(blManifest);
+        loggingService.logChanges(oldBlManifest,blManifest,ShipBlManifestHDR.class,UserContext.getDocumentId(),blManifest.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
 
         DoShPrintingDtl doShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery order ship printing detail", "transactionPoid", transactionPoid.toString()));
+
+        DoShPrintingDtl oldDoShPrintingDtl = new DoShPrintingDtl();
+        BeanUtils.copyProperties(doShPrintingDtl, oldDoShPrintingDtl);
 
         if (StringUtils.isNotBlank(request.getOriginalBlReleaseCr())) {
             doShPrintingDtl.setOrignalBlReleaseCr(request.getOriginalBlReleaseCr());
@@ -196,7 +210,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         doShPrintingDtl.setLastModifiedBy(username);
         doShPrintingDtl.setLastModifiedDate(LocalDateTime.now());
         doShPrintingDtlRepository.save(doShPrintingDtl);
-
+        loggingService.logChanges(oldDoShPrintingDtl,doShPrintingDtl,DoShPrintingDtl.class,UserContext.getDocumentId(),doShPrintingDtl.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
         return transactionPoid;
     }
 

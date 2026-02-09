@@ -1,6 +1,7 @@
 package com.asg.shipping.deliveryorderissuetocustomer.entity;
 
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,20 +21,25 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class ShipBlManifestHDR {
 
+    @AuditIgnore
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long transactionPoid;
 
+    @AuditIgnore
     @Column(name = "GROUP_POID", nullable = false)
     private Long groupPoid;
 
+    @AuditIgnore
     @Column(name = "COMPANY_POID", nullable = false)
     private Long companyPoid;
 
+    @AuditIgnore
     @Column(name = "DOC_REF", length = 25, unique = true)
     private String docRef;
 
+    @AuditIgnore
     @Column(name = "TRANSACTION_DATE")
     private LocalDateTime transactionDate;
 
@@ -379,15 +385,19 @@ public class ShipBlManifestHDR {
     @Column(name = "EMAIL_VERIFIED_WITH_SPECIAL_C", length = 1)
     private String emailVerifiedWithSpecialC;
 
+    @AuditIgnore
     @Column(name = "CREATED_BY", length = 20)
     private String createdBy;
 
+    @AuditIgnore
     @Column(name = "CREATED_DATE")
     private LocalDateTime createdDate;
 
+    @AuditIgnore
     @Column(name = "LASTMODIFIED_BY", length = 20)
     private String lastModifiedBy;
 
+    @AuditIgnore
     @Column(name = "LASTMODIFIED_DATE")
     private LocalDateTime lastModifiedDate;
 

@@ -1,7 +1,10 @@
 package com.asg.shipping.deliveryorderissuetocustomer.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.*;
 import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
@@ -27,6 +30,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.success;
 public class DeliveryOrderIssueToCustomerController {
 
     private final DeliveryOrderIssueToCustomerService deliveryOrderIssueToCustomerService;
+    private final LoggingService loggingService;
 
     /**
      * Get delivery order by BL transaction POID
@@ -37,6 +41,7 @@ public class DeliveryOrderIssueToCustomerController {
     public ResponseEntity<?> getDeliveryOrderIssueToCustomer(@PathVariable Long id) {
         log.info("Get request for Delivery Order Issue To Customer with id: {}", id);
         DeliveryOrderIssueToCustomerDto dto = deliveryOrderIssueToCustomerService.getDeliveryOrderIssueToCustomer(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         return success("Delivery order retrieved successfully", dto);
     }
 
@@ -91,6 +96,7 @@ public class DeliveryOrderIssueToCustomerController {
     @PostMapping("/validate-document/{id}")
     public ResponseEntity<?> validateDocument(@PathVariable Long id, @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto) {
         ValidateDocumentDto dto = deliveryOrderIssueToCustomerService.validateDocument(id, requestDto);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         return success("Delivery order retrieved successfully", dto);
     }
 
