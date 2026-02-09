@@ -8,7 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ValidateDocumentDto {
-
     private Boolean canPrint;
     private String message;
 }

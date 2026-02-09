@@ -35,16 +35,16 @@ public class DeliveryOrderIssueToCustomerRepository {
         String sql = "SELECT COMPANY_POID, TRANSACTION_POID, TRANSACTION_DATE, DOC_REF, JOBNO, " +
                 "ARRIVAL_DATE, BL_NUMBER, LINE, CONSIGNEE, NOTIFY, C_20, C_40, HOLD_DO, " +
                 "DO_RELASED_ID_PERSON, DO_RELASED_TO_PERSON, DO_RELASED_ADDRS_PERSON, " +
-                "BL_RELEASE_TYPE_OFFICE, ORIGNAL_BL_RELEASE_CR, DO_PRIORITY, DO_ISSUE_AUTH, " +
-                "DO_ISSUE_AUTH_POID, DO_CNT_TO_CONSIGNEE, DO_CNT_TO_NOTIFY, DO_CNT_TO_OTHERS, " +
-                "DO_CNT_TO_OTHERS_MAILS, DO_EMAILS, DELIVERY_SENT_TO, PRINCIPAL_DO_NUMBER, " +
-                "PRINCIPAL_DO_REQUIRED " +
+                "DELETED, SEQNO, BL_RELEASE_TYPE_OFFICE, ORIGNAL_BL_RELEASE_CR, DO_PRIORITY, " +
+                "DO_ISSUE_AUTH, DO_ISSUE_AUTH_POID, DO_CNT_TO_CONSIGNEE, DO_CNT_TO_NOTIFY, " +
+                "DO_CNT_TO_OTHERS, DO_CNT_TO_OTHERS_MAILS, DO_EMAILS, DELIVERY_SENT_TO, " +
+                "PRINCIPAL_DO_NUMBER, PRINCIPAL_DO_REQUIRED " +
                 "FROM VW_CREDIT_DELIVERY_ORDER_PEND " +
                 "WHERE TRANSACTION_POID = ? AND COMPANY_POID = ?";
 
         try {
             List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid, companyPoid);
-            return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+            return results.isEmpty() ? Optional.empty() : Optional.of(results.getFirst());
         } catch (Exception e) {
             // Log error and return empty
             return Optional.empty();
@@ -60,12 +60,10 @@ public class DeliveryOrderIssueToCustomerRepository {
             return DeliveryOrderIssueToCustomerDto.builder()
                     .companyPoid(rs.getLong("COMPANY_POID"))
                     .transactionPoid(rs.getLong("TRANSACTION_POID"))
-                    .transactionDate(rs.getDate("TRANSACTION_DATE") != null ?
-                            rs.getDate("TRANSACTION_DATE").toLocalDate() : null)
+                    .transactionDate(rs.getDate("TRANSACTION_DATE") != null ? rs.getDate("TRANSACTION_DATE").toLocalDate() : null)
                     .docRef(rs.getString("DOC_REF"))
                     .jobNo(rs.getString("JOBNO"))
-                    .arrivalDate(rs.getDate("ARRIVAL_DATE") != null ?
-                            rs.getDate("ARRIVAL_DATE").toLocalDate() : null)
+                    .arrivalDate(rs.getDate("ARRIVAL_DATE") != null ? rs.getDate("ARRIVAL_DATE").toLocalDate() : null)
                     .blNumber(rs.getString("BL_NUMBER"))
                     .line(rs.getString("LINE"))
                     .consignee(rs.getString("CONSIGNEE"))
@@ -76,12 +74,13 @@ public class DeliveryOrderIssueToCustomerRepository {
                     .doReleasedIdPerson(rs.getString("DO_RELASED_ID_PERSON"))
                     .doReleasedToPerson(rs.getString("DO_RELASED_TO_PERSON"))
                     .doReleasedAddrsPerson(rs.getString("DO_RELASED_ADDRS_PERSON"))
+                    .deleted(rs.getString("DELETED"))
+                    .seqno(rs.getObject("SEQNO") != null ? rs.getLong("SEQNO") : null)
                     .blReleaseTypeOffice(rs.getString("BL_RELEASE_TYPE_OFFICE"))
                     .originalBlReleaseCr(rs.getString("ORIGNAL_BL_RELEASE_CR"))
                     .doPriority(rs.getString("DO_PRIORITY"))
                     .doIssueAuth(rs.getString("DO_ISSUE_AUTH"))
-                    .doIssueAuthPoid(rs.getObject("DO_ISSUE_AUTH_POID") != null ?
-                            rs.getLong("DO_ISSUE_AUTH_POID") : null)
+                    .doIssueAuthPoid(rs.getObject("DO_ISSUE_AUTH_POID") != null ? rs.getLong("DO_ISSUE_AUTH_POID") : null)
                     .doCntToConsignee(rs.getString("DO_CNT_TO_CONSIGNEE"))
                     .doCntToNotify(rs.getString("DO_CNT_TO_NOTIFY"))
                     .doCntToOthers(rs.getString("DO_CNT_TO_OTHERS"))
@@ -97,23 +96,22 @@ public class DeliveryOrderIssueToCustomerRepository {
     @SuppressWarnings("unchecked")
     public List<Object[]> fetchShipLineDetails(Long pBLPoid) {
 
-        String sql =
-                "SELECT DISTINCT " +
-                        " CONTAINER_FORM_VHENT, " +
-                        " CONTAINER_FORM_RTN, " +
-                        " DO_PRINT_LINE, " +
-                        " LINE_CODE, " +
-                        " RCPT_PRINT_LINE " +
-                        "FROM SHIP_LINE_MASTER " +
-                        "WHERE LINE_POID IN ( " +
-                        "   SELECT LINE_POID " +
-                        "   FROM SHIP_VOYAGE_HDR " +
-                        "   WHERE TRANSACTION_POID IN ( " +
-                        "       SELECT VOYAGE_TRANSACTION_POID " +
-                        "       FROM SHIP_BL_MANIFEST_HDR " +
-                        "       WHERE TRANSACTION_POID = :pBLPoid " +
-                        "   ) " +
-                        ")";
+        String sql = "SELECT DISTINCT " +
+                " CONTAINER_FORM_VHENT, " +
+                " CONTAINER_FORM_RTN, " +
+                " DO_PRINT_LINE, " +
+                " LINE_CODE, " +
+                " RCPT_PRINT_LINE " +
+                "FROM SHIP_LINE_MASTER " +
+                "WHERE LINE_POID IN ( " +
+                "   SELECT LINE_POID " +
+                "   FROM SHIP_VOYAGE_HDR " +
+                "   WHERE TRANSACTION_POID IN ( " +
+                "       SELECT VOYAGE_TRANSACTION_POID " +
+                "       FROM SHIP_BL_MANIFEST_HDR " +
+                "       WHERE TRANSACTION_POID = :pBLPoid " +
+                "   ) " +
+                ")";
 
         Query query = entityManager.createNativeQuery(sql);
         query.setParameter("pBLPoid", pBLPoid);
@@ -134,43 +132,26 @@ public class DeliveryOrderIssueToCustomerRepository {
                             " AND FREIGHT_TYPE='C' AND RECEIPT_INVOICE_POID IS NULL " +
                             " AND NVL(PER_QUANTITY_AMOUNT,0)<>0 AND MHDR.TRANSACTION_POID=?";
 
-            BigDecimal pendingAmount =
-                    jdbcTemplate.queryForObject(
-                            pendingAmountQuery,
-                            BigDecimal.class,
-                            transactionPoid
-                    );
+            BigDecimal pendingAmount = jdbcTemplate.queryForObject(pendingAmountQuery, BigDecimal.class, transactionPoid);
 
             if (pendingAmount != null && pendingAmount.compareTo(BigDecimal.ZERO) > 0) {
                 return "Y";
             }
-            String printStatusQuery =
-                    " select DO_PRINTED ,CNT_FORM_DLV_PRINTED,CNT_FORM_RTN_PRINTED " +
-                            " FROM DO_sh_PRINTING_DTL WHERE TRANSACTION_POID=?";
+            String printStatusQuery = " select DO_PRINTED ,CNT_FORM_DLV_PRINTED,CNT_FORM_RTN_PRINTED " + " FROM DO_sh_PRINTING_DTL WHERE TRANSACTION_POID=?";
 
-            List<Map<String, Object>> rows =
-                    jdbcTemplate.queryForList(printStatusQuery, transactionPoid);
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(printStatusQuery, transactionPoid);
 
             if (rows.isEmpty()) {
                 return "N";
             }
 
-            Map<String, Object> row = rows.get(0);
+            Map<String, Object> row = rows.getFirst();
 
-            String doPrinted =
-                    row.get("DO_PRINTED") != null
-                            ? row.get("DO_PRINTED").toString()
-                            : "N";
+            String doPrinted = row.get("DO_PRINTED") != null ? row.get("DO_PRINTED").toString() : "N";
 
-            String dlvCntPrinted =
-                    row.get("CNT_FORM_DLV_PRINTED") != null
-                            ? row.get("CNT_FORM_DLV_PRINTED").toString()
-                            : "N";
+            String dlvCntPrinted = row.get("CNT_FORM_DLV_PRINTED") != null ? row.get("CNT_FORM_DLV_PRINTED").toString() : "N";
 
-            String rtnCntPrinted =
-                    row.get("CNT_FORM_RTN_PRINTED") != null
-                            ? row.get("CNT_FORM_RTN_PRINTED").toString()
-                            : "N";
+            String rtnCntPrinted = row.get("CNT_FORM_RTN_PRINTED") != null ? row.get("CNT_FORM_RTN_PRINTED").toString() : "N";
 
             /* ===============================
              * 3. Return strictly Y / N
@@ -197,16 +178,15 @@ public class DeliveryOrderIssueToCustomerRepository {
 
     public String getPlineCode(Long pBLPoid) {
 
-        String sql =
-                " select distinct " +
-                        "CONTAINER_FORM_VHENT," +
-                        "CONTAINER_FORM_RTN," +
-                        "DO_PRINT_LINE," +
-                        "LINE_CODE," +
-                        "RCPT_PRINT_LINE from SHIP_LINE_MASTER where line_poid in " +
-                        "(select line_poid from SHIP_VOYAGE_HDR where transaction_poid in " +
-                        "(select voyage_transaction_poid from SHIP_BL_MANIFEST_HDR where transaction_poid=" +
-                        pBLPoid.toString() + "))";
+        String sql = " select distinct " +
+                "CONTAINER_FORM_VHENT," +
+                "CONTAINER_FORM_RTN," +
+                "DO_PRINT_LINE," +
+                "LINE_CODE," +
+                "RCPT_PRINT_LINE from SHIP_LINE_MASTER where line_poid in " +
+                "(select line_poid from SHIP_VOYAGE_HDR where transaction_poid in " +
+                "(select voyage_transaction_poid from SHIP_BL_MANIFEST_HDR where transaction_poid=" +
+                pBLPoid.toString() + "))";
 
         try {
             @SuppressWarnings("unchecked")
@@ -228,14 +208,9 @@ public class DeliveryOrderIssueToCustomerRepository {
 
     }
 
-    public String getGlobalParameterValue(
-            String parameterName,
-            String parameterKeyIdType,
-            String parameterKeyId,
-            String defaultValue) {
+    public String getGlobalParameterValue(String parameterName, String parameterKeyIdType, String parameterKeyId, String defaultValue) {
 
-        String sql =
-                "SELECT PRODUCTION.RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
+        String sql = "SELECT PRODUCTION.RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
 
         try {
             return jdbcTemplate.queryForObject(
@@ -251,7 +226,5 @@ public class DeliveryOrderIssueToCustomerRepository {
             return defaultValue;
         }
     }
-
-
 }
 

@@ -69,6 +69,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
                 .doPriority("HIGH")
                 .doIssueAuthPoid(200L)
                 .deliverySentTo("C")
+                .blReleaseTypeOffice("OFFICE")
                 .build();
 
         mockEntity = new ShipBlManifestHDR();
@@ -144,14 +145,25 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         IssueDeliveryOrderRequestDto invalidRequest = IssueDeliveryOrderRequestDto.builder()
                 .doReleasedIdPerson("REL001")
+                .doReleasedToPerson("John Doe")
+                .doReleasedAddressPerson("123 Test Street")
                 .doPriority("HIGH")
                 .emailsDo("do@example.com")
+                .originalBlReleaseCr("OFFICE")
                 .build();
 
-        ValidationException exception = assertThrows(ValidationException.class, 
-                () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
-        
-        assertEquals("Delivery sent to is required", exception.getMessage());
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
+            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
+            
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
+
+            ValidationException exception = assertThrows(ValidationException.class, 
+                    () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
+            
+            assertEquals("Select delivery send to from dropdown list", exception.getMessage());
+        }
     }
 
     @Test
@@ -159,14 +171,25 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         IssueDeliveryOrderRequestDto invalidRequest = IssueDeliveryOrderRequestDto.builder()
                 .doReleasedIdPerson("REL001")
+                .doReleasedToPerson("John Doe")
+                .doReleasedAddressPerson("123 Test Street")
                 .doPriority("HIGH")
                 .deliverySentTo("C")
+                .originalBlReleaseCr("OFFICE")
                 .build();
 
-        ValidationException exception = assertThrows(ValidationException.class, 
-                () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
-        
-        assertEquals("Delivery emails not added for customer", exception.getMessage());
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
+            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
+            
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
+
+            ValidationException exception = assertThrows(ValidationException.class, 
+                    () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
+            
+            assertEquals("Delivery emails not added for customer", exception.getMessage());
+        }
     }
 
     @Test
@@ -174,11 +197,9 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
-            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.empty());
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, issueRequest));
@@ -188,14 +209,16 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
     @Test
     void issueDeliveryOrder_EntityDeleted() {
         Long transactionPoid = 1L;
-        mockEntity.setDeleted("Y");
+        mockDto = DeliveryOrderIssueToCustomerDto.builder()
+                .transactionPoid(1L)
+                .companyPoid(100L)
+                .deleted("Y")
+                .build();
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
-            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.of(mockEntity));
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, issueRequest));

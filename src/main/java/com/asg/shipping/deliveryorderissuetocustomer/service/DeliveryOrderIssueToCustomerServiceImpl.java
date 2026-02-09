@@ -68,10 +68,56 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
 
-        if (request.getDeliverySentTo() == null || request.getDeliverySentTo().trim().isEmpty()) {
-            throw new ValidationException("Delivery sent to is required");
+        // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired for validation
+        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery Order", "transactionPoid", transactionPoid.toString()));
+
+        // Validate Principal DO Number
+        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired())) {
+            if (StringUtils.isBlank(request.getPrincipalDoNumber()) || request.getPrincipalDoNumber().trim().length() <= 3) {
+                throw new ValidationException("Principal Do number can not be blank");
+            }
         }
 
+        // Validate Address
+        if (StringUtils.isBlank(request.getDoReleasedAddressPerson())) {
+            throw new ValidationException("Address can not be blank");
+        }
+
+        // Validate ID/CPR
+        if (StringUtils.isBlank(request.getDoReleasedIdPerson())) {
+            throw new ValidationException("ID/CPR can not be blank");
+        }
+
+        // Validate Name
+        if (StringUtils.isBlank(request.getDoReleasedToPerson())) {
+            throw new ValidationException("Name can not be blank");
+        }
+
+        // Validate DO Priority
+        if (StringUtils.isBlank(request.getDoPriority())) {
+            throw new ValidationException("Do Issue TO, can not be blank");
+        }
+
+        // Validate Original BL Release CR
+        if (StringUtils.isBlank(request.getOriginalBlReleaseCr())) {
+            throw new ValidationException("Bl issue type can not be blank");
+        }
+
+        // Validate BL Release Type Office matches Original BL Release CR
+        if (StringUtils.isBlank(dto.getBlReleaseTypeOffice())) {
+            throw new ValidationException("Office Bl issue type can not be blank");
+        }
+        if (!dto.getBlReleaseTypeOffice().equalsIgnoreCase(request.getOriginalBlReleaseCr())) {
+            throw new ValidationException("Check Bl issue type");
+        }
+
+        // Validate Delivery Sent To
+        if (StringUtils.isBlank(request.getDeliverySentTo())) {
+            throw new ValidationException("Select delivery send to from dropdown list");
+        }
+
+        // Validate Email Configuration
         validateEmailConfiguration(request);
 
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
@@ -86,22 +132,15 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         blManifestRepository.save(blManifest);
 
         // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 18 parameters
+        // In legacy, this is called before printing. NOT_UPDATE is called AFTER printing all documents.
+        // In new architecture, printing is handled separately via print endpoints, so NOT_UPDATE
+        // will be called in the print endpoint after each document is printed.
         callProcShipDoCntPrintAfter(groupPoid, companyPoid, transactionPoid, null,
                 "ARSHRCPTPRINTUPDATE", username, request.getDoReleasedIdPerson(),
                 request.getDoReleasedToPerson(), request.getDoReleasedAddressPerson(),
                 request.getOriginalBlReleaseCr(), request.getDoPriority(), request.getDoCntToConsignee(),
                 request.getDoCntToNotify(), request.getDoCntToOthers(), request.getDoCntToOthersMails(),
                 request.getEmailsDo(), request.getDeliverySentTo(), request.getPrincipalDoNumber());
-
-        // Check if auto-print is enabled (simplified - would need parameter service)
-        // For now, we'll skip auto-print and call the second stored procedure call
-        // In real implementation, check system parameter START_DO_CNT_DIRECT_CUST
-
-        // Call PROC_SHIP_DO_CNT_PRINT_AFTER again with 11 parameters (NOT_UPDATE)
-        callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, "ARSHRCPTPRINTUPDATE",
-                username, request.getDoReleasedIdPerson(), request.getDoReleasedToPerson(),
-                request.getDoReleasedAddressPerson(), request.getOriginalBlReleaseCr()
-        );
     }
 
     @Override
@@ -164,24 +203,32 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     @Override
     public byte[] print(Long transactionPoid, IssueDeliveryOrderRequestDto requestDto, ButtonType buttonType) throws Exception {
 
-        validateEmailConfiguration(requestDto);
-
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
 
+        // In legacy, print methods only check if document can be printed and print it.
+        // All field validations are done once in doCntPrint() before printing.
+        // Here we only validate print conditions, not field values.
+        
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-414");
         params.put("P_TRAN_NO", transactionPoid);
 
         byte[] result = generatePrintByButtonType(transactionPoid, buttonType, params);
         if (result != null) {
+            // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 11 parameters (NOT_UPDATE) after successful print
+            // In legacy, this is called once after all 3 documents are printed in sequence.
+            // In new architecture, we call it after each successful print since printing is done separately.
+            // The stored procedure should handle being called multiple times gracefully.
+            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, "ARSHRCPTPRINTUPDATE",
+                    username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
+                    requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
+            );
             return result;
         }
-
-        callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, "ARSHRCPTPRINTUPDATE",
-                username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
-                requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
-        );
+        
+        // If printing failed (result is null), don't call NOT_UPDATE
+        // This happens when document cannot be printed (print validation failed or already printed)
         return null;
     }
 
@@ -192,10 +239,56 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
 
-        if (requestDto.getDeliverySentTo() == null || requestDto.getDeliverySentTo().trim().isEmpty()) {
-            throw new ValidationException("Delivery sent to is required");
+        // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired
+        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(id, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery Order", "transactionPoid", id.toString()));
+
+        // Validate Principal DO Number
+        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired())) {
+            if (StringUtils.isBlank(requestDto.getPrincipalDoNumber()) || requestDto.getPrincipalDoNumber().trim().length() <= 3) {
+                throw new ValidationException("Principal Do number can not be blank");
+            }
         }
 
+        // Validate Address
+        if (StringUtils.isBlank(requestDto.getDoReleasedAddressPerson())) {
+            throw new ValidationException("Address can not be blank");
+        }
+
+        // Validate ID/CPR
+        if (StringUtils.isBlank(requestDto.getDoReleasedIdPerson())) {
+            throw new ValidationException("ID/CPR can not be blank");
+        }
+
+        // Validate Name
+        if (StringUtils.isBlank(requestDto.getDoReleasedToPerson())) {
+            throw new ValidationException("Name can not be blank");
+        }
+
+        // Validate DO Priority
+        if (StringUtils.isBlank(requestDto.getDoPriority())) {
+            throw new ValidationException("Do Issue TO, can not be blank");
+        }
+
+        // Validate Original BL Release CR
+        if (StringUtils.isBlank(requestDto.getOriginalBlReleaseCr())) {
+            throw new ValidationException("Bl issue type can not be blank");
+        }
+
+        // Validate BL Release Type Office matches Original BL Release CR
+        if (StringUtils.isBlank(dto.getBlReleaseTypeOffice())) {
+            throw new ValidationException("Office Bl issue type can not be blank");
+        }
+        if (!dto.getBlReleaseTypeOffice().equalsIgnoreCase(requestDto.getOriginalBlReleaseCr())) {
+            throw new ValidationException("Check Bl issue type");
+        }
+
+        // Validate Delivery Sent To
+        if (StringUtils.isBlank(requestDto.getDeliverySentTo())) {
+            throw new ValidationException("Select delivery send to from dropdown list");
+        }
+
+        // Validate Email Configuration
         validateEmailConfiguration(requestDto);
 
         callProcShipDoCntPrintAfter(
@@ -221,7 +314,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             return new ValidateDocumentDto(false, "Verification Completed");
         }
         return new ValidateDocumentDto(true, null);
-
     }
 
     private byte[] generatePrintByButtonType(Long transactionPoid, ButtonType buttonType, Map<String, Object> params) throws Exception {
@@ -296,13 +388,13 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     }
 
     private void validateEmailConfiguration(IssueDeliveryOrderRequestDto request) {
-        if (request.getEmailsAdditional() != null &&
+        if (StringUtils.isNotBlank(request.getEmailsAdditional()) &&
                 (request.getDoCntToOthers() == null || !"Y".equals(request.getDoCntToOthers()))) {
             throw new ValidationException("Select additional emails check box when providing additional emails");
         }
 
-        if (request.getEmailsAdditional() != null && !request.getEmailsAdditional().trim().isEmpty()) {
-            if (request.getEmailsAdditional().length() <= 5) {
+        if (StringUtils.isNotBlank(request.getEmailsAdditional())) {
+            if (request.getEmailsAdditional().trim().length() <= 5) {
                 throw new ValidationException("Check additional emails value - must be longer than 5 characters");
             }
             if (!request.getEmailsAdditional().contains("@")) {
@@ -310,12 +402,12 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             }
         }
 
-        if (request.getEmailsDo() == null || request.getEmailsDo().trim().isEmpty()) {
+        if (StringUtils.isBlank(request.getEmailsDo())) {
             throw new ValidationException("Delivery emails not added for customer");
         }
 
         if ("Y".equals(request.getDoCntToOthers()) && StringUtils.isNotBlank(request.getEmailsDo())) {
-            if (request.getEmailsAdditional() == null || request.getEmailsAdditional().trim().isEmpty()) {
+            if (StringUtils.isBlank(request.getEmailsAdditional())) {
                 throw new ValidationException("Additional emails need to be added when others is selected");
             }
         }
