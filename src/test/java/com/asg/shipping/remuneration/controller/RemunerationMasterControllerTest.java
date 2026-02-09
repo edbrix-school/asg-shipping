@@ -3,6 +3,7 @@ package com.asg.shipping.remuneration.controller;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.service.RemunerationMasterService;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,9 @@ class RemunerationMasterControllerTest {
 
     @Mock
     private RemunerationMasterService service;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private RemunerationMasterController controller;
