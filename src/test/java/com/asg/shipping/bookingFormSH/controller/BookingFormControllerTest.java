@@ -62,6 +62,7 @@ class BookingFormControllerTest {
 	@BeforeEach
 	void setUp() {
 		objectMapper = new ObjectMapper();
+		objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
 		mockedUserContext = mockStatic(UserContext.class);
 		mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
@@ -218,6 +219,11 @@ class BookingFormControllerTest {
 	private BookingFormCreateDTO createMockCreateDto() {
 		BookingFormCreateDTO dto = new BookingFormCreateDTO();
 		dto.setBookingIssueNo("BK001");
+		dto.setSalesmanPoid(1L);
+		dto.setShipperPoid(1L);
+		dto.setLinePoid(1L);
+		dto.setVesselPoid(1L);
+		dto.setVesselEtaDate(java.time.LocalDate.now());
 		return dto;
 	}
 
