@@ -1,8 +1,13 @@
 package com.asg.shipping.lineprincipalmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.dto.LovItem;
  import com.asg.shipping.common.service.LovService;
@@ -20,12 +25,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -53,6 +60,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
     private final LovService lovService;
     private final LinePrincipalMasterMapper mapper;
     private final JdbcTemplate jdbcTemplate;
+    private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
 
     @Override
     @Transactional(readOnly = true)
@@ -88,6 +97,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
         // Enrich with LOV data
         enrichDtoWithLovData(dto, line, groupPoid);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully retrieved line with id: {}", id);
         return dto;
@@ -126,6 +137,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setCharges(mapper.mapChargeDetailsToDto(charges));
         enrichDtoWithLovData(result, saved, groupPoid);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getLinePoid().toString());
+
         log.info("Successfully created line with id: {}", saved.getLinePoid());
         return result;
     }
@@ -143,12 +156,19 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         ShipLineMaster line = lineRepository.findByLinePoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Line", "linePoid", id.toString()));
 
+        ShipLineMaster oldEntity = new ShipLineMaster();
+        BeanUtils.copyProperties(line, oldEntity);
+
         // Validate
         validateLineUpdateDTO(dto, groupPoid, id);
 
         // Update main entity
         mapper.mapUpdateDTOToEntity(dto, line, groupPoid, userPoid, companyPoid);
         ShipLineMaster saved = lineRepository.save(line);
+
+        String docId = UserContext.getDocumentId();
+        String key = saved.getLinePoid().toString();
+        loggingService.logChanges(oldEntity, saved, ShipLineMaster.class, docId, key, LogDetailsEnum.MODIFIED, "LINE_POID");
 
         // Handle charge details
         updateChargeDetails(id, dto.getCharges(), userPoid);
@@ -186,7 +206,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
     @Override
     @Transactional
-    public void deleteLine(Long id) {
+    public void deleteLine(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting line with id: {}", id);
 
         Long groupPoid = getGroupPoid();
@@ -198,12 +218,14 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             return;
         }
 
-        line.setDeleted("Y");
-        line.setActive("N");
-        line.setLastModifiedBy(getCurrentUser());
-        line.setLastModifiedDate(LocalDateTime.now());
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_LINE_MASTER",
+                "LINE_POID",
+                deleteReasonDto,
+                line.getCreatedDate() != null ? LocalDate.from(line.getCreatedDate()) : LocalDate.now()
+        );
 
-        lineRepository.save(line);
         log.info("Successfully deleted line with id: {}", id);
     }
 

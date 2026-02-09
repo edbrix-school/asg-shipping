@@ -1,6 +1,7 @@
 package com.asg.shipping.lineprincipalmaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.lineprincipalmaster.dto.*;
@@ -306,7 +307,7 @@ public class LinePrincipalMasterController {
     @DeleteMapping("/{id}")
     @Operation(
             summary = "Delete line",
-            description = "Soft delete a line by setting DELETED flag to Y and ACTIVE to N",
+            description = "Soft delete a line using DocumentDeleteService with delete reason",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @Parameters({
@@ -341,9 +342,11 @@ public class LinePrincipalMasterController {
     })
     public ResponseEntity<?> deleteLine(
             @Parameter(description = "Line POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Parameter(description = "Delete reason for audit")
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting line with id: {}", id);
-        lineService.deleteLine(id);
+        lineService.deleteLine(id, deleteReasonDto != null ? deleteReasonDto : new DeleteReasonDto());
         log.info("Successfully deleted line with id: {}", id);
         return ApiResponse.success("Line deleted successfully");
     }

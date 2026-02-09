@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.lineprincipalmaster.dto.*;
 
 import java.util.Map;
@@ -52,11 +53,12 @@ public interface LinePrincipalMasterService {
     void toggleActive(Long id);
 
     /**
-     * Soft delete a line
+     * Soft delete a line using DocumentDeleteService
      *
      * @param id Line POID
+     * @param deleteReasonDto Delete reason for audit
      */
-    void deleteLine(Long id);
+    void deleteLine(Long id, DeleteReasonDto deleteReasonDto);
 
     /**
      * Copy charges from another line
