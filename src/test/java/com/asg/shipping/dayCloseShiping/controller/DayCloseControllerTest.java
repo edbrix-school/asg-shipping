@@ -35,6 +35,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
+import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjectionImpl;
 import com.asg.shipping.dayCloseShiping.service.DayCloseService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,6 +59,7 @@ class DayCloseControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
         mockedUserContext = mockStatic(UserContext.class);
         mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1001L);
@@ -142,7 +144,16 @@ class DayCloseControllerTest {
 
     @Test
     void createDayClose_Success() throws Exception {
-        DayCloseDto request = new DayCloseDto();
+        DayCloseHdrDto header = DayCloseHdrDto.builder()
+                .groupPoid(1001L)
+                .companyPoid(2001L)
+                .transactionDate(LocalDate.now())
+                .build();
+        
+        DayCloseDto request = DayCloseDto.builder()
+                .header(header)
+                .build();
+        
         DayCloseDto response = new DayCloseDto();
 
         when(dayCloseService.createDayClose(any(), eq(1001L), eq(2001L), eq(9001L)))

@@ -125,8 +125,6 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         ShipRemunerationMaster entity = repository.findById(remunerationPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Remuneration", "Remuneration Poid", remunerationPoid));
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), remunerationPoid.toString());
-
         log.info("Successfully retrieved remuneration with id: {}", remunerationPoid);
         return ShipRemunerationMasterMapper.toResponseDto(entity);
     }

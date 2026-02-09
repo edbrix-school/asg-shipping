@@ -247,6 +247,7 @@ class DayCloseServiceImplTest {
         DayCloseDenominationDto denom = new DayCloseDenominationDto();
         denom.setDenomination(new BigDecimal("100"));
         denom.setNoOfTran(2L);
+        denom.setAction("INSERT");
 
         DayCloseHdrDto hdrDto = DayCloseHdrDto.builder()
                 .cashAmount(new BigDecimal("200"))
@@ -258,16 +259,19 @@ class DayCloseServiceImplTest {
         dto.setHeader(hdrDto);
         dto.setDenominations(List.of(denom));
 
+        ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
+        hdr.setTransactionPoid(1L);
+
+        when(hdrRepo.findById(1L)).thenReturn(Optional.of(hdr));
+        when(hdrRepo.save(any())).thenReturn(hdr);
         when(dtlRepo.getMaxDetRowId(1L)).thenReturn(0L);
-        when(mapper.mapDtlFromDto(any(), any(), any()))
-                .thenReturn(new ArShDayEndCloseDtl());
-        when(hdrRepo.findById(1L))
-                .thenReturn(Optional.of(new ArShDayEndCloseHdr()));
+        when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
         when(mapper.mapToDto(any())).thenReturn(new DayCloseDto());
         when(mapper.mapDtlListToDto(any())).thenReturn(List.of());
 
-        service.updateDayClose(dto, 1L, 1L, 1L, 1L);
+        DayCloseDto result = service.updateDayClose(dto, 1L, 1L, 1L, 1L);
 
-        verify(dtlRepo, atLeastOnce()).save(any());
+        assertNotNull(result);
+        verify(hdrRepo).save(any());
     }
 }

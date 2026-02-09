@@ -8,9 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Entity class for SHIP_BL_MANIFEST_HDR table
- */
+
 @Entity
 @Table(name = "SHIP_BL_MANIFEST_HDR",
         uniqueConstraints = {

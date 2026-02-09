@@ -1,5 +1,6 @@
 package com.asg.shipping.deliveryorderissuetocustomer.dto;
 
+import com.asg.shipping.deliveryorderissuetocustomer.annotation.ValidDoCntToOthers;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -9,8 +10,8 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidDoCntToOthers
 public class UpdateDeliveryOrderRequestDto {
-
     @NotBlank(message = "DO released ID person is required")
     @Size(max = 50, message = "DO released ID person must not exceed 50 characters")
     private String doReleasedIdPerson;
@@ -29,36 +30,18 @@ public class UpdateDeliveryOrderRequestDto {
     @Size(max = 10, message = "DO priority must not exceed 10 characters")
     private String doPriority;
 
-//    @Size(max = 500, message = "Consignee emails must not exceed 500 characters")
-//    private String emailsConsg;
-//
-//    @Size(max = 500, message = "Notify emails must not exceed 500 characters")
-//    private String emailNotify;
-//
-//    @Size(max = 500, message = "Other emails must not exceed 500 characters")
-//    private String emailsOthers;
-//
-//    @Size(max = 500, message = "Additional emails must not exceed 500 characters")
-//    private String emailsAdditional;
-//
-//    @Size(max = 500, message = "DO emails must not exceed 500 characters")
-//    private String emailsDo;
-
     @Size(max = 1, message = "Delivery sent to must not exceed 1 character")
     private String deliverySentTo;
 
     @Size(max = 50, message = "Principal DO number must not exceed 50 characters")
     private String principalDoNumber;
 
-    @Size(max = 1, message = "DO count to consignee must not exceed 1 character")
-    private String doCntToConsignee;
-
-    @Size(max = 1, message = "DO count to notify must not exceed 1 character")
-    private String doCntToNotify;
-
     @Size(max = 1, message = "DO count to others must not exceed 1 character")
     private String doCntToOthers;
 
     @Size(max = 500, message = "DO count to others mails must not exceed 500 characters")
     private String doCntToOthersMails;
+
+    @Size(max = 250, message = "Remarks must not exceed 500 characters")
+    private String remarks;
 }

@@ -96,14 +96,12 @@ public class ChargeGroupMasterControllerTest {
                 .chargeGroupName("")
                 .build();
 
-        when(service.create(any(ChargeGroupMasterRequestDto.class))).thenReturn(responseDto);
-
         mockMvc.perform(post("/v1/charge-group-master")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidDto)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).create(any(ChargeGroupMasterRequestDto.class));
+        verify(service, never()).create(any(ChargeGroupMasterRequestDto.class));
     }
 
     @Test

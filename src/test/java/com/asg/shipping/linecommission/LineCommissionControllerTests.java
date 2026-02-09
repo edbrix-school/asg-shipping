@@ -37,7 +37,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LineCommissionControllerTests {
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
     @Mock
     private LineCommissionService service;
@@ -56,11 +57,13 @@ class LineCommissionControllerTests {
                 .build();
 
         requestDTO = new LineCommissionRequest();
-        // set mandatory fields if any
-        // requestDTO.setLinePoid(1L);
+        requestDTO.setLinePoid(1L);
+        requestDTO.setCurrencyPoid(1L);
+        requestDTO.setPeriodFrom(java.time.LocalDate.of(2024, 1, 1));
+        requestDTO.setPeriodTo(java.time.LocalDate.of(2024, 12, 31));
+        requestDTO.setRenewalDate(java.time.LocalDate.of(2024, 12, 31));
 
         responseDTO = new LineCommissionResponse();
-        // responseDTO.setTransactionPoid(1L);
     }
 
     // ---------- LIST ----------

@@ -7,6 +7,7 @@ import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -58,26 +59,25 @@ public class DeliveryOrderIssueToCustomerController {
      */
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDeliveryOrder(@PathVariable Long id,
+    public ResponseEntity<?> updateDeliveryOrder(@PathVariable @NotNull Long id,
                                                  @Valid @RequestBody UpdateDeliveryOrderRequestDto request) {
         log.info("Update request for Delivery Order Issue To Customer with id: {}", id);
-        DeliveryOrderIssueToCustomerDto dto = deliveryOrderIssueToCustomerService.updateDeliveryOrder(id, request);
-        return success("Delivery order updated successfully", dto);
+        Long transactionPoid = deliveryOrderIssueToCustomerService.updateDeliveryOrder(id, request);
+        return success("Delivery order updated successfully", transactionPoid);
     }
 
 
     @AllowedAction(UserRolesRightsEnum.PRINT)
     @PostMapping("/print/{transactionPoid}")
-    public ResponseEntity<?> print(
-            @Parameter(description = "Transaction POID", example = "12345")
-            @PathVariable Long transactionPoid,
-            @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto, @RequestParam ButtonType buttonType) {
+    public ResponseEntity<?> print(@Parameter(description = "Transaction POID", example = "12345")
+                                   @PathVariable Long transactionPoid,
+                                   @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto, @RequestParam ButtonType buttonType) {
         try {
-            byte[] pdf = deliveryOrderIssueToCustomerService.print(transactionPoid,requestDto,buttonType);
+            byte[] pdf = deliveryOrderIssueToCustomerService.print(transactionPoid, requestDto, buttonType);
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=delivery-order-issue-to-customer-"+buttonType.name().toLowerCase()+ "-" + transactionPoid + ".pdf")
+                            "attachment; filename=delivery-order-issue-to-customer-" + buttonType.name().toLowerCase() + "-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -89,8 +89,8 @@ public class DeliveryOrderIssueToCustomerController {
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/validate-document/{id}")
-    public ResponseEntity<?> validateDocument(@PathVariable Long id,@Valid @RequestBody IssueDeliveryOrderRequestDto requestDto) {
-        ValidateDocumentDto dto = deliveryOrderIssueToCustomerService.validateDocument(id,requestDto);
+    public ResponseEntity<?> validateDocument(@PathVariable Long id, @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto) {
+        ValidateDocumentDto dto = deliveryOrderIssueToCustomerService.validateDocument(id, requestDto);
         return success("Delivery order retrieved successfully", dto);
     }
 
