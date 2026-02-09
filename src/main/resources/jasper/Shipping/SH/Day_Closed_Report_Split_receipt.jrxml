@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Day_Closed_Report_Split_receipt" language="groovy" pageWidth="802" pageHeight="555" orientation="Landscape" columnWidth="802" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="58a10e7c-9184-47dd-828e-b089c593315a">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<subDataset name="CASH_CHEQUE" uuid="95ec26b7-f625-4788-a24b-24599acd28bb">
+		<parameter name="P_START_DATE" class="java.lang.String"/>
+		<parameter name="P_END_DATE" class="java.lang.String"/>
+		<parameter name="P_COMPANY" class="java.lang.String"/>
+		<queryString>
+			<![CDATA[SELECT  CASH,CHEQUE FROM (
+           select rcpt_type,sum(AMOUNT) AMOUNT from (
+           select hdr.TRANSACTION_POID,hdr.company_poid,
+           case when PYMT_TYPE = 'CHEQUE' and CHQ_CARDNO is not null
+           then 'CHEQUE'
+            when PYMT_TYPE = 'CASH' and (AMOUNT is not null or AMOUNT != 0)
+            then 'CASH'
+           end rcpt_type,
+          AMOUNT from
+           AR_SH_RECEIPT_HDR hdr
+           inner join ar_sh_receipt_pymt_details paydtl  on paydtl.TRANSACTION_POID = hdr.TRANSACTION_POID
+           where to_date(TRUNC(hdr.TRANSACTION_DATE)) BETWEEN $P{P_START_DATE} AND  $P{P_END_DATE}
+           and NVL(hdr.DELETED,'N') = 'N'
+           order by hdr.company_poid)
+           where rcpt_type is not null
+           group by rcpt_type
+           order by company_poid )
+           PIVOT ( SUM(AMOUNT) FOR (rcpt_type) IN ('CASH' AS CASH, 'CHEQUE' AS CHEQUE))]]>
+		</queryString>
+		<field name="CASH" class="java.math.BigDecimal"/>
+		<field name="CHEQUE" class="java.math.BigDecimal"/>
+	</subDataset>
+	<parameter name="P_START_DATE" class="java.lang.String"/>
+	<parameter name="P_END_DATE" class="java.lang.String"/>
+	<parameter name="COMPANY_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String" isForPrompting="false"/>
+	<queryString>
+		<![CDATA[SELECT
+                         REPHDR.TRANSACTION_DATE, REPHDR.DOC_REF,  BL_NUMBER,REPHDR.CREATED_BY,RCPT_AMOUNT,
+                        (SELECT listagg(HDR.doc_ref||'('||SPLIT_RCPT_AMOUNT||')',',')  WITHIN GROUP (ORDER BY HDR.TRANSACTION_POID) SPLIT_RECEIPT
+FROM AR_SH_RECEIPT_HDR HDR
+INNER JOIN AR_SH_RECEIPT_SPLIT_DTL ARBDTL ON HDR.TRANSACTION_POID = ARBDTL.SPLIT_TRANSACTION_POID
+INNER JOIN SHIP_BL_MANIFEST_HDR BHDR ON BHDR.TRANSACTION_POID=HDR.BL_POID
+WHERE ARBDTL.TRANSACTION_POID IN (SELECT  TRANSACTION_POID FROM AR_SH_RECEIPT_HDR  WHERE TRANSACTION_POID =REPHDR.TRANSACTION_POID)) split_receipt
+                  FROM
+                        AR_SH_RECEIPT_HDR REPHDR
+                  left JOIN SHIP_BL_MANIFEST_HDR MANIHDR       ON REPHDR.BL_POID                  = MANIHDR.TRANSACTION_POID
+
+                  WHERE
+                         to_date(TRUNC(REPHDR.TRANSACTION_DATE)) BETWEEN  $P{P_START_DATE} AND   $P{P_END_DATE}
+                         AND BL_NUMBER IS NULL AND NVL(REPHDR.DELETED,'N') = 'N'
+order by REPHDR.COMPANY_POID,REPHDR.DOC_REF]]>
+	</queryString>
+	<field name="TRANSACTION_DATE" class="java.sql.Timestamp"/>
+	<field name="DOC_REF" class="java.lang.String"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="CREATED_BY" class="java.lang.String"/>
+	<field name="RCPT_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="SPLIT_RECEIPT" class="java.lang.String"/>
+	<variable name="TOTAL RECEIPT_AMT" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{RCPT_AMOUNT}]]></variableExpression>
+		<initialValueExpression><![CDATA[$F{RCPT_AMOUNT}]]></initialValueExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="52" splitType="Stretch">
+			<staticText>
+				<reportElement x="327" y="0" width="141" height="29" uuid="4b7dbe12-4b1e-4c67-bfea-4465639f1eb6"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="14" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Split Details]]></text>
+			</staticText>
+			<textField pattern="dd-MMM-yyyy">
+				<reportElement x="118" y="36" width="85" height="15" uuid="c630b5ed-e1b2-497d-857d-a6ba03f8f9f2"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{P_START_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="8" y="36" width="100" height="15" uuid="f73088fe-8cd4-4709-b93c-c7d278d2d3f2"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Split Receipts Dated]]></text>
+			</staticText>
+		</band>
+	</title>
+	<columnHeader>
+		<band height="20" splitType="Stretch">
+			<staticText>
+				<reportElement x="118" y="0" width="100" height="18" uuid="8da1f8e6-cc50-483a-958a-95cf70715cd1"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[No]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="231" y="2" width="100" height="18" uuid="563427e7-719e-4afa-948e-70e10f4730ec"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Split Receipt]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="8" y="2" width="100" height="18" uuid="141897dd-8cbb-4746-8cc4-63f9f7ce86ee"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Date]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="0" width="802" height="1" uuid="84c4f5c4-e016-48ff-92ef-e67f0fa2aa84"/>
+			</line>
+			<line>
+				<reportElement x="0" y="18" width="802" height="1" uuid="27674681-d40f-4ce8-98fd-aaa302786d8b"/>
+			</line>
+			<staticText>
+				<reportElement x="622" y="0" width="61" height="18" uuid="cb7ea5cc-cfd8-46bf-83d4-f448c81c6137"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[User]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="688" y="0" width="100" height="18" uuid="5c965e67-b416-4d6a-a712-ce6a8f8f8a22"/>
+				<textElement textAlignment="Right">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Receipt Amt]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="17" splitType="Stretch">
+			<textField pattern="dd-MMMMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="8" y="0" width="100" height="16" uuid="eef6bf5b-3374-4700-b7f3-d7ee64b0f0fa"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TRANSACTION_DATE}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement stretchType="RelativeToBandHeight" x="231" y="0" width="380" height="16" uuid="75c35972-ad01-4cfc-bafd-a01c8b04b2fd"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SPLIT_RECEIPT}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="118" y="0" width="100" height="16" uuid="ccccdaa4-a180-4f43-b4a4-4bf396dd8063"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DOC_REF}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="622" y="0" width="61" height="16" uuid="5116f521-ee55-4fa2-aa4f-4060c049286e"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CREATED_BY}]]></textFieldExpression>
+			</textField>
+			<textField pattern="###,###,###,##0.000">
+				<reportElement x="688" y="0" width="100" height="16" uuid="50a9386e-fbfb-4767-854d-222210a526db"/>
+				<textElement textAlignment="Right">
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{RCPT_AMOUNT}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<lastPageFooter>
+		<band height="25">
+			<textField evaluationTime="Report" pattern="###,###,###,##0.000">
+				<reportElement x="688" y="2" width="100" height="20" uuid="d9a9d5ed-c513-42f8-87aa-9bf306ef35c9"/>
+				<textElement textAlignment="Right">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{TOTAL RECEIPT_AMT}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="588" y="2" width="100" height="20" uuid="109a3617-66c9-4d96-9d73-79fb3c463009"/>
+				<textElement textAlignment="Right">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Total Receipt Amt :]]></text>
+			</staticText>
+			<componentElement>
+				<reportElement key="table" x="8" y="2" width="360" height="20" uuid="415cdb21-eeb9-4235-9e91-1d1b0c5bca1e"/>
+				<jr:table xmlns:jr="http://jasperreports.sourceforge.net/jasperreports/components" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports/components http://jasperreports.sourceforge.net/xsd/components.xsd">
+					<datasetRun subDataset="CASH_CHEQUE" uuid="28243840-e7a7-4035-8cfc-c3116ac97393">
+						<datasetParameter name="P_START_DATE">
+							<datasetParameterExpression><![CDATA[$P{P_START_DATE}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="P_END_DATE">
+							<datasetParameterExpression><![CDATA[$P{P_END_DATE}]]></datasetParameterExpression>
+						</datasetParameter>
+						<datasetParameter name="P_COMPANY">
+							<datasetParameterExpression><![CDATA[$P{COMPANY_POID}]]></datasetParameterExpression>
+						</datasetParameter>
+						<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					</datasetRun>
+					<jr:column width="109" uuid="1a2d9e02-ce69-4aa6-969c-df931ce5e78e">
+						<jr:detailCell height="20" rowSpan="1">
+							<staticText>
+								<reportElement x="11" y="0" width="95" height="20" uuid="f4aa935f-0114-4b2d-b9d2-4ab8eec81aca"/>
+								<textElement textAlignment="Right">
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Cash :]]></text>
+							</staticText>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="93" uuid="e2284244-c982-4953-9808-ca19602a676b">
+						<jr:detailCell height="20" rowSpan="1">
+							<textField pattern="###,###,###,##0.000">
+								<reportElement x="0" y="0" width="90" height="20" uuid="d4ecdd6b-5345-43db-9eff-5088d6e9d1bf"/>
+								<textElement>
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CASH}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="166" uuid="ac62c099-a7e6-4837-9c05-179b1a434f16">
+						<jr:detailCell height="20" rowSpan="1">
+							<staticText>
+								<reportElement x="9" y="0" width="153" height="20" uuid="627811da-df73-41b2-8f8f-0df858457891"/>
+								<textElement textAlignment="Right">
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<text><![CDATA[Cheque :]]></text>
+							</staticText>
+						</jr:detailCell>
+					</jr:column>
+					<jr:column width="90" uuid="9a4f7e7a-33a2-4df9-a835-cdc53b8ea2d2">
+						<jr:detailCell height="20" rowSpan="1">
+							<textField pattern="###,###,###,##0.000">
+								<reportElement x="0" y="0" width="90" height="20" uuid="ab98da19-1a52-42e0-98b0-632707b6322f"/>
+								<textElement>
+									<font isBold="true" pdfFontName="Helvetica-Bold"/>
+								</textElement>
+								<textFieldExpression><![CDATA[$F{CHEQUE}]]></textFieldExpression>
+							</textField>
+						</jr:detailCell>
+					</jr:column>
+				</jr:table>
+			</componentElement>
+			<line>
+				<reportElement x="0" y="0" width="802" height="1" uuid="a6d525d8-79ff-46af-9ee1-203ed716a7c0"/>
+			</line>
+			<line>
+				<reportElement x="0" y="22" width="802" height="1" uuid="47901948-756b-400a-b114-da9c5d0a5a52"/>
+			</line>
+		</band>
+	</lastPageFooter>
+</jasperReport>

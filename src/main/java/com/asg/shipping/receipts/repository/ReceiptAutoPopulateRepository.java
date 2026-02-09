@@ -21,5 +21,4 @@ public interface ReceiptAutoPopulateRepository {
 
     BigDecimal findLinePoidByBlPoid(Long blPoid);
 
-    TaxConfig findTaxConfig(Long companyPoid);
 }

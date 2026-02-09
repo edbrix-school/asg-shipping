@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -15,8 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
 import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -38,7 +43,8 @@ public class PortMasterServiceImpl implements PortMasterService {
 	private final PortMasterRepository repository;
 	private final GlobalCountryMasterRepository countryRepository;
 	private final DocumentSearchService documentService;
-	private final ShipTradeLaneService tradeLaneService; 
+	private final ShipTradeLaneService tradeLaneService;
+	private final LoggingService loggingService;
 
 	@Override
 	public Map<String, Object> createPort(Long groupPoid, PortMasterRequest request, String userId) {
@@ -69,14 +75,18 @@ public class PortMasterServiceImpl implements PortMasterService {
 		repository.save(entity);
 		Long portPoid = repository.findByGroupPoidAndPortCode(groupPoid, request.getPortCode())
 				.map(PortMaster::getPortPoid).orElseThrow(() -> new RuntimeException("Port not found after save"));
+		loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), portPoid.toString());
 		return Map.of("portPoid", portPoid);
 	}
 
 	@Transactional
 	public PortMasterResponse updatePort(Long groupPoid, Long portPoid, PortMasterRequest request, String userId) {
 
-		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
+		PortMaster existingData = repository.findById(new PortMasterId(groupPoid, portPoid))
 				.orElseThrow(() -> new RuntimeException("Port not found"));
+		
+		PortMaster entity =new PortMaster();
+		BeanUtils.copyProperties(existingData, entity);
 
 		if (!Objects.equals(entity.getPortCode(), request.getPortCode())) {
 
@@ -109,7 +119,9 @@ public class PortMasterServiceImpl implements PortMasterService {
 		entity.setLastModifiedDate(LocalDateTime.now());
 
 		repository.save(entity);
-
+		String key = entity.getPortPoid().toString();
+		String docId = UserContext.getDocumentId();
+		loggingService.logChanges(existingData, entity, PortMaster.class, docId, key, LogDetailsEnum.MODIFIED, "PORT_POID");
 		return getPortById(groupPoid, portPoid);
 	}
 

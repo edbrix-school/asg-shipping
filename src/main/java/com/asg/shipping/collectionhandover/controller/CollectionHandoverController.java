@@ -20,11 +20,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
+import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 import static com.asg.common.lib.security.util.UserContext.getUserPoid;
 
@@ -48,12 +52,23 @@ public class CollectionHandoverController {
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction", example = "docRef,asc")
-            @RequestParam(required = false) String sort) {
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
 
-        log.info("Searching collection handovers with page: {}, size: {}, sort: {}", page, size, sort);
-        Pageable pageable = createPageable(page, size, sort);
-        Map<String, Object> result = collectionHandoverService.searchCollectionHandovers(DOC_ID, request, pageable);
-        return ApiResponse.success("Collection handovers retrieved successfully", result);
+        log.info("Searching collection handovers with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}", page, size, sort, startDate, endDate);
+        
+        try {
+            if((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+                return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
+            }
+            
+            Pageable pageable = createPageable(page, size, sort);
+            Map<String, Object> result = collectionHandoverService.searchCollectionHandovers(DOC_ID, request, pageable, startDate, endDate);
+            return ApiResponse.success("Collection handovers retrieved successfully", result);
+        } catch (Exception e) {
+            return ApiResponse.internalServerError("Unable to fetch collection handovers: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -102,6 +117,34 @@ public class CollectionHandoverController {
         log.info("Toggling verify status for collection handover with id: {} to {}", id, verifiedRcvd);
         collectionHandoverService.toggleVerifyStatus(id, verifiedRcvd, mainOfcRemarks);
         return ApiResponse.success("Verify status updated successfully");
+    }
+    
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @Operation(
+            summary = "Generate PDF for Collection Handover",
+            description = "Generate PDF report for a specific Collection Handover",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "PDF generated successfully",
+                            content = @Content(mediaType = "application/pdf")),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Collection Handover not found"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Failed to generate PDF")
+            }
+    )
+    @GetMapping("/print/{transactionPoid}")
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = collectionHandoverService.print(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=collection-handover-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Collection Handover: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
     }
 
     private Pageable createPageable(int page, int size, String sort) {

@@ -1,7 +1,11 @@
 package com.asg.shipping.vesseltypemaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeCreateDTO;
@@ -34,6 +38,7 @@ import java.util.Map;
 public class VesselTypeMasterController {
 
         private final VesselTypeService vesselTypeService;
+    private final LoggingService loggingService;
 
         @AllowedAction(UserRolesRightsEnum.VIEW)
         @PostMapping("/search")
@@ -115,6 +120,7 @@ public class VesselTypeMasterController {
                 @PathVariable Long id) {
             log.info("Getting vessel type with id: {}", id);
             VesselTypeDto vesselType = vesselTypeService.getVesselType(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
             log.info("Successfully retrieved vessel type with id: {}", id);
             return ApiResponse.success("Vessel type retrieved successfully", vesselType);
         }
@@ -246,7 +252,7 @@ public class VesselTypeMasterController {
         @DeleteMapping("/{id}")
         @Operation(
                 summary = "Delete vessel type",
-                description = "Soft delete a vessel type by setting DELETED flag to Y and ACTIVE to N",
+                description = "Deletes a vessel type (soft delete). Checks dependencies before deletion.",
                 security = @SecurityRequirement(name = "bearerAuth")
         )
         @ApiResponses(value = {
@@ -261,18 +267,30 @@ public class VesselTypeMasterController {
                         content = @Content(mediaType = "application/json")
                 ),
                 @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                        responseCode = "500",
-                        description = "Internal server error",
+                        responseCode = "400",
+                        description = "Cannot delete due to dependencies",
+                        content = @Content(mediaType = "application/json")
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                        responseCode = "401",
+                        description = "Unauthorized",
                         content = @Content(mediaType = "application/json")
                 )
         })
         public ResponseEntity<?> deleteVesselType(
                 @Parameter(description = "Vessel Type POID", required = true, example = "12345")
-                @PathVariable Long id) {
-            log.info("Deleting vessel type with id: {}", id);
-            vesselTypeService.deleteVesselType(id);
-            log.info("Successfully deleted vessel type with id: {}", id);
-            return ApiResponse.success("Vessel type deleted successfully");
+                @PathVariable Long id,
+                @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
+            log.info("deleteVesselType started for companyPoid={} groupPoid={}", 
+                UserContext.getCompanyPoid(), UserContext.getGroupPoid());
+            
+            vesselTypeService.deleteVesselType(UserContext.getGroupPoid(), id, 
+                UserContext.getCompanyPoid(), deleteReasonDto);
+            
+            log.info("deleteVesselType completed for companyPoid={} groupPoid={}", 
+                UserContext.getCompanyPoid(), UserContext.getGroupPoid());
+            
+            return ApiResponse.success("Vessel type deleted successfully", null);
         }
 
         /**

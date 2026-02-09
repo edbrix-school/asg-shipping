@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.portMaster.dto.PortMasterRequest;
 import com.asg.shipping.portMaster.dto.PortMasterResponse;
 import com.asg.shipping.portMaster.service.PortMasterService;
@@ -43,6 +45,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PortMasterController {
 
 	private final PortMasterService service;
+	private final LoggingService loggingService;
 
 	@AllowedAction(UserRolesRightsEnum.CREATE)
 	@Operation(summary = "Create a new Port", description = "Creates a new Port Master record for the given group", responses = {
@@ -101,6 +104,7 @@ public class PortMasterController {
 
 			@Parameter(description = "Port POID", required = true, example = "5001") @PathVariable Long portPoid) {
 		PortMasterResponse response = service.getPortById(groupPoid, portPoid);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(),portPoid.toString());
 		return success("Port fetched successfully", response);
 	}
 
@@ -117,6 +121,7 @@ public class PortMasterController {
 
 			@Parameter(description = "Port POID to be deleted", required = true, example = "5001") @PathVariable Long portPoid) {
 		service.deletePort(groupPoid, portPoid, userPoid);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(),portPoid.toString());
 		return success("Port deleted successfully");
 	}
 

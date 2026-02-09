@@ -69,8 +69,17 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
                         .vesselName(manifestRs.getString(6))
                         .voyageNo(manifestRs.getString(7))
                         .jobNo(manifestRs.getString(8))
-                        .arrivalDate(manifestRs.getDate(9).toLocalDate())
-                        .sailDate(manifestRs.getDate(10).toLocalDate())
+                        .arrivalDate(
+                                manifestRs.getTimestamp(9) != null
+                                        ? manifestRs.getTimestamp(9).toLocalDateTime().toLocalDate()
+                                        : null
+                        )
+                        .sailDate(
+                                manifestRs.getTimestamp(10) != null
+                                        ? manifestRs.getTimestamp(10).toLocalDateTime().toLocalDate()
+                                        : null
+                        )
+
                         .build());
             }
         } catch (Exception e) {

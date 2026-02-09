@@ -30,4 +30,13 @@ public class BlManifestValidationRepository {
             return null;
         }
     }
+
+    public String getLineCode(Long voyageTransactionPoid) {
+        try {
+            String sql = "SELECT GET_LINE_code(line_poid) FROM SHIP_VOYAGE_HDR WHERE transaction_poid = ?";
+            return jdbcTemplate.queryForObject(sql, String.class, voyageTransactionPoid);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

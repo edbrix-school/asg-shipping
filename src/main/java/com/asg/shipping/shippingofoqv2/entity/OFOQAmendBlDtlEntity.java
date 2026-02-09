@@ -2,8 +2,7 @@ package com.asg.shipping.shippingofoqv2.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "OFOQ_API_MANIFEST_BL_DTL")
@@ -59,13 +58,13 @@ public class OFOQAmendBlDtlEntity {
     private String createdBy;
 
     @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "LASTMODIFIED_BY", length = 20)
     private String lastModifiedBy;
 
     @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastModifiedDate;
+    private LocalDateTime lastModifiedDate;
 
     @Column(name = "MANIFEST_DOC_REF", length = 100)
     private String manifestDocRef;

@@ -46,6 +46,9 @@ class VesselTypeServiceImplTest {
     @Mock
     private LoggingService loggingService;
 
+    @Mock
+    private com.asg.common.lib.service.DocumentDeleteService documentDeleteService;
+
     @InjectMocks
     private VesselTypeServiceImpl vesselTypeService;
 
@@ -280,7 +283,7 @@ class VesselTypeServiceImplTest {
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
             when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
 
-            vesselTypeService.deleteVesselType(1L);
+            vesselTypeService.deleteVesselType(1L, 1L, 1L, null);
 
             verify(vesselTypeRepository).save(argThat(saved -> 
                 "Y".equals(saved.getDeleted()) && "N".equals(saved.getActive())
@@ -296,7 +299,8 @@ class VesselTypeServiceImplTest {
             testEntity.setDeleted("Y");
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
 
-            vesselTypeService.deleteVesselType(1L);
+            assertThrows(com.asg.common.lib.exception.CustomException.class, 
+                () -> vesselTypeService.deleteVesselType(1L, 1L, 1L, null));
 
             verify(vesselTypeRepository, never()).save(any(ShipVesselTypeMaster.class));
         }
@@ -309,7 +313,7 @@ class VesselTypeServiceImplTest {
 
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> vesselTypeService.deleteVesselType(1L));
+            assertThrows(ResourceNotFoundException.class, () -> vesselTypeService.deleteVesselType(1L, 1L, 1L, null));
         }
     }
 }

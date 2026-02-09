@@ -16,4 +16,11 @@ public interface OFOQItemDtlRepository extends JpaRepository<OFOQItemDtlEntity, 
     List<OFOQItemDtlEntity> findByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
     void deleteByTransactionPoid(Long transactionPoid);
+
+    void deleteByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
+
+    @Query("SELECT COALESCE(MAX(e.detRowId), 0) FROM OFOQItemDtlEntity e WHERE e.transactionPoid = :transactionPoid")
+    Long findMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
+
+
 }
