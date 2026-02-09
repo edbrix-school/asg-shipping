@@ -1,5 +1,6 @@
 package com.asg.shipping.deliveryorderissuetocustomer.dto;
 
+import com.asg.shipping.deliveryorderissuetocustomer.annotation.ValidDoCntToOthers;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -9,6 +10,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ValidDoCntToOthers
 public class UpdateDeliveryOrderRequestDto {
     @NotBlank(message = "DO released ID person is required")
     @Size(max = 50, message = "DO released ID person must not exceed 50 characters")

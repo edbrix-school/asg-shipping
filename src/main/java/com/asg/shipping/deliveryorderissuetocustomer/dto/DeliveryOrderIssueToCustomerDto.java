@@ -27,6 +27,8 @@ public class DeliveryOrderIssueToCustomerDto {
     private String doReleasedIdPerson;
     private String doReleasedToPerson;
     private String doReleasedAddrsPerson;
+    private String deleted;
+    private Long seqno;
     private String blReleaseTypeOffice;
     private String originalBlReleaseCr;
     private String doPriority;
