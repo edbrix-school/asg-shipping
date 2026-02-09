@@ -1,17 +1,21 @@
 package com.asg.shipping.shippingmanifestcorrector.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorUpdateDTO;
 import com.asg.shipping.shippingmanifestcorrector.service.ManifestCorrectorService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
@@ -37,15 +41,21 @@ class ManifestCorrectorControllerTest {
     @Mock
     private ManifestCorrectorService service;
 
+    @Mock
+    private LoggingService loggingService;
+
     @InjectMocks
     private ManifestCorrectorController controller;
 
     private ManifestCorrectorCreateDTO createDTO;
     private ManifestCorrectorUpdateDTO updateDTO;
     private ManifestCorrectorDto responseDTO;
+    private MockedStatic<UserContext> userContext;
 
     @BeforeEach
     void setup() {
+        userContext = mockStatic(UserContext.class);
+        userContext.when(UserContext::getDocumentId).thenReturn("100-143");
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
@@ -61,6 +71,11 @@ class ManifestCorrectorControllerTest {
 
         responseDTO = new ManifestCorrectorDto();
         responseDTO.setTransactionPoid(1L);
+    }
+
+    @AfterEach
+    void tearDown() {
+        userContext.close();
     }
 
     @Test

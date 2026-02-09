@@ -62,6 +62,7 @@ class LinePayableTransferReportingControllerTest {
                 .reportStartDate(LocalDate.of(2024, 1, 1))
                 .reportEndDate(LocalDate.of(2024, 1, 31))
                 .docRef("LPT-2024-001")
+                .transactionDate(LocalDate.of(2024, 1, 1))
                 .build();
     }
 
@@ -151,6 +152,7 @@ class LinePayableTransferReportingControllerTest {
     void processWeeklyBeforeCreate_Success() throws Exception {
         LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
                 .linePoid(1123L)
+                .blType("IMPORT")
                 .reportStartDate(LocalDate.of(2024, 1, 1))
                 .reportEndDate(LocalDate.of(2024, 1, 7))
                 .build();

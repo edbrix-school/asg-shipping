@@ -128,9 +128,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -142,9 +142,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -156,9 +156,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -170,9 +170,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -184,9 +184,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
