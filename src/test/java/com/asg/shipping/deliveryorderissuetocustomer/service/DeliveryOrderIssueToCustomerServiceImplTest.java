@@ -2,6 +2,7 @@ package com.asg.shipping.deliveryorderissuetocustomer.service;
 
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
@@ -46,6 +47,9 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
 
     @Mock
     private JdbcTemplate jdbcTemplate;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private DeliveryOrderIssueToCustomerServiceImpl service;

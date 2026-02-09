@@ -2,6 +2,7 @@ package com.asg.shipping.deliveryorderissuetocustomer.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
@@ -33,6 +34,9 @@ public class DeliveryOrderIssueToCustomerControllerTest {
 
     @Mock
     private DeliveryOrderIssueToCustomerService service;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private DeliveryOrderIssueToCustomerController controller;
