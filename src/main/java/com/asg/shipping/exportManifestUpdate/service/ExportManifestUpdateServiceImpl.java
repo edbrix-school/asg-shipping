@@ -664,10 +664,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public byte[] generateManifest(Long transactionPoid, GenerateManifestRequest request, String docId) throws Exception {
     	Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
 		params.put("P_FREIGHTCARGO", request.getFreightCargo().toString().toUpperCase());
-        params.put("MARK_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
-	    params.put("CONTAINER_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
-	    params.put("DESCRIPTION_INFO_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
-	    params.put("FREIGHT_DETAIL_SUBREPORT_1", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+	    params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
 	    JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
 	    return printService.fillReportToPdf(mainReport, params, dataSource);
     }

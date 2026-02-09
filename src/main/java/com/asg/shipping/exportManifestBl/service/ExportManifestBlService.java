@@ -6,6 +6,8 @@ import com.asg.shipping.exportManifestBl.dto.ExportManifestBlRequestDto;
 import com.asg.shipping.exportManifestBl.dto.ExportManifestBlUpdateDto;
 import com.asg.shipping.exportManifestBl.dto.ShipBlToFfDto;
 import org.springframework.data.domain.Pageable;
+import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
+import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
 
 import java.util.Map;
 
@@ -28,6 +30,17 @@ public interface ExportManifestBlService {
 
    
     ShipBlToFfDto getShipBlToFfByBlNumber(String blNumber);
+    
+    
+    byte[] generateBlPrint(Long transactionPoid, GenerateBlPrintRequest request, String docId) throws Exception;
+    
+    
+    byte[] generateManifest(Long transactionPoid, GenerateManifestRequest request,String docId)  throws Exception;
+    
+    
+    byte[] generateDetentionStorage(Long transactionPoid, String docId)  throws Exception;
+    
+    byte[] exportDraftPrint(Long transactionPoid)  throws Exception;
 }
 
 
