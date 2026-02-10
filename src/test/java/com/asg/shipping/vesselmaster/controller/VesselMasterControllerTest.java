@@ -262,12 +262,24 @@ class VesselMasterControllerTest {
 
     @Test
     void deleteVessel_Success() throws Exception {
-        doNothing().when(vesselService).deleteVessel(1L);
+        doNothing().when(vesselService).deleteVessel(eq(1L), any());
 
         mockMvc.perform(delete("/v1/vessel-master/1"))
                 .andExpect(status().isOk());
 
-        verify(vesselService).deleteVessel(1L);
+        verify(vesselService).deleteVessel(eq(1L), any());
+    }
+
+    @Test
+    void deleteVessel_WithDeleteReason_Success() throws Exception {
+        doNothing().when(vesselService).deleteVessel(eq(1L), any());
+
+        mockMvc.perform(delete("/v1/vessel-master/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"deleteReason\":\"No longer needed\"}"))
+                .andExpect(status().isOk());
+
+        verify(vesselService).deleteVessel(eq(1L), any());
     }
 
     @Test

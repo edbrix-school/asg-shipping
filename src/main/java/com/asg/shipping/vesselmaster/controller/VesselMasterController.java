@@ -1,6 +1,7 @@
 package com.asg.shipping.vesselmaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.vesselmaster.dto.*;
@@ -344,9 +345,10 @@ public class VesselMasterController {
     })
     public ResponseEntity<?> deleteVessel(
             @Parameter(description = "Vessel POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting vessel with id: {}", id);
-        vesselService.deleteVessel(id);
+        vesselService.deleteVessel(id, deleteReasonDto);
         log.info("Successfully deleted vessel with id: {}", id);
         return ApiResponse.success("Vessel deleted successfully");
     }

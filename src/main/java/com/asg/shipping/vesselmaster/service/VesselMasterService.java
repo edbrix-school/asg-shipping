@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.vesselmaster.dto.VesselMasterCreateDTO;
 import com.asg.shipping.vesselmaster.dto.VesselMasterDto;
 import com.asg.shipping.vesselmaster.dto.VesselMasterUpdateDTO;
@@ -57,7 +58,8 @@ public interface VesselMasterService {
      * Soft delete a vessel
      *
      * @param id Vessel POID
+     * @param deleteReasonDto Optional delete reason for auditing
      */
-    void deleteVessel(Long id);
+    void deleteVessel(Long id, DeleteReasonDto deleteReasonDto);
 }
 

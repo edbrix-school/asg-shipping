@@ -3,7 +3,9 @@ package com.asg.shipping.vesselmaster.service;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
@@ -47,10 +49,16 @@ class VesselMasterServiceImplTest {
     private DocumentSearchService documentSearchService;
 
     @Mock
+    private DocumentDeleteService documentDeleteService;
+
+    @Mock
     private VesselMasterLovService vesselMasterLovService;
 
     @Mock
     private VesselMasterMapper mapper;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private VesselMasterServiceImpl vesselService;
@@ -193,6 +201,7 @@ class VesselMasterServiceImplTest {
     void getVessel_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(GROUP_POID);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-008");
 
             when(vesselRepository.findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID))
                     .thenReturn(Optional.of(vessel));
@@ -310,6 +319,7 @@ class VesselMasterServiceImplTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(GROUP_POID);
             mockedUserContext.when(UserContext::getUserPoid).thenReturn(USER_POID);
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(COMPANY_POID);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-008");
 
             ShipVesselMaster savedVessel = ShipVesselMaster.builder()
                     .vesselPoid(2L)
@@ -406,6 +416,7 @@ class VesselMasterServiceImplTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(GROUP_POID);
             mockedUserContext.when(UserContext::getUserPoid).thenReturn(USER_POID);
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(COMPANY_POID);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-008");
 
             when(vesselRepository.findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID))
                     .thenReturn(Optional.of(vessel));
@@ -526,6 +537,7 @@ class VesselMasterServiceImplTest {
     void toggleActive_FromNToY_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(GROUP_POID);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-008");
 
             vessel.setActive("N");
             when(vesselRepository.findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID))
@@ -543,6 +555,7 @@ class VesselMasterServiceImplTest {
     void toggleActive_FromNullToY_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(GROUP_POID);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-008");
 
             vessel.setActive(null);
             when(vesselRepository.findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID))
@@ -573,18 +586,21 @@ class VesselMasterServiceImplTest {
     void deleteVessel_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(GROUP_POID);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-008");
 
             vessel.setDeleted("N");
             vessel.setActive("Y");
             when(vesselRepository.findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID))
                     .thenReturn(Optional.of(vessel));
             when(vesselRepository.save(vessel)).thenReturn(vessel);
+            when(documentDeleteService.deleteDocument(any(), any(), any(), any(), any())).thenReturn(null);
 
-            vesselService.deleteVessel(VESSEL_POID);
+            vesselService.deleteVessel(VESSEL_POID, null);
 
             assertEquals("Y", vessel.getDeleted());
             assertEquals("N", vessel.getActive());
             verify(vesselRepository).findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID);
+            verify(documentDeleteService).deleteDocument(eq(VESSEL_POID), eq("SHIP_VESSEL_MASTER"), eq("VESSEL_POID"), isNull(), any());
             verify(vesselRepository).save(vessel);
         }
     }
@@ -598,9 +614,10 @@ class VesselMasterServiceImplTest {
             when(vesselRepository.findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID))
                     .thenReturn(Optional.of(vessel));
 
-            vesselService.deleteVessel(VESSEL_POID);
+            vesselService.deleteVessel(VESSEL_POID, null);
 
             verify(vesselRepository).findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID);
+            verify(documentDeleteService, never()).deleteDocument(any(), any(), any(), any(), any());
             verify(vesselRepository, never()).save(any());
         }
     }
@@ -613,7 +630,7 @@ class VesselMasterServiceImplTest {
             when(vesselRepository.findByVesselPoidAndGroupPoid(VESSEL_POID, GROUP_POID))
                     .thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> vesselService.deleteVessel(VESSEL_POID));
+            assertThrows(ResourceNotFoundException.class, () -> vesselService.deleteVessel(VESSEL_POID, null));
             verify(vesselRepository, never()).save(any());
         }
     }
