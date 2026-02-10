@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
@@ -39,6 +40,7 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +88,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	public ReceiptsBlDetailsDto createReceipt(ReceiptsCreateDto createDto) {
 		log.info("Creating receipt with docRef: {}", createDto.getDocRef());
 
-		LocalDate transactionDate = createDto.getTransactionDate() == null ? transactionDateService.calculateTransactionDate() : createDto.getTransactionDate();
+		LocalDate transactionDate = (createDto.getTransactionDate() == null ? transactionDateService.calculateTransactionDate() : createDto.getTransactionDate().toLocalDate());
 
 
 		validationService.validateReceiptCreation(createDto);
@@ -94,7 +96,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		ArShReceiptHdr hdr = mapper.mapBlDetailsDtoToEntity(
 				ReceiptsBlDetailsDto.builder()
 						.docRef(createDto.getDocRef())
-						.date(transactionDate)
+						.date(transactionDate.atStartOfDay())
 						.blPoid(createDto.getBlPoid())
 						.companyPoid(createDto.getCompanyPoid())
 						.releaseType(createDto.getReleaseType())
@@ -145,7 +147,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		validationService.validateReceiptUpdate(updateDto, existingReceipt);
 
 		// Preserve original transaction date
-		LocalDate originalTransactionDate = existingReceipt.getTransactionDate();
+		LocalDateTime originalTransactionDate = existingReceipt.getTransactionDate();
 
 		ArShReceiptHdr updated = mapper.mapBlDetailsDtoToEntity(
 				ReceiptsBlDetailsDto.builder()
@@ -189,10 +191,22 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 		ArShReceiptHdr hdr = getReceiptHdr(transactionPoid);
 
-		documentDeleteService.deleteDocument(transactionPoid,"AR_SH_RECEIPT_HDR","TRANSACTION_POID"
-				,deleteReasonDto,hdr.getTransactionDate());
+		LocalDate transactionDate = null;
+		if (hdr.getTransactionDate() != null) {
+			transactionDate = LocalDate.from(hdr.getTransactionDate());
+		}
+
+		documentDeleteService.deleteDocument(
+				transactionPoid,
+				"AR_SH_RECEIPT_HDR",
+				"TRANSACTION_POID",
+				deleteReasonDto,
+				transactionDate
+		);
+
 		log.info("Receipt deleted with id: {}", transactionPoid);
 	}
+
 
 	@Override
 	public Map<String, Object> list(FilterRequestDto filters, Pageable pageable) {
@@ -243,8 +257,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 				requestDto.getContainerNo(),
 				requestDto.getContainerIsoType(),
 				linePoid.longValue(),
-				requestDto.getFromDate(),
-				requestDto.getToDate(),
+				LocalDate.from(requestDto.getFromDate()),
+				LocalDate.from(requestDto.getToDate()),
 				requestDto.getExtraFreeDays()
 		);
 
@@ -296,7 +310,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 			totalAmount = totalAmount.add(charge.getAmount()).add(charge.getTaxAmount());
 		}
 
-		log.info("Demurrage calculated - BL: {}, Demurrage: {}, Tax: {}, Total: {}", 
+		log.info("Demurrage calculated - BL: {}, Demurrage: {}, Tax: {}, Total: {}",
 			requestDto.getBlPoid(), demurrageAmount, demurrageTaxAmount, totalAmount);
 
 		return ReceiptCalculateDemurrageResponseDto.builder()
@@ -386,6 +400,9 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 	private void updateDetailRecords(Long transactionPoid, ReceiptsUpdateDto updateDto) {
 		if (updateDto.getContainer() != null && !updateDto.getContainer().isEmpty()) {
+			List<ArShReceiptContainerDtl> toUpdate = new ArrayList<>();
+			List<LogRequestDto<ArShReceiptContainerDtl>> logRequests = new ArrayList<>();
+
 			for (ReceiptContainerDto dto : updateDto.getContainer()) {
 				String action = resolveAction(dto.getActionType());
 				switch (action) {
@@ -409,15 +426,31 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 						ArShReceiptContainerDtl entity = containerRepository.findById(new TransactionDtlId(transactionPoid, dto.getDetRowId()))
 								.orElseThrow(() -> new ResourceNotFoundException("Container Detail", "detRowId", dto.getDetRowId()));
 
-//						BeanUtils.copyProperties();
+						ArShReceiptContainerDtl oldEntity = new ArShReceiptContainerDtl();
+						BeanUtils.copyProperties(entity, oldEntity);
 						mapper.updateContainerEntity(dto, entity);
-						containerRepository.save(entity);
+						entity.setLastModifiedBy(UserContext.getUserName());
+						entity.setLastModifiedDate(LocalDateTime.now());
+						toUpdate.add(entity);
+						String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+						logRequests.add(new LogRequestDto<>(oldEntity, entity, ArShReceiptContainerDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
+
+					}
+
+				}
+				if (!toUpdate.isEmpty()) {
+					containerRepository.saveAll(toUpdate);
+					if (!logRequests.isEmpty()) {
+						loggingService.createLogBatch(logRequests);
 					}
 				}
 			}
 		}
 
 		if (updateDto.getCharges() != null && !updateDto.getCharges().isEmpty()) {
+
+			List<ArShReceiptChargesDtl> toUpdate = new ArrayList<>();
+			List<LogRequestDto<ArShReceiptChargesDtl>> logRequests = new ArrayList<>();
 			for (ReceiptCharges dto : updateDto.getCharges()) {
 				String action = resolveAction(dto.getActionType());
 				switch (action) {
@@ -440,14 +473,30 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 					case ACTION_ISUPDATED -> {
 						ArShReceiptChargesDtl entity = chargesRepository.findById(new TransactionDtlId(transactionPoid, dto.getDetRowId()))
 								.orElseThrow(() -> new ResourceNotFoundException("Charges Detail", "detRowId", dto.getDetRowId()));
+						ArShReceiptChargesDtl oldEntity = new ArShReceiptChargesDtl();
+						BeanUtils.copyProperties(entity, oldEntity);
 						mapper.updateChargesEntity(dto, entity);
-						chargesRepository.save(entity);
+						entity.setLastModifiedBy(UserContext.getUserName());
+						entity.setLastModifiedDate(LocalDateTime.now());
+						toUpdate.add(entity);
+
+						String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+						logRequests.add(new LogRequestDto<>(oldEntity, entity, ArShReceiptChargesDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
 					}
+				}
+			}
+
+			if (!toUpdate.isEmpty()) {
+				chargesRepository.saveAll(toUpdate);
+				if (!logRequests.isEmpty()) {
+					loggingService.createLogBatch(logRequests);
 				}
 			}
 		}
 
 		if (updateDto.getPaymentDetail() != null && !updateDto.getPaymentDetail().isEmpty()) {
+			List<ArShReceiptPymtDetails> toUpdate = new ArrayList<>();
+			List<LogRequestDto<ArShReceiptPymtDetails>> logRequests = new ArrayList<>();
 			for (ReceiptPaymentDetailDto dto : updateDto.getPaymentDetail()) {
 				String action = resolveAction(dto.getActionType());
 				switch (action) {
@@ -470,9 +519,24 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 					case ACTION_ISUPDATED -> {
 						ArShReceiptPymtDetails entity = paymentRepository.findById(new TransactionDtlId(transactionPoid, dto.getDetRowId()))
 								.orElseThrow(() -> new ResourceNotFoundException("Payment Detail", "detRowId", dto.getDetRowId()));
+						ArShReceiptPymtDetails oldEntity = new ArShReceiptPymtDetails();
+						BeanUtils.copyProperties(entity, oldEntity);
 						mapper.updatePaymentEntity(dto, entity);
-						paymentRepository.save(entity);
+						entity.setLastModifiedBy(UserContext.getUserName());
+						entity.setLastModifiedDate(LocalDateTime.now());
+						toUpdate.add(entity);
+
+						String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+						logRequests.add(new LogRequestDto<>(oldEntity, entity, ArShReceiptPymtDetails.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
 					}
+				}
+
+			}
+
+			if (!toUpdate.isEmpty()) {
+				paymentRepository.saveAll(toUpdate);
+				if (!logRequests.isEmpty()) {
+					loggingService.createLogBatch(logRequests);
 				}
 			}
 		}

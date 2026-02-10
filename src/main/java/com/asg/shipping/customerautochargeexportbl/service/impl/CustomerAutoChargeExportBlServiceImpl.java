@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
@@ -22,6 +23,7 @@ import com.asg.shipping.customerautochargeexportbl.repository.ShipCustomerCharge
 import com.asg.shipping.customerautochargeexportbl.repository.ShipCustomerChargesHdrRepository;
 import com.asg.shipping.customerautochargeexportbl.service.CustomerAutoChargeExportBlService;
 import com.asg.shipping.customerautochargeexportbl.util.CustomerAutoChargeExportBLMapper;
+import com.asg.shipping.receipts.entity.ArShReceiptContainerDtl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,14 +31,14 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
+import static com.asg.common.lib.security.util.UserContext.getUserName;
 
 
 @Service
@@ -186,6 +188,9 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
 
 
     private void updateDetailRecords(Long transactionPoid, List<CustomerAutoChargeDetailDto> detailDtos) {
+
+        List<ShipCustomerChargesDtlEntity> toUpdate = new ArrayList<>();
+        List<LogRequestDto<ShipCustomerChargesDtlEntity>> logRequests = new ArrayList<>();
         for (CustomerAutoChargeDetailDto dto : detailDtos) {
             String action = resolveAction(dto.getActionType());
             switch (action) {
@@ -213,15 +218,25 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
                     if (dto.getDetRowId() != null) {
                         ShipCustomerChargesDtlEntity entity = detailRepository.findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
                                 .orElseThrow(() -> new ResourceNotFoundException("Customer Charge Detail", "DetRowId", dto.getDetRowId().toString()));
+                        ShipCustomerChargesDtlEntity oldEntity = new ShipCustomerChargesDtlEntity();
+                        BeanUtils.copyProperties(entity,oldEntity);
                         mapper.updateDtlEntity(dto, entity);
-                        detailRepository.save(entity);
-                        String logDetail = String.format("Row Updated on Customer Charge Detail with DetRowId: %s", entity.getDetRowId());
-                        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+                        entity.setLastModifiedBy(getUserName());
+                        entity.setLastModifiedDate(LocalDateTime.now());
+                        toUpdate.add(entity);
+                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+                        logRequests.add(new LogRequestDto<>(oldEntity, entity, ShipCustomerChargesDtlEntity.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
                     }
                     else {
                         throw new ValidationException("Customer Charge Detail  DetRowId is null");
                     }
                 }
+            }
+        }
+        if (!toUpdate.isEmpty()) {
+            detailRepository.saveAll(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
             }
         }
     }

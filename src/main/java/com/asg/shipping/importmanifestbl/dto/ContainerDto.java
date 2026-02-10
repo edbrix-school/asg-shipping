@@ -2,7 +2,7 @@ package com.asg.shipping.importmanifestbl.dto;
 
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -43,9 +43,9 @@ public class ContainerDto {
 
     private Double amountPerDayAfterFree;
 
-    private LocalDate actualDischargeDate;
-    private LocalDate emptyDate;
-    private LocalDate collectionDate;
+    private LocalDateTime actualDischargeDate;
+    private LocalDateTime emptyDate;
+    private LocalDateTime collectionDate;
 
     private Double collectionAmount;
     private Integer collectionDays;

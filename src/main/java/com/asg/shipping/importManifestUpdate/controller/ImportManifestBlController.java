@@ -11,6 +11,7 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importManifestUpdate.service.ImportManifestBlService;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
 import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
@@ -49,6 +50,7 @@ public class ImportManifestBlController {
 
     private final LoggingService loggingService;
     private final ImportManifestService manifestService;
+    private final ImportManifestBlService service;
 
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,

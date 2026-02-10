@@ -15,7 +15,6 @@ import com.asg.shipping.importmanifestbl.repository.ContainerDropdownRepository;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.importmanifestbl.util.ImportManifestDropdownMapper;
-import com.asg.shipping.importmanifestbl.util.ImportManifestMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
@@ -68,11 +67,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
 
         ImportManifestBlRequestDto requestDto = mapper.mapToDto(entity);
-
         ImportManifestBlRequestDto dto =   updateService.loadDetailTables(requestDto,transactionPoId);
-
-
-
         log.info("Successfully retrieved Import Manifest BL with id: {}", transactionPoId);
         return dto;
     }
@@ -81,9 +76,14 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     @Transactional
     public void delete(Long transactionPoId, DeleteReasonDto deleteReasonDto) {
         try {
+
             ShipBlManifestHdr entity = findEntityById(transactionPoId);
-             documentDeleteService.deleteDocument(transactionPoId,"SHIP_BL_MANIFEST_HDR","TRANSACTION_POID",
-                    deleteReasonDto,entity.getTransactionDate());
+            LocalDate transactionDate = entity.getTransactionDate() == null
+                    ? null
+                    : LocalDate.from(entity.getTransactionDate());
+
+            documentDeleteService.deleteDocument(transactionPoId,"SHIP_BL_MANIFEST_HDR","TRANSACTION_POID",
+                    deleteReasonDto,transactionDate);
             log.info("Soft deleted header for transactionPoId: {}", transactionPoId);
         } catch (ResourceNotFoundException e) {
             log.error("Failed to delete: Entity not found for transactionPoId: {}", transactionPoId);

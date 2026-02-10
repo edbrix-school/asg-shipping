@@ -1,7 +1,10 @@
 package com.asg.shipping.importManifestUpdateTest.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importManifestUpdate.controller.ImportManifestBlController;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
@@ -17,12 +20,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,6 +41,12 @@ public class ImportManifestBlControllerTest {
 
     @InjectMocks
     private ImportManifestBlController controller;
+
+    @Mock
+    private LoggingService loggingService;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -102,7 +110,7 @@ public class ImportManifestBlControllerTest {
         ImportManifestBlUpdateDTO updateDto = ImportManifestBlUpdateDTO.builder()
                 .blNumber("TEST123")
                 .agentReference("AGENT001")
-                .transactionDate(LocalDate.now())
+                .transactionDate(LocalDateTime.now())
                 .build();
         
         ImportManifestBlRequestDto expectedResponse = ImportManifestBlRequestDto.builder()
@@ -156,16 +164,16 @@ public class ImportManifestBlControllerTest {
     void deleteImportManifestBl_Success() {
         // Given
         Long id = 1L;
-        doNothing().when(service).deleteImportManifestBl(id);
+        doNothing().when(service).deleteImportManifestBl(id,new DeleteReasonDto());
 
         // When
-        ResponseEntity<?> response = controller.deleteImportManifestBl(id);
+        ResponseEntity<?> response = controller.deleteImportManifestBl(id,new DeleteReasonDto());
 
         // Then
         assertEquals(HttpStatus.OK, response.getStatusCode());
         Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
         assertEquals("Import Manifest BL deleted successfully", responseBody.get("message"));
-        verify(service).deleteImportManifestBl(id);
+        verify(service).deleteImportManifestBl(id,new DeleteReasonDto());
     }
 
     @Test
@@ -207,13 +215,13 @@ public class ImportManifestBlControllerTest {
         // Given
         Long id = 999L;
         doThrow(new RuntimeException("Import Manifest BL not found"))
-                .when(service).deleteImportManifestBl(id);
+                .when(service).deleteImportManifestBl(id,new DeleteReasonDto());
 
         // When & Then
         assertThrows(RuntimeException.class, () -> {
-            controller.deleteImportManifestBl(id);
+            controller.deleteImportManifestBl(id,new DeleteReasonDto());
         });
-        verify(service).deleteImportManifestBl(id);
+        verify(service).deleteImportManifestBl(id,new DeleteReasonDto());
     }
 
 

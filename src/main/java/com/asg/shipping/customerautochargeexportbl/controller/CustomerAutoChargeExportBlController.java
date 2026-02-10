@@ -125,17 +125,17 @@ public class CustomerAutoChargeExportBlController {
             @ApiResponse(responseCode = "404", description = "Customer Auto Charge Export BL not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getById(
-            @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long id
-    ) {
+        @GetMapping("/{id}")
+        public ResponseEntity<?> getById(
+                @Parameter(description = "Transaction POID", required = true)
+                @PathVariable Long id
+        ) {
 
-            CustomerAutoChargeExportBLDto response = service.getCustomerAutoChargeExportBL(id);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
-        return success("Customer Auto Charge Export BL retrieved successfully", response);
+                CustomerAutoChargeExportBLDto response = service.getCustomerAutoChargeExportBL(id);
+            loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
+            return success("Customer Auto Charge Export BL retrieved successfully", response);
 
-    }
+        }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @Operation(

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
@@ -133,7 +134,7 @@ public class CustomerAutoChargeExportBLMapper {
                 .amount53(dto.getAmount53())
                 .amount53Cost(dto.getAmount53Cost())
                 .createdBy(getCurrentUser())
-                .createdDate(new Timestamp(System.currentTimeMillis()))
+                .createdDate(LocalDateTime.now())
                 .build();
     }
 
@@ -169,7 +170,7 @@ public class CustomerAutoChargeExportBLMapper {
         if (dto.getAmount53() != null) entity.setAmount53(dto.getAmount53());
         if (dto.getAmount53Cost() != null) entity.setAmount53Cost(dto.getAmount53Cost());
         entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()));
+        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
 }

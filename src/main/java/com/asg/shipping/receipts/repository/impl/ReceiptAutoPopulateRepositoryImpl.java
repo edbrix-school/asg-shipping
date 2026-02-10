@@ -233,8 +233,8 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
 
                             .containerNo((String) r[2])
 
-                            .fromDate(((LocalDateTime) r[3]).toLocalDate())
-                            .toDate(((LocalDateTime) r[4]).toLocalDate())
+                            .fromDate(((LocalDateTime) r[3]))
+                            .toDate(((LocalDateTime) r[4]))
 
                             .days(((Number) r[5]).longValue())
 
@@ -245,7 +245,7 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
                             .freeDays(((Number) r[8]).longValue())
 
                             .emptyIn(r[9] != null
-                                    ? ((LocalDateTime) r[9]).toLocalDate()
+                                    ? ((LocalDateTime) r[9])
                                     : null)
 
                             .build())

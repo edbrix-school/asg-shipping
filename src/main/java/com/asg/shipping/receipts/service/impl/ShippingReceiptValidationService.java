@@ -12,7 +12,6 @@ import com.asg.shipping.receipts.dto.ReceiptsUpdateDto;
 import com.asg.shipping.receipts.entity.ArShReceiptHdr;
 import com.asg.shipping.receipts.repository.ShipReceiptProcRepository;
 import com.asg.shipping.receipts.util.ValidationMessages;
-import com.ctc.wstx.shaded.msv_core.relaxns.grammar.DeclImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,7 +37,7 @@ public class ShippingReceiptValidationService {
 		validateBlPoid(createDto.getBlPoid());
 		validatePrintCustomer(createDto.getPrintDoCustomerPoid(), createDto.getBlPoid());
 		validateAmount(createDto.getCharges(),createDto.getPaymentDetail());
-		validateFinancialYearAndPeriod(createDto.getCompanyPoid(), createDto.getTransactionDate());
+		validateFinancialYearAndPeriod(createDto.getCompanyPoid(), LocalDate.from(createDto.getTransactionDate()));
 		validateReceiptAmount(createDto.getPaymentDetail(), createDto.getCharges(), createDto.getContainer());
 		validatePaymentMethods(createDto.getPaymentDetail());
 		validateBlacklistedCustomers(createDto.getPaymentDetail());
@@ -105,8 +104,8 @@ public class ShippingReceiptValidationService {
 
 		validateReleaseTypeMatching(existingReceipt);
 
-		validateFinancialYearAndPeriod(updateDto.getCompanyPoid(), existingReceipt.getTransactionDate());
-		validateFinancialYearAndPeriod(updateDto.getCompanyPoid(), updateDto.getTransactionDate());
+		validateFinancialYearAndPeriod(updateDto.getCompanyPoid(), LocalDate.from(existingReceipt.getTransactionDate()));
+		validateFinancialYearAndPeriod(updateDto.getCompanyPoid(), LocalDate.from(updateDto.getTransactionDate()));
 
 		validateReceiptAmount(updateDto.getPaymentDetail(), updateDto.getCharges(), updateDto.getContainer());
 		validatePaymentMethods(updateDto.getPaymentDetail());

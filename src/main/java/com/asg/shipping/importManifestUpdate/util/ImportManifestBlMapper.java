@@ -457,10 +457,10 @@ public class ImportManifestBlMapper {
                 .refferTemp(entity.getRefferTemp())
                 .refferHum(entity.getRefferHum())
                 .refferVent(entity.getRefferVent())
-                .issueToConsignee(toLocalDate(entity.getIssueToConsignee()))
-                .returnFromConsignee(toLocalDate(entity.getReturnFromConsignee()))
-                .displayCollectedDate(toLocalDate(entity.getDisplayCollectedDate()))
-                .actualDischargeDate(toLocalDate(entity.getActualDischargeDate()))
+                .issueToConsignee(entity.getIssueToConsignee())
+                .returnFromConsignee(entity.getReturnFromConsignee())
+                .displayCollectedDate(entity.getDisplayCollectedDate())
+                .actualDischargeDate(entity.getActualDischargeDate())
                 .isImco(entity.getIsImco())
                 .isOog(entity.getIsOog())
                 .isRefer(entity.getIsRefer())
@@ -932,11 +932,5 @@ public class ImportManifestBlMapper {
         };
 
     }
-
-
-    public static LocalDate toLocalDate(LocalDateTime dateTime) {
-        return dateTime != null ? dateTime.toLocalDate() : null;
-    }
-
 
 }

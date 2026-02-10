@@ -2,7 +2,7 @@ package com.asg.shipping.importmanifestbl.dto;
 
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -38,7 +38,7 @@ public class ChargeDto {
     private Long taxPoid;
     private Long discountPercentage;
 
-    private LocalDate demurrageChargesTillDate;
+    private LocalDateTime demurrageChargesTillDate;
     private String actionType;
 
 

@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -24,12 +24,12 @@ public class ReceiptContainerDto {
 	private String containerNo;
 	private String equipmentIsoType;
 	private Long freeDays;
-	private LocalDate dmFrmDate;
-	private LocalDate dmToDate;
+	private LocalDateTime dmFrmDate;
+	private LocalDateTime dmToDate;
 	private Long dmDays;
 	private BigDecimal dmChargeAmt;
 	private BigDecimal cntTaxPercentage;
 	private BigDecimal cntTaxAmount;
-	private LocalDate emptyIn;
+	private LocalDateTime emptyIn;
 	private Long cntTaxPoid;
 }

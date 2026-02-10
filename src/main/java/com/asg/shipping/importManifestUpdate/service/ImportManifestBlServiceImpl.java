@@ -81,14 +81,14 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     public ImportManifestBlRequestDto createImportManifestBl(ImportManifestBlCreateDto dto) {
         log.info("Creating new Import Manifest BL");
 
-//        validateMandatoryFields(dto);
-//        validateCreateDTO(dto);
-//        validateHoldReasons(dto);
-//        validateAddresses(dto);
-//        validateContainers(dto);
-//        validateFinancial(dto);
-//        validateFreightType(dto);
-//        validateDemurrage(dto);
+        validateMandatoryFields(dto);
+        validateCreateDTO(dto);
+        validateHoldReasons(dto);
+        validateAddresses(dto);
+        validateContainers(dto);
+        validateFinancial(dto);
+        validateFreightType(dto);
+        validateDemurrage(dto);
 
 
         ShipBlManifestHdr entity = mapper.mapToEntity(dto);
@@ -141,11 +141,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         ShipBlManifestHdr oldEntity = new ShipBlManifestHdr();
         BeanUtils.copyProperties(existingEntity, oldEntity);
 
-        log.info("existing data total no of packs ----------->{}",existingEntity.getTotalNoOfPacks());
-
-//        validateMandatoryFieldsForUpdate(dto);
-//        validateBeforeSave(dto, id, companyPoid, groupPoid);
-//        validateUpdateDTO(dto, id, companyPoid, groupPoid);
+        validateMandatoryFieldsForUpdate(dto);
+        validateBeforeSave(dto, id, companyPoid, groupPoid);
+        validateUpdateDTO(dto, id, companyPoid, groupPoid);
         String oldFreightStatus = existingEntity.getFreightStatus();
         String oldDoNo = existingEntity.getDoNo();
         ShipBlManifestHdr savedEntity =  mapper.mapUpdateDTOToEntity(dto, existingEntity);
@@ -153,7 +151,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             formatEdiFields(savedEntity);
         }
         ShipBlManifestHdr saved = repository.saveAndFlush(savedEntity);
-        log.info("going to save data total no. of packs ------------------>{}",saved.getTotalNoOfPacks());
         updateDetailTables(dto, saved.getTransactionPoid());
         loggingService.logChanges(oldEntity, savedEntity, ShipBlManifestHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
@@ -217,12 +214,17 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
 
         ShipBlManifestHdr entity = repository.findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Import Manifest BL", "transactionPoid", id.toString()));
+
+        LocalDate transactionDate = entity.getTransactionDate() == null
+                ? null
+                : LocalDate.from(entity.getTransactionDate());
+
         documentDeleteService.deleteDocument(
                 id,
                 "SHIP_BL_MANIFEST_HDR",
                 "TRANSACTION_POID",
                 deleteReasonDto,
-                entity.getTransactionDate()
+                transactionDate
         );
 
         log.info("Successfully deleted Import Manifest BL with id: {}", id);
@@ -1294,7 +1296,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             throw new ValidationException("Port of loading is required for IMPORT BL");
         }
 
-        validateFinancialYear(UserContext.getCompanyPoid(), dto.getTransactionDate() != null ? dto.getTransactionDate().atStartOfDay() : LocalDateTime.now());
+        validateFinancialYear(UserContext.getCompanyPoid(), dto.getTransactionDate() != null ? dto.getTransactionDate() : LocalDateTime.now());
     }
 
 
