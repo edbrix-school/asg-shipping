@@ -87,9 +87,6 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         // Enrich with LOV data
         enrichDtoWithLovData(dto, line, groupPoid);
 
-        // Log view
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
-
         log.info("Successfully retrieved third party line with id: {}", id);
         return dto;
     }

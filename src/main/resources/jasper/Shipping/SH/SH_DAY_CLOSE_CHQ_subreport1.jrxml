@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SH_DAY_CLOSE_CHQ_subreport1" language="groovy" pageWidth="600" pageHeight="400" columnWidth="600" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="087dbc4d-1538-467f-af36-1d5e39a59876">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="P_TRN_DT" class="java.sql.Timestamp">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String"/>
+	<parameter name="DOC_KEY_POID_DNOC" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT rownum,GET_COMPANY_CODE(nvl(RC.DOCUMENT_CMP_POID,RC.COMPANY_POID)) Phy_COMPANY,GET_COMPANY_CODE(RC.COMPANY_POID)COMPANY,RC.doc_ref, PY.CHQ_CARDNO,PY.CHQ_DATE,GET_CUST_BANK_CODE(PY.BANK_POID) BANK,PY.ACCOUNT_NAME,PY.ACCOUNT_NO,PY.AMOUNT,
+(SELECT  COUNT(GET_COMPANY_CODE(nvl(DRC.DOCUMENT_CMP_POID,DRC.COMPANY_POID))) Phy_COMPANY FROM AR_SH_RECEIPT_PYMT_DETAILS DPY,AR_SH_RECEIPT_HDR DRC WHERE
+                      DPY.TRANSACTION_POID=DRC.TRANSACTION_POID
+                  AND DPY.PYMT_TYPE in('CHEQUE') AND NVL(DPY.AMOUNT,0)<>0
+and       TRUNC(DRC.TRANSACTION_DATE)=$P{P_TRN_DT} AND DRC.COMPANY_POID=RC.COMPANY_POID) CNT,
+DECODE(GET_LINE_CODE(GET_LINE_POID_FROM_BL(BL_POID)),'MSC','MSC','OTH') LINE
+        FROM AR_SH_RECEIPT_PYMT_DETAILS PY,AR_SH_RECEIPT_HDR RC WHERE
+                      PY.TRANSACTION_POID=RC.TRANSACTION_POID
+AND NVL(RC.DELETED,'N')='N'
+                  AND PY.PYMT_TYPE in('CHEQUE') AND NVL(PY.AMOUNT,0)<>0
+and       TRUNC(RC.TRANSACTION_DATE)=$P{P_TRN_DT}
+order by nvl(RC.DOCUMENT_CMP_POID,RC.COMPANY_POID),RC.COMPANY_POID,PY.BANK_POID,RC.doc_ref,PY.CHQ_DATE]]>
+	</queryString>
+	<field name="ROWNUM" class="java.math.BigDecimal"/>
+	<field name="PHY_COMPANY" class="java.lang.String"/>
+	<field name="COMPANY" class="java.lang.String"/>
+	<field name="DOC_REF" class="java.lang.String"/>
+	<field name="CHQ_CARDNO" class="java.lang.String"/>
+	<field name="CHQ_DATE" class="java.sql.Timestamp"/>
+	<field name="BANK" class="java.lang.String"/>
+	<field name="ACCOUNT_NAME" class="java.lang.String"/>
+	<field name="ACCOUNT_NO" class="java.lang.String"/>
+	<field name="AMOUNT" class="java.math.BigDecimal"/>
+	<field name="CNT" class="java.math.BigDecimal"/>
+	<field name="LINE" class="java.lang.String"/>
+	<variable name="AMOUNT_1" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{AMOUNT}]]></variableExpression>
+	</variable>
+	<variable name="CNT_PAGE" class="java.lang.Integer" calculation="Count">
+		<variableExpression><![CDATA[$F{ROWNUM}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band height="3" splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="21" splitType="Stretch">
+			<staticText>
+				<reportElement x="12" y="0" width="26" height="20" uuid="83939589-4bcc-481e-b698-80a2ae64b6e1"/>
+				<textElement verticalAlignment="Middle"/>
+				<text><![CDATA[Sn.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="71" y="0" width="51" height="20" uuid="ef319f3f-496d-4ced-a4aa-065a2c8edddd"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Company]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="122" y="1" width="70" height="20" uuid="ae862077-0a0e-4666-91a1-10e63a59c246"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Doc Ref]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="192" y="1" width="78" height="20" uuid="33a52580-4b3e-410e-bc53-e669c1d56f72"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Cheque Date]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="296" y="1" width="66" height="20" uuid="3561e24b-e49a-4c6d-b503-7fc9da6515ed"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Chq No]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="362" y="1" width="64" height="20" uuid="5f5df160-af70-4523-b8d3-149286f7c6b1"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Bank]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="426" y="1" width="81" height="20" uuid="1713cf1e-a41e-46db-9dd7-410f3cc9c520"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Account ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="507" y="0" width="81" height="20" uuid="95d0312f-8233-4f67-811a-17c5c6131568"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<text><![CDATA[Amount]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="38" y="1" width="32" height="19" uuid="ed0b956c-f13a-4122-bb44-2111158c5b03"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[ChqC]]></text>
+			</staticText>
+			<line>
+				<reportElement x="0" y="19" width="600" height="2" uuid="4ab2e318-88fb-4624-bbdf-973a77033d5a"/>
+			</line>
+			<staticText>
+				<reportElement x="270" y="2" width="26" height="17" uuid="22888c9f-4673-424a-8892-3910c0a09c51"/>
+				<text><![CDATA[LINE]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="19" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="71" y="0" width="51" height="13" uuid="f6fdb036-e42d-4631-a8c1-7b3baa7c554c"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{COMPANY}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="122" y="1" width="70" height="13" uuid="195586a1-76bc-4056-a70d-482f273585eb"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{DOC_REF}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="192" y="0" width="78" height="13" uuid="d09ff5e6-d16f-4919-b838-99b87ff96b39"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{CHQ_DATE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="362" y="0" width="64" height="13" uuid="849352ff-62a0-4d3a-b4df-49b9bef4c21d"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{BANK}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="296" y="0" width="66" height="13" uuid="0705e213-d441-446b-96ac-6739d2ce94ae"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{CHQ_CARDNO}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="426" y="0" width="81" height="13" uuid="9ff93da1-e157-40bb-a87d-0ddceefaf536"/>
+				<textElement textAlignment="Center"/>
+				<textFieldExpression><![CDATA[$F{ACCOUNT_NO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="507" y="0" width="81" height="13" uuid="42cad363-5def-4a92-becc-8f0120102c06"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle"/>
+				<textFieldExpression><![CDATA[$F{AMOUNT}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="16" y="16" width="572" height="1" uuid="286f3286-1f8d-45c9-8535-47cea2362feb">
+					<printWhenExpression><![CDATA[$F{COMPANY}.equals( '-1' )]]></printWhenExpression>
+				</reportElement>
+				<graphicElement>
+					<pen lineWidth="0.5" lineStyle="Dashed"/>
+				</graphicElement>
+			</line>
+			<textField>
+				<reportElement x="12" y="1" width="26" height="13" uuid="4e6e3141-9b8a-4dbe-8445-aa1006362634"/>
+				<textFieldExpression><![CDATA[$V{CNT_PAGE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="38" y="1" width="32" height="13" uuid="45e4c2e0-4252-403a-aa87-4e50fe137f25"/>
+				<textFieldExpression><![CDATA[$F{PHY_COMPANY}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="270" y="0" width="26" height="13" uuid="4a37dbaa-1ade-46bc-adba-fac0726edacc"/>
+				<textFieldExpression><![CDATA[$F{LINE}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band height="23" splitType="Stretch">
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="504" y="0" width="81" height="20" uuid="b188c5f1-1761-4e05-8b40-6eef4c21a867"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{AMOUNT_1}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="485" y="22" width="100" height="1" uuid="12e9f125-92b9-4949-8126-1fa2062353a2"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</line>
+		</band>
+	</summary>
+</jasperReport>

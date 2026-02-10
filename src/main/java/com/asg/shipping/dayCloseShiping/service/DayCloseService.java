@@ -23,4 +23,6 @@ public interface DayCloseService {
 			Long userPoid);
 
 	Map<String, Object> searchDayClose(String docId, FilterRequestDto request, Pageable pageable);
+	
+	byte[] print(Long transactionPoid) throws Exception;
 }

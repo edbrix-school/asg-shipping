@@ -74,7 +74,7 @@ class PortChargesTariffControllerTest {
         updateDto.setDescription("Updated Tariff");
         updateDto.setPortPoid(200L);
         updateDto.setChargeLinePoid(300L);
-        updateDto.setChargeDivision("DIV1");
+        updateDto.setChargeDivision("DIVISION1");
         updateDto.setPeriodFrom(LocalDate.of(2024, 1, 1));
         updateDto.setPeriodTo(LocalDate.of(2024, 12, 31));
 

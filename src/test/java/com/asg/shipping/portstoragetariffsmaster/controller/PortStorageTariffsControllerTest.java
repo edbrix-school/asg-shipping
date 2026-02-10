@@ -31,6 +31,9 @@ class PortStorageTariffsControllerTest {
     @Mock
     private PortStorageTariffsService tariffService;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private PortStorageTariffsController controller;
 
@@ -197,31 +200,46 @@ class PortStorageTariffsControllerTest {
 
     @Test
     void deleteTariff_Success() {
-        doNothing().when(tariffService).deleteTariff(1L);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        ResponseEntity<?> response = controller.deleteTariff(1L);
+            doNothing().when(tariffService).deleteTariff(1L, 1L, 1L, null);
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        verify(tariffService).deleteTariff(1L);
+            ResponseEntity<?> response = controller.deleteTariff(1L, null);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(tariffService).deleteTariff(1L, 1L, 1L, null);
+        }
     }
 
     @Test
     void deleteTariff_NotFound() {
-        doThrow(new ResourceNotFoundException("Tariff", "transactionPoid", "1"))
-                .when(tariffService).deleteTariff(1L);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        assertThrows(ResourceNotFoundException.class, () -> controller.deleteTariff(1L));
+            doThrow(new ResourceNotFoundException("Tariff", "transactionPoid", "1"))
+                    .when(tariffService).deleteTariff(1L, 1L, 1L, null);
+
+            assertThrows(ResourceNotFoundException.class, () -> controller.deleteTariff(1L, null));
+        }
     }
 
     @Test
     void deleteTariff_AlreadyDeleted() {
-        doNothing().when(tariffService).deleteTariff(1L);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        ResponseEntity<?> response = controller.deleteTariff(1L);
+            doNothing().when(tariffService).deleteTariff(1L, 1L, 1L, null);
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        verify(tariffService).deleteTariff(1L);
+            ResponseEntity<?> response = controller.deleteTariff(1L, null);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(tariffService).deleteTariff(1L, 1L, 1L, null);
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.asg.shipping.dayCloseShiping.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,4 +32,7 @@ public class DayCloseHdrDto {
 
 	private String locationCode;
 	private BigDecimal outstandingAmount;
+
+	private String createdBy;
+	private LocalDateTime createdDate;
 }

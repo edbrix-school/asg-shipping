@@ -3,9 +3,7 @@ package com.asg.shipping.shippingofoqv2.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
-import java.util.Date;
-
+import java.time.LocalDateTime;
 @Entity
 @Table(name = "OFOQ_API_DATA_DTL")
 @IdClass(TransactionDetailId.class)
@@ -44,24 +42,22 @@ public class OFOQItemDtlEntity {
     private String jobNo;
 
     @Column(name = "ARRIVAL_DATE")
-    @Temporal(TemporalType.DATE)
-    private Date arrivalDate;
+    private LocalDateTime arrivalDate;
 
     @Column(name = "SAIL_DATE")
-    @Temporal(TemporalType.DATE)
-    private Date sailDate;
+    private LocalDateTime sailDate;
 
     @Column(name = "CREATED_BY", length = 20)
     private String createdBy;
 
     @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "LASTMODIFIED_BY", length = 20)
     private String lastModifiedBy;
 
     @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastModifiedDate;
+    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DRILLDOWN_LINK_INFO", length = 1000)
     private String drilldownLinkInfo;

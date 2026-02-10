@@ -1,7 +1,11 @@
 package com.asg.shipping.portstoragetariffsmaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffCreateDTO;
 import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffDto;
@@ -42,6 +46,7 @@ public class PortStorageTariffsController {
     private static final String DOC_ID = "100-060";
 
     private final PortStorageTariffsService tariffService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/search")
@@ -113,6 +118,7 @@ public class PortStorageTariffsController {
 
         log.info("Getting tariff with id: {}", id);
         PortStorageTariffDto tariff = tariffService.getTariff(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved tariff with id: {}", id);
         return ApiResponse.success("Tariff retrieved successfully", tariff);
     }
@@ -212,7 +218,7 @@ public class PortStorageTariffsController {
     @DeleteMapping("/{id}")
     @Operation(
             summary = "Delete tariff",
-            description = "Soft delete a port storage tariff by setting DELETED='Y'",
+            description = "Deletes a port storage tariff (soft delete). Checks dependencies before deletion.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -224,16 +230,32 @@ public class PortStorageTariffsController {
                     responseCode = "404",
                     description = "Tariff not found",
                     content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Cannot delete due to dependencies",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(mediaType = "application/json")
             )
     })
     public ResponseEntity<?> deleteTariff(
             @Parameter(description = "Transaction POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
 
-        log.info("Deleting tariff with id: {}", id);
-        tariffService.deleteTariff(id);
-        log.info("Successfully deleted tariff with id: {}", id);
-        return ApiResponse.success("Tariff deleted successfully");
+        log.info("deleteTariff started for companyPoid={} groupPoid={}", 
+            getCompanyPoid(), getGroupPoid());
+        
+        tariffService.deleteTariff(getGroupPoid(), id, getCompanyPoid(), deleteReasonDto);
+        
+        log.info("deleteTariff completed for companyPoid={} groupPoid={}", 
+            getCompanyPoid(), getGroupPoid());
+        
+        return ApiResponse.success("Tariff deleted successfully", null);
     }
 
     /**

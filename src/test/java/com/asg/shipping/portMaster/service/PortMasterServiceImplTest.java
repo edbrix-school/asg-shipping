@@ -26,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
 import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -51,6 +52,9 @@ class PortMasterServiceImplTest {
 
 	@Mock
 	private ShipTradeLaneService tradeLaneService;
+
+	@Mock
+	private LoggingService loggingService;
 
 	@InjectMocks
 	private PortMasterServiceImpl service;

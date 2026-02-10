@@ -42,4 +42,5 @@ public class BookingFormCargoDetailDto {
 	private String oogRW;
 	private String oogF;
 	private String oogA;
+	private String action; // ISCREATE, ISUPDATE, ISDELETE
 }

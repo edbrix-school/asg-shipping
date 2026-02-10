@@ -1,6 +1,8 @@
 package com.asg.shipping.linepayabletransfetasperreporting.service;
 
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.service.DocumentDeleteService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
 import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportTransferDtl;
@@ -35,6 +37,12 @@ class LinePayableTransferReportingServiceImplTest {
 
     @Mock
     private ShipLineReportTransferDtlRepository dtlRepository;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
+
+    @Mock
+    private LoggingService loggingService;
 
     @Mock
     private JdbcTemplate jdbcTemplate;
@@ -182,8 +190,9 @@ class LinePayableTransferReportingServiceImplTest {
     void deleteLinePayableTransfer_Success() {
         when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
         when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(documentDeleteService.deleteDocument(any(), any(), any(), any(), any())).thenReturn(null);
 
-        service.deleteLinePayableTransfer(1L);
+        service.deleteLinePayableTransfer(1L, null);
 
         verify(hdrRepository).save(argThat(entity -> "Y".equals(entity.getDeleted())));
     }
@@ -192,7 +201,7 @@ class LinePayableTransferReportingServiceImplTest {
     void deleteLinePayableTransfer_NotFound() {
         when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.deleteLinePayableTransfer(1L));
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteLinePayableTransfer(1L, null));
     }
 
     @Test

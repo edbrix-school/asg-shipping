@@ -33,6 +33,9 @@ public class ShipAgentMasterControllerTest {
     @Mock
     private ShipAgentMasterService service;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private ShipAgentMasterController controller;
 

@@ -12,6 +12,7 @@ import com.asg.shipping.importManifestUpdate.service.ImportManifestBlService;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
 import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
+import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -25,6 +26,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +46,7 @@ import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 public class ImportManifestBlController {
 
     private final ImportManifestBlService service;
+    private final ImportManifestService manifestService;
 
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
@@ -105,7 +109,7 @@ public class ImportManifestBlController {
     )
     @PostMapping("/list")
     public ResponseEntity<?> getImportManifestList(@ParameterObject Pageable pageable,
-                                                      @RequestBody(required = false) FilterRequestDto filters) {
+                                                   @RequestBody(required = false) FilterRequestDto filters) {
         try {
             Map<String, Object> countries = service.listOfImportManifest(UserContext.getDocumentId(), filters, pageable);
             return success("Import Manifest list fetched successfully", countries);
@@ -340,6 +344,69 @@ public class ImportManifestBlController {
             return notFound(e.getMessage());
         } catch (Exception e) {
             return internalServerError("Failed to retrieve BL status: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/cargo-arrival-notice/{transactionPoid}")
+    public ResponseEntity<?> printCargoArrivalNotice(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Voyage Transaction POID", example = "67890", required = true)
+            @RequestParam Long voyageTransactionPoid
+    ) {
+        try {
+            byte[] pdf = manifestService.printCargoArrivalNotice(voyageTransactionPoid, transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-update-bl-cargo-arrival-notice-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("error", e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/uncleared-cargo-notice/{transactionPoid}")
+    public ResponseEntity<?> printUnclearedCargoNotice(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid
+    ) {
+        try {
+            byte[] pdf = manifestService.printUnclearedCargoNotice(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-update-bl-uncleared-cargo-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/cargo-manifest-print/{transactionPoid}")
+    public ResponseEntity<?> printCargoManifest(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Is Cargo Manifest Print", example = "true")
+            @RequestParam(defaultValue = "false") boolean isCargoManifestPrint
+    ) {
+        try {
+            byte[] pdf = manifestService.printCargoManifest(transactionPoid, isCargoManifestPrint);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-update-bl-cargo-manifest-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("error",e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
 }

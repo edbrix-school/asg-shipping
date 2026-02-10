@@ -1,10 +1,13 @@
 package com.asg.shipping.shippingmanifestcorrector.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shippingmanifestcorrector.dto.*;
 import com.asg.shipping.shippingmanifestcorrector.service.ManifestCorrectorService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +45,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 public class ManifestCorrectorController {
 
     private final ManifestCorrectorService service;
+    private final LoggingService loggingService;
 
     /**
      * Search Shipping Manifest Corrector records
@@ -104,6 +108,7 @@ public class ManifestCorrectorController {
         try {
             log.info("Get request for Shipping Manifest Corrector with id: {}", transactionPoid);
             ManifestCorrectorDto dto = service.getManifestCorrectorById(transactionPoid);
+            loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
             return success("Shipping Manifest Corrector retrieved successfully", dto);
         } catch (Exception e) {
             return internalServerError("Error fetching Shipping Manifest Corrector: " + e.getMessage());
@@ -218,10 +223,11 @@ public class ManifestCorrectorController {
     @DeleteMapping("/{transactionPoid}")
     public ResponseEntity<?> deleteManifestCorrector(
             @Parameter(description = "Transaction POID", required = true, example = "12345")
-            @PathVariable Long transactionPoid) {
+            @PathVariable Long transactionPoid,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         try {
             log.info("Delete request for Shipping Manifest Corrector with id: {}", transactionPoid);
-            service.deleteManifestCorrector(transactionPoid);
+            service.deleteManifestCorrector(transactionPoid, deleteReasonDto);
             return success("Shipping Manifest Corrector deleted successfully");
         } catch (Exception e) {
             return internalServerError("Error deleting Shipping Manifest Corrector: " + e.getMessage());

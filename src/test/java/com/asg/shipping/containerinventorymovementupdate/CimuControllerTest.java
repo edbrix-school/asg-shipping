@@ -99,6 +99,7 @@ class CimuControllerTest {
     void testUpdate() throws Exception {
         UpdateCimuRequest request = new UpdateCimuRequest();
         request.setContainerNo("CONT001");
+        request.setTransactionPoid(1L);
 
         when(cimuService.updateContainerData(any()))
                 .thenReturn(new UpdateCimuResponse());
@@ -139,6 +140,8 @@ class CimuControllerTest {
     void testCalculateDemurrage() throws Exception {
         DemurrageCalculateRequest request = new DemurrageCalculateRequest();
         request.setContainerNo("CONT001");
+        request.setTransactionPoid(1L);
+        request.setDemDt("2024-01-01");
 
         when(cimuService.calculateDemurrage(any()))
                 .thenReturn(new DemurrageCalculateResponse());

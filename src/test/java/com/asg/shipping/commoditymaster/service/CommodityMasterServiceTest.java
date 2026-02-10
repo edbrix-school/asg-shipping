@@ -43,6 +43,9 @@ class CommodityMasterServiceTest {
     @Mock
     private Query nativeQuery;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private CommodityMasterService commodityMasterService;
 
