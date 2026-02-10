@@ -1,5 +1,6 @@
 package com.asg.shipping.receipts.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.receipts.dto.*;
 import com.asg.shipping.receipts.enums.ButtonType;
@@ -16,7 +17,7 @@ public interface ReceiptsService {
 
 	ReceiptsBlDetailsDto updateReceipt(Long transactionPoid, ReceiptsUpdateDto updateDto);
 
-	void deleteReceipt(Long transactionPoid);
+	void deleteReceipt(Long transactionPoid, DeleteReasonDto deleteReasonDto);
 
 	Map<String, Object> list(FilterRequestDto filters, Pageable pageable);
 

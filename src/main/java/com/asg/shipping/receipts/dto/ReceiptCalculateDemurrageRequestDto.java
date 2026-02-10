@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -17,8 +17,8 @@ public class ReceiptCalculateDemurrageRequestDto {
     private Long blPoid;
     private String containerNo;
     private String containerIsoType;
-    private LocalDate fromDate;
-    private LocalDate toDate;
+    private LocalDateTime fromDate;
+    private LocalDateTime toDate;
     private Long extraFreeDays;
 
 

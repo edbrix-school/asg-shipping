@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_CUSTOMER_CHARGES_DTL")
@@ -78,13 +78,13 @@ public class ShipCustomerChargesDtlEntity {
     private String createdBy;
 
     @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
+    private java.time.LocalDateTime createdDate;
 
     @Column(name = "LASTMODIFIED_BY", length = 20)
     private String lastModifiedBy;
 
     @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastModifiedDate;
+    private LocalDateTime lastModifiedDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", nullable = false, insertable = false, updatable = false)

@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.*;
 
@@ -15,7 +16,7 @@ public interface ImportManifestService {
 
     ImportManifestBlRequestDto getImportManifest(Long transactionPoId);
 
-    void delete(Long transactionPoId);
+    void delete(Long transactionPoId, DeleteReasonDto deleteReasonDto);
 
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
 

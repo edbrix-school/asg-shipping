@@ -1,11 +1,10 @@
 package com.asg.shipping.importManifestUpdateTest.service;
 
-import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
@@ -22,11 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -64,6 +59,9 @@ public class ImportManifestServiceImplTest {
     @Mock
     private StoredProcedureQuery storedProcedureQuery;
 
+    @Mock
+    private DocumentDeleteService documentDeleteService;
+
     @InjectMocks
     private ImportManifestBlServiceImpl service;
 
@@ -79,7 +77,7 @@ public class ImportManifestServiceImplTest {
         mockEntity.setFreightStatus("PAID");
         mockEntity.setDoNo("DO001");
         mockEntity.setDeleted("N");
-        mockEntity.setTransactionDate(LocalDate.now());
+        mockEntity.setTransactionDate(LocalDateTime.now());
 
         mockUpdateDto = ImportManifestBlUpdateDTO.builder()
                 .blNumber("TEST123")
@@ -194,7 +192,7 @@ public class ImportManifestServiceImplTest {
         when(repository.findByTransactionPoid(id)).thenReturn(Optional.of(mockEntity));
 
         // When
-        service.deleteImportManifestBl(id);
+        service.deleteImportManifestBl(id,new DeleteReasonDto());
 
         // Then
         verify(repository).findByTransactionPoid(id);

@@ -1,15 +1,16 @@
 package com.asg.shipping.importmanifestbl.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.service.DocumentDeleteService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importManifestUpdate.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importManifestUpdate.entity.*;
 import com.asg.shipping.importManifestUpdate.respository.*;
 import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
-import com.asg.shipping.importmanifestbl.dto.CommodityDTO;
-import com.asg.shipping.importmanifestbl.dto.ContainerTypeDTO;
-import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
-import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
+import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.repository.ContainerDropdownRepository;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
@@ -52,6 +53,8 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     private final DataSource dataSource;
     private final ContainerDropdownRepository containerDropdownRepository;
     private final BlManifestValidationRepository validationRepository;
+    private final DocumentDeleteService documentDeleteService;
+    private final LoggingService loggingService;
 
     @Override
     public ImportManifestBlRequestDto getImportManifest(Long transactionPoId) {
@@ -64,22 +67,23 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
 
         ImportManifestBlRequestDto requestDto = mapper.mapToDto(entity);
-
         ImportManifestBlRequestDto dto =   updateService.loadDetailTables(requestDto,transactionPoId);
-
-
-
         log.info("Successfully retrieved Import Manifest BL with id: {}", transactionPoId);
         return dto;
     }
 
     @Override
     @Transactional
-    public void delete(Long transactionPoId) {
+    public void delete(Long transactionPoId, DeleteReasonDto deleteReasonDto) {
         try {
+
             ShipBlManifestHdr entity = findEntityById(transactionPoId);
-            entity.setDeleted("Y");
-            headerRepository.save(entity);
+            LocalDate transactionDate = entity.getTransactionDate() == null
+                    ? null
+                    : LocalDate.from(entity.getTransactionDate());
+
+            documentDeleteService.deleteDocument(transactionPoId,"SHIP_BL_MANIFEST_HDR","TRANSACTION_POID",
+                    deleteReasonDto,transactionDate);
             log.info("Soft deleted header for transactionPoId: {}", transactionPoId);
         } catch (ResourceNotFoundException e) {
             log.error("Failed to delete: Entity not found for transactionPoId: {}", transactionPoId);

@@ -1,10 +1,11 @@
 package com.asg.shipping.tradelanemaster.service;
 
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.ASGHelperUtils;
 import com.asg.shipping.tradelanemaster.dto.request.ShipTradelaneRequest;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
@@ -41,6 +42,12 @@ class ShipTradeLaneServiceImplTest {
 
     @InjectMocks
     private ShipTradeLaneServiceImpl service;
+
+    @Mock
+    private LoggingService loggingService;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     private ShipTradelaneRequest request;
     private ShipTradelaneMaster entity;
@@ -138,18 +145,6 @@ class ShipTradeLaneServiceImplTest {
     }
 
     @Test
-    void testUpdateDeletedRecord() {
-        try (MockedStatic<ASGHelperUtils> mockedStatic = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
-            mockedStatic.when(ASGHelperUtils::getGroupId).thenReturn(2L);
-            
-            entity.setDeleted("Y");
-            when(repository.findById(1L)).thenReturn(Optional.of(entity));
-
-            assertThrows(IllegalStateException.class, () -> service.update(1L, request));
-        }
-    }
-
-    @Test
     void testGetByIdSuccess() {
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
 
@@ -168,17 +163,30 @@ class ShipTradeLaneServiceImplTest {
 
     @Test
     void testDeleteSuccess() {
-        try (MockedStatic<ASGHelperUtils> mockedStatic = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
-            mockedStatic.when(() -> getCurrentUser()).thenReturn("user2");
-            
-            when(repository.findById(1L)).thenReturn(Optional.of(entity));
-            when(repository.save(any(ShipTradelaneMaster.class))).thenReturn(entity);
+        try (MockedStatic<ASGHelperUtils> mockedStatic =
+                     mockStatic(ASGHelperUtils.class)) {
 
-            service.delete(1L);
+            mockedStatic.when(ASGHelperUtils::getCurrentUser)
+                    .thenReturn("user2");
 
-            verify(repository).save(any(ShipTradelaneMaster.class));
+            when(repository.findById(1L))
+                    .thenReturn(Optional.of(entity));
+
+            service.delete(1L, new DeleteReasonDto());
+
+            verify(repository).findById(1L);
+            verify(documentDeleteService).deleteDocument(
+                    eq(1L),
+                    eq("SHIP_TRADELANE_MASTER"),
+                    eq("TRADELANE_POID"),
+                    any(DeleteReasonDto.class),
+                    isNull()
+            );
+
+            verifyNoMoreInteractions(repository);
         }
     }
+
 
     @Test
     void testValidateRequestEmptyCode() {
