@@ -5,7 +5,7 @@ import com.asg.shipping.shippingofoqv2.entity.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.ZoneId;
+import java.time.LocalDate;
 import java.util.List;
 
 @Component
@@ -13,18 +13,14 @@ import java.util.List;
 public class OFOQMapper {
 
     public OFOQApiDataHdrDto toHeaderDto(OfoqApiDataHdrEntity entity,String functionalReference) {
-        log.info("Header mapping - apiProvisionalMfNo: {}, apiProvisionalStatus: {}, manifestNo: {}, manifestStatus: {}",
-                entity.getApiProvisionalMfNo(), entity.getApiProvisionalStatus(), entity.getManifestNo(), entity.getManifestStatus());
-
         return OFOQApiDataHdrDto.builder()
                 .transactionPoid(entity.getTransactionPoid())
                 .docRef(entity.getDocRef())
-                .transactionDate(entity.getTransactionDate() != null ? new java.util.Date(entity.getTransactionDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
+                .transactionDate(entity.getTransactionDate())
                 .voyageNo(entity.getVoyageNo())
                 .vesselPoid(entity.getVesselPoid())
-                .arrivalDate(entity.getArrivalDate() != null ? new java.util.Date(entity.getArrivalDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
+                .arrivalDate(entity.getArrivalDate())
                 .rotationNumber(entity.getRotationNumber())
-                .apiProvisionalMfNo(entity.getApiProvisionalMfNo())
                 .apiProvisionalStatus(entity.getApiProvisionalStatus())
                 .manifestNo(entity.getManifestNo())
                 .manifestStatus(entity.getManifestStatus())
@@ -32,9 +28,9 @@ public class OFOQMapper {
                 .remarks(entity.getRemarks())
                 .deleted(entity.getDeleted())
                 .createdBy(entity.getCreatedBy())
-                .createdDate(entity.getCreatedDate() != null ? entity.getCreatedDate().toLocalDateTime() : null)
+                .createdDate(entity.getCreatedDate())
                 .lastModifiedBy(entity.getLastModifiedBy())
-                .lastModifiedDate(entity.getLastModifiedDate() != null ? entity.getLastModifiedDate().toLocalDateTime() : null)
+                .lastModifiedDate(entity.getLastModifiedDate())
                 .build();
     }
 
@@ -46,17 +42,18 @@ public class OFOQMapper {
                 .vesselName(entity.getVesselName())
                 .voyageNo(entity.getVoyageNo())
                 .jobNo(entity.getJobNo())
-                .arrivalDate(entity.getArrivalDate() != null ? new java.util.Date(entity.getArrivalDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
-                .sailDate(entity.getSailDate() != null ? new java.util.Date(entity.getSailDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
+                .arrivalDate(LocalDate.from(entity.getArrivalDate()))
+                .sailDate(LocalDate.from(entity.getSailDate()))
                 .checked(entity.getChecked())
                 .drillDownLinkInfo(entity.getDrilldownLinkInfo())
                 .build();
     }
 
     public OFOQManifestAmendmentResponse toAmendmentResponseDto(OFOQManifestAmendmentResponseDtlEntity entity) {
+        if (entity == null) return null;
         return OFOQManifestAmendmentResponse.builder()
                 .detRowId(entity.getDetRowId())
-                .date(entity.getResponseDate() != null ? new java.util.Date(entity.getResponseDate().getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null)
+                .date(entity.getResponseDate())
                 .blNumber(entity.getXmlBlNumber())
                 .functionalReference(entity.getFunctionalRef())
                 .statusCode(entity.getStatusCode())
@@ -68,6 +65,9 @@ public class OFOQMapper {
 
 
     public OFOQAmendBLDto toAmendBLDto(OFOQAmendBlDtlEntity entity) {
+        if (entity == null){
+            return  null;
+        }
         return OFOQAmendBLDto.builder()
                 .detRowId(entity.getDetRowId())
                 .blNumber(entity.getBlNumber())
@@ -84,8 +84,7 @@ public class OFOQMapper {
         OFOQCheckStatusManifestResponse dto = new OFOQCheckStatusManifestResponse();
         dto.setTransactionPoid(entity.getTransactionPoid());
         dto.setDetRowId(entity.getDetRowId());
-        dto.setDate(entity.getResponseDate() != null ?
-            entity.getResponseDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate() : null);
+        dto.setDate(entity.getResponseDate());
         dto.setFunctionalReference(entity.getFunctionalRef());
         dto.setStatusCode(String.valueOf(entity.getStatusCode()));
         dto.setResponseMessage(entity.getResponseMessage());

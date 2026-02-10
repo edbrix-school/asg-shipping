@@ -18,8 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
 import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormResponse;
 import com.asg.shipping.MafiTrailerDateUpdateForm.service.MafiTrailerDateUpdateFormService;
@@ -42,6 +44,7 @@ import lombok.extern.slf4j.Slf4j;
 public class MafiTrailerDateUpdateFormController {
 
 	private final MafiTrailerDateUpdateFormService service;
+	private final LoggingService loggingService;
 
 	@Operation(summary = "Get all Mafi Trailer date update", description = "Fetches all the records for the Mafi trailer date update", responses = {
 			@ApiResponse(responseCode = "200", description = "Mafi trailers fetched successfully."),
@@ -66,6 +69,7 @@ public class MafiTrailerDateUpdateFormController {
 
 			@Parameter(description = "Company POID", required = true, example = "5001") @RequestParam("companyPoid") Long companyPoid) {
 		MafiTrailerDateUpdateFormResponse response = service.getById(transactionPoid, groupPoid, companyPoid);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(),transactionPoid.toString());
 		return success("Mafi Trailer date update fetched successfully", response);
 	}
 

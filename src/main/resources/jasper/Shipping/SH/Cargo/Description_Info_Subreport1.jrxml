@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Description_Info_Subreport1" language="groovy" pageWidth="111" pageHeight="802" columnWidth="111" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\10.100.1.24\\adflibrary\\deployed\\Reports\\Templates\\"]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT DISTINCT  nvl(RECORD_ORDER,DET_ROW_ID),CARGODTL.CARGO_DESCRIPTION
+FROM SHIP_BL_MANIFEST_HDR MFHDR
+INNER JOIN SHIP_BL_MANIFEST_CARGO_DTL CARGODTL   ON MFHDR.TRANSACTION_POID =CARGODTL.TRANSACTION_POID
+WHERE DESCRIPTION_TYPE='CARGO'
+AND MFHDR.TRANSACTION_POID = $P{DOC_KEY_POID}
+order by nvl(RECORD_ORDER,DET_ROW_ID)]]>
+	</queryString>
+	<field name="NVL(RECORD_ORDER,DET_ROW_ID)" class="java.math.BigDecimal"/>
+	<field name="CARGO_DESCRIPTION" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<detail>
+		<band height="13" splitType="Stretch">
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="0" y="0" width="111" height="13" uuid="8b3297e2-c608-430d-b06a-f99ec536e264"/>
+				<textElement>
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CARGO_DESCRIPTION}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

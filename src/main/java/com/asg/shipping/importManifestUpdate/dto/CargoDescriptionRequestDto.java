@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CargoDescriptionRequestDto {
     private Long detRowId;
+    private String actionType; 
     private String descriptionType; // DESCRIPTION / MARKS
     private String cargoDescription;
     private Long recordOrder;

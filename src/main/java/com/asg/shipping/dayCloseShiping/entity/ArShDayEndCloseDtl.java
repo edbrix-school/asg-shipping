@@ -1,6 +1,7 @@
 package com.asg.shipping.dayCloseShiping.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,4 +43,16 @@ public class ArShDayEndCloseDtl {
 
 	@Column(name = "CASH_AMOUNT")
 	private BigDecimal cashAmount;
+
+    @Column(name = "CREATED_BY")
+    private String createdBy;
+
+    @Column(name = "CREATED_DATE")
+    private LocalDateTime createdDate;
+
+    @Column(name = "LASTMODIFIED_BY")
+    private String lastModifiedBy;
+
+    @Column(name = "LASTMODIFIED_DATE")
+    private LocalDateTime lastModifiedDate;
 }

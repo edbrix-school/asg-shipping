@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Day_Closed_Report_subreport2" language="groovy" pageWidth="802" pageHeight="555" orientation="Landscape" columnWidth="802" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="f33dfd7d-4296-44b8-baa2-c3c9b4a68462">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="FROM_DATE" class="java.lang.String"/>
+	<parameter name="TO_DATE" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT CASH,CHEQUE,SPLIT,IMCOCASH,IMCOCHEQUE,ROUNDOFF FROM (
+           select rcpt_type,sum(AMOUNT) AMOUNT from (
+           select hdr.TRANSACTION_POID,
+           case when PYMT_TYPE = 'CHEQUE' and CHQ_CARDNO is not null
+           then 'CHEQUE'
+           when PYMT_TYPE = 'SPLIT' and (AMOUNT is not null or AMOUNT != 0)
+            then 'SPLIT'
+            when PYMT_TYPE = 'CASH' and (AMOUNT is not null or AMOUNT != 0)
+            then 'CASH'
+             when PYMT_TYPE = 'IMCOCASH' and (AMOUNT is not null or AMOUNT != 0)
+            then 'IMCOCASH'
+            when PYMT_TYPE = 'IMCOCHEQUE' and  CHQ_CARDNO is not null
+            then 'IMCOCHEQUE'
+             when PYMT_TYPE = 'ROUNDOFF' and (AMOUNT is not null or AMOUNT != 0)
+            then 'ROUNDOFF'
+           end rcpt_type,
+          AMOUNT from
+           AR_SH_RECEIPT_HDR hdr
+           inner join ar_sh_receipt_pymt_details paydtl  on paydtl.TRANSACTION_POID = hdr.TRANSACTION_POID
+           where to_date(TRUNC(hdr.TRANSACTION_DATE)) BETWEEN  $P{FROM_DATE}  AND   $P{TO_DATE}
+           and NVL(hdr.DELETED,'N') = 'N'  and hdr.bl_poid is not null
+           )
+           where rcpt_type is not null
+           group by rcpt_type
+            )
+           PIVOT ( SUM(AMOUNT) FOR (rcpt_type) IN ('CASH' AS CASH, 'CHEQUE' AS CHEQUE, 'SPLIT' AS SPLIT,'IMCOCASH' as IMCOCASH,'IMCOCHEQUE' as IMCOCHEQUE,'ROUNDOFF' as ROUNDOFF))]]>
+	</queryString>
+	<field name="CASH" class="java.math.BigDecimal"/>
+	<field name="CHEQUE" class="java.math.BigDecimal"/>
+	<field name="SPLIT" class="java.math.BigDecimal"/>
+	<field name="IMCOCASH" class="java.math.BigDecimal"/>
+	<field name="IMCOCHEQUE" class="java.math.BigDecimal"/>
+	<field name="ROUNDOFF" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="18" splitType="Stretch">
+			<staticText>
+				<reportElement x="2" y="2" width="88" height="16" uuid="b32e1b59-b7c5-4485-8b7e-647aec9e6730"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Total Cash/IMCO :]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="90" y="2" width="61" height="16" uuid="eb247cab-d771-4313-b605-1475c0335ddc"/>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$F{CASH}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="216" y="2" width="102" height="16" uuid="218b4405-c12d-41cb-a6ba-ac4f7a9cca09"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Total Cheque/IMCO :]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="318" y="2" width="58" height="16" uuid="8be1269c-b5fc-474d-8ac1-d40690bd11bb"/>
+				<textElement textAlignment="Right">
+					<font isBold="false"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CHEQUE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="525" y="2" width="62" height="16" uuid="761a51c6-0714-42bd-a187-fa1d1f86cb5a"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Total Split :]]></text>
+			</staticText>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="587" y="2" width="79" height="16" uuid="9605f9f0-8118-49c5-84b8-5412959667e8"/>
+				<textFieldExpression><![CDATA[$F{SPLIT}]]></textFieldExpression>
+			</textField>
+			<line>
+				<reportElement x="1" y="2" width="802" height="1" uuid="4f969558-03fe-460d-80f1-80a468a5d0d4"/>
+			</line>
+			<line>
+				<reportElement x="1" y="17" width="802" height="1" uuid="ce036439-576b-4e83-83f3-3d561bbad269"/>
+			</line>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="160" y="2" width="50" height="14" uuid="607e0134-8fc9-4cd9-ab5a-4d902365cdb6"/>
+				<textFieldExpression><![CDATA[$F{IMCOCASH}]]></textFieldExpression>
+			</textField>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="383" y="2" width="50" height="15" uuid="203f8066-25b6-4e8d-a2ae-144add869373"/>
+				<textFieldExpression><![CDATA[$F{IMCOCHEQUE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="###,###,###,##0.000" isBlankWhenNull="true">
+				<reportElement x="490" y="2" width="27" height="15" uuid="6e65b99b-6683-45bc-909b-f12d53c09121"/>
+				<textFieldExpression><![CDATA[$F{ROUNDOFF}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="437" y="2" width="53" height="15" uuid="c7e352bf-6c59-469e-9b8a-dd7a394c96ba"/>
+				<textElement>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Roundoff:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="154" y="2" width="3" height="16" uuid="45f819c8-f2fb-4996-ada7-2debc44b9eac"/>
+				<text><![CDATA[/]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="377" y="2" width="3" height="16" uuid="ada201ab-2245-4d62-8f78-e8364eb6e9df"/>
+				<text><![CDATA[/]]></text>
+			</staticText>
+		</band>
+	</title>
+</jasperReport>

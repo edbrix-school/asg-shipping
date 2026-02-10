@@ -2,10 +2,19 @@ package com.asg.shipping.dayCloseShiping.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
+
+import com.asg.common.lib.dto.request.LogRequestDto;
+import com.asg.shipping.bookingFormSH.dto.BookingFormContainerDetailDto;
+import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -17,11 +26,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDenominationDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
@@ -35,6 +48,7 @@ import com.asg.shipping.dayCloseShiping.repository.ArShReceiptHdrRepository;
 import com.asg.shipping.dayCloseShiping.util.DayCloseMapper;
 
 import lombok.RequiredArgsConstructor;
+import net.sf.jasperreports.engine.JasperReport;
 
 @Service
 @RequiredArgsConstructor
@@ -48,6 +62,9 @@ public class DayCloseServiceImpl implements DayCloseService {
 	private final JdbcTemplate jdbcTemplate;
 	private final DocumentSearchService documentService;
 	private final DayCloseMapper mapper;
+	private final PrintService printService;
+    private final DataSource dataSource;
+    private final LoggingService loggingService;
 
 	@Override
 	public DayCloseDto getDayClose(Long transactionPoid, Long groupPoid, Long companyPoid) {
@@ -86,6 +103,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 		callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
 				hdr.getDocRef(), groupPoid, companyPoid, userPoid);
+		loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.toString());
 
 		return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
 	}
@@ -114,6 +132,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 		validateAmounts(request);
 
+		ArShDayEndCloseHdr existingData=hdrRepo.findById(transactionPoid).orElseThrow(()->new ResourceNotFoundException("Day close Shipping", "transactionPoid", transactionPoid));
 		ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
 		hdr.setTransactionPoid(transactionPoid);
 
@@ -121,6 +140,8 @@ public class DayCloseServiceImpl implements DayCloseService {
 		hdrRepo.save(hdr);
 
 		saveDenominations(transactionPoid, request.getDenominations());
+		String docId = UserContext.getDocumentId();
+		loggingService.logChanges(existingData, hdr, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
 		return getDayClose(transactionPoid, groupPoid, companyPoid);
 	}
@@ -146,16 +167,73 @@ public class DayCloseServiceImpl implements DayCloseService {
 			return;
 		}
 
+        String currentUser = getCurrentUser();
+        LocalDateTime now = LocalDateTime.now();
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+
 		Long maxDetRowId = dtlRepo.getMaxDetRowId(transactionPoid);
 
-		for (DayCloseDenominationDto dto : details) {
-			ArShDayEndCloseDtl entity = mapper.mapDtlFromDto(dto, transactionPoid, null);
+        List<ArShDayEndCloseDtl> toSave = new ArrayList<>();
+        List<ArShDayEndCloseDtl> toUpdate = new ArrayList<>();
+        List<Long> toDelete = new ArrayList<>();
+        List<LogRequestDto<ArShDayEndCloseDtl>> logRequests = new ArrayList<>();
 
-			if (entity.getDetRowId() == null) {
-				entity.setDetRowId(++maxDetRowId);
-			}
-			dtlRepo.save(entity);
+		for (DayCloseDenominationDto dto : details) {
+
+            String action = dto.getAction().toUpperCase();
+
+            switch (action) {
+
+                case "ISCREATED":
+                    ArShDayEndCloseDtl entity = mapper.mapDtlFromDto(dto, transactionPoid, null);
+                    entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
+                    entity.setCreatedBy(currentUser);
+                    entity.setCreatedDate(now);
+                    toSave.add(entity);
+                    break;
+
+                case "ISUPDATED":
+                    ArShDayEndCloseDtl existingData = dtlRepo
+                            .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
+                            .orElseThrow(() -> new com.asg.shipping.exceptions.ValidationException(
+                                    "Container detail not found for detRowId: " + dto.getDetRowId()));
+                    ArShDayEndCloseDtl oldEntity = new ArShDayEndCloseDtl();
+                    BeanUtils.copyProperties(existingData, oldEntity);
+
+                    ArShDayEndCloseDtl existing = new ArShDayEndCloseDtl();
+                    BeanUtils.copyProperties(existingData, existing);
+
+                    mapDayCloseDtlFromDto(dto, existing, transactionPoid);
+                    existing.setLastModifiedBy(currentUser);
+                    existing.setLastModifiedDate(now);
+                    toUpdate.add(existing);
+                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ArShDayEndCloseDtl.class, docId,
+                            docKeyPoid, "DAYENDCLOSE DET_ROW_ID: " + dto.getDetRowId()));
+                    break;
+
+                case "ISDELETED":
+                    toDelete.add(dto.getDetRowId());
+                    loggingService.logDelete(dto, docId, docKeyPoid);
+                    break;
+            }
 		}
+
+        if (!toSave.isEmpty()) {
+            List<ArShDayEndCloseDtl> saved = dtlRepo.saveAll(toSave);
+            saved.forEach(e -> loggingService.createLogSummaryEntry(docId, docKeyPoid,
+                    "DayEndClose detail created with detRowId: " + e.getDetRowId()));
+        }
+        if (!toUpdate.isEmpty()) {
+            dtlRepo.saveAll(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
+            }
+        }
+
+        if (!toDelete.isEmpty()) {
+            dtlRepo.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
+        }
 	}
 
 	private String callProcGlChoIntoChqMainShip(Long transactionPoid, LocalDate transactionDate, String docId,
@@ -214,4 +292,27 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 		return BigDecimal.ZERO;
 	}
+
+    private String getCurrentUser() {
+        return UserContext.getUserId() != null ? String.valueOf(UserContext.getUserId()) : "SYSTEM";
+    }
+
+    private void mapDayCloseDtlFromDto(DayCloseDenominationDto dto,ArShDayEndCloseDtl entity,Long transactionPoid){
+        entity.setTransactionPoid(transactionPoid);
+        entity.setCurrencyAmount(dto.getDenomination());
+        entity.setDetRowId(dto.getDetRowId());
+        entity.setCurrencyType(dto.getCurrencyType());
+        entity.setNoOfTran(dto.getNoOfTran());
+        entity.setCashAmount(dto.getCashAmount());
+    }
+	
+	@Override
+    public byte[] print(Long transactionPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-106");
+        params.put("SH_DAY_CLOSE_CASH_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CASH_subreport1.jrxml"));
+        params.put("SH_DAY_CLOSE_CHQ_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CHQ_subreport1.jrxml"));
+        params.put("SH_DAY_CLOSE_SMRY_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_SMRY_subreport1.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/SH_DAY_CLOSE.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
 }

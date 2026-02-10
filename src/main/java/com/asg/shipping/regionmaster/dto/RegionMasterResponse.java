@@ -20,6 +20,8 @@ public class RegionMasterResponse {
 
     private String regionName;
 
+    private String regionName2;
+
     private String active;
 
     private Long seqno;

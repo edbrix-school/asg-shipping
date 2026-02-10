@@ -37,7 +37,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.success;
 @RequestMapping("/v1/shipping-ff-charge-master")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Shipping/FF Charge Master Management", description = "APIs for managing shipping/FF charges")
+@Tag(name = "Shipping/FF Charge Master Management", description = "APIs for managing Shipping/FF charges")
 public class ShippingFFChargeMasterController {
 
     private final ShippingFFChargeMasterService chargeMasterService;

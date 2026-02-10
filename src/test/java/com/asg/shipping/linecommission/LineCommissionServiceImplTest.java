@@ -6,6 +6,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.linecommission.dto.LineCommissionResponse;
 import com.asg.shipping.linecommission.dto.LineCommissionRequest;
@@ -61,7 +62,8 @@ class LineCommissionServiceImplTest {
     private ShipLineMasterTypeRepository lineTypeRepository;
     @Mock
     private LineCommissionMapper mapper;
-
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private LineCommissionServiceImpl service;

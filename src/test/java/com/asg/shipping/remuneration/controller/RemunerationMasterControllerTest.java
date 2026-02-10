@@ -1,11 +1,16 @@
 package com.asg.shipping.remuneration.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.service.RemunerationMasterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -24,6 +29,9 @@ class RemunerationMasterControllerTest {
     @Mock
     private RemunerationMasterService service;
 
+    @Mock
+    private LoggingService loggingService;
+
     @InjectMocks
     private RemunerationMasterController controller;
 
@@ -36,14 +44,18 @@ class RemunerationMasterControllerTest {
     void testListRemunerations() {
         Map<String, Object> response = new HashMap<>();
         response.put("data", "test");
-        when(service.listRemunerations(isNull(), isNull(), any())).thenReturn(response);
+        when(service.listRemunerations(anyString(), any(), any())).thenReturn(response);
 
-        ResponseEntity<?> result = controller.listRemunerations(
-                PageRequest.of(0, 10), null);
-        
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertNotNull(result.getBody());
-        verify(service, times(1)).listRemunerations(isNull(), isNull(), any());
+        try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
+            userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            
+            ResponseEntity<?> result = controller.listRemunerations(
+                    PageRequest.of(0, 10), new FilterRequestDto("", "", java.util.List.of()));
+            
+            assertEquals(HttpStatus.OK, result.getStatusCode());
+            assertNotNull(result.getBody());
+            verify(service, times(1)).listRemunerations(anyString(), any(), any());
+        }
     }
 
     @Test
@@ -78,11 +90,13 @@ class RemunerationMasterControllerTest {
 
     @Test
     void testDelete() {
-        doNothing().when(service).softDeleteRemuneration(anyLong());
+        DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
+        doNothing().when(service).softDeleteRemuneration(anyLong(), any(DeleteReasonDto.class));
 
-        ResponseEntity<?> result = controller.delete(1L);
+        ResponseEntity<?> result = controller.delete(1L, deleteReasonDto);
         
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(service, times(1)).softDeleteRemuneration(eq(1L));
+        verify(service, times(1)).softDeleteRemuneration(eq(1L), any(DeleteReasonDto.class));
     }
 }

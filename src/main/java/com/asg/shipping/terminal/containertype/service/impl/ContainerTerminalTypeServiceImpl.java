@@ -6,6 +6,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -77,6 +78,9 @@ public class ContainerTerminalTypeServiceImpl implements ContainerTerminalTypeSe
                                 "containerTerminalTypePoid",
                                 poid
                         ));
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), poid.toString());
+
         log.info("Successfully retrieved container terminal type with id: {}", poid);
 
         return mapper.toResponse(entity);
@@ -111,8 +115,6 @@ public class ContainerTerminalTypeServiceImpl implements ContainerTerminalTypeSe
         String key = saved.getContainerTerminalTypePoid().toString();
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
-
-        loggingService.logChanges(null, saved, ContainerTerminalTypeEntity.class, docId, key, LogDetailsEnum.CREATED, "CONTAINER_TMNL_TYPE_POID");
 
         log.info("Successfully created container terminal type with id: {}", saved.getContainerTerminalTypePoid());
         return mapper.toResponse(saved);
@@ -150,8 +152,6 @@ public class ContainerTerminalTypeServiceImpl implements ContainerTerminalTypeSe
         repository.save(entity);
         String key = entity.getContainerTerminalTypePoid().toString();
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
-
         loggingService.logChanges(oldEntity, entity, ContainerTerminalTypeEntity.class, docId, key, LogDetailsEnum.MODIFIED, "CONTAINER_TMNL_TYPE_POID");
 
         log.info("Successfully updated container terminal type with id: {}", poid);
@@ -180,8 +180,51 @@ public class ContainerTerminalTypeServiceImpl implements ContainerTerminalTypeSe
         entity.setLastModifiedBy(userId);
         entity.setLastModifiedDate(LocalDateTime.now());
         repository.save(entity);
+
+        String docId = UserContext.getDocumentId();
+        String key = poid.toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
+
+        loggingService.logSimpleFieldChange(ContainerTerminalTypeEntity.class, docId, key, "deleted", "N", "Y", "ContainerTerminalType soft deleted");
+        loggingService.logSimpleFieldChange(ContainerTerminalTypeEntity.class, docId, key, "active", "Y", "N", "ContainerTerminalType soft deleted");
+
         log.info("Successfully deleted container terminal type with id: {}", poid);
 
+    }
+
+    @Override
+    @Transactional
+    public void toggleActiveStatus(
+            Long poid,
+            Long groupPoid,
+            String userId) {
+        log.info("Toggling active status for container terminal type with id: {}, groupPoid: {}, userId: {}",
+                poid, groupPoid, userId);
+
+        ContainerTerminalTypeEntity entity =
+                repository.findByContainerTerminalTypePoidAndGroupPoid(poid, groupPoid)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "ContainerTerminalType",
+                                "containerTerminalTypePoid",
+                                poid
+                        ));
+
+        String currentActive = entity.getActive();
+        String newActive = (currentActive == null || "N".equals(currentActive)) ? "Y" : "N";
+
+        entity.setActive(newActive);
+        entity.setLastModifiedBy(userId);
+        entity.setLastModifiedDate(LocalDateTime.now());
+        repository.save(entity);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), poid.toString());
+        String logDetail = String.format("KeyId = CONTAINER_TMNL_TYPE_POID:%s", poid);
+        String tableName = ContainerTerminalTypeEntity.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), poid.toString(), "Active",
+                currentActive, entity.getActive(), logDetail, tableName);
+
+        log.info("Successfully toggled active status for container terminal type with id: {} from {} to {}",
+                poid, currentActive, newActive);
     }
 
 }

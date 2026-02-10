@@ -2,8 +2,7 @@ package com.asg.shipping.shippingofoqv2.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "OFOQ_API_XML_DATA")
@@ -32,13 +31,13 @@ public class OfoqApiXmlDataEntity {
     private String createdBy;
 
     @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
+    private LocalDateTime createdDate;
 
     @Column(name = "LASTMODIFIED_BY", length = 50)
     private String lastModifiedBy;
 
     @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastModifiedDate;
+    private LocalDateTime lastModifiedDate;
 
     @Column(name = "XML_BL_NUMBER", length = 100)
     private String xmlBlNumber;

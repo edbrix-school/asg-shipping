@@ -44,6 +44,9 @@ class DemurrageDetentionPayableTransferControllerTests {
     @Mock
     private DemurrageDetentionPayableTransferService service;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private DemurrageDetentionPayableTransferController controller;
 
@@ -156,7 +159,7 @@ class DemurrageDetentionPayableTransferControllerTests {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
 
-            doNothing().when(service).deleteDemurrageDetentionPayableTransfer(eq(1L), eq(1L), eq(100L));
+            doNothing().when(service).deleteDemurrageDetentionPayableTransfer(eq(1L), eq(1L), eq(100L), any());
 
             mockMvc.perform(delete("/v1/demurrage-detention-payable-transfer/1")
                             .header("X-Group-Poid", 100L)

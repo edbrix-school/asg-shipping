@@ -45,6 +45,9 @@ class PortMasterControllerTest {
 	@Mock
 	private PortMasterService service;
 
+	@Mock
+	private com.asg.common.lib.service.LoggingService loggingService;
+
 	@InjectMocks
 	private PortMasterController controller;
 

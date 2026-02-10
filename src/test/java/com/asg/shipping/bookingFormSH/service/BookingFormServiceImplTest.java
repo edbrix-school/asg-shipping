@@ -30,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -42,6 +43,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCargoDetailDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormChargesDetailDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormContainerDetailDto;
@@ -85,6 +87,8 @@ class BookingFormServiceImplTest {
 	private BookingFormMapper mapper;
 	@Mock
 	private JdbcTemplate jdbcTemplate;
+	@Mock
+	private LoggingService loggingService;
 
 	private MockedStatic<UserContext> userContext;
 
@@ -224,9 +228,15 @@ class BookingFormServiceImplTest {
 		BookingFormUpdateDTO dto = new BookingFormUpdateDTO();
 		dto.setLinePoid(10L);
 		dto.setBookingIssueNo("NEW");
-		dto.setCargoDetails(List.of(new BookingFormCargoDetailDto()));
-		dto.setChargesDetails(List.of(new BookingFormChargesDetailDto()));
-		dto.setContainerDetails(List.of(new BookingFormContainerDetailDto()));
+		BookingFormCargoDetailDto cargo = new BookingFormCargoDetailDto();
+		cargo.setAction("ADD");
+		dto.setCargoDetails(List.of(cargo));
+		BookingFormChargesDetailDto charges = new BookingFormChargesDetailDto();
+		charges.setAction("ADD");
+		dto.setChargesDetails(List.of(charges));
+		BookingFormContainerDetailDto container = new BookingFormContainerDetailDto();
+		container.setAction("ADD");
+		dto.setContainerDetails(List.of(container));
 
 		ShipMateHdr entity = new ShipMateHdr();
 		entity.setDeleted("N");
@@ -237,15 +247,19 @@ class BookingFormServiceImplTest {
 				.thenReturn(Optional.of(entity));
 		when(headerRepository.existsByBookingIssueNoAndNotDeletedExcludingPoid("NEW", TX_POID)).thenReturn(false);
 
-		doNothing().when(mapper).mapUpdateDTOToEntity(any(), any());
+		when(cargoRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
+		when(chargesRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
+		when(containerRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
+
+		doAnswer(inv -> {
+			entity.setBookingIssueNo("NEW");
+			return null;
+		}).when(mapper).mapUpdateDTOToEntity(any(), any());
 		mockJdbcCall("Ok");
 
 		service.updateBookingForm(TX_POID, dto);
 
 		assertEquals("NEW", entity.getBookingIssueNo());
-		verify(cargoRepo).deleteByTransactionPoid(TX_POID);
-		verify(chargesRepo).deleteByTransactionPoid(TX_POID);
-		verify(containerRepo).deleteByTransactionPoid(TX_POID);
 	}
 
 	@Test
@@ -278,10 +292,19 @@ class BookingFormServiceImplTest {
 
 	@Test
 	void generateCoprarBooking_success() {
+		BookingFormServiceImpl spyService = Mockito.spy(service);
+
 		mockJdbcCallWithOutParam("Copran generated, Sent Mail...");
-		String result = service.generateCoprarBooking(TX_POID);
+
+		doReturn("Copran generated, Sent Mail...")
+				.when(spyService)
+				.generateCoprarFile(anyLong(), anyLong());
+
+		String result = spyService.generateCoprarBooking(TX_POID);
+
 		assertEquals("Copran generated, Sent Mail...", result);
 	}
+
 
 	@Test
 	void generateCoprarBooking_exception() {

@@ -1,6 +1,8 @@
 package com.asg.shipping.containertypeportchargestariff.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import com.asg.shipping.containertypeportchargestariff.service.PortChargesTariffService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,6 +33,9 @@ class PortChargesTariffControllerTest {
     @Mock
     private PortChargesTariffService portChargesTariffService;
 
+    @Mock
+    private LoggingService loggingService;
+
     @InjectMocks
     private PortChargesTariffController controller;
 
@@ -38,8 +43,8 @@ class PortChargesTariffControllerTest {
     private PortChargesTariffDto mockTariffDto;
     private PortChargesTariffCreateDto createDto;
     private PortChargesTariffUpdateDto updateDto;
-    private CopyTariffRequestDto copyRequest;
     private ValidateOverlapRequestDto overlapRequest;
+    private DeleteReasonDto deleteReasonDto;
 
     @BeforeEach
     void setUp() {
@@ -69,13 +74,9 @@ class PortChargesTariffControllerTest {
         updateDto.setDescription("Updated Tariff");
         updateDto.setPortPoid(200L);
         updateDto.setChargeLinePoid(300L);
-        updateDto.setChargeDivision("DIV1");
+        updateDto.setChargeDivision("DIVISION1");
         updateDto.setPeriodFrom(LocalDate.of(2024, 1, 1));
         updateDto.setPeriodTo(LocalDate.of(2024, 12, 31));
-
-        copyRequest = new CopyTariffRequestDto();
-        copyRequest.setDescription("Copied Tariff");
-        copyRequest.setUseStoredProcedure(false);
 
         overlapRequest = new ValidateOverlapRequestDto();
         overlapRequest.setPortPoid(200L);
@@ -83,6 +84,9 @@ class PortChargesTariffControllerTest {
         overlapRequest.setChargeDivision("DIV1");
         overlapRequest.setPeriodFrom(LocalDate.of(2024, 1, 1));
         overlapRequest.setPeriodTo(LocalDate.of(2024, 12, 31));
+
+        deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
     }
 
     @Test
@@ -139,12 +143,14 @@ class PortChargesTariffControllerTest {
     void testDeletePortChargesTariff() throws Exception {
         Long tariffId = 1L;
 
-        doNothing().when(portChargesTariffService).deletePortChargesTariff(tariffId);
+        doNothing().when(portChargesTariffService).deletePortChargesTariff(tariffId, deleteReasonDto);
 
-        mockMvc.perform(delete("/v1/container-type-port-charges-tariff/{id}", tariffId))
+        mockMvc.perform(delete("/v1/container-type-port-charges-tariff/{id}", tariffId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(deleteReasonDto)))
                 .andExpect(status().isOk());
 
-        verify(portChargesTariffService).deletePortChargesTariff(tariffId);
+        verify(portChargesTariffService).deletePortChargesTariff(eq(tariffId), any(DeleteReasonDto.class));
     }
 
     @Test
