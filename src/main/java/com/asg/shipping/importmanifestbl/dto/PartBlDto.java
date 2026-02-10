@@ -1,24 +1,27 @@
-package com.asg.shipping.importManifestUpdate.dto;
+package com.asg.shipping.importmanifestbl.dto;
 
 import lombok.*;
 
 @Getter
 @Setter
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
-public class PartBlRequestDto {
+@NoArgsConstructor
+@Builder
+public class PartBlDto {
 
     private Long detRowId;
     private String partBlNumber;
     private String shipperName;
     private String consigneeName;
-    private String containerNo;
+
+    private Long containerPoid;
     private String cargoDescription;
-    private Long comodityPoid;
-    private Long netWeight;
-    private Long netVolume;
-    private Long noOfPacks;
+
+    private Long commodityPoid;
+    private String packageDetails;
     private String packUnit;
+
+    private Double netWeight;
+    private Double netVolume;
     private String actionType;
 }

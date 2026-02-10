@@ -1,10 +1,15 @@
 package com.asg.shipping.customerautochargeexportbl.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.DocumenResponsetDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLCreateDTO;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLDto;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLUpdateDTO;
@@ -36,6 +41,8 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 public class CustomerAutoChargeExportBlController {
 
     private final CustomerAutoChargeExportBlService service;
+    private final LoggingService loggingService;
+
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(
@@ -123,14 +130,11 @@ public class CustomerAutoChargeExportBlController {
             @Parameter(description = "Transaction POID", required = true)
             @PathVariable Long id
     ) {
-        try {
+
             CustomerAutoChargeExportBLDto response = service.getCustomerAutoChargeExportBL(id);
-            return success("Customer Auto Charge Export BL retrieved successfully", response);
-        } catch (ResourceNotFoundException e) {
-            return notFound(e.getMessage());
-        } catch (Exception e) {
-            return internalServerError("Failed to retrieve Customer Auto Charge Export BL: " + e.getMessage());
-        }
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
+        return success("Customer Auto Charge Export BL retrieved successfully", response);
+
     }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
@@ -147,10 +151,11 @@ public class CustomerAutoChargeExportBlController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
             @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long id
-    ) {
+            @PathVariable Long id,
+            @Valid @RequestBody DeleteReasonDto deleteReasonDto
+            ) {
         try {
-            service.deleteCustomerAutoChargeExportBL(id);
+            service.deleteCustomerAutoChargeExportBL(id,deleteReasonDto);
             return success("Customer Auto Charge Export BL deleted successfully", null);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());

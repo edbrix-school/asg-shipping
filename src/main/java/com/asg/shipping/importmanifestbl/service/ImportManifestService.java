@@ -1,10 +1,12 @@
 package com.asg.shipping.importmanifestbl.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.*;
 
 import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
 import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
+import com.asg.shipping.importmanifestbl.dto.ImportManifestBlDto;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 
@@ -13,9 +15,9 @@ import java.util.Map;
 
 public interface ImportManifestService {
 
-    ImportManifestBlRequestDto getImportManifest(Long transactionPoId);
+    ImportManifestBlDto getImportManifest(Long transactionPoId);
 
-    void delete(Long transactionPoId);
+    void delete(Long transactionPoId, DeleteReasonDto deleteReasonDto);
 
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
 

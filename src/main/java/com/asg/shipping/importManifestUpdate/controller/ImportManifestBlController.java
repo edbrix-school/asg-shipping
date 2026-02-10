@@ -2,13 +2,15 @@ package com.asg.shipping.importManifestUpdate.controller;
 
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.response.ApiResponse;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importManifestUpdate.dto.*;
-import com.asg.shipping.importManifestUpdate.service.ImportManifestBlService;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
 import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
@@ -45,7 +47,7 @@ import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 @Tag(name = "Import Manifest Update OPS- BL Management", description = "APIs for managing Import Manifest BL records")
 public class ImportManifestBlController {
 
-    private final ImportManifestBlService service;
+    private final LoggingService loggingService;
     private final ImportManifestService manifestService;
 
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -109,7 +111,7 @@ public class ImportManifestBlController {
     )
     @PostMapping("/list")
     public ResponseEntity<?> getImportManifestList(@ParameterObject Pageable pageable,
-                                                   @RequestBody(required = false) FilterRequestDto filters) {
+                                                      @RequestBody(required = false) FilterRequestDto filters) {
         try {
             Map<String, Object> countries = service.listOfImportManifest(UserContext.getDocumentId(), filters, pageable);
             return success("Import Manifest list fetched successfully", countries);
@@ -189,6 +191,7 @@ public class ImportManifestBlController {
 
         log.info("Getting Import Manifest BL with id: {}", id);
         ImportManifestBlRequestDto manifestBl = service.getImportManifestBl(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved Import Manifest BL with id: {}", id);
         return ApiResponse.success("Import Manifest BL retrieved successfully", manifestBl);
     }
@@ -213,10 +216,11 @@ public class ImportManifestBlController {
     })
     public ResponseEntity<?> deleteImportManifestBl(
             @Parameter(description = "Transaction POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id, @Valid @RequestBody
+            DeleteReasonDto deleteReasonDto) {
 
         log.info("Deleting Import Manifest BL with id: {}", id);
-        service.deleteImportManifestBl(id);
+        service.deleteImportManifestBl(id,deleteReasonDto);
         log.info("Successfully deleted Import Manifest BL with id: {}", id);
         return ApiResponse.success("Import Manifest BL deleted successfully");
     }

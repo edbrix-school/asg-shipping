@@ -1,9 +1,13 @@
 package com.asg.shipping.receipts.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.receipts.dto.*;
 import com.asg.shipping.receipts.enums.ButtonType;
 import com.asg.shipping.receipts.service.ReceiptsService;
@@ -39,6 +43,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 public class ReceiptsController {
 
 	private final ReceiptsService receiptsService;
+	private final LoggingService loggingService;
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@GetMapping("/{transactionPoid}")
@@ -55,14 +60,11 @@ public class ReceiptsController {
 			@Parameter(description = "Transaction POID", required = true, example = "1001")
 			@PathVariable Long transactionPoid
 	) {
-		try {
+
 			ReceiptsBlDetailsDto response = receiptsService.getReceipt(transactionPoid);
-			return success("Receipt retrieved successfully", response);
-		} catch (ResourceNotFoundException e) {
-			return notFound(e.getMessage());
-		} catch (Exception e) {
-			return internalServerError("Failed to retrieve Receipt: " + e.getMessage());
-		}
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+		return success("Receipt retrieved successfully", response);
+
 	}
 
 	@AllowedAction(UserRolesRightsEnum.CREATE)
@@ -279,10 +281,10 @@ public class ReceiptsController {
 	})
 	public ResponseEntity<?> delete(
 			@Parameter(description = "Transaction POID", required = true, example = "1001")
-			@PathVariable Long transactionPoid
-	) {
+			@PathVariable Long transactionPoid, @RequestBody DeleteReasonDto deleteReasonDto
+			) {
 		try {
-			receiptsService.deleteReceipt(transactionPoid);
+			receiptsService.deleteReceipt(transactionPoid,deleteReasonDto);
 			return success("Receipt deleted successfully", null);
 		} catch (ResourceNotFoundException e) {
 			return notFound(e.getMessage());

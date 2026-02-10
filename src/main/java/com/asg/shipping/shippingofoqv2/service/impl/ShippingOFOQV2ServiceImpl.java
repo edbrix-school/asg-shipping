@@ -134,7 +134,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
             OfoqApiDataHdrEntity savedHeader =
                     ofoqApiDataHdrRepository.saveAndFlush(
                             OfoqApiDataHdrEntity.builder()
-                                    .docRef(request.getDocRef())
                                     .voyageNo(request.getVoyageNo())
                                     .vesselPoid(request.getVesselPoid())
                                     .arrivalDate(

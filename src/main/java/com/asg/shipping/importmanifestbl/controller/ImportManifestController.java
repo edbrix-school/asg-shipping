@@ -1,9 +1,12 @@
 package com.asg.shipping.importmanifestbl.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
@@ -43,6 +46,7 @@ import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 public class ImportManifestController {
 
     private final ImportManifestService importManifestService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(
@@ -79,8 +83,10 @@ public class ImportManifestController {
             @PathVariable Long id
     ) {
             ImportManifestBlRequestDto response = importManifestService.getImportManifest(id);
-            return success("Import Manifest BL retrieved successfully", response);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
+        return success("Import Manifest BL retrieved successfully", response);
     }
+
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @Operation(
@@ -96,10 +102,10 @@ public class ImportManifestController {
     @DeleteMapping("/{transactionPoId}")
     public ResponseEntity<?> delete(
             @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long transactionPoId
-    ) {
-
-            importManifestService.delete(transactionPoId);
+            @PathVariable Long transactionPoId,
+            @Valid @RequestBody DeleteReasonDto deleteReasonDto
+            ) {
+        importManifestService.delete(transactionPoId,deleteReasonDto);
             return success("Import Manifest BL deleted successfully", null);
     }
 

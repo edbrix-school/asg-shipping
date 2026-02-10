@@ -174,7 +174,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
             Long groupPoid = UserContext.getGroupPoid();
             Long companyPoid = UserContext.getCompanyPoid();
 
-            StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PRODUCTION.PROC_SHIP_VALD_BEFORE_SAVE");
+            StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_VALD_BEFORE_SAVE");
 
             query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
             query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);

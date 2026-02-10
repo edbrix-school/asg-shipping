@@ -1,13 +1,18 @@
 package com.asg.shipping.receipts.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.service.LoggingService;
+
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.receipts.dto.*;
 import com.asg.shipping.receipts.entity.ArShReceiptChargesDtl;
@@ -22,6 +27,7 @@ import com.asg.shipping.receipts.util.ReceiptsMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperReport;
 import org.springframework.data.domain.Page;
@@ -60,6 +66,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private final ReceiptAutoPopulateRepository autoPopulateRepository;
 	private final PrintService printService;
 	private final DataSource dataSource;
+	private final DocumentDeleteService documentDeleteService;
+	private final LoggingService loggingService;
 
 	@Override
 	public ReceiptsBlDetailsDto getReceipt(Long transactionPoid) {
@@ -82,8 +90,6 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 
 		validationService.validateReceiptCreation(createDto);
-
-
 
 		ArShReceiptHdr hdr = mapper.mapBlDetailsDtoToEntity(
 				ReceiptsBlDetailsDto.builder()
@@ -109,6 +115,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 		saveDetailRecords(hdr.getTransactionPoid(), createDto);
 
+		loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
+
 		// Call post-save procedure
 		procRepository.afterSave(hdr.getGroupPoid(), hdr.getCompanyPoid(), hdr.getTransactionPoid(), 0L, "INSERT", null);
 
@@ -129,6 +137,9 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		log.info("Updating receipt with id: {}", transactionPoid);
 
 		ArShReceiptHdr existingReceipt = getReceiptHdr(transactionPoid);
+
+		ArShReceiptHdr oldReceipt = new ArShReceiptHdr();
+		BeanUtils.copyProperties(existingReceipt, oldReceipt);
 
 		// Execute update validations
 		validationService.validateReceiptUpdate(updateDto, existingReceipt);
@@ -159,6 +170,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 		updateDetailRecords(transactionPoid, updateDto);
 
+		loggingService.logChanges(oldReceipt, updated, ArShReceiptHdr.class, UserContext.getDocumentId(), transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+
 		procRepository.afterSave(updated.getGroupPoid(), updated.getCompanyPoid(), transactionPoid, 0L, "UPDATE", null);
 
 		procRepository.doCntPrintAfter(updated.getGroupPoid(), updated.getCompanyPoid(), transactionPoid, 0L, "ARSHRCPTPRINTUPDATE", null);
@@ -171,13 +184,13 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	}
 
 	@Override
-	public void deleteReceipt(Long transactionPoid) {
+	public void deleteReceipt(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
 		log.info("Deleting receipt with id: {}", transactionPoid);
 
 		ArShReceiptHdr hdr = getReceiptHdr(transactionPoid);
 
-		hdr.setDeleted("Y");
-		hdrRepository.save(hdr);
+		documentDeleteService.deleteDocument(transactionPoid,"AR_SH_RECEIPT_HDR","TRANSACTION_POID"
+				,deleteReasonDto,hdr.getTransactionDate());
 		log.info("Receipt deleted with id: {}", transactionPoid);
 	}
 
@@ -345,6 +358,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 			for (var dto : createDto.getContainer()) {
 				ArShReceiptContainerDtl entity = mapper.mapContainerDtoToEntity(dto, transactionPoid, ++maxDetRowId);
 				containerRepository.save(entity);
+				String logDetail = String.format("Row Created on Receipt Container Detail with detRowId: %s", entity.getId().getDetRowId());
+				loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 			}
 		}
 
@@ -353,6 +368,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 			for (var dto : createDto.getCharges()) {
 				ArShReceiptChargesDtl entity = mapper.mapChargesDtoToEntity(dto, transactionPoid, ++maxDetRowId);
 				chargesRepository.save(entity);
+				String logDetail = String.format("Row Created on Receipt Charges Detail with detRowId: %s", entity.getId().getDetRowId());
+				loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 			}
 		}
 
@@ -361,6 +378,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 			for (var dto : createDto.getPaymentDetail()) {
 				ArShReceiptPymtDetails entity = mapper.mapPaymentDtoToEntity(dto, transactionPoid, ++maxDetRowId);
 				paymentRepository.save(entity);
+				String logDetail = String.format("Row Created on Receipt Payment Detail with detRowId: %s", entity.getId().getDetRowId());
+				loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 			}
 		}
 	}
@@ -375,16 +394,22 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 					case ACTION_ISDELETED -> {
 						if (dto.getDetRowId() != null) {
 							containerRepository.deleteById(new TransactionDtlId(transactionPoid, dto.getDetRowId()));
+							String logDetail = String.format("Row Deleted on Receipt Container Detail with detRowId: %s", dto.getDetRowId());
+							loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 						}
 					}
 					case ACTION_ISCREATED -> {
 						long detRowId = dto.getDetRowId() != null ? dto.getDetRowId() : containerRepository.getMaxDetRowId(transactionPoid) + 1;
 						ArShReceiptContainerDtl entity = mapper.mapContainerDtoToEntity(dto, transactionPoid, detRowId);
 						containerRepository.save(entity);
+						String logDetail = String.format("Row Created on Receipt Container Detail with detRowId: %s", entity.getId().getDetRowId());
+						loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 					}
 					case ACTION_ISUPDATED -> {
 						ArShReceiptContainerDtl entity = containerRepository.findById(new TransactionDtlId(transactionPoid, dto.getDetRowId()))
 								.orElseThrow(() -> new ResourceNotFoundException("Container Detail", "detRowId", dto.getDetRowId()));
+
+//						BeanUtils.copyProperties();
 						mapper.updateContainerEntity(dto, entity);
 						containerRepository.save(entity);
 					}
@@ -401,12 +426,16 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 					case ACTION_ISDELETED -> {
 						if (dto.getDetRowId() != null) {
 							chargesRepository.deleteById(new TransactionDtlId(transactionPoid, dto.getDetRowId()));
+							String logDetail = String.format("Row Deleted on Receipt Charges Detail with detRowId: %s", dto.getDetRowId());
+							loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 						}
 					}
 					case ACTION_ISCREATED -> {
 						long detRowId = dto.getDetRowId() != null ? dto.getDetRowId() : chargesRepository.getMaxDetRowId(transactionPoid) + 1;
 						ArShReceiptChargesDtl entity = mapper.mapChargesDtoToEntity(dto, transactionPoid, detRowId);
 						chargesRepository.save(entity);
+						String logDetail = String.format("Row Created on Receipt Charges Detail with detRowId: %s", entity.getId().getDetRowId());
+						loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 					}
 					case ACTION_ISUPDATED -> {
 						ArShReceiptChargesDtl entity = chargesRepository.findById(new TransactionDtlId(transactionPoid, dto.getDetRowId()))
@@ -427,12 +456,16 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 					case ACTION_ISDELETED -> {
 						if (dto.getDetRowId() != null) {
 							paymentRepository.deleteById(new TransactionDtlId(transactionPoid, dto.getDetRowId()));
+							String logDetail = String.format("Row Deleted on Receipt Payment Detail with detRowId: %s", dto.getDetRowId());
+							loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 						}
 					}
 					case ACTION_ISCREATED -> {
 						long detRowId = dto.getDetRowId() != null ? dto.getDetRowId() : paymentRepository.getMaxDetRowId(transactionPoid) + 1;
 						ArShReceiptPymtDetails entity = mapper.mapPaymentDtoToEntity(dto, transactionPoid, detRowId);
 						paymentRepository.save(entity);
+						String logDetail = String.format("Row Created on Receipt Payment Detail with detRowId: %s", entity.getId().getDetRowId());
+						loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
 					}
 					case ACTION_ISUPDATED -> {
 						ArShReceiptPymtDetails entity = paymentRepository.findById(new TransactionDtlId(transactionPoid, dto.getDetRowId()))

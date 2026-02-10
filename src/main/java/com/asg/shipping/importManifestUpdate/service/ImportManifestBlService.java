@@ -1,5 +1,6 @@
 package com.asg.shipping.importManifestUpdate.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.common.lib.dto.FilterRequestDto;
 import org.springframework.data.domain.Pageable;
@@ -16,7 +17,7 @@ public interface ImportManifestBlService {
 
     ImportManifestBlRequestDto getImportManifestBl(Long id);
 
-    void deleteImportManifestBl(Long id);
+    void deleteImportManifestBl(Long id, DeleteReasonDto deleteReasonDto);
 
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
 

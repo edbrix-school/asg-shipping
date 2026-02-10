@@ -13,28 +13,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-        name = "SHIP_BL_MANIFEST_HDR",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "UK_SHIP_BL_MANIFEST_VOYBL",
-                        columnNames = {"VOYAGE_TRANSACTION_POID", "BL_NUMBER"}),
-                @UniqueConstraint(name = "UK_DOCREFFSHIP_BL_MANIFEST_HDR",
-                        columnNames = {"DOC_REF"})
-        }
-)
+@Table(name = "SHIP_BL_MANIFEST_HDR")
 public class ShipBlManifestHdr {
 
 
     @Id
-    @GeneratedValue(
-            strategy = GenerationType.SEQUENCE,
-            generator = "SHIP_BL_MANIFEST_HDR_SEQ"
-    )
-    @SequenceGenerator(
-            name = "SHIP_BL_MANIFEST_HDR_SEQ",
-            sequenceName = "PRODUCTION.SHIP_BL_MANIFEST_HDR_SEQ",
-            allocationSize = 1
-    )
     @Column(name = "TRANSACTION_POID", nullable = false)
     private Long transactionPoid;
 
