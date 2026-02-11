@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -111,6 +112,18 @@ public class GlobalExceptionHandler {
         String msg = "File exceeds the maximum allowed upload size. Please upload a smaller file.";
         log.warn("MaxUploadSizeExceededException: {}", ex.getMessage());
         return ApiResponse.badRequest(msg);
+    }
+    
+    @ExceptionHandler(JpaSystemException.class)
+    public ResponseEntity<?> handleJpaSystemException(JpaSystemException ex,HttpServletRequest request) {
+    	log.error("Unexpected DB error at {} ", request.getRequestURI(), ex);
+        String msg = ex.getMostSpecificCause().getMessage();
+
+        int index = msg.indexOf("\n");
+        if (index != -1) {
+            msg = msg.substring(0, index);
+        }
+        return ApiResponse.error(msg, HttpStatus.INTERNAL_SERVER_ERROR.value());
     }
 
     @ExceptionHandler(RuntimeException.class)

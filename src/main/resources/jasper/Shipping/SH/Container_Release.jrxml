@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Container_Return" language="groovy" pageWidth="920" pageHeight="595" orientation="Landscape" columnWidth="880" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent"/>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="DOC_ID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="SUBREPORT_CONTAINER_RELEASE_1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString>
+		<![CDATA[select GET_COMPANY_NAME(HDR.COMPANY_POID)COMPANY,HDR.TRANSACTION_POID,HDR.TRANSACTION_DATE,HDR.VESSAL_AGENT_NAME,
+get_address_Name(HDR.SHIPPER_POID)SHIPER,get_address_Name(HDR.CONSIGNEE_POID)CONSIGNEE,
+get_address_Name(HDR.NOTIFY_POID_1)NOTIFY1,get_vessel_name(HDR.VESSEL_POID)VESSEL,HDR.VESSEL_ETA_DATE,get_LINE_NAME(HDR.LINE_POID,'Y') LINE,
+get_port_name(PORT_OF_LOADING_POID)POL,
+get_port_name(PORT_OF_DISCHARGE_POID)POD,
+HDR.VOYAGE_NO,HDR.BOOKING_ISSUE_NO,HDR.MATE_LOAD_DATE,HDR.MATE_LOAD_NO
+from SHIP_MATE_HDR HDR
+where HDR.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="COMPANY" class="java.lang.String"/>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="TRANSACTION_DATE" class="java.sql.Timestamp"/>
+	<field name="VESSAL_AGENT_NAME" class="java.lang.String"/>
+	<field name="SHIPER" class="java.lang.String"/>
+	<field name="CONSIGNEE" class="java.lang.String"/>
+	<field name="NOTIFY1" class="java.lang.String"/>
+	<field name="VESSEL" class="java.lang.String"/>
+	<field name="VESSEL_ETA_DATE" class="java.sql.Timestamp"/>
+	<field name="LINE" class="java.lang.String"/>
+	<field name="POL" class="java.lang.String"/>
+	<field name="POD" class="java.lang.String"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="BOOKING_ISSUE_NO" class="java.lang.String"/>
+	<field name="MATE_LOAD_DATE" class="java.sql.Timestamp"/>
+	<field name="MATE_LOAD_NO" class="java.math.BigDecimal"/>
+	<group name="TRANSACTION_POID">
+		<groupExpression><![CDATA[$F{TRANSACTION_POID}]]></groupExpression>
+		<groupHeader>
+			<band height="108">
+				<textField>
+					<reportElement x="79" y="0" width="160" height="20" uuid="6018155a-12e3-4567-a873-792561ce9a3c"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{VESSEL}]]></textFieldExpression>
+				</textField>
+				<textField>
+					<reportElement x="79" y="20" width="160" height="20" uuid="a57d7bfd-b746-4299-bba2-a40675557de7"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{VOYAGE_NO}]]></textFieldExpression>
+				</textField>
+				<textField>
+					<reportElement x="79" y="40" width="176" height="20" uuid="d1ffb521-7a7f-49fb-a5dd-c0f6097ef263"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{LINE}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="11" y="40" width="60" height="20" uuid="ba81db52-282e-4f0c-992e-e6119badf6d2"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"  pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Line:]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="11" y="0" width="65" height="20" uuid="05a029b8-06d7-418d-8ba3-47471ab2047c"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Vessel:]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="11" y="20" width="65" height="20" uuid="ba31c2ba-41ee-4ed5-962f-ac8b09e37be4"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Voyage:]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="335" y="40" width="60" height="20" uuid="53b1b803-45d9-4769-bebb-3a2902ee054e"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Agent:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="403" y="40" width="176" height="20" uuid="400b38a7-e90f-4328-b81b-e6f71a0e42d0"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{LINE}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="39" splitType="Stretch">
+			<subreport>
+				<reportElement x="11" y="0" width="791" height="33" uuid="11dd97b8-4c92-45fe-85bb-3b9358474446"/>
+				<subreportParameter name="LOGIN_COMP_POID">
+					<subreportParameterExpression><![CDATA[$P{LOGIN_COMP_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUB_HEADER}]]></subreportExpression>
+			</subreport>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="23" splitType="Stretch">
+			<staticText>
+				<reportElement x="11" y="0" width="228" height="20" uuid="b55d4736-b403-43bc-a582-ac8dad349818"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Empty Release]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="11" splitType="Stretch">
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="6" width="880" height="1" uuid="9ec55f57-eda0-48ce-a06e-ffab81edbcc6"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="49" splitType="Stretch">
+			<frame>
+				<reportElement style="Row" mode="Opaque" x="0" y="2" width="865" height="47" uuid="6979ffce-27d2-4b83-82e4-886c2188c707"/>
+				<subreport>
+					<reportElement x="0" y="4" width="862" height="38" uuid="861e1f79-d04c-481e-9b98-00a971efdebe"/>
+					<subreportParameter name="P_TRAN_POID">
+						<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<subreportExpression><![CDATA[$P{SUBREPORT_CONTAINER_RELEASE_1}]]></subreportExpression>
+				</subreport>
+			</frame>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="24" splitType="Stretch">
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="3" width="880" height="1" uuid="d289b3ef-2b1e-48fd-b978-d9a4aded8371"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+		</band>
+	</columnFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>
