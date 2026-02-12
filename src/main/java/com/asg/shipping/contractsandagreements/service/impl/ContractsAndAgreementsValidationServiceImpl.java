@@ -37,7 +37,6 @@ public class ContractsAndAgreementsValidationServiceImpl implements ContractsAnd
     }
 
 
-
     @Override
     public void expiryDateValidation(
             LocalDateTime expiryDate,
@@ -71,29 +70,29 @@ public class ContractsAndAgreementsValidationServiceImpl implements ContractsAnd
 
             case "CUSTOMER":
                 sql = """
-                SELECT 1 
-                FROM PRODUCTION.SALES_CUSTOMER_MASTER
-                WHERE CUSTOMER_POID = ?
-                AND NVL(DELETED,'N') <> 'Y'
-                """;
+                        SELECT 1 
+                        FROM PRODUCTION.SALES_CUSTOMER_MASTER
+                        WHERE CUSTOMER_POID = ?
+                        AND NVL(DELETED,'N') <> 'Y'
+                        """;
                 break;
 
             case "SUPPLIER":
                 sql = """
-                SELECT 1 
-                FROM PRODUCTION.AP_SUPPLIER_MASTER
-                WHERE SUPPLIER_POID = ?
-                AND NVL(DELETED,'N') <> 'Y'
-                """;
+                        SELECT 1 
+                        FROM PRODUCTION.AP_SUPPLIER_MASTER
+                        WHERE SUPPLIER_POID = ?
+                        AND NVL(DELETED,'N') <> 'Y'
+                        """;
                 break;
 
             case "PRINCIPAL":
                 sql = """
-                SELECT 1 
-                FROM PRODUCTION.SHIP_PRINCIPAL_MASTER
-                WHERE PRINCIPAL_POID = ?
-                AND NVL(DELETED,'N') <> 'Y'
-                """;
+                        SELECT 1 
+                        FROM PRODUCTION.SHIP_PRINCIPAL_MASTER
+                        WHERE PRINCIPAL_POID = ?
+                        AND NVL(DELETED,'N') <> 'Y'
+                        """;
                 break;
 
             default:

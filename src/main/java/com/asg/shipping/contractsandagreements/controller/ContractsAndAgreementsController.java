@@ -52,67 +52,67 @@ public class ContractsAndAgreementsController {
                             examples = @ExampleObject(
                                     name = "Sample Request",
                                     value = """
-{
-  "transactionDate": "2026-02-05T16:11:13",
-  "agreementName": "test agreement name",
-  "agreementType": "SERVICE",
-  "agreementCategory": "COMMERCIAL",
-  "agreementDescription": "Dummy agreement for testing",
-  "agreementStatus": "ACTIVE",
-  "agreementSource": "MANUAL",
-  "agreementCompanyPoid": 2001,
-  "partyType": "CUSTOMER",
-  "partyPoid": 5925,
-  "newParty": "N",
-  "newPartyName": null,
-  "linePoid": 4001,
-  "partyContactPerson": "Jo",
-  "partyContactEmail": "jo@test.com",
-  "partyContactPhone": "1234567810",
-  "partyAddress": "IN",
-  "referenceDate": "2026-02-05T16:11:13",
-  "effectiveDate": "2026-02-05T16:11:13",
-  "expiryDate": "2027-02-05T16:11:13",
-  "noticePeriodDays": 30,
-  "renewalType": "AUTO",
-  "renewalCycle": "YEARLY",
-  "renewalDueDate": "2027-01-05T16:11:13",
-  "lastRenewalDate": null,
-  "totalContractValue": 1000000,
-  "annualValue": 100000,
-  "paymentTerms": "NET 30",
-  "paymentFrequency": "MONTHLY",
-  "terminated": "N",
-  "terminationDate": null,
-  "terminationReason": null,
-  "agreementCaption": "Service Agreement Caption",
-  "agreementContent": "Dummy agreement content",
-  "signatory": "Authorized Signatory",
-  "agreementContentDetails": [
-    {
-      "departmentPoid": 25,
-      "handledUserPoid": 3005,
-      "periodFrom": "2026-01-01T23:59:59",
-      "periodTo": "2026-12-31T23:59:59",
-      "remarks": "Handled by operations team"
-    },
-    {
-      "departmentPoid": 30,
-      "handledUserPoid": 3010,
-      "periodFrom": "2026-02-01T23:59:59",
-      "periodTo": "2026-12-31T23:59:59",
-      "remarks": "Secondary department support"
-    }
-  ],
-  "renewalDetails": [
-    {
-      "effectiveStartDate": "2026-01-01T00:00:00",
-      "expiryDate": "2026-12-31T23:59:59",
-      "renewalDate": "2026-12-01T00:00:00"
-    }
-  ]
-}
-"""
+                                            {
+                                              "transactionDate": "2026-02-05T16:11:13",
+                                              "agreementName": "test agreement name",
+                                              "agreementType": "SERVICE",
+                                              "agreementCategory": "COMMERCIAL",
+                                              "agreementDescription": "Dummy agreement for testing",
+                                              "agreementStatus": "ACTIVE",
+                                              "agreementSource": "MANUAL",
+                                              "agreementCompanyPoid": 2001,
+                                              "partyType": "CUSTOMER",
+                                              "partyPoid": 5925,
+                                              "newParty": "N",
+                                              "newPartyName": null,
+                                              "linePoid": 4001,
+                                              "partyContactPerson": "Jo",
+                                              "partyContactEmail": "jo@test.com",
+                                              "partyContactPhone": "1234567810",
+                                              "partyAddress": "IN",
+                                              "referenceDate": "2026-02-05T16:11:13",
+                                              "effectiveDate": "2026-02-05T16:11:13",
+                                              "expiryDate": "2027-02-05T16:11:13",
+                                              "noticePeriodDays": 30,
+                                              "renewalType": "AUTO",
+                                              "renewalCycle": "YEARLY",
+                                              "renewalDueDate": "2027-01-05T16:11:13",
+                                              "lastRenewalDate": null,
+                                              "totalContractValue": 1000000,
+                                              "annualValue": 100000,
+                                              "paymentTerms": "NET 30",
+                                              "paymentFrequency": "MONTHLY",
+                                              "terminated": "N",
+                                              "terminationDate": null,
+                                              "terminationReason": null,
+                                              "agreementCaption": "Service Agreement Caption",
+                                              "agreementContent": "Dummy agreement content",
+                                              "signatory": "Authorized Signatory",
+                                              "agreementContentDetails": [
+                                                {
+                                                  "departmentPoid": 25,
+                                                  "handledUserPoid": 3005,
+                                                  "periodFrom": "2026-01-01T23:59:59",
+                                                  "periodTo": "2026-12-31T23:59:59",
+                                                  "remarks": "Handled by operations team"
+                                                },
+                                                {
+                                                  "departmentPoid": 30,
+                                                  "handledUserPoid": 3010,
+                                                  "periodFrom": "2026-02-01T23:59:59",
+                                                  "periodTo": "2026-12-31T23:59:59",
+                                                  "remarks": "Secondary department support"
+                                                }
+                                              ],
+                                              "renewalDetails": [
+                                                {
+                                                  "effectiveStartDate": "2026-01-01T00:00:00",
+                                                  "expiryDate": "2026-12-31T23:59:59",
+                                                  "renewalDate": "2026-12-01T00:00:00"
+                                                }
+                                              ]
+                                            }
+                                            """
                             )
                     )
             )
@@ -167,8 +167,8 @@ public class ContractsAndAgreementsController {
     public ResponseEntity<?> delete(
             @Parameter(description = "Transaction POID", required = true)
             @PathVariable Long transactionPoid, @Valid @RequestBody DeleteReasonDto deleteReasonDto
-            ) {
-        service.deleteContractsAndAgreements(transactionPoid,deleteReasonDto);
+    ) {
+        service.deleteContractsAndAgreements(transactionPoid, deleteReasonDto);
         return success("Contracts and Agreements deleted successfully", null);
 
     }
@@ -178,8 +178,8 @@ public class ContractsAndAgreementsController {
     @Operation(
             summary = "List Contracts and Agreements",
             description = """
-                    Fetch Contracts and Agreements records using filters and pagination.
-               """
+                         Fetch Contracts and Agreements records using filters and pagination.
+                    """
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             content = @Content(
@@ -214,8 +214,8 @@ public class ContractsAndAgreementsController {
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters
     ) {
-            Map<String, Object> response = service.list(filters, pageable);
-            return success("Contracts and Agreements list retrieved successfully", response);
+        Map<String, Object> response = service.list(filters, pageable);
+        return success("Contracts and Agreements list retrieved successfully", response);
 
     }
 
@@ -230,64 +230,64 @@ public class ContractsAndAgreementsController {
                             examples = @ExampleObject(
                                     name = "Sample Update Request",
                                     value = """
-{
-  "transactionDate": "2026-02-05T16:11:13",
-  "agreementName": "Service Agreement supplier test with child 3",
-  "agreementType": "SERVICE",
-  "agreementCategory": "COMMERCIAL",
-  "agreementDescription": "Dummy agreement for 2  for testing testing",
-  "agreementStatus": "ACTIVE",
-  "agreementSource": "MANUAL",
-  "agreementCompanyPoid": 2001,
-  "partyType": "CUSTOMER",
-  "partyPoid": 5925,
-  "newParty": "N",
-  "newPartyName": null,
-  "linePoid": 4001,
-  "partyContactPerson": "Jo",
-  "partyContactEmail": "jo@test.com",
-  "partyContactPhone": "1234567810",
-  "partyAddress": "IN",
-  "referenceDate": "2026-02-05T16:11:13",
-  "effectiveDate": "2026-02-05T16:11:13",
-  "expiryDate": "2027-02-05T16:11:13",
-  "noticePeriodDays": 30,
-  "renewalType": "AUTO",
-  "renewalCycle": "YEARLY",
-  "renewalDueDate": "2027-01-05T16:11:13",
-  "lastRenewalDate": null,
-  "totalContractValue": 1000000,
-  "annualValue": 100000,
-  "paymentTerms": "NET 30 test",
-  "paymentFrequency": "MONTHLY",
-  "terminated": "N",
-  "terminationDate": null,
-  "terminationReason": null,
-  "agreementCaption": "Service Agreement Caption",
-  "agreementContent": "Dummy agreement content",
-  "signatory": "Authorized Signatory",
-  "agreementContentDetails": [
-    {
-      "detRowId": 3,
-      "departmentPoid": 25,
-      "handledUserPoid": 3005,
-      "periodFrom": "2026-01-01T23:59:59",
-      "periodTo": "2026-12-31T23:59:59",
-      "remarks": "Handled by operations team create",
-      "actionType": "isUpdated"
-    }
-  ],
-  "renewalDetails": [
-    {
-      "detRowId": 1,
-      "effectiveStartDate": "2026-01-01T00:00:00",
-      "expiryDate": "2026-12-31T23:59:59",
-      "renewalDate": "2026-12-05T00:00:00",
-      "actionType": "isUpdated"
-    }
-  ]
-}
-"""
+                                            {
+                                              "transactionDate": "2026-02-05T16:11:13",
+                                              "agreementName": "Service Agreement supplier test with child 3",
+                                              "agreementType": "SERVICE",
+                                              "agreementCategory": "COMMERCIAL",
+                                              "agreementDescription": "Dummy agreement for 2  for testing testing",
+                                              "agreementStatus": "ACTIVE",
+                                              "agreementSource": "MANUAL",
+                                              "agreementCompanyPoid": 2001,
+                                              "partyType": "CUSTOMER",
+                                              "partyPoid": 5925,
+                                              "newParty": "N",
+                                              "newPartyName": null,
+                                              "linePoid": 4001,
+                                              "partyContactPerson": "Jo",
+                                              "partyContactEmail": "jo@test.com",
+                                              "partyContactPhone": "1234567810",
+                                              "partyAddress": "IN",
+                                              "referenceDate": "2026-02-05T16:11:13",
+                                              "effectiveDate": "2026-02-05T16:11:13",
+                                              "expiryDate": "2027-02-05T16:11:13",
+                                              "noticePeriodDays": 30,
+                                              "renewalType": "AUTO",
+                                              "renewalCycle": "YEARLY",
+                                              "renewalDueDate": "2027-01-05T16:11:13",
+                                              "lastRenewalDate": null,
+                                              "totalContractValue": 1000000,
+                                              "annualValue": 100000,
+                                              "paymentTerms": "NET 30 test",
+                                              "paymentFrequency": "MONTHLY",
+                                              "terminated": "N",
+                                              "terminationDate": null,
+                                              "terminationReason": null,
+                                              "agreementCaption": "Service Agreement Caption",
+                                              "agreementContent": "Dummy agreement content",
+                                              "signatory": "Authorized Signatory",
+                                              "agreementContentDetails": [
+                                                {
+                                                  "detRowId": 3,
+                                                  "departmentPoid": 25,
+                                                  "handledUserPoid": 3005,
+                                                  "periodFrom": "2026-01-01T23:59:59",
+                                                  "periodTo": "2026-12-31T23:59:59",
+                                                  "remarks": "Handled by operations team create",
+                                                  "actionType": "isUpdated"
+                                                }
+                                              ],
+                                              "renewalDetails": [
+                                                {
+                                                  "detRowId": 1,
+                                                  "effectiveStartDate": "2026-01-01T00:00:00",
+                                                  "expiryDate": "2026-12-31T23:59:59",
+                                                  "renewalDate": "2026-12-05T00:00:00",
+                                                  "actionType": "isUpdated"
+                                                }
+                                              ]
+                                            }
+                                            """
                             )
                     )
             )

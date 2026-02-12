@@ -79,7 +79,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 dto.getTerminationDate()
         );
         AdminContractsAgreementHdr entity = new AdminContractsAgreementHdr();
-                ContractsAndAgreementsMapper.updateHdrEntity(dto,entity);
+        ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
 
         entity.setCreatedBy(UserContext.getUserName());
         entity.setCreatedDate(LocalDateTime.now());
@@ -158,7 +158,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
 
         headerRepo.save(entity);
 
-        loggingService.logChanges(oldEntity,entity, AdminContractsAgreementHdr.class,UserContext.getDocumentId(),transactionPoid.toString(), LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
+        loggingService.logChanges(oldEntity, entity, AdminContractsAgreementHdr.class, UserContext.getDocumentId(), transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
 
         updateAgreementContentDetails(dto.getAgreementContentDetails(), transactionPoid);
@@ -306,8 +306,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     );
                 }
 
-                case ACTION_ISCREATED ->
-                        saveAgreementRenewalDetails(List.of(dto), transactionPoid);
+                case ACTION_ISCREATED -> saveAgreementRenewalDetails(List.of(dto), transactionPoid);
 
                 case ACTION_ISUPDATED -> {
                     AdminContractsAgreementRenewalEntity entity =
@@ -371,8 +370,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     );
                 }
 
-                case ACTION_ISCREATED ->
-                        saveAgreementContentDetails(List.of(dto), transactionPoid);
+                case ACTION_ISCREATED -> saveAgreementContentDetails(List.of(dto), transactionPoid);
 
                 case ACTION_ISUPDATED -> {
                     AdminContractsAgreementPicDtl entity =

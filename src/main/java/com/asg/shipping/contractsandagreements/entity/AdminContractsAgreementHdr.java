@@ -130,8 +130,6 @@ public class AdminContractsAgreementHdr {
     @Column(name = "PAYMENT_FREQUENCY", length = 30)
     private String paymentFrequency;
 
-
-
     @Column(name = "TERMINATED", length = 1)
     private String terminated;
 
