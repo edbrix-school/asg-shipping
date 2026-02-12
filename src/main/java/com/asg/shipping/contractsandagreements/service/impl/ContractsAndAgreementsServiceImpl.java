@@ -333,14 +333,8 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
 
                     toUpdate.add(entity);
 
-                    logs.add(new LogRequestDto<>(
-                            old,
-                            entity,
-                            AdminContractsAgreementRenewalEntity.class,
-                            UserContext.getDocumentId(),
-                            transactionPoid.toString(),
-                            "DET_ROW_ID: " + dto.getDetRowId()
-                    ));
+                    String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+                    logs.add(new LogRequestDto<>(old, entity, AdminContractsAgreementRenewalEntity.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
                 }
             }
         }
@@ -404,14 +398,8 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     entity.setLastModifiedDate(LocalDateTime.now());
                     toUpdate.add(entity);
 
-                    logs.add(new LogRequestDto<>(
-                            old,
-                            entity,
-                            AdminContractsAgreementPicDtl.class,
-                            UserContext.getDocumentId(),
-                            transactionPoid.toString(),
-                            "DET_ROW_ID: " + dto.getDetRowId()
-                    ));
+                    String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+                    logs.add(new LogRequestDto<>(old, entity, AdminContractsAgreementPicDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
                 }
             }
         }
