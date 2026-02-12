@@ -74,7 +74,7 @@ public class CustomerInvoiceChargeMapMasterController {
     })
     public ResponseEntity<?> getByCustomer(
             @Parameter(description = "Customer POID", required = true, example = "12345")
-            @PathVariable @NotNull @Positive Long customerPoid
+            @PathVariable @NotNull @Positive @Validated Long customerPoid
     ) {
         log.info("Getting customer invoice charge mapping with customerPoid: {}", customerPoid);
         CustomerInvoiceChargeMapMasterResponse response =
