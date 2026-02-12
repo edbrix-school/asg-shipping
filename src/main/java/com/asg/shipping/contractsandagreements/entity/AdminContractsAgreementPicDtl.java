@@ -1,5 +1,6 @@
 package com.asg.shipping.contractsandagreements.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.shipping.contractsandagreements.entity.key.AdminContractsAgreementDtlId;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,9 +43,11 @@ public class AdminContractsAgreementPicDtl {
     private LocalDateTime createdDate;
 
     @Column(name = "LASTMODIFIED_BY", length = 20)
+    @AuditIgnore
     private String lastModifiedBy;
 
     @Column(name = "LASTMODIFIED_DATE")
+    @AuditIgnore
     private LocalDateTime lastModifiedDate;
 
     @Column(name = "DELETED", length = 1)
