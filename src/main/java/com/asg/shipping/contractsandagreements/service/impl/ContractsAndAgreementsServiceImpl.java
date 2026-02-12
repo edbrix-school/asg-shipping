@@ -35,10 +35,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -97,7 +99,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         return getContractsAndAgreementsById(saved.getTransactionPoid());
     }
 
-    /* ================= READ ================= */
 
     @Override
     public AdminContractsAgreementHdrDto getContractsAndAgreementsById(Long transactionPoid) {
@@ -117,7 +118,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         );
     }
 
-    /* ================= UPDATE ================= */
 
     @Override
     @Transactional
@@ -167,7 +167,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         return getContractsAndAgreementsById(transactionPoid);
     }
 
-    /* ================= DELETE ================= */
 
     @Override
     @Transactional
@@ -175,16 +174,21 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
 
         AdminContractsAgreementHdr entity = findByHeaderId(id);
 
+
+        LocalDate createdDate = Optional.ofNullable(entity.getCreatedDate())
+                .map(LocalDateTime::toLocalDate)
+                .orElse(null);
+
+
         documentDeleteService.deleteDocument(
                 id,
                 "ADMIN_CONTRACTS_AGREEMENT_HDR",
                 "TRANSACTION_POID",
                 deleteReasonDto,
-                entity.getCreatedDate().toLocalDate()
+                createdDate
         );
     }
 
-    /* ================= LIST ================= */
 
     @Override
     public Map<String, Object> list(FilterRequestDto filters, Pageable pageable) {
@@ -209,7 +213,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
-    /* ================= SAVE CHILD ================= */
 
     private void saveAgreementRenewalDetails(
             List<AdminContractsAgreementRenewalDto> dtos,
@@ -264,8 +267,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     transactionPoid,
                     nextDetRowId
             ));
-            log.info("entity --------------------------------->{}",entity.toString());
-
             picDtlRepository.save(entity);
 
             loggingService.createLogSummaryEntry(
@@ -278,7 +279,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         }
     }
 
-    /* ================= UPDATE CHILD ================= */
 
     private void updateAgreementRenewalDetails(
             List<AdminContractsAgreementRenewalDto> dtos,
@@ -421,8 +421,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
             loggingService.createLogBatch(logs);
         }
     }
-
-    /* ================= HELPERS ================= */
 
     private AdminContractsAgreementHdr findByHeaderId(Long transactionPoid) {
         return headerRepo.findById(transactionPoid)
