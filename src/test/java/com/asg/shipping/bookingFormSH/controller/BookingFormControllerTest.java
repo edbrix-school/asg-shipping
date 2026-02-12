@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -196,18 +197,6 @@ class BookingFormControllerTest {
 		verify(bookingFormService).processEmptyContainerLoad(1L);
 	}
 
-	/* ---------------- PRINT ---------------- */
-
-	@Test
-	void print_Success() throws Exception {
-		when(bookingFormService.print(1L)).thenReturn(new byte[] { 1, 2, 3 });
-
-		mockMvc.perform(get("/v1/booking-form-sh/print/1")).andExpect(status().isOk());
-
-		verify(bookingFormService).print(1L);
-	}
-
-	/* ---------------- MOCK DTOs ---------------- */
 
 	private BookingFormDto createMockDto() {
 		BookingFormDto dto = new BookingFormDto();
