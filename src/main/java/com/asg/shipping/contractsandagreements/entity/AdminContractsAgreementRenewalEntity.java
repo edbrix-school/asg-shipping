@@ -1,5 +1,6 @@
 package com.asg.shipping.contractsandagreements.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.shipping.contractsandagreements.entity.key.AdminContractsAgreementDtlId;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,9 +38,11 @@ public class AdminContractsAgreementRenewalEntity {
     @Column(name = "LAST_UPDATED_DATE")
     private LocalDateTime lastUpdatedDate;
 
+    @AuditIgnore
     @Column(name = "CREATED_BY", length = 20)
     private String createdBy;
 
+    @AuditIgnore
     @Column(name = "CREATED_DATE")
     private LocalDateTime createdDate;
 

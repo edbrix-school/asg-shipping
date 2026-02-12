@@ -26,15 +26,18 @@ public class AdminContractsAgreementHdr {
 
 
     @Column(name = "GROUP_POID", nullable = false)
+    @AuditIgnore
     private Long groupPoid;
 
     @Column(name = "COMPANY_POID", nullable = false)
+    @AuditIgnore
     private Long companyPoid;
 
     @Column(name = "TRANSACTION_DATE")
     private LocalDateTime transactionDate;
 
     @Column(name = "DOC_REF", length = 25)
+    @AuditIgnore
     private String docRef;
 
     @Column(name = "AGREEMENT_ID", length = 100)
@@ -150,9 +153,11 @@ public class AdminContractsAgreementHdr {
     private String signatory;
 
 
+    @AuditIgnore
     @Column(name = "CREATED_BY", length = 20)
     private String createdBy;
 
+    @AuditIgnore
     @Column(name = "CREATED_DATE")
     private LocalDateTime createdDate;
 
