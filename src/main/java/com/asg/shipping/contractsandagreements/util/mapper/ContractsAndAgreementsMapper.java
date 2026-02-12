@@ -167,7 +167,6 @@ public  class ContractsAndAgreementsMapper {
         entity.setDepartmentPoid(dto.getDepartmentPoid());
         entity.setHandledUserPoid(dto.getHandledUserPoid());
         entity.setPeriodFrom(dto.getPeriodFrom());
-        entity.setDeleted("N");
         entity.setPeriodTo(dto.getPeriodTo());
         entity.setRemarks(dto.getRemarks());
     }

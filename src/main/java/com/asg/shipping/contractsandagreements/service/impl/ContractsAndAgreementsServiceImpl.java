@@ -330,7 +330,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     ContractsAndAgreementsMapper.updateRenewalDtlEntity(dto, entity);
                     entity.setLastUpdatedBy(UserContext.getUserName());
                     entity.setLastUpdatedDate(LocalDateTime.now());
-                    entity.setDeleted("N");
 
                     toUpdate.add(entity);
 
@@ -403,8 +402,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     ContractsAndAgreementsMapper.updatePicDtlEntity(dto, entity);
                     entity.setLastModifiedBy(UserContext.getUserName());
                     entity.setLastModifiedDate(LocalDateTime.now());
-                    entity.setDeleted("N");
-
                     toUpdate.add(entity);
 
                     logs.add(new LogRequestDto<>(
