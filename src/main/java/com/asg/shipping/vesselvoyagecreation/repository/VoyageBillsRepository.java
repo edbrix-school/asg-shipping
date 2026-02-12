@@ -24,8 +24,8 @@ public class VoyageBillsRepository {
     public Page<VoyageBlRow> listBills(Long voyagePoid, VoyageBlTab tab, VoyageBlFilter filter, Pageable pageable) {
         String view = switch (tab) {
             case HOLD -> "VOYAGEWISEBILLS";
-            case APPROVAL1 -> "VOYAGEWISEBILLS_APPROVALONE";
-            case APPROVAL2 -> "VOYAGEWISEBILLS_APPROVALTWO";
+            case APPROVAL_ONE -> "VOYAGEWISEBILLS_APPROVALONE";
+            case APPROVAL_TWO -> "VOYAGEWISEBILLS_APPROVALTWO";
             case APPROVED -> "VOYAGEWISEBILLS_APPROVED";
         };
 
