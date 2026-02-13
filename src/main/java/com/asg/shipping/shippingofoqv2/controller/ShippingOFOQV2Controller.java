@@ -42,7 +42,7 @@ public class ShippingOFOQV2Controller {
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "OFOQ document request details",
 			required = true,
-			content = @Content(schema = @Schema(implementation = ShippingOFOQV2Request.class))
+			content = @Content(schema = @Schema(implementation = ShippingOFOQV2UpdateRequestDto.class))
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Document saved and submitted successfully",
@@ -51,7 +51,7 @@ public class ShippingOFOQV2Controller {
 			@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
 	public ResponseEntity<?> saveDocument(
-			@Valid @RequestBody ShippingOFOQV2Request request) {
+			@Valid @RequestBody ShippingOFOQV2UpdateRequestDto request) {
 
 		OFOQCheckStatusResponseDto response = shippingOFOQV2Service.createShippingOFOQ(request);
 
@@ -236,7 +236,7 @@ public class ShippingOFOQV2Controller {
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "OFOQ document update request",
 			required = true,
-			content = @Content(schema = @Schema(implementation = ShippingOFOQV2Request.class))
+			content = @Content(schema = @Schema(implementation = ShippingOFOQV2UpdateRequestDto.class))
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Document updated successfully",
@@ -249,7 +249,7 @@ public class ShippingOFOQV2Controller {
 	public ResponseEntity<?> updateDocument(
 			@Parameter(description = "Transaction POID", required = true)
 			@PathVariable Long transactionPoid,
-			@Valid @RequestBody ShippingOFOQV2Request request
+			@Valid @RequestBody ShippingOFOQV2UpdateRequestDto request
 	) {
 		OFOQCheckStatusResponseDto response = shippingOFOQV2Service.updateShippingOFOQ(transactionPoid, request);
 		return success("Document updated successfully", response);
@@ -337,7 +337,7 @@ public class ShippingOFOQV2Controller {
 			@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
 	@PostMapping("/amend-bl")
-	public ResponseEntity<?> amendBl(@Valid @RequestBody OFOQAmendBlRequestDto request) {
+	public ResponseEntity<?> amendBl(@RequestBody OFOQAmendBlRequestDto request) {
 
 		AmendBlDto response = shippingOFOQV2Service.amendBl(request);
 		return success("Amend bl successfully", response);

@@ -46,6 +46,6 @@ public class OFOQItemDtlDto {
     @Schema(description = "Shipping line POID", example = "4322")
     private Long linePoid;
 
-    @Schema(description = "Action type (ISCREATE / ISDELETE)", example = "ISCREATE")
+    @Schema(description = "Action type (ISCREATED / ISDELETED)", example = "ISCREATED")
     private String actionType;
 }
