@@ -5,6 +5,7 @@ import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importManifestUpdate.entity.*;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -150,114 +151,6 @@ public class ImportManifestBlMapper {
     }
 
     /**
-     * Map CreateDTO to Header Entity
-     */
-  /*  public void mapCreateDTOToEntity(ImportManifestBlCreateDTO dto, ShipBlManifestHdr entity, Long groupPoid, Long companyPoid) {
-        entity.setGroupPoid(groupPoid);
-        entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : LocalDateTime.now());
-        entity.setVoyageTransactionPoid(dto.getVoyageTransactionPoid());
-        entity.setBlNumber(dto.getBlNumber() != null ? dto.getBlNumber().trim() : null);
-        entity.setAgentReference(dto.getAgentReference());
-        entity.setShipperPoid(dto.getShipperPoid());
-        entity.setShipperAddressPoid(dto.getShipperAddressPoid());
-        entity.setConsigneePoid(dto.getConsigneePoid());
-        entity.setConsigneeAddressPoid(dto.getConsigneeAddressPoid());
-        entity.setNotifyPoid1(dto.getNotifyPoid1());
-        entity.setNotifyAddressPoid1(dto.getNotifyAddressPoid1());
-        entity.setNotifyPoid2(dto.getNotifyPoid2());
-        entity.setNotifyAddressPoid2(dto.getNotifyAddressPoid2());
-        entity.setNotifyPoid3(dto.getNotifyPoid3());
-        entity.setNotifyAddressPoid3(dto.getNotifyAddressPoid3());
-        entity.setQuotationTransactionPoid(dto.getQuotationTransactionPoid());
-        entity.setSalesmanPoid(dto.getSalesmanPoid());
-        entity.setComodityPoid(dto.getComodityPoid());
-        entity.setNoOfOrgnlBls(dto.getNoOfOrgnlBls());
-        entity.setExportReference(dto.getExportReference());
-        entity.setLpoSrnNo(dto.getLpoSrnNo());
-        entity.setLpoSrnDate(dto.getLpoSrnDate());
-        entity.setTypeOfMove(dto.getTypeOfMove());
-        entity.setPreCarriedBy(dto.getPreCarriedBy());
-        entity.setPlaceOfIssuePoid(dto.getPlaceOfIssuePoid());
-        entity.setDateOfIssue(dto.getDateOfIssue());
-        entity.setPrintFreightDetails(dto.getPrintFreightDetails());
-        entity.setTotalVolume(dto.getTotalVolume());
-        entity.setTotalNetVolume(dto.getTotalNetVolume());
-        entity.setTotalWeight(dto.getTotalWeight());
-        entity.setTotalNetWeight(dto.getTotalNetWeight());
-        entity.setWeightUnit(dto.getWeightUnit());
-        entity.setUnitPack(dto.getUnitPack());
-        entity.setTotalNoOfPacks(dto.getTotalNoOfPacks());
-        entity.setPlaceOfRecieptPoid(dto.getPlaceOfRecieptPoid());
-        entity.setPlaceOfDelieveryPoid(dto.getPlaceOfDelieveryPoid());
-        entity.setPortOfLoadingPoid(dto.getPortOfLoadingPoid());
-        entity.setPortOfDischargePoid(dto.getPortOfDischargePoid());
-        entity.setRemarks(dto.getRemarks());
-        entity.setBlStatus(dto.getBlStatus());
-        entity.setBlType(dto.getBlType());
-        entity.setCargoType(dto.getCargoType());
-        entity.setDoNo(dto.getDoNo());
-        entity.setBlIssueType(dto.getBlIssueType());
-        entity.setShipperEdiName(dto.getShipperEdiName());
-        entity.setShipperEdiAddress(dto.getShipperEdiAddress());
-        entity.setConsigneeEdiName(dto.getConsigneeEdiName());
-        entity.setConsigneeEdiAddress(dto.getConsigneeEdiAddress());
-        entity.setNotify1EdiName(dto.getNotify1EdiName());
-        entity.setNotify1EdiAddress(dto.getNotify1EdiAddress());
-        entity.setNotify2EdiName(dto.getNotify2EdiName());
-        entity.setNotify2EdiAddress(dto.getNotify2EdiAddress());
-        entity.setNotify3EdiName(dto.getNotify3EdiName());
-        entity.setNotify3EdiAddress(dto.getNotify3EdiAddress());
-        entity.setCanNotifyCustomerPoid(dto.getCanNotifyCustomerPoid());
-        entity.setBookedBy(dto.getBookedBy());
-        entity.setFreightStatus(dto.getFreightStatus());
-        entity.setHoldCanDo(dto.getHoldCanDo());
-        entity.setHoldReason(dto.getHoldReason());
-        entity.setDocumentCompanyPoid(dto.getDocumentCompanyPoid());
-        entity.setDocumentCompanyDivisionPoid(dto.getDocumentCompanyDivisionPoid());
-        entity.setBlPlaceReceipt(dto.getBlPlaceReceipt());
-        entity.setBlPlaceLoad(dto.getBlPlaceLoad());
-        entity.setBlFinalDestination(dto.getBlFinalDestination());
-        entity.setBookingPartyPoid(dto.getBookingPartyPoid());
-        entity.setBlPlaceDischareDesc(dto.getBlPlaceDischareDesc());
-        entity.setCargoArrivalNumber(dto.getCargoArrivalNumber());
-        entity.setBookedByPp(dto.getBookedByPp());
-        entity.setManuallyCanSend(dto.getManuallyCanSend());
-        entity.setAllInOneFreight(dto.getAllInOneFreight());
-        entity.setHoldRemarks(dto.getHoldRemarks());
-        entity.setBlConsigneeAddressAdd(dto.getBlConsigneeAddressAdd());
-        entity.setAvoidCargoAlert(dto.getAvoidCargoAlert());
-        entity.setAgentPoid(dto.getAgentPoid());
-        entity.setFfJobNoHold(dto.getFfJobNoHold());
-        entity.setIssueManualInvoice(dto.getIssueManualInvoice());
-        entity.setDoPriority(dto.getDoPriority());
-        entity.setDoIssueAuth(dto.getDoIssueAuth());
-        entity.setDoIssueAuthPoid(dto.getDoIssueAuthPoid());
-        entity.setDoCntToConsignee(dto.getDoCntToConsignee());
-        entity.setDoCntToNotify(dto.getDoCntToNotify());
-        entity.setDoCntToOthers(dto.getDoCntToOthers());
-        entity.setDoCntToOthersMails(dto.getDoCntToOthersMails());
-        entity.setDoCntReasonFailure(dto.getDoCntReasonFailure());
-        entity.setDoCntToRegsMails(dto.getDoCntToRegsMails());
-        entity.setDeliverySentTo(dto.getDeliverySentTo());
-        entity.setFfBillToPoid(dto.getFfBillToPoid());
-        entity.setDemActualNextDay(dto.getDemActualNextDay());
-        entity.setPrincipalDoNumber(dto.getPrincipalDoNumber());
-        entity.setStopUcanAlert(dto.getStopUcanAlert());
-        entity.setIsMbl(dto.getIsMbl());
-        entity.setForwarderPin(dto.getForwarderPin());
-
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-
-        // Set deleted flag
-        entity.setDeleted("N");
-    }*/
-
-    /**
      * Convert DTO to Header Entity for create operation
      */
     public ShipBlManifestHdr mapToEntity(ImportManifestBlCreateDto dto) {
@@ -364,294 +257,106 @@ public class ImportManifestBlMapper {
     /**
      * Map UpdateDTO to Header Entity
      */
-    public void mapUpdateDTOToEntity(ImportManifestBlUpdateDTO dto, ShipBlManifestHdr entity) {
-        if (dto.getTransactionDate() != null) {
-            entity.setTransactionDate(dto.getTransactionDate());
-        }
-        if (dto.getVoyageTransactionPoid() != null) {
-            entity.setVoyageTransactionPoid(dto.getVoyageTransactionPoid());
-        }
-        if (dto.getBlNumber() != null) {
-            entity.setBlNumber(dto.getBlNumber().trim());
-        }
-        if (dto.getAgentReference() != null) {
-            entity.setAgentReference(dto.getAgentReference());
-        }
-        if (dto.getShipperPoid() != null) {
-            entity.setShipperPoid(dto.getShipperPoid());
-        }
-        if (dto.getShipperAddressPoid() != null) {
-            entity.setShipperAddressPoid(dto.getShipperAddressPoid());
-        }
-        if (dto.getConsigneePoid() != null) {
-            entity.setConsigneePoid(dto.getConsigneePoid());
-        }
-        if (dto.getConsigneeAddressPoid() != null) {
-            entity.setConsigneeAddressPoid(dto.getConsigneeAddressPoid());
-        }
-        if (dto.getNotifyPoid1() != null) {
-            entity.setNotifyPoid1(dto.getNotifyPoid1());
-        }
-        if (dto.getNotifyAddressPoid1() != null) {
-            entity.setNotifyAddressPoid1(dto.getNotifyAddressPoid1());
-        }
-        if (dto.getNotifyPoid2() != null) {
-            entity.setNotifyPoid2(dto.getNotifyPoid2());
-        }
-        if (dto.getNotifyAddressPoid2() != null) {
-            entity.setNotifyAddressPoid2(dto.getNotifyAddressPoid2());
-        }
-        if (dto.getNotifyPoid3() != null) {
-            entity.setNotifyPoid3(dto.getNotifyPoid3());
-        }
-        if (dto.getNotifyAddressPoid3() != null) {
-            entity.setNotifyAddressPoid3(dto.getNotifyAddressPoid3());
-        }
-        if (dto.getQuotationTransactionPoid() != null) {
-            entity.setQuotationTransactionPoid(dto.getQuotationTransactionPoid());
-        }
-        if (dto.getSalesmanPoid() != null) {
-            entity.setSalesmanPoid(dto.getSalesmanPoid());
-        }
-        if (dto.getComodityPoid() != null) {
-            entity.setComodityPoid(dto.getComodityPoid());
-        }
-        if (dto.getNoOfOrgnlBls() != null) {
-            entity.setNoOfOrgnlBls(dto.getNoOfOrgnlBls());
-        }
-        if (dto.getExportReference() != null) {
-            entity.setExportReference(dto.getExportReference());
-        }
-        if (dto.getLpoSrnNo() != null) {
-            entity.setLpoSrnNo(dto.getLpoSrnNo());
-        }
-        if (dto.getLpoSrnDate() != null) {
-            entity.setLpoSrnDate(dto.getLpoSrnDate());
-        }
-        if (dto.getTypeOfMove() != null) {
-            entity.setTypeOfMove(dto.getTypeOfMove());
-        }
-        if (dto.getPreCarriedBy() != null) {
-            entity.setPreCarriedBy(dto.getPreCarriedBy());
-        }
-        if (dto.getPlaceOfIssuePoid() != null) {
-            entity.setPlaceOfIssuePoid(dto.getPlaceOfIssuePoid());
-        }
-        if (dto.getDateOfIssue() != null) {
-            entity.setDateOfIssue(dto.getDateOfIssue());
-        }
-        if (dto.getPrintFreightDetails() != null) {
-            entity.setPrintFreightDetails(dto.getPrintFreightDetails());
-        }
-        if (dto.getTotalVolume() != null) {
-            entity.setTotalVolume(dto.getTotalVolume());
-        }
-        if (dto.getTotalNetVolume() != null) {
-            entity.setTotalNetVolume(dto.getTotalNetVolume());
-        }
-        if (dto.getTotalWeight() != null) {
-            entity.setTotalWeight(dto.getTotalWeight());
-        }
-        if (dto.getTotalNetWeight() != null) {
-            entity.setTotalNetWeight(dto.getTotalNetWeight());
-        }
-        if (dto.getWeightUnit() != null) {
-            entity.setWeightUnit(dto.getWeightUnit());
-        }
-        if (dto.getUnitPack() != null) {
-            entity.setUnitPack(dto.getUnitPack());
-        }
-        if (dto.getTotalNoOfPacks() != null) {
-            entity.setTotalNoOfPacks(dto.getTotalNoOfPacks());
-        }
-        if (dto.getPlaceOfRecieptPoid() != null) {
-            entity.setPlaceOfReceiptPoid(dto.getPlaceOfRecieptPoid());
-        }
-        if (dto.getPlaceOfDelieveryPoid() != null) {
-            entity.setPlaceOfDeliveryPoid(dto.getPlaceOfDelieveryPoid());
-        }
-        if (dto.getPortOfLoadingPoid() != null) {
-            entity.setPortOfLoadingPoid(dto.getPortOfLoadingPoid());
-        }
-        if (dto.getPortOfDischargePoid() != null) {
-            entity.setPortOfDischargePoid(dto.getPortOfDischargePoid());
-        }
-        if (dto.getRemarks() != null) {
-            entity.setRemarks(dto.getRemarks());
-        }
-        if (dto.getBlStatus() != null) {
-            entity.setBlStatus(dto.getBlStatus());
-        }
-        if (dto.getBlType() != null) {
-            entity.setBlType(dto.getBlType());
-        }
-        if (dto.getCargoType() != null) {
-            entity.setCargoType(dto.getCargoType());
-        }
-        if (dto.getDoNo() != null) {
-            entity.setDoNo(dto.getDoNo());
-        }
-        if (dto.getBlIssueType() != null) {
-            entity.setBlIssueType(dto.getBlIssueType());
-        }
-        if (dto.getShipperEdiName() != null) {
-            entity.setShipperEdiName(dto.getShipperEdiName());
-        }
-        if (dto.getShipperEdiAddress() != null) {
-            entity.setShipperEdiAddress(dto.getShipperEdiAddress());
-        }
-        if (dto.getConsigneeEdiName() != null) {
-            entity.setConsigneeEdiName(dto.getConsigneeEdiName());
-        }
-        if (dto.getConsigneeEdiAddress() != null) {
-            entity.setConsigneeEdiAddress(dto.getConsigneeEdiAddress());
-        }
-        if (dto.getNotify1EdiName() != null) {
-            entity.setNotify1EdiName(dto.getNotify1EdiName());
-        }
-        if (dto.getNotify1EdiAddress() != null) {
-            entity.setNotify1EdiAddress(dto.getNotify1EdiAddress());
-        }
-        if (dto.getNotify2EdiName() != null) {
-            entity.setNotify2EdiName(dto.getNotify2EdiName());
-        }
-        if (dto.getNotify2EdiAddress() != null) {
-            entity.setNotify2EdiAddress(dto.getNotify2EdiAddress());
-        }
-        if (dto.getNotify3EdiName() != null) {
-            entity.setNotify3EdiName(dto.getNotify3EdiName());
-        }
-        if (dto.getNotify3EdiAddress() != null) {
-            entity.setNotify3EdiAddress(dto.getNotify3EdiAddress());
-        }
-        if (dto.getCanNotifyCustomerPoid() != null) {
-            entity.setCanNotifyCustomerPoid(dto.getCanNotifyCustomerPoid());
-        }
-        if (dto.getBookedBy() != null) {
-            entity.setBookedBy(dto.getBookedBy());
-        }
-        if (dto.getFreightStatus() != null) {
-            entity.setFreightStatus(dto.getFreightStatus());
-        }
-        if (dto.getHoldCanDo() != null) {
-            entity.setHoldCanDo(dto.getHoldCanDo());
-        }
-        if (dto.getHoldReason() != null) {
-            entity.setHoldReason(dto.getHoldReason());
-        }
-        if (dto.getDocumentCompanyPoid() != null) {
-            entity.setDocumentCompanyPoid(dto.getDocumentCompanyPoid());
-        }
-        if (dto.getDocumentCompanyDivisionPoid() != null) {
-            entity.setDocumentCompanyDivisionPoid(dto.getDocumentCompanyDivisionPoid());
-        }
-        if (dto.getBlPlaceReceipt() != null) {
-            entity.setBlPlaceReceipt(dto.getBlPlaceReceipt());
-        }
-        if (dto.getBlPlaceLoad() != null) {
-            entity.setBlPlaceLoad(dto.getBlPlaceLoad());
-        }
-        if (dto.getBlFinalDestination() != null) {
-            entity.setBlFinalDestination(dto.getBlFinalDestination());
-        }
-        if (dto.getBookingPartyPoid() != null) {
-            entity.setBookingPartyPoid(dto.getBookingPartyPoid());
-        }
-        if (dto.getBlPlaceDischareDesc() != null) {
-            entity.setBlPlaceDischargeDesc(dto.getBlPlaceDischareDesc());
-        }
-        if (dto.getCargoArrivalNumber() != null) {
-            entity.setCargoArrivalNumber(dto.getCargoArrivalNumber());
-        }
-        if (dto.getBookedByPp() != null) {
-            entity.setBookedByPp(dto.getBookedByPp());
-        }
-        if (dto.getManuallyCanSend() != null) {
-            entity.setManuallyCanSend(dto.getManuallyCanSend());
-        }
-        if (dto.getAllInOneFreight() != null) {
-            entity.setAllInOneFreight(dto.getAllInOneFreight());
-        }
-        if (dto.getHoldRemarks() != null) {
-            entity.setHoldRemarks(dto.getHoldRemarks());
-        }
-        if (dto.getBlConsigneeAddressAdd() != null) {
-            entity.setBlConsigneeAddressAdd(dto.getBlConsigneeAddressAdd());
-        }
-        if (dto.getAvoidCargoAlert() != null) {
-            entity.setAvoidCargoAlert(dto.getAvoidCargoAlert());
-        }
-        if (dto.getAgentPoid() != null) {
-            entity.setAgentPoid(dto.getAgentPoid());
-        }
-        if (dto.getFfJobNoHold() != null) {
-            entity.setFfJobNoHold(dto.getFfJobNoHold());
-        }
-        if (dto.getIssueManualInvoice() != null) {
-            entity.setIssueManualInvoice(dto.getIssueManualInvoice());
-        }
-        if (dto.getDoPriority() != null) {
-            entity.setDoPriority(dto.getDoPriority());
-        }
-        if (dto.getDoIssueAuth() != null) {
-            entity.setDoIssueAuth(dto.getDoIssueAuth());
-        }
-        if (dto.getDoIssueAuthPoid() != null) {
-            entity.setDoIssueAuthPoid(dto.getDoIssueAuthPoid());
-        }
-        if (dto.getDoCntToConsignee() != null) {
-            entity.setDoCntToConsignee(dto.getDoCntToConsignee());
-        }
-        if (dto.getDoCntToNotify() != null) {
-            entity.setDoCntToNotify(dto.getDoCntToNotify());
-        }
-        if (dto.getDoCntToOthers() != null) {
-            entity.setDoCntToOthers(dto.getDoCntToOthers());
-        }
-        if (dto.getDoCntToOthersMails() != null) {
-            entity.setDoCntToOthersMails(dto.getDoCntToOthersMails());
-        }
-        if (dto.getDoCntReasonFailure() != null) {
-            entity.setDoCntReasonFailure(dto.getDoCntReasonFailure());
-        }
-        if (dto.getDoCntToRegsMails() != null) {
-            entity.setDoCntToRegsMails(dto.getDoCntToRegsMails());
-        }
-        if (dto.getDeliverySentTo() != null) {
-            entity.setDeliverySentTo(dto.getDeliverySentTo());
-        }
-        if (dto.getFfBillToPoid() != null) {
-            entity.setFfBillToPoid(dto.getFfBillToPoid());
-        }
-        if (dto.getDemActualNextDay() != null) {
-            entity.setDemActualNextDay(dto.getDemActualNextDay());
-        }
-        if (dto.getPrincipalDoNumber() != null) {
-            entity.setPrincipalDoNumber(dto.getPrincipalDoNumber());
-        }
-        if (dto.getStopUcanAlert() != null) {
-            entity.setStopUcanAlert(dto.getStopUcanAlert());
-        }
-        if (dto.getIsMbl() != null) {
-            entity.setIsMbl(dto.getIsMbl());
-        }
-        if (dto.getForwarderPin() != null) {
-            entity.setForwarderPin(dto.getForwarderPin());
-        }
+    public ShipBlManifestHdr mapUpdateDTOToEntity(ImportManifestBlUpdateDTO dto, ShipBlManifestHdr entity) {
 
-        if(dto.getManifestEmailVerified()!= null){
-            entity.setManifestEmailVerified(dto.getManifestEmailVerified());
-        }
-
-        if(dto.getEmailVerifiedWithSpecialC()!= null){
-             entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
-        }
-
-
-        // Update audit fields
+        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setVoyageTransactionPoid(dto.getVoyageTransactionPoid());
+        entity.setBlNumber(dto.getBlNumber() != null ? dto.getBlNumber().trim() : null);
+        entity.setAgentReference(dto.getAgentReference());
+        entity.setShipperPoid(dto.getShipperPoid());
+        entity.setShipperAddressPoid(dto.getShipperAddressPoid());
+        entity.setConsigneePoid(dto.getConsigneePoid());
+        entity.setConsigneeAddressPoid(dto.getConsigneeAddressPoid());
+        entity.setNotifyPoid1(dto.getNotifyPoid1());
+        entity.setNotifyAddressPoid1(dto.getNotifyAddressPoid1());
+        entity.setNotifyPoid2(dto.getNotifyPoid2());
+        entity.setNotifyAddressPoid2(dto.getNotifyAddressPoid2());
+        entity.setNotifyPoid3(dto.getNotifyPoid3());
+        entity.setNotifyAddressPoid3(dto.getNotifyAddressPoid3());
+        entity.setQuotationTransactionPoid(dto.getQuotationTransactionPoid());
+        entity.setSalesmanPoid(dto.getSalesmanPoid());
+        entity.setComodityPoid(dto.getComodityPoid());
+        entity.setNoOfOrgnlBls(dto.getNoOfOrgnlBls());
+        entity.setExportReference(dto.getExportReference());
+        entity.setLpoSrnNo(dto.getLpoSrnNo());
+        entity.setLpoSrnDate(dto.getLpoSrnDate());
+        entity.setTypeOfMove(dto.getTypeOfMove());
+        entity.setPreCarriedBy(dto.getPreCarriedBy());
+        entity.setPlaceOfIssuePoid(dto.getPlaceOfIssuePoid());
+        entity.setDateOfIssue(dto.getDateOfIssue());
+        entity.setPrintFreightDetails(dto.getPrintFreightDetails());
+        entity.setTotalVolume(dto.getTotalVolume());
+        entity.setTotalNetVolume(dto.getTotalNetVolume());
+        entity.setTotalWeight(dto.getTotalWeight());
+        entity.setTotalNetWeight(dto.getTotalNetWeight());
+        entity.setWeightUnit(dto.getWeightUnit());
+        entity.setUnitPack(dto.getUnitPack());
+        entity.setTotalNoOfPacks(dto.getTotalNoOfPacks());
+        entity.setPlaceOfReceiptPoid(dto.getPlaceOfRecieptPoid());
+        entity.setPlaceOfDeliveryPoid(dto.getPlaceOfDelieveryPoid());
+        entity.setPortOfLoadingPoid(dto.getPortOfLoadingPoid());
+        entity.setPortOfDischargePoid(dto.getPortOfDischargePoid());
+        entity.setRemarks(dto.getRemarks());
+        entity.setBlStatus(dto.getBlStatus());
+        entity.setBlType(dto.getBlType());
+        entity.setCargoType(dto.getCargoType());
+        entity.setDoNo(dto.getDoNo());
+        entity.setBlIssueType(dto.getBlIssueType());
+        entity.setShipperEdiName(dto.getShipperEdiName());
+        entity.setShipperEdiAddress(dto.getShipperEdiAddress());
+        entity.setConsigneeEdiName(dto.getConsigneeEdiName());
+        entity.setConsigneeEdiAddress(dto.getConsigneeEdiAddress());
+        entity.setNotify1EdiName(dto.getNotify1EdiName());
+        entity.setNotify1EdiAddress(dto.getNotify1EdiAddress());
+        entity.setNotify2EdiName(dto.getNotify2EdiName());
+        entity.setNotify2EdiAddress(dto.getNotify2EdiAddress());
+        entity.setNotify3EdiName(dto.getNotify3EdiName());
+        entity.setNotify3EdiAddress(dto.getNotify3EdiAddress());
+        entity.setCanNotifyCustomerPoid(dto.getCanNotifyCustomerPoid());
+        entity.setBookedBy(dto.getBookedBy());
+        entity.setFreightStatus(dto.getFreightStatus());
+        entity.setHoldCanDo(dto.getHoldCanDo());
+        entity.setHoldReason(dto.getHoldReason());
+        entity.setDocumentCompanyPoid(dto.getDocumentCompanyPoid());
+        entity.setDocumentCompanyDivisionPoid(dto.getDocumentCompanyDivisionPoid());
+        entity.setBlPlaceReceipt(dto.getBlPlaceReceipt());
+        entity.setBlPlaceLoad(dto.getBlPlaceLoad());
+        entity.setBlFinalDestination(dto.getBlFinalDestination());
+        entity.setBookingPartyPoid(dto.getBookingPartyPoid());
+        entity.setBlPlaceDischargeDesc(dto.getBlPlaceDischareDesc());
+        entity.setCargoArrivalNumber(dto.getCargoArrivalNumber());
+        entity.setBookedByPp(dto.getBookedByPp());
+        entity.setManuallyCanSend(dto.getManuallyCanSend());
+        entity.setAllInOneFreight(dto.getAllInOneFreight());
+        entity.setHoldRemarks(dto.getHoldRemarks());
+        entity.setBlConsigneeAddressAdd(dto.getBlConsigneeAddressAdd());
+        entity.setAvoidCargoAlert(dto.getAvoidCargoAlert());
+        entity.setAgentPoid(dto.getAgentPoid());
+        entity.setFfJobNoHold(dto.getFfJobNoHold());
+        entity.setIssueManualInvoice(dto.getIssueManualInvoice());
+        entity.setDoPriority(dto.getDoPriority());
+        entity.setDoIssueAuth(dto.getDoIssueAuth());
+        entity.setDoIssueAuthPoid(dto.getDoIssueAuthPoid());
+        entity.setDoCntToConsignee(dto.getDoCntToConsignee());
+        entity.setDoCntToNotify(dto.getDoCntToNotify());
+        entity.setDoCntToOthers(dto.getDoCntToOthers());
+        entity.setDoCntToOthersMails(dto.getDoCntToOthersMails());
+        entity.setDoCntReasonFailure(dto.getDoCntReasonFailure());
+        entity.setDoCntToRegsMails(dto.getDoCntToRegsMails());
+        entity.setDeliverySentTo(dto.getDeliverySentTo());
+        entity.setFfBillToPoid(dto.getFfBillToPoid());
+        entity.setDemActualNextDay(dto.getDemActualNextDay());
+        entity.setPrincipalDoNumber(dto.getPrincipalDoNumber());
+        entity.setStopUcanAlert(dto.getStopUcanAlert());
+        entity.setIsMbl(dto.getIsMbl());
+        entity.setForwarderPin(dto.getForwarderPin());
+        entity.setManifestEmailVerified(dto.getManifestEmailVerified());
+        entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
+        return entity;
     }
+
 
     // Detail mapping methods - General DTL
     public GeneralCargoRequestDto mapGeneralDtlToDto(ShipBlManifestGeneralDtl entity) {
@@ -724,6 +429,7 @@ public class ImportManifestBlMapper {
     // Detail mapping methods - Container DTL
     public ContainerRequestDto mapContainerDtlToDto(ShipBlManifestContainerDtl entity) {
         if (entity == null) return null;
+
         return ContainerRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .mateTransactionPoid(entity.getMateTransactionPoid())
@@ -753,6 +459,8 @@ public class ImportManifestBlMapper {
                 .refferVent(entity.getRefferVent())
                 .issueToConsignee(entity.getIssueToConsignee())
                 .returnFromConsignee(entity.getReturnFromConsignee())
+                .displayCollectedDate(entity.getDisplayCollectedDate())
+                .actualDischargeDate(entity.getActualDischargeDate())
                 .isImco(entity.getIsImco())
                 .isOog(entity.getIsOog())
                 .isRefer(entity.getIsRefer())
@@ -768,7 +476,6 @@ public class ImportManifestBlMapper {
                 .oogA(entity.getOogA())
                 .oogType(entity.getOogType())
                 .imcoClassActual(entity.getImcoClassActual())
-                .displayCollectedDate(entity.getDisplayCollectedDate())
                 .totalDaysCollected(entity.getTotalDaysCollected())
                 .totalAmountCollected(entity.getTotalAmountCollected())
                 .printReturnFormDefault(entity.getPrintReturnFormDefault())
@@ -777,21 +484,25 @@ public class ImportManifestBlMapper {
                 .hsCode(entity.getHsCode())
                 .hsDescription(entity.getHsDescription())
                 .amountPerDayAfterFree(entity.getAmountPerDayAfterFree())
-                .actualDischargeDate(entity.getActualDischargeDate())
                 .build();
     }
 
-    public ShipBlManifestContainerDtl mapContainerDtlFromDto(ContainerRequestDto dto, Long transactionPoid) {
+
+    public ShipBlManifestContainerDtl mapContainerDtlFromDto(
+            ContainerRequestDto dto,
+            Long transactionPoid
+    ) {
         if (dto == null) return null;
 
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(
                 transactionPoid,
                 dto.getDetRowId()
         );
+
         return ShipBlManifestContainerDtl.builder()
                 .id(id)
                 .mateTransactionPoid(dto.getMateTransactionPoid())
-                .containerNo(dto.getContainerNo() != null ? dto.getContainerNo().trim() : null)
+                .containerNo(dto.getContainerNo())
                 .equipmentShipperOwn(dto.getEquipmentShipperOwn())
                 .cargoDescription(dto.getCargoDescription())
                 .equipmentSealNo(dto.getEquipmentSealNo())
@@ -815,8 +526,12 @@ public class ImportManifestBlMapper {
                 .refferTemp(dto.getRefferTemp())
                 .refferHum(dto.getRefferHum())
                 .refferVent(dto.getRefferVent())
-                .issueToConsignee(dto.getIssueToConsignee())
-                .returnFromConsignee(dto.getReturnFromConsignee())
+
+                .issueToConsignee(toLocalDateTime(dto.getIssueToConsignee()))
+                .returnFromConsignee(toLocalDateTime(dto.getReturnFromConsignee()))
+                .displayCollectedDate(toLocalDateTime(dto.getDisplayCollectedDate()))
+                .actualDischargeDate(toLocalDateTime(dto.getActualDischargeDate()))
+
                 .isImco(dto.getIsImco())
                 .isOog(dto.getIsOog())
                 .isRefer(dto.getIsRefer())
@@ -832,7 +547,6 @@ public class ImportManifestBlMapper {
                 .oogA(dto.getOogA())
                 .oogType(dto.getOogType())
                 .imcoClassActual(dto.getImcoClassActual())
-                .displayCollectedDate(dto.getDisplayCollectedDate())
                 .totalDaysCollected(dto.getTotalDaysCollected())
                 .totalAmountCollected(dto.getTotalAmountCollected())
                 .printReturnFormDefault(dto.getPrintReturnFormDefault())
@@ -841,9 +555,9 @@ public class ImportManifestBlMapper {
                 .hsCode(dto.getHsCode())
                 .hsDescription(dto.getHsDescription())
                 .amountPerDayAfterFree(dto.getAmountPerDayAfterFree())
-                .actualDischargeDate(dto.getActualDischargeDate())
                 .build();
     }
+
 
     // Detail mapping methods - Charges DTL
     public ChargeRequestDto mapChargesDtlToDto(ShipBlManifestChargesDtl entity) {
@@ -1064,19 +778,96 @@ public class ImportManifestBlMapper {
         return entities.stream().map(this::mapMafiDtlToDto).collect(Collectors.toList());
     }
 
+    public void updateGeneralFromDto(GeneralCargoRequestDto dto, ShipBlManifestGeneralDtl entity) {
+        entity.setComodityPoid(dto.getComodityPoid());
+        entity.setCargoDescription(dto.getCargoDescription());
+        entity.setQuantity(dto.getQuantity());
+        entity.setGrsVolume(dto.getGrsVolume());
+        entity.setGrsWeight(dto.getGrsWeight());
+        entity.setNetVolume(dto.getNetVolume());
+        entity.setNetWeight(dto.getNetWeight());
+        entity.setTareWeight(dto.getTareWeight());
+        entity.setNoOfPacks(dto.getNoOfPacks());
+        entity.setPackUnit(dto.getPackUnit());
+        entity.setDestinationPortPoid(dto.getDestinationPortPoid());
+    }
+
+    public void updateChargesFromDto(ChargeRequestDto dto, ShipBlManifestChargesDtl entity) {
+        entity.setChargePoid(dto.getChargePoid());
+        entity.setCurrencyExchange(dto.getCurrencyExchange());
+        entity.setQuantity(dto.getQuantity());
+        entity.setBuyPercharge(dto.getBuyPercharge());
+        entity.setPerQuantityAmount(dto.getPerQuantityAmount());
+        entity.setPaidAtPortPoid(dto.getPaidAtPortPoid());
+        entity.setChargeType(dto.getChargeType());
+        entity.setCurrencyCode(dto.getCurrencyCode());
+        entity.setFreightType(dto.getFreightType());
+        entity.setEdiChargeCode(dto.getEdiChargeCode());
+        entity.setArShReceiptTransactionPoid(dto.getArShReceiptTransactionPoid());
+        entity.setChargeBasisOn(dto.getChargeBasisOn());
+        entity.setPrintGroup(dto.getPrintGroup());
+        entity.setReceiptInvoicePoid(dto.getReceiptInvoicePoid());
+        entity.setDocRefLinkNo(dto.getDocRefLinkNo());
+        entity.setReprintDetRowId(dto.getReprintDetRowId());
+        entity.setReprintTransactionPoid(dto.getReprintTransactionPoid());
+        entity.setInvoiceType(dto.getInvoiceType());
+        entity.setAutoCanInvoiceNo(dto.getAutoCanInvoiceNo());
+        entity.setChargeDescription(dto.getChargeDescription());
+        entity.setTaxPoid(dto.getTaxPoid());
+        entity.setTaxPercentage(dto.getTaxPercentage());
+        entity.setTaxAmount(dto.getTaxAmount());
+        entity.setCnRefDocId(dto.getCnRefDocId());
+        entity.setCnRefDocPoid(dto.getCnRefDocPoid());
+        entity.setCnRefDetRowId(dto.getCnRefDetRowId());
+        entity.setCnIssueInvoice(dto.getCnIssueInvoice());
+        entity.setSelectRow(dto.getSelectRow());
+    }
+
+    public void updatePartBlFromDto(PartBlRequestDto dto, ShipBlManifestPartBL entity) {
+        entity.setShipperName(dto.getShipperName());
+        entity.setConsigneeName(dto.getConsigneeName());
+        entity.setContainerNo(dto.getContainerNo());
+        entity.setCargoDescription(dto.getCargoDescription());
+        entity.setComodityPoid(dto.getComodityPoid());
+        entity.setNetVolume(dto.getNetVolume());
+        entity.setNetWeight(dto.getNetWeight());
+        entity.setNoOfPacks(dto.getNoOfPacks());
+        entity.setPackUnit(dto.getPackUnit());
+        entity.setPartBlNumber(dto.getPartBlNumber());
+    }
+
+    public void updateEmailFaxFromDto(NotifyPartyRequestDto dto, ShipBlManifestEmailFaxDtl entity) {
+        entity.setAddressPoid(dto.getAddressPoid());
+        entity.setFax(dto.getFax());
+        entity.setEmail1(dto.getEmail1());
+        entity.setEmail2(dto.getEmail2());
+        entity.setSendEmailFax(dto.getSendEmailFax());
+        entity.setSendYesNo(dto.getSendYesNo());
+        entity.setFaxLog(dto.getFaxLog());
+        entity.setEmailLog(dto.getEmailLog());
+    }
+
+    public void updateMafiFromDto(MafiRequestDto dto, ShipBlManifestMafiDtl entity) {
+        entity.setMafiRef(dto.getMafiRef());
+        entity.setRemarks(dto.getRemarks());
+        entity.setMafiFreeDays(dto.getMafiFreeDays());
+        entity.setMafiSize(dto.getMafiSize());
+        entity.setMafiEmptyDate(dto.getMafiEmptyDate());
+        entity.setBackLoadDate(dto.getBackLoadDate());
+    }
+
     public void updateContainerFromDto(
             ContainerRequestDto dto,
             ShipBlManifestContainerDtl entity) {
 
-        // ❌ NEVER update:
-        // entity.getId()
-        // entity.setId()
-        // transactionPoid
-        // detRowId
+        if (dto == null || entity == null) {
+            return;
+        }
 
         if (dto.getMateTransactionPoid() != null) {
             entity.setMateTransactionPoid(dto.getMateTransactionPoid());
         }
+
         if (dto.getContainerNo() != null) {
             entity.setContainerNo(dto.getContainerNo().trim());
         }
@@ -1104,8 +895,11 @@ public class ImportManifestBlMapper {
         entity.setRefferTemp(dto.getRefferTemp());
         entity.setRefferHum(dto.getRefferHum());
         entity.setRefferVent(dto.getRefferVent());
-        entity.setIssueToConsignee(dto.getIssueToConsignee());
-        entity.setReturnFromConsignee(dto.getReturnFromConsignee());
+
+        entity.setIssueToConsignee(toLocalDateTime(dto.getIssueToConsignee()));
+        entity.setReturnFromConsignee(toLocalDateTime(dto.getReturnFromConsignee()));
+        entity.setActualDischargeDate(toLocalDateTime(dto.getActualDischargeDate()));
+
         entity.setIsImco(dto.getIsImco());
         entity.setIsOog(dto.getIsOog());
         entity.setIsRefer(dto.getIsRefer());
@@ -1126,8 +920,17 @@ public class ImportManifestBlMapper {
         entity.setHsCode(dto.getHsCode());
         entity.setHsDescription(dto.getHsDescription());
         entity.setAmountPerDayAfterFree(dto.getAmountPerDayAfterFree());
-        entity.setActualDischargeDate(dto.getActualDischargeDate());
-
-        // ⚠️ Demurrage / collected fields deliberately untouched
     }
+
+
+    public static LocalDateTime toLocalDateTime(Object value) {
+        return switch (value) {
+            case null -> null;
+            case LocalDateTime ldt -> ldt;
+            case LocalDate ld -> ld.atStartOfDay();
+            default -> throw new IllegalArgumentException("Unsupported date type: " + value.getClass());
+        };
+
+    }
+
 }

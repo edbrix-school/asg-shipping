@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT1" language="groovy" pageWidth="580" pageHeight="120" columnWidth="580" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="fc0c6db9-9dcc-407a-966d-1ecdaf757679">
+	<property name="ireport.zoom" value="1.9487171000000014"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="P_TRN_NO" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_INV_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="SPECIAL_CONDITION" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="CONTRACT_REF_NUMBER" class="java.lang.String">
+		<defaultValueExpression><![CDATA[]]></defaultValueExpression>
+	</parameter>
+	<parameter name="CC_REF" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT MNF.TRANSACTION_POID,MNF.TRANSACTION_DATE,MNF.COMPANY_POID,MNF.GROUP_POID,MNF.FF_JOBNO,MNF.FF_JOBTYPE,
+decode(MNF.LINE_POID,null,'',get_LINE_NAME(MNF.LINE_POID))LINE,
+
+NVL(PROC_FF_CHARGE_GET_DATA_MASTER($P{P_TRN_NO},$P{P_INV_POID},'HSBL'),MNF.MASTER_BL_NO) MASTER_BL_NO
+
+,MNF.VOYAGE_POID,MNF.FEEDER_VSL_NAME,MNF.FEEDER_VSL_SAIL_DATE,
+MNF.FEEDER_VSL_ETA,MNF.FEEDER_VSL_ARRIVAL_DATE,
+(SELECT AIRPORT_NAME FROM FF_AIRPORT_MASTER WHERE AIRPORT_CODE=MNF.AIR_DEPARTURE_PORT)  AWPORT_LOAD,
+
+(SELECT NVL(PROC_FF_CHARGE_GET_DATA_MASTER($P{P_TRN_NO},$P{P_INV_POID},'PORT'),AIRPORT_NAME)  FROM FF_AIRPORT_MASTER WHERE AIRPORT_CODE=MNF.AIR_ARRIVAL_PORT)  AWPORT_UNLOAD,
+
+MNF.TOTAL_NO_OF_PACKS,MNF.DOC_REF ,MNF.FLIGHT_NO,
+NVL(PROC_FF_CHARGE_GET_DATA_MASTER($P{P_TRN_NO},$P{P_INV_POID},'WT'),MNF.CHARGABLE_WEIGHT) CHARGABLE_WEIGHT,
+MNF.FLIGHT_DATE,MNF.CARGO_DESCRIPTION,
+VOY.VOYAGE_NO,MNF.LPO_NO,MNF.LPO_DATE,MNF.HOUSE_BL_NO, SHIPPER_MANUAL, FCR_SUPLIER_SHIPPER_REF
+FROM FF_MANIEST_HDR MNF
+LEFT JOIN SHIP_VOYAGE_HDR VOY ON VOY.TRANSACTION_POID=MNF.VOYAGE_POID
+WHERE MNF.TRANSACTION_POID=$P{P_TRN_NO} AND (MNF.FF_JOBTYPE LIKE 'AIR%'  )]]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="TRANSACTION_DATE" class="java.sql.Timestamp"/>
+	<field name="COMPANY_POID" class="java.math.BigDecimal"/>
+	<field name="GROUP_POID" class="java.math.BigDecimal"/>
+	<field name="FF_JOBNO" class="java.lang.String"/>
+	<field name="FF_JOBTYPE" class="java.lang.String"/>
+	<field name="LINE" class="java.lang.String"/>
+	<field name="MASTER_BL_NO" class="java.lang.String"/>
+	<field name="VOYAGE_POID" class="java.math.BigDecimal"/>
+	<field name="FEEDER_VSL_NAME" class="java.lang.String"/>
+	<field name="FEEDER_VSL_SAIL_DATE" class="java.sql.Timestamp"/>
+	<field name="FEEDER_VSL_ETA" class="java.sql.Timestamp"/>
+	<field name="FEEDER_VSL_ARRIVAL_DATE" class="java.sql.Timestamp"/>
+	<field name="AWPORT_LOAD" class="java.lang.String"/>
+	<field name="AWPORT_UNLOAD" class="java.lang.String"/>
+	<field name="TOTAL_NO_OF_PACKS" class="java.math.BigDecimal"/>
+	<field name="DOC_REF" class="java.lang.String"/>
+	<field name="FLIGHT_NO" class="java.lang.String"/>
+	<field name="CHARGABLE_WEIGHT" class="java.lang.String"/>
+	<field name="FLIGHT_DATE" class="java.sql.Timestamp"/>
+	<field name="CARGO_DESCRIPTION" class="java.lang.String"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="LPO_NO" class="java.lang.String"/>
+	<field name="LPO_DATE" class="java.sql.Timestamp"/>
+	<field name="HOUSE_BL_NO" class="java.lang.String"/>
+	<field name="SHIPPER_MANUAL" class="java.lang.String"/>
+	<field name="FCR_SUPLIER_SHIPPER_REF" class="java.lang.String"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="120" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="388" y="4" width="155" height="20" uuid="fceb041f-af51-4f19-9005-f1b41a306f25"/>
+				<textElement>
+					<font fontName="SansSerif" size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{MASTER_BL_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="292" y="4" width="86" height="20" uuid="4c79d731-3031-4380-8b73-26e174990ca3"/>
+				<textElement>
+					<font fontName="SansSerif" size="9"/>
+				</textElement>
+				<text><![CDATA[BL NO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="292" y="41" width="86" height="20" uuid="f0ddfd88-4603-4b26-8999-90c6b650468f"/>
+				<textElement>
+					<font fontName="SansSerif" size="9"/>
+				</textElement>
+				<text><![CDATA[PORT OF LOAD]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="292" y="61" width="86" height="20" uuid="34e57e19-295f-4681-85d1-bba4d804a3b1"/>
+				<textElement>
+					<font fontName="SansSerif" size="9"/>
+				</textElement>
+				<text><![CDATA[PORT OF DISCH.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="7" y="4" width="72" height="20" uuid="04e67aeb-478a-4926-b0aa-5a932cc78402"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[TYPE ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="76" y="4" width="65" height="20" uuid="05614197-0726-4254-bc86-c53032177dd6"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FF_JOBTYPE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="388" y="41" width="155" height="20" uuid="f788fbc1-5ca1-4c69-ae94-f00d3639cb1a"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AWPORT_LOAD}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="388" y="61" width="128" height="20" uuid="f1fc690a-d137-41ee-b1d1-0ea8b88f35ba"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AWPORT_UNLOAD}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="141" y="4" width="92" height="20" uuid="2bbf181a-ce5b-427b-85c7-f684183dae5a"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DOC_REF}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="292" y="81" width="86" height="15" uuid="edbedb87-ff52-409c-8bd0-938c533da47a"/>
+				<textElement verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[LPO ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="388" y="78" width="192" height="18" uuid="e089da45-7ffe-4afd-af6d-da5e22dd69fa"/>
+				<textElement verticalAlignment="Middle">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LPO_NO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="389" y="88" width="75" height="12" uuid="c0119730-20ad-4f54-9635-b4d26a9d6544"/>
+				<textElement verticalAlignment="Bottom">
+					<font size="7"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LPO_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="7" y="24" width="69" height="20" uuid="891b03d5-9c3a-4eb0-92f5-d6b700d933ee"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[FLIGHT ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="79" y="24" width="46" height="20" uuid="c96e4582-3917-4e22-ad1d-09a192581de2"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FLIGHT_NO}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="127" y="24" width="92" height="20" uuid="863c0145-1bcb-44d3-90be-aabda6d23dee"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FLIGHT_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="7" y="44" width="69" height="20" uuid="00a70a0f-9e22-42a6-a74a-f812d174d862"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[WEIGHT ]]></text>
+			</staticText>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="79" y="44" width="62" height="20" uuid="82230778-87a5-40c8-98b2-2423707113bf"/>
+				<textElement textAlignment="Right">
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CHARGABLE_WEIGHT}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="7" y="61" width="69" height="20" uuid="6490d7de-918d-4af2-89bd-0b1815750127"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[CARGO ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="78" y="61" width="172" height="32" uuid="5fc03184-62b3-4ecb-9de9-5c8519dc6402"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CARGO_DESCRIPTION}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="292" y="21" width="86" height="20" uuid="8f6262d8-ea53-45ee-a069-d57e5e5aa520"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[HOUSE BL ]]></text>
+			</staticText>
+			<textField isBlankWhenNull="true">
+				<reportElement x="388" y="24" width="155" height="20" uuid="c4c6ddc9-e494-41d6-a7fe-5299097d5588"/>
+				<textElement>
+					<font size="9"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{HOUSE_BL_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="378" y="2" width="11" height="20" uuid="e6e6a321-bfc1-4047-9910-788d65b7960a"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="378" y="21" width="11" height="20" uuid="7d55cae8-5d32-4117-afc3-3af254609ad5"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="378" y="44" width="11" height="20" uuid="c1fe0f23-1eb5-42ca-a5d4-8882b45785a8"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="378" y="64" width="11" height="20" uuid="4d23801e-9cc1-46be-81a6-26d91fb37c9e"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="378" y="84" width="11" height="13" uuid="1f32393f-8d9b-4afe-b741-7046745c6265"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="67" y="4" width="11" height="20" uuid="dd7dd696-bf3a-4187-9559-d38b7afa4f7c"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="67" y="24" width="11" height="20" uuid="2a55b010-701c-4161-90a7-0c05400db29f"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="67" y="44" width="11" height="20" uuid="fa4881aa-4eb5-4dac-a493-809bc47eecfc"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="68" y="60" width="11" height="20" uuid="394a9bd4-a15a-403e-a1a2-fc812e8100a5"/>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<line>
+				<reportElement x="266" y="2" width="1" height="118" uuid="402bdcce-7169-4fe8-8cad-237ed5169961"/>
+			</line>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="79" y="97" width="162" height="12" uuid="0ae1238c-a033-4dbf-b8d0-12f4b82fe961">
+					<printWhenExpression><![CDATA[$P{CONTRACT_REF_NUMBER}!=null]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{CONTRACT_REF_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="366" y="100" width="11" height="12" uuid="d72631bb-9280-45ad-b231-7c8c711a2f23">
+					<printWhenExpression><![CDATA[$P{CC_REF}!=null]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="68" y="96" width="11" height="12" uuid="c31e158c-1ab6-4c82-9798-e300ad14a467">
+					<printWhenExpression><![CDATA[$P{CONTRACT_REF_NUMBER}!=null]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[:]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" isBlankWhenNull="true">
+				<reportElement x="381" y="100" width="162" height="12" uuid="45497a1f-5e26-475c-aaed-21594cb66169">
+					<printWhenExpression><![CDATA[$P{CC_REF}!=null]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Top">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{CC_REF}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="291" y="99" width="88" height="15" uuid="545a4af9-ee5d-4820-9efb-81c9c98e4fb1">
+					<printWhenExpression><![CDATA[$P{CC_REF}!=null]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="6" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Cost Ref Number]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="6" y="96" width="85" height="15" uuid="acc701d3-91c5-41ba-b464-e0f8dc12e8c7">
+					<printWhenExpression><![CDATA[$P{CONTRACT_REF_NUMBER}!=null]]></printWhenExpression>
+				</reportElement>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="6" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Contract Ref Number]]></text>
+			</staticText>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

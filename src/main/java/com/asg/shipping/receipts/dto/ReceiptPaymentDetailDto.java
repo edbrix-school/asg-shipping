@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -23,7 +23,7 @@ public class ReceiptPaymentDetailDto {
 	private BigDecimal amount;
 	private Long ttBankPoid;
 	private String chqCardno;
-	private LocalDate chqDate;
+	private LocalDateTime chqDate;
 	private String accountName;
 	private String accountNo;
 	private Long bankPoid;

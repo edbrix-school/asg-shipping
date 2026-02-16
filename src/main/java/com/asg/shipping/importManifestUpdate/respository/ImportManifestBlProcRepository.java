@@ -8,8 +8,6 @@ import com.asg.shipping.importManifestUpdate.dto.BlStatusResponseDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlCreateDto;
 import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
 
-
-
 public interface ImportManifestBlProcRepository {
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
     ResendCanResponseDto resendCan(Long voyageTransactionPoId, Long transactionPoId);

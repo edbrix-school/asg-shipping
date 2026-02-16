@@ -65,8 +65,6 @@ class LineCommissionServiceImplTest {
     @Mock
     private LoggingService loggingService;
 
-
-
     @InjectMocks
     private LineCommissionServiceImpl service;
 

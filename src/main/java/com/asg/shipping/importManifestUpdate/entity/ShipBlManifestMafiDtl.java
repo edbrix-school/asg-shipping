@@ -7,7 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -36,10 +35,10 @@ public class ShipBlManifestMafiDtl {
     private Long mafiSize;
 
     @Column(name = "MAFI_EMPTY_DATE")
-    private LocalDate mafiEmptyDate;
+    private LocalDateTime mafiEmptyDate;
 
     @Column(name = "BACK_LOAD_DATE")
-    private LocalDate backLoadDate;
+    private LocalDateTime backLoadDate;
 
     @Column(name = "CREATED_BY", length = 20)
     private String createdBy;

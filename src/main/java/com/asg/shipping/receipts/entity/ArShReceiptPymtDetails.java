@@ -1,9 +1,7 @@
 package com.asg.shipping.receipts.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -34,7 +32,7 @@ public class ArShReceiptPymtDetails {
 	private String chqCardno;
 
 	@Column(name = "CHQ_DATE")
-	private LocalDate chqDate;
+	private LocalDateTime chqDate;
 
 	@Column(name = "BANK_POID")
 	private Long bankPoid;

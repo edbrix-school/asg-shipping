@@ -1,15 +1,16 @@
 package com.asg.shipping.deliveryorderissuetocustomer.service;
 
-import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import com.asg.shipping.deliveryorderissuetocustomer.entity.DoShPrintingDtl;
 import com.asg.shipping.deliveryorderissuetocustomer.entity.ShipBlManifestHDR;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
+import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
 import jakarta.validation.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +40,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
     private ShipBlManifestHDRRepository blManifestRepository;
 
     @Mock
-    private DocumentSearchService documentService;
+    private DoShPrintingDtlRepository doShPrintingDtlRepository;
 
     @Mock
     private LovDataService lovService;
@@ -47,11 +48,15 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private LoggingService loggingService;
+
     @InjectMocks
     private DeliveryOrderIssueToCustomerServiceImpl service;
 
     private DeliveryOrderIssueToCustomerDto mockDto;
     private ShipBlManifestHDR mockEntity;
+    private DoShPrintingDtl mockPrintingDtl;
     private IssueDeliveryOrderRequestDto issueRequest;
     private UpdateDeliveryOrderRequestDto updateRequest;
 
@@ -68,6 +73,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
                 .doPriority("HIGH")
                 .doIssueAuthPoid(200L)
                 .deliverySentTo("C")
+                .blReleaseTypeOffice("OFFICE")
                 .build();
 
         mockEntity = new ShipBlManifestHDR();
@@ -78,6 +84,10 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         mockEntity.setDeleted("N");
         mockEntity.setCreatedBy("testuser");
         mockEntity.setCreatedDate(LocalDateTime.now());
+
+        mockPrintingDtl = new DoShPrintingDtl();
+        mockPrintingDtl.setTransactionPoid(1L);
+        mockPrintingDtl.setCompanyPoid(100L);
 
         issueRequest = IssueDeliveryOrderRequestDto.builder()
                 .doReleasedIdPerson("REL001")
@@ -109,12 +119,8 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             
             when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
-            when(lovService.getDetailsByCodeAndLovName("HIGH", "DO_PRIORITY_SH"))
-                    .thenReturn(new LovGetListDto(1L, "HIGH", "High Priority", null, null, null, null));
-            when(lovService.getDetailsByPoidAndLovName(200L, "USER_MASTER"))
-                    .thenReturn(new LovGetListDto(2L, "AUTH001", "Authorized Person", null, null, null, null));
-            when(lovService.getDetailsByCodeAndLovName("C", "DELIVERY_SENT_TO"))
-                    .thenReturn(new LovGetListDto(3L, "C", "Consignee", null, null, null, null));
+            when(lovService.getDetailsByCodeAndLovName(any(), any())).thenReturn(null);
+            when(lovService.getDetailsByPoidAndLovName(any(), any())).thenReturn(null);
 
             DeliveryOrderIssueToCustomerDto result = service.getDeliveryOrderIssueToCustomer(transactionPoid);
 
@@ -143,14 +149,25 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         IssueDeliveryOrderRequestDto invalidRequest = IssueDeliveryOrderRequestDto.builder()
                 .doReleasedIdPerson("REL001")
+                .doReleasedToPerson("John Doe")
+                .doReleasedAddressPerson("123 Test Street")
                 .doPriority("HIGH")
                 .emailsDo("do@example.com")
+                .originalBlReleaseCr("OFFICE")
                 .build();
 
-        ValidationException exception = assertThrows(ValidationException.class, 
-                () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
-        
-        assertEquals("Delivery sent to is required", exception.getMessage());
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
+            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
+            
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
+
+            ValidationException exception = assertThrows(ValidationException.class, 
+                    () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
+            
+            assertEquals("Select delivery send to from dropdown list", exception.getMessage());
+        }
     }
 
     @Test
@@ -158,14 +175,25 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         IssueDeliveryOrderRequestDto invalidRequest = IssueDeliveryOrderRequestDto.builder()
                 .doReleasedIdPerson("REL001")
+                .doReleasedToPerson("John Doe")
+                .doReleasedAddressPerson("123 Test Street")
                 .doPriority("HIGH")
                 .deliverySentTo("C")
+                .originalBlReleaseCr("OFFICE")
                 .build();
 
-        ValidationException exception = assertThrows(ValidationException.class, 
-                () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
-        
-        assertEquals("Delivery emails not added for customer", exception.getMessage());
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
+            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
+            
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
+
+            ValidationException exception = assertThrows(ValidationException.class, 
+                    () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
+            
+            assertEquals("Delivery emails not added for customer", exception.getMessage());
+        }
     }
 
     @Test
@@ -173,12 +201,9 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
-            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(blManifestRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, 1L, 100L))
-                    .thenReturn(Optional.empty());
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, issueRequest));
@@ -188,15 +213,16 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
     @Test
     void issueDeliveryOrder_EntityDeleted() {
         Long transactionPoid = 1L;
-        mockEntity.setDeleted("Y");
+        mockDto = DeliveryOrderIssueToCustomerDto.builder()
+                .transactionPoid(1L)
+                .companyPoid(100L)
+                .deleted("Y")
+                .build();
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
-            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(blManifestRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, 1L, 100L))
-                    .thenReturn(Optional.of(mockEntity));
+            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, issueRequest));
@@ -208,21 +234,34 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
-            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(blManifestRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, 1L, 100L))
-                    .thenReturn(Optional.of(mockEntity));
+            when(doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.of(mockPrintingDtl));
+            when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.of(mockEntity));
             when(blManifestRepository.save(any(ShipBlManifestHDR.class))).thenReturn(mockEntity);
-            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
-            when(lovService.getDetailsByCodeAndLovName(any(), any())).thenReturn(new LovGetListDto());
-            when(lovService.getDetailsByPoidAndLovName(any(), any())).thenReturn(new LovGetListDto());
+            when(doShPrintingDtlRepository.save(any(DoShPrintingDtl.class))).thenReturn(mockPrintingDtl);
 
-            DeliveryOrderIssueToCustomerDto result = service.updateDeliveryOrder(transactionPoid, updateRequest);
+            Long result = service.updateDeliveryOrder(transactionPoid, updateRequest);
 
             assertNotNull(result);
+            assertEquals(transactionPoid, result);
             verify(blManifestRepository).save(any(ShipBlManifestHDR.class));
+            verify(doShPrintingDtlRepository).save(any(DoShPrintingDtl.class));
+        }
+    }
+
+    @Test
+    void updateDeliveryOrder_PrintingDtlNotFound() {
+        Long transactionPoid = 1L;
+        
+        try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
+            userContextMock.when(UserContext::getUserName).thenReturn("testuser");
+            
+            when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.of(mockEntity));
+            when(doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, 
+                    () -> service.updateDeliveryOrder(transactionPoid, updateRequest));
         }
     }
 
@@ -231,12 +270,9 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         Long transactionPoid = 1L;
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
-            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
-            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(blManifestRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, 1L, 100L))
-                    .thenReturn(Optional.empty());
+            when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.updateDeliveryOrder(transactionPoid, updateRequest));

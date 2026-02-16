@@ -1,5 +1,6 @@
 package com.asg.shipping.customerautochargeexportbl.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLCreateDTO;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLDto;
@@ -22,5 +23,5 @@ public interface CustomerAutoChargeExportBlService {
     CustomerAutoChargeExportBLDto updateCustomerAutoChargeExportBL(Long id, CustomerAutoChargeExportBLUpdateDTO updateDTO);
 
 
-    void deleteCustomerAutoChargeExportBL(Long id);
+    void deleteCustomerAutoChargeExportBL(Long id, DeleteReasonDto deleteReasonDto);
 }

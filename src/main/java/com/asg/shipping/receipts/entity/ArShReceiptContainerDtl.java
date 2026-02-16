@@ -1,8 +1,8 @@
 package com.asg.shipping.receipts.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
+
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -37,10 +37,10 @@ public class ArShReceiptContainerDtl {
 	private String containerNo;
 
 	@Column(name = "DM_FRM_DATE")
-	private LocalDate dmFrmDate;
+	private LocalDateTime dmFrmDate;
 
 	@Column(name = "DM_TO_DATE")
-	private LocalDate dmToDate;
+	private LocalDateTime dmToDate;
 
 	@Column(name = "DM_DAYS")
 	private Long dmDays;
@@ -73,7 +73,7 @@ public class ArShReceiptContainerDtl {
 	private String rtnFormPrinted;
 
 	@Column(name = "EMPTY_IN")
-	private LocalDate emptyIn;
+	private LocalDateTime emptyIn;
 
 	@Column(name = "CNT_TAX_POID")
 	private Long cntTaxPoid;

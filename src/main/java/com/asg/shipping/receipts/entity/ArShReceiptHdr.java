@@ -1,9 +1,7 @@
 package com.asg.shipping.receipts.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -29,7 +27,7 @@ public class ArShReceiptHdr {
 	private Long transactionPoid;
 
 	@Column(name = "TRANSACTION_DATE")
-	private LocalDate transactionDate;
+	private LocalDateTime transactionDate;
 
 	@Column(name = "GROUP_POID")
 	private Long groupPoid;

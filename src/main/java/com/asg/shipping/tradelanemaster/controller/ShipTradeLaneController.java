@@ -1,10 +1,14 @@
 package com.asg.shipping.tradelanemaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import org.springframework.dao.DuplicateKeyException;
 import com.asg.shipping.tradelanemaster.dto.request.ShipTradelaneRequest;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
@@ -38,6 +42,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 public class ShipTradeLaneController {
 
     private final ShipTradeLaneService shipTradeLaneService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(
@@ -132,14 +137,10 @@ public class ShipTradeLaneController {
             @Parameter(description = "Trade Lane POID", required = true)
             @PathVariable Long tradeLanePoid
     ) {
-        try {
             ShipTradelaneResponse response = shipTradeLaneService.getById(tradeLanePoid);
-            return success("Ship Trade Lane retrieved successfully", response);
-        } catch (ResourceNotFoundException e) {
-            return notFound(e.getMessage());
-        } catch (Exception e) {
-            return internalServerError("Failed to retrieve Ship Trade Lane: " + e.getMessage());
-        }
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), tradeLanePoid.toString());
+        return success("Ship Trade Lane retrieved successfully", response);
+
     }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
@@ -158,10 +159,11 @@ public class ShipTradeLaneController {
     @DeleteMapping("/{tradeLanePoid}")
     public ResponseEntity<?> delete(
             @Parameter(description = "Trade Lane POID", required = true)
-            @PathVariable Long tradeLanePoid
+            @PathVariable Long tradeLanePoid,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto
     ) {
         try {
-            shipTradeLaneService.delete(tradeLanePoid);
+            shipTradeLaneService.delete(tradeLanePoid,deleteReasonDto);
             return success("Ship Trade Lane deleted successfully", null);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());

@@ -1,20 +1,23 @@
 package com.asg.shipping.importmanifestbl.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.service.DocumentDeleteService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importManifestUpdate.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importManifestUpdate.entity.*;
 import com.asg.shipping.importManifestUpdate.respository.*;
 import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
-import com.asg.shipping.importmanifestbl.dto.CommodityDTO;
-import com.asg.shipping.importmanifestbl.dto.ContainerTypeDTO;
-import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
-import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
+import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.repository.ContainerDropdownRepository;
-import com.asg.shipping.importmanifestbl.service.ImportManifestBlService;
+import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.importmanifestbl.util.ImportManifestDropdownMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JasperReport;
 import org.springframework.stereotype.Service;
 
 import com.asg.common.lib.exception.ResourceNotFoundException;
@@ -26,17 +29,19 @@ import com.asg.common.lib.utility.PaginationUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
 
+import javax.sql.DataSource;
 
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class ImportManifestServiceImpl implements ImportManifestBlService {
+public class ImportManifestServiceImpl implements ImportManifestService {
 
     private final ShipBlManifestHdrRepository headerRepository;
     private final ImportManifestBlProcRepository procRepository;
@@ -44,7 +49,12 @@ public class ImportManifestServiceImpl implements ImportManifestBlService {
     private final com.asg.shipping.importManifestUpdate.service.ImportManifestBlServiceImpl updateService;
     private final ImportManifestBlMapper mapper;
     private final DocumentSearchService documentService;
+    private final PrintService printService;
+    private final DataSource dataSource;
     private final ContainerDropdownRepository containerDropdownRepository;
+    private final BlManifestValidationRepository validationRepository;
+    private final DocumentDeleteService documentDeleteService;
+    private final LoggingService loggingService;
 
     @Override
     public ImportManifestBlRequestDto getImportManifest(Long transactionPoId) {
@@ -57,22 +67,23 @@ public class ImportManifestServiceImpl implements ImportManifestBlService {
         }
 
         ImportManifestBlRequestDto requestDto = mapper.mapToDto(entity);
-
         ImportManifestBlRequestDto dto =   updateService.loadDetailTables(requestDto,transactionPoId);
-
-
-
         log.info("Successfully retrieved Import Manifest BL with id: {}", transactionPoId);
         return dto;
     }
 
     @Override
     @Transactional
-    public void delete(Long transactionPoId) {
+    public void delete(Long transactionPoId, DeleteReasonDto deleteReasonDto) {
         try {
+
             ShipBlManifestHdr entity = findEntityById(transactionPoId);
-            entity.setDeleted("Y");
-            headerRepository.save(entity);
+            LocalDate transactionDate = entity.getTransactionDate() == null
+                    ? null
+                    : LocalDate.from(entity.getTransactionDate());
+
+            documentDeleteService.deleteDocument(transactionPoId,"SHIP_BL_MANIFEST_HDR","TRANSACTION_POID",
+                    deleteReasonDto,transactionDate);
             log.info("Soft deleted header for transactionPoId: {}", transactionPoId);
         } catch (ResourceNotFoundException e) {
             log.error("Failed to delete: Entity not found for transactionPoId: {}", transactionPoId);
@@ -208,11 +219,69 @@ public class ImportManifestServiceImpl implements ImportManifestBlService {
                 UserContext.getUserPoid(),
                 docId
         );
-        
+
 
     }
 
+    @Override
+    public byte[] printUnclearedCargoNotice(Long transactionPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
+        JasperReport mainReport = printService.load("Shipping/SH/CAN_SHIPPING_UNCLEARED.jrxml");
+        return printService.fillReportToPdf(mainReport,params,dataSource);
+    }
 
+    @Override
+    public byte[] printProformaInvoice(Long transactionPoid, LocalDate demChargesTill, Long percentage) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
+        params.put("P_DEMURRAGE_DATE", demChargesTill != null ? demChargesTill : LocalDate.now());
+        params.put("P_DISCOUNT", percentage != null ? percentage : 0);
+        params.put("SUBREPORT2",printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT2.jrxml"));
+        params.put("SUBREPORT3",printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT3.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] printCargoArrivalNotice(Long voyageTransactionPoid, Long transactionPoid) throws Exception {
+
+        Map<String, Object> params =
+                printService.buildBaseParams(transactionPoid, "100-102");
+
+        String lineCode = validationRepository.getLineCode(voyageTransactionPoid);
+        String jrxmlPath = "Shipping/CAN_SHIPPING.jrxml";
+        if ("MSC".equalsIgnoreCase(lineCode)) {
+            jrxmlPath = "Shipping/SH/CAN_SHIPPING_msc.jrxml";
+        } else if ("COS".equalsIgnoreCase(lineCode)) {
+            jrxmlPath = "Shipping/SH/CAN_SHIPPING_COS.jrxml";
+        }
+
+        JasperReport mainReport = printService.load(jrxmlPath);
+
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] printCargoManifest(Long transactionPoid, boolean isCargoManifestPrint) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
+        params.put("P_FREIGHTCARGO", isCargoManifestPrint ? "FALSE" : "TRUE");
+        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+        params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_TOTAL_COUNT", printService.load("Shipping/SH/Cargo/TotalCount_By_Size.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] printCheckPortCharges(Long transactionPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
+        params.put("P_TILL_DATE", LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
+        params.put("SUBREPORT_PORT_STORAGE", printService.load("Shipping/SH/PORT_STORAGE_IMP_FULL.jrxml"));
+        params.put("SUBREPORT_PORT_STORAGE_EMPTY", printService.load("Shipping/SH/PORT_STORAGE_IMP_FULL_EMPTY_subreport1.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/PORT_STORAGE_CALC.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
 
     @Override
     public Map<String, Object> list(FilterRequestDto request, Pageable pageable) {

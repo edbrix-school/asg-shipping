@@ -1,11 +1,9 @@
 package com.asg.shipping.importManifestUpdate.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,4 +18,5 @@ public class NotifyPartyRequestDto {
     private String addressType;
     private String faxLog;
     private String emailLog;
+    private String actionType;
 }

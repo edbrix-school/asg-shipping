@@ -1,11 +1,9 @@
 package com.asg.shipping.importManifestUpdate.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,4 +20,5 @@ public class PartBlRequestDto {
     private Long netVolume;
     private Long noOfPacks;
     private String packUnit;
+    private String actionType;
 }

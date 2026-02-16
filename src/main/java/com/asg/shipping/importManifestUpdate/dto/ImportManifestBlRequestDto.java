@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,46 +20,31 @@ public class ImportManifestBlRequestDto {
     private Long groupPoid;
     private Long companyPoid;
     private String docRef;
-    private LocalDate transactionDate;
+    private LocalDateTime transactionDate;
     private Long voyageTransactionPoid;
-    //private LovItem voyageTransactionPoidDet; // LOV data
     private String blNumber;
     private String agentReference;
     private Long shipperPoid;
-    //private LovItem shipperPoidDet; // LOV data
     private Long shipperAddressPoid;
-    //private LovItem shipperAddressPoidDet; // LOV data
     private Long consigneePoid;
-    //private LovItem consigneePoidDet; // LOV data
     private Long consigneeAddressPoid;
-    //private LovItem consigneeAddressPoidDet; // LOV data
     private Long notifyPoid1;
-    //private LovItem notifyPoid1Det; // LOV data
     private Long notifyAddressPoid1;
-    //private LovItem notifyAddressPoid1Det; // LOV data
     private Long notifyPoid2;
-    //private LovItem notifyPoid2Det; // LOV data
     private Long notifyAddressPoid2;
-    //private LovItem notifyAddressPoid2Det; // LOV data
     private Long notifyPoid3;
-    //private LovItem notifyPoid3Det; // LOV data
     private Long notifyAddressPoid3;
-    //private LovItem notifyAddressPoid3Det; // LOV data
     private Long quotationTransactionPoid;
-   // private LovItem quotationTransactionPoidDet; // LOV data
     private Long salesmanPoid;
-    //private LovItem salesmanPoidDet; // LOV data
     private Long comodityPoid;
-    //private LovItem comodityPoidDet; // LOV data
     private Long noOfOrgnlBls;
     private String exportReference;
     private String lpoSrnNo;
-    private LocalDate lpoSrnDate;
+    private LocalDateTime lpoSrnDate;
     private String typeOfMove;
     private String preCarriedBy;
     private Long placeOfIssuePoid;
-    //private LovItem placeOfIssuePoidDet; // LOV data
-    private LocalDate dateOfIssue;
+    private LocalDateTime dateOfIssue;
     private String printFreightDetails;
     private BigDecimal totalVolume;
     private BigDecimal totalNetVolume;
@@ -69,23 +54,19 @@ public class ImportManifestBlRequestDto {
     private String unitPack;
     private BigDecimal totalNoOfPacks;
     private Long placeOfRecieptPoid;
-    //private LovItem placeOfRecieptPoidDet; // LOV data
     private Long placeOfDelieveryPoid;
-    //private LovItem placeOfDelieveryPoidDet; // LOV data
     private Long portOfLoadingPoid;
-    //private LovItem portOfLoadingPoidDet; // LOV data
     private Long portOfDischargePoid;
-    //private LovItem portOfDischargePoidDet; // LOV data
     private String remarks;
     private String blStatus;
     private String blOrginalPrint;
-    private LocalDate blOrginalDate;
+    private LocalDateTime blOrginalDate;
     private String blPrintedBy;
     private String uniqueBlno;
     private BigDecimal demRate;
     private Long demFreeDays;
     private String releasedStatus;
-    private LocalDate releasedDate;
+    private LocalDateTime releasedDate;
     private String relasedToPerson;
     private String relasedIdPerson;
     private String relasedAddrsPerson;
@@ -94,7 +75,7 @@ public class ImportManifestBlRequestDto {
     private String releasedType;
     private Long relasedSeqno;
     private String releasedGrantBy;
-    private LocalDate releasedGrantDate;
+    private LocalDateTime releasedGrantDate;
     private String releasedGrantReason;
     private String cargoType;
     private String blType;
@@ -120,13 +101,11 @@ public class ImportManifestBlRequestDto {
     private LocalDateTime canSentDate;
     private String canSentBy;
     private Long documentCompanyPoid;
-    //private LovItem documentCompanyPoidDet; // LOV data
     private Long documentCompanyDivisionPoid;
     private String blPlaceReceipt;
     private String blPlaceLoad;
     private String blFinalDestination;
     private Long bookingPartyPoid;
-    //private LovItem bookingPartyPoidDet; // LOV data
     private String blPlaceDischareDesc;
     private String cargoArrivalNumber;
     private String bookedByPp;
@@ -136,7 +115,6 @@ public class ImportManifestBlRequestDto {
     private String blConsigneeAddressAdd;
     private String avoidCargoAlert;
     private Long agentPoid;
-    //private LovItem agentPoidDet; // LOV data
     private String ffJobNoHold;
     private String issueManualInvoice;
     private String doPriority;

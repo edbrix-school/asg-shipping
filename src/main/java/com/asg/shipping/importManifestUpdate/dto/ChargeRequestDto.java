@@ -1,17 +1,15 @@
 package com.asg.shipping.importManifestUpdate.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ChargeRequestDto {
     private Long detRowId;
-    private String actionType; 
     private Long chargePoid;
 
     private Long currencyExchange;
@@ -43,4 +41,5 @@ public class ChargeRequestDto {
     private String cnRefDetRowId;
     private String cnIssueInvoice;
     private String selectRow;
+    private String actionType;
 }

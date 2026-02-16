@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -13,28 +12,11 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-        name = "SHIP_BL_MANIFEST_HDR",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "UK_SHIP_BL_MANIFEST_VOYBL",
-                        columnNames = {"VOYAGE_TRANSACTION_POID", "BL_NUMBER"}),
-                @UniqueConstraint(name = "UK_DOCREFFSHIP_BL_MANIFEST_HDR",
-                        columnNames = {"DOC_REF"})
-        }
-)
+@Table(name = "SHIP_BL_MANIFEST_HDR")
 public class ShipBlManifestHdr {
 
 
     @Id
-    @GeneratedValue(
-            strategy = GenerationType.SEQUENCE,
-            generator = "SHIP_BL_MANIFEST_HDR_SEQ"
-    )
-    @SequenceGenerator(
-            name = "SHIP_BL_MANIFEST_HDR_SEQ",
-            sequenceName = "PRODUCTION.SHIP_BL_MANIFEST_HDR_SEQ",
-            allocationSize = 1
-    )
     @Column(name = "TRANSACTION_POID", nullable = false)
     private Long transactionPoid;
 
@@ -47,7 +29,7 @@ public class ShipBlManifestHdr {
     private Long companyPoid;
 
     @Column(name = "TRANSACTION_DATE")
-    private LocalDate transactionDate;
+    private LocalDateTime transactionDate;
 
     @Column(name = "VOYAGE_TRANSACTION_POID", nullable = false)
     private Long voyageTransactionPoid;
@@ -113,7 +95,7 @@ public class ShipBlManifestHdr {
     private String lpoSrnNo;
 
     @Column(name = "LPO_SRN_DATE")
-    private LocalDate lpoSrnDate;
+    private LocalDateTime lpoSrnDate;
 
     @Column(name = "TYPE_OF_MOVE", length = 25)
     private String typeOfMove;
@@ -125,7 +107,7 @@ public class ShipBlManifestHdr {
     private Long placeOfIssuePoid;
 
     @Column(name = "DATE_OF_ISSUE")
-    private LocalDate dateOfIssue;
+    private LocalDateTime dateOfIssue;
 
     @Column(name = "PRINT_FREIGHT_DETAILS", length = 1)
     private String printFreightDetails;
@@ -179,7 +161,7 @@ public class ShipBlManifestHdr {
     private String blOrginalPrint;
 
     @Column(name = "BL_ORGINAL_DATE")
-    private LocalDate blOrginalDate;
+    private LocalDateTime blOrginalDate;
 
     @Column(name = "BL_PRINTED_BY", length = 20)
     private String blPrintedBy;
@@ -201,7 +183,7 @@ public class ShipBlManifestHdr {
     private String releasedStatus;
 
     @Column(name = "RELEASED_DATE")
-    private LocalDate releasedDate;
+    private LocalDateTime releasedDate;
 
     @Column(name = "RELASED_TO_PERSON", length = 50)
     private String relasedToPerson;
@@ -228,7 +210,7 @@ public class ShipBlManifestHdr {
     private String releasedGrantBy;
 
     @Column(name = "RELEASED_GRANT_DATE")
-    private LocalDate releasedGrantDate;
+    private LocalDateTime releasedGrantDate;
 
     @Column(name = "RELEASED_GRANT_REASON", length = 200)
     private String releasedGrantReason;

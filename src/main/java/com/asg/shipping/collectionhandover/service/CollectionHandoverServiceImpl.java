@@ -1,11 +1,17 @@
 package com.asg.shipping.collectionhandover.service;
 
+import javax.sql.DataSource;
+
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.collectionhandover.dto.*;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtl;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtlId;
@@ -15,17 +21,22 @@ import com.asg.shipping.collectionhandover.repository.CollectionHandoverDtlRepos
 import com.asg.shipping.collectionhandover.util.CollectionHandoverMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import net.sf.jasperreports.engine.JasperReport;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -41,15 +52,24 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
     private final CollectionHandoverDtlRepository detailRepository;
     private final DocumentSearchService documentService;
     private final CollectionHandoverMapper mapper;
+    private final LoggingService loggingService;
+    private final PrintService printService;
+	private final DataSource dataSource;
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchCollectionHandovers(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
-        log.info("Searching collection handovers with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
+    public Map<String, Object> searchCollectionHandovers(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
+        log.info("Searching collection handovers with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = documentService.resolveFilters(request);
+        
+        // Add date filters if provided
+        if (startDate != null && endDate != null) {
+            // Add date range filter for TRANSACTION_DATE field
+            filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        }
 
         RawSearchResult raw = documentService.search(
                 docId,
@@ -108,6 +128,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
         enrichLovData(result);
 
         log.info("Successfully created collection handover with id: {}", saved.getTransactionPoid());
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getTransactionPoid().toString());
         return result;
     }
 
@@ -120,6 +141,8 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
                 .orElseThrow(() -> new ResourceNotFoundException("Collection Handover", "transactionPoid", id.toString()));
 
         validateUpdateDTO(dto, id, groupPoid);
+        ArShDayEndCloseHdr oldHandover=new ArShDayEndCloseHdr();
+        BeanUtils.copyProperties(handover, oldHandover);
 
         mapper.mapUpdateDTOToEntity(dto, handover, groupPoid, userPoid);
         ArShDayEndCloseHdr saved = headerRepository.save(handover);
@@ -132,6 +155,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
         enrichLovData(result);
 
         log.info("Successfully updated collection handover with id: {}", id);
+        loggingService.logChanges(oldHandover, handover, ArShDayEndCloseHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
         return result;
     }
 
@@ -184,6 +208,18 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
 
         log.info("Successfully updated verify status for collection handover with id: {}", id);
     }
+    
+    @Override
+	public byte[] print(Long transactionPoid) throws Exception {
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-114");
+		params.put("SH_DAY_CLOSE_CASH_SUBREPORT_1",
+				printService.load("Shipping/SH/SH_DAY_CLOSE_CASH_subreport1.jrxml"));
+		params.put("SH_DAY_CLOSE_CHQ_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CHQ_subreport1.jrxml"));
+		params.put("SH_DAY_CLOSE_SMRY_SUBREPORT_1",
+				printService.load("Shipping/SH/SH_DAY_CLOSE_SMRY_subreport1.jrxml"));
+		JasperReport mainReport = printService.load("Shipping/SH/SH_DAY_CLOSE.jrxml");
+		return printService.fillReportToPdf(mainReport, params, dataSource);
+	}
 
     private void createDetailRecords(Long transactionPoid, List<CollectionHandoverDetailCreateDTO> details) {
         if (details == null || details.isEmpty()) {

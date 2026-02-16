@@ -31,6 +31,9 @@ class VesselTypeMasterControllerTest {
     @Mock
     private VesselTypeService vesselTypeService;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private VesselTypeMasterController controller;
 
@@ -193,21 +196,31 @@ class VesselTypeMasterControllerTest {
 
     @Test
     void deleteVesselType_Success() {
-        doNothing().when(vesselTypeService).deleteVesselType(1L);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        ResponseEntity<?> response = controller.deleteVesselType(1L);
+            doNothing().when(vesselTypeService).deleteVesselType(1L, 1L, 1L, null);
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        verify(vesselTypeService).deleteVesselType(1L);
+            ResponseEntity<?> response = controller.deleteVesselType(1L, null);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(vesselTypeService).deleteVesselType(1L, 1L, 1L, null);
+        }
     }
 
     @Test
     void deleteVesselType_NotFound() {
-        doThrow(new ResourceNotFoundException("Vessel Type", "vesselTypePoid", "1"))
-                .when(vesselTypeService).deleteVesselType(1L);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        assertThrows(ResourceNotFoundException.class, () -> controller.deleteVesselType(1L));
+            doThrow(new ResourceNotFoundException("Vessel Type", "vesselTypePoid", "1"))
+                    .when(vesselTypeService).deleteVesselType(1L, 1L, 1L, null);
+
+            assertThrows(ResourceNotFoundException.class, () -> controller.deleteVesselType(1L, null));
+        }
     }
 }
 

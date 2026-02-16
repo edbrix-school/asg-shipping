@@ -1,11 +1,13 @@
 package com.asg.shipping.customerautochargeexportbl.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeDetailDto;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLCreateDTO;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLDto;
@@ -52,6 +54,9 @@ class CustomerAutoChargeExportBlServiceImplTest {
 
     @Mock
     private CustomerAutoChargeExportBLMapper mapper;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private CustomerAutoChargeExportBlServiceImpl service;
@@ -261,42 +266,6 @@ class CustomerAutoChargeExportBlServiceImplTest {
         assertThrows(ValidationException.class, () -> service.createCustomerAutoChargeExportBL(createDTO));
     }
 
-
-
-    @Test
-    void testUpdateSuccess() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-
-            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-
-            when(headerRepository.findById(1L))
-                    .thenReturn(Optional.of(headerEntity));
-
-            doNothing().when(mapper).mapUpdateDTOToEntity(any(), any());
-
-            when(headerRepository.save(any()))
-                    .thenReturn(headerEntity);
-
-            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
-                    .thenReturn(Collections.emptyList());
-
-            when(mapper.mapToDto(any()))
-                    .thenReturn(responseDto);
-
-            when(mapper.mapDtlListToDto(any()))
-                    .thenReturn(Collections.emptyList());
-
-            CustomerAutoChargeExportBLDto result =
-                    service.updateCustomerAutoChargeExportBL(1L, updateDTO);
-
-            assertNotNull(result);
-
-            verify(headerRepository).save(any());
-            verify(detailRepository).deleteByTransactionPoid(1L);
-        }
-    }
-
-
     @Test
     void testUpdateNotFound() {
         when(headerRepository.findById(1L)).thenReturn(Optional.empty());
@@ -315,13 +284,16 @@ class CustomerAutoChargeExportBlServiceImplTest {
     }
 
     @Test
-    void testUpdateWithChargeDetails() {
+    void testUpdateWithChargeDetails_create() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
 
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC1");
 
             CustomerAutoChargeDetailDto detailDto = new CustomerAutoChargeDetailDto();
             detailDto.setChargeCodePoid(50L);
+            detailDto.setActionType("ISCREATED");   // ✅ REQUIRED
+
             updateDTO.setChargeDetails(List.of(detailDto));
 
             when(headerRepository.findById(1L))
@@ -335,7 +307,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
             when(detailRepository.getMaxDetRowId(1L))
                     .thenReturn(0L);
 
-            when(mapper.mapDtlFromDto(any(), anyLong(), any()))
+            when(mapper.mapDtlFromDto(any(), anyLong(), anyLong()))
                     .thenReturn(new ShipCustomerChargesDtlEntity());
 
             when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
@@ -352,8 +324,43 @@ class CustomerAutoChargeExportBlServiceImplTest {
 
             assertNotNull(result);
 
-            verify(detailRepository).deleteByTransactionPoid(1L);
-            verify(detailRepository).save(any());
+            verify(detailRepository).getMaxDetRowId(1L);
+            verify(detailRepository).save(any(ShipCustomerChargesDtlEntity.class));
+
+            verify(detailRepository, never()).deleteByTransactionPoid(anyLong());
+        }
+    }
+    @Test
+    void testUpdateWithChargeDetails_delete() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC1");
+
+            CustomerAutoChargeDetailDto detailDto = new CustomerAutoChargeDetailDto();
+            detailDto.setActionType("ISDELETED");
+            detailDto.setDetRowId(10L);
+
+            updateDTO.setChargeDetails(List.of(detailDto));
+
+            when(headerRepository.findById(1L))
+                    .thenReturn(Optional.of(headerEntity));
+
+            when(headerRepository.save(any()))
+                    .thenReturn(headerEntity);
+
+            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
+                    .thenReturn(Collections.emptyList());
+
+            when(mapper.mapToDto(any()))
+                    .thenReturn(responseDto);
+
+            when(mapper.mapDtlListToDto(any()))
+                    .thenReturn(Collections.emptyList());
+
+            service.updateCustomerAutoChargeExportBL(1L, updateDTO);
+
+            verify(detailRepository)
+                    .deleteByTransactionPoidAndDetRowId(1L, 10L);
         }
     }
 
@@ -364,7 +371,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
     void testDeleteNotFound() {
         when(headerRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.deleteCustomerAutoChargeExportBL(1L));
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteCustomerAutoChargeExportBL(1L,new DeleteReasonDto()));
     }
 
     @Test

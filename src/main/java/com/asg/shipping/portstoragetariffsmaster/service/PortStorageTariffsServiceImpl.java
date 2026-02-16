@@ -1,9 +1,11 @@
 package com.asg.shipping.portstoragetariffsmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
@@ -26,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +48,7 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
     private final ShipPortTariffHdrRepository tariffHdrRepository;
     private final ShipPortTariffDtlRepository tariffDtlRepository;
     private final DocumentSearchService documentService;
+    private final DocumentDeleteService documentDeleteService;
     private final LovDataService lovService;
     private final PortStorageTariffMapper mapper;
     private final LoggingService loggingService;
@@ -103,7 +107,6 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         enrichLovData(dto, groupPoid);
 
         // Log view
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully retrieved tariff with id: {}", id);
         return dto;
@@ -189,21 +192,31 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
 
     @Override
     @Transactional
-    public void deleteTariff(Long id) {
-        log.info("Deleting tariff with id: {}", id);
+    public void deleteTariff(Long groupPoid, Long tariffId, Long companyPoid, DeleteReasonDto deleteReasonDto) {
+        log.info("deleteTariff started for tariffId={} companyPoid={} groupPoid={}", 
+            tariffId, companyPoid, groupPoid);
 
-        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+        // 1. Validate entity exists
+        ShipPortTariffHdr tariff = tariffHdrRepository
+                .findByTransactionPoidAndGroupPoid(tariffId, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Tariff", "transactionPoid", tariffId));
 
-        ShipPortTariffHdr tariff = tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Tariff", "transactionPoid", id.toString()));
-
-        // Check if already deleted (idempotent)
+        // 2. Check if already deleted
         if ("Y".equals(tariff.getDeleted())) {
-            log.info("Tariff with id: {} is already deleted", id);
-            return;
+            log.warn("deleteTariff found companyPoid={} tariffId={} already deleted", companyPoid, tariffId);
+            throw new com.asg.shipping.exceptions.CustomException("Cannot delete tariff. It is already deleted.");
         }
 
-        // Soft delete
+        // 3. Use DocumentDeleteService to handle delete reason
+        documentDeleteService.deleteDocument(
+                tariffId,
+                "SHIP_PORT_TARIFF_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                LocalDate.now()
+        );
+
+        // 4. Soft delete the tariff
         tariff.setDeleted("Y");
         tariff.setLastModifiedBy(getCurrentUser());
         tariff.setLastModifiedDate(LocalDateTime.now());
@@ -211,12 +224,12 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         tariffHdrRepository.save(tariff);
 
         // Log deletion
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
-        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), tariffId.toString());
+        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", tariffId);
         String tableName = ShipPortTariffHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), tariffId.toString(), "Deleted", "N", "Y", logDetail, tableName);
 
-        log.info("Successfully deleted tariff with id: {}", id);
+        log.info("deleteTariff completed for tariffId={} companyPoid={}", tariffId, companyPoid);
     }
 
     /**

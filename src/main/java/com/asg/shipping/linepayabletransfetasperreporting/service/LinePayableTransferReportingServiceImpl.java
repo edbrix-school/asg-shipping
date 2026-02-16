@@ -2,11 +2,15 @@ package com.asg.shipping.linepayabletransfetasperreporting.service;
 
 
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
@@ -46,6 +50,8 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     private final ShipLineReportTransferHdrRepository hdrRepository;
     private final ShipLineReportTransferDtlRepository dtlRepository;
     private final DocumentSearchService documentSearchService;
+    private final DocumentDeleteService documentDeleteService;
+    private final LoggingService loggingService;
     private final JdbcTemplate jdbcTemplate;
     private final LinePayableTransferReportingMapper mapper;
 
@@ -95,6 +101,8 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
         // Enrich with LOV data
         enrichLovData(dto);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
         log.info("Successfully retrieved Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return dto;
@@ -148,6 +156,8 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
+
         log.info("Successfully created Line Payable Transfer As Per Reporting with id: {}", saved.getTransactionPoid());
         return result;
     }
@@ -199,20 +209,32 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+
         log.info("Successfully updated Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return result;
     }
 
     @Override
     @Transactional
-    public void deleteLinePayableTransfer(Long transactionPoid) {
+    public void deleteLinePayableTransfer(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
 
         ShipLineReportTransferHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Line Payable Transfer As Per Reporting", "transactionPoid", transactionPoid.toString()));
 
+        documentDeleteService.deleteDocument(
+                transactionPoid,
+                "SHIP_LINE_REPORT_TRANSFER_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                java.time.LocalDate.now()
+        );
+
         entity.setDeleted("Y");
         hdrRepository.save(entity);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
         log.info("Successfully deleted Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
     }
@@ -588,7 +610,11 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             for (LinePayableTransferReportingDtlDto dtlDto : dto.getDetails()) {
                 detRowId++;
                 ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
-                dtlRepository.save(dtl);
+                ShipLineReportTransferDtl saved = dtlRepository.save(dtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Line Payable Transfer Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
             }
         }
     }
@@ -597,6 +623,12 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
      * Update detail tables from DTO
      */
     private void updateDetailTables(LinePayableTransferReportingUpdateDTO dto, Long transactionPoid) {
+        // Get existing details for logging deletions
+        List<ShipLineReportTransferDtl> existingDetails = dtlRepository.findByTransactionPoid(transactionPoid);
+        
+        // Log deletions
+        existingDetails.forEach(deleted -> loggingService.logDelete(deleted, DOC_ID, transactionPoid.toString()));
+        
         // Delete existing details
         dtlRepository.deleteByTransactionPoid(transactionPoid);
 
@@ -606,7 +638,11 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             for (LinePayableTransferReportingDtlDto dtlDto : dto.getDetails()) {
                 detRowId++;
                 ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
-                dtlRepository.save(dtl);
+                ShipLineReportTransferDtl saved = dtlRepository.save(dtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Line Payable Transfer Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
             }
         }
     }

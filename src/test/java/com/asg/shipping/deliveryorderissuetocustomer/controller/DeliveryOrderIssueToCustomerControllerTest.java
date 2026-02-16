@@ -2,6 +2,7 @@ package com.asg.shipping.deliveryorderissuetocustomer.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
@@ -33,6 +34,9 @@ public class DeliveryOrderIssueToCustomerControllerTest {
 
     @Mock
     private DeliveryOrderIssueToCustomerService service;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private DeliveryOrderIssueToCustomerController controller;
@@ -116,8 +120,6 @@ public class DeliveryOrderIssueToCustomerControllerTest {
                 .doPriority("MEDIUM")
                 .deliverySentTo("N")
                 .principalDoNumber("PDO002")
-                .doCntToConsignee("N")
-                .doCntToNotify("N")
                 .doCntToOthers("Y")
                 .doCntToOthersMails("updated@example.com")
                 .build();
@@ -153,7 +155,7 @@ public class DeliveryOrderIssueToCustomerControllerTest {
     void updateDeliveryOrder_Success() throws Exception {
         Long id = 1L;
         when(service.updateDeliveryOrder(eq(id), any(UpdateDeliveryOrderRequestDto.class)))
-                .thenReturn(responseDto);
+                .thenReturn(id);
 
         mockMvc.perform(put("/v1/delivery-order-issue-to-customer/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)

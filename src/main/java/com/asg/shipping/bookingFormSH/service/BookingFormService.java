@@ -53,4 +53,10 @@ public interface BookingFormService {
 	 * Process empty container load
 	 */
 	String processEmptyContainerLoad(Long transactionPoid);
+	
+	byte[] mateBookingPrintForm(Long transactionPoid) throws Exception;
+	
+	byte[] cntEmptyBookingPrintForm(Long transactionPoid) throws Exception;
+	
+	byte[] cntReturnBookingPrintFormAll(Long transactionPoid, String printStamp) throws Exception;
 }

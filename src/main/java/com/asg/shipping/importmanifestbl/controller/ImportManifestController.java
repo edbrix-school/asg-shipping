@@ -1,13 +1,16 @@
 package com.asg.shipping.importmanifestbl.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importManifestUpdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
-import com.asg.shipping.importmanifestbl.service.ImportManifestBlService;
+import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -19,17 +22,22 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
 import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("v1/import-manifest-bl")
@@ -37,7 +45,8 @@ import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 @Tag(name = "import-manifest-bl-controller", description = "Manage Import Manifest BL records")
 public class ImportManifestController {
 
-    private final ImportManifestBlService importManifestBlService;
+    private final ImportManifestService importManifestService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(
@@ -56,7 +65,7 @@ public class ImportManifestController {
     ) {
             Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
             Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
-            ImportManifestBlRequestDto response = importManifestBlService.createImportManifestBl(request, companyPoid, groupPoid);
+            ImportManifestBlRequestDto response = importManifestService.createImportManifestBl(request, companyPoid, groupPoid);
             return success("Import Manifest BL created successfully", response);
 
     }
@@ -73,9 +82,11 @@ public class ImportManifestController {
             @Parameter(description = "Transaction POID", required = true)
             @PathVariable Long id
     ) {
-            ImportManifestBlRequestDto response = importManifestBlService.getImportManifest(id);
-            return success("Import Manifest BL retrieved successfully", response);
+            ImportManifestBlRequestDto response = importManifestService.getImportManifest(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
+        return success("Import Manifest BL retrieved successfully", response);
     }
+
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @Operation(
@@ -91,9 +102,10 @@ public class ImportManifestController {
     @DeleteMapping("/{transactionPoId}")
     public ResponseEntity<?> delete(
             @Parameter(description = "Transaction POID", required = true)
-            @PathVariable Long transactionPoId
-    ) {
-            importManifestBlService.delete(transactionPoId);
+            @PathVariable Long transactionPoId,
+            @Valid @RequestBody DeleteReasonDto deleteReasonDto
+            ) {
+        importManifestService.delete(transactionPoId,deleteReasonDto);
             return success("Import Manifest BL deleted successfully", null);
     }
 
@@ -132,7 +144,7 @@ public class ImportManifestController {
         Long companyPoid = getCompanyPoid();
         Long groupPoid = getGroupPoid();
 
-        ImportManifestBlRequestDto updated = importManifestBlService.updateImportManifestBl(id, dto, companyPoid, groupPoid);
+        ImportManifestBlRequestDto updated = importManifestService.updateImportManifestBl(id, dto, companyPoid, groupPoid);
 
         return success("Import Manifest BL updated successfully", updated);
     }
@@ -152,7 +164,7 @@ public class ImportManifestController {
     public ResponseEntity<?> updateEmailVerification(
             @Valid @RequestBody EmailVerificationRequestDto request
     ) {
-            EmailVerificationResponseDto response = importManifestBlService.updateEmailVerification(request.getTransactionPoId(), request);
+            EmailVerificationResponseDto response = importManifestService.updateEmailVerification(request.getTransactionPoId(), request);
             return success("Email verification updated successfully", response);
 
     }
@@ -172,7 +184,7 @@ public class ImportManifestController {
     public ResponseEntity<?> resendCan(
             @Valid @RequestBody ResendCanRequestDto request
     ) {
-            ResendCanResponseDto response = importManifestBlService.resendCan(request.getTransactionPoId());
+            ResendCanResponseDto response = importManifestService.resendCan(request.getTransactionPoId());
             return success("CAN resent successfully", response);
 
     }
@@ -192,7 +204,7 @@ public class ImportManifestController {
     public ResponseEntity<?> sendEdiEmails(
             @Valid @RequestBody SendEdiEmailsRequestDto request
     ) {
-        SendEdiEmailsResponseDto response = importManifestBlService.sendEdiEmails(request.getTransactionPoId());
+        SendEdiEmailsResponseDto response = importManifestService.sendEdiEmails(request.getTransactionPoId());
         return success("EDI emails sent successfully", response);
     }
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -210,7 +222,7 @@ public class ImportManifestController {
     public ResponseEntity<?> loadEmailFax(
             @Valid @RequestBody LoadEmailFaxRequestDto request
     ) {
-            LoadEmailFaxResponseDto response = importManifestBlService.loadEmailFax(request.getTransactionPoId(), null);
+            LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(request.getTransactionPoId(), null);
             return success("Email/Fax data loaded successfully", response);
 
     }
@@ -231,7 +243,7 @@ public class ImportManifestController {
             @Parameter(description = "Transaction POID", required = true)
             @PathVariable Long id
     ) {
-            BlStatusResponseDto response = importManifestBlService.getBlStatus(id);
+            BlStatusResponseDto response = importManifestService.getBlStatus(id);
             return success("BL status retrieved successfully", response);
     }
 
@@ -277,7 +289,7 @@ public class ImportManifestController {
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters
     ) {
-            Map<String, Object> response = importManifestBlService.list(filters, pageable);
+            Map<String, Object> response = importManifestService.list(filters, pageable);
             return success("Import Manifest BL list retrieved successfully", response);
 
 }
@@ -294,7 +306,7 @@ public class ImportManifestController {
     @GetMapping("/default-values")
     public ResponseEntity<?> getDefaultValues(
     ){
-            DefaultValueDto response = importManifestBlService.getDefaultValues(UserContext.getDocumentId());
+            DefaultValueDto response = importManifestService.getDefaultValues(UserContext.getDocumentId());
             if (response == null) {
                 return notFound("No default values found for docId: " + UserContext.getDocumentId());
             }
@@ -317,7 +329,111 @@ public class ImportManifestController {
             @Parameter(description = "Voyage Transaction POID", example = "12345")
             @RequestParam(required = false) Long voyageTransPoid) {
 
-        ContainersDropDownDto containerTypes = importManifestBlService.getContainerTypesByVoyage(voyageTransPoid);
+        ContainersDropDownDto containerTypes = importManifestService.getContainerTypesByVoyage(voyageTransPoid);
         return ResponseEntity.ok(containerTypes);
+    }
+
+   @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/uncleared-cargo-notice/{transactionPoid}")
+    public ResponseEntity<?> printUnclearedCargoNotice(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid
+          ) {
+        try {
+            byte[] pdf = importManifestService.printUnclearedCargoNotice(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-bl-cargo-notice-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/proforma-invoice/{transactionPoid}")
+    public ResponseEntity<?> printProformaInvoice(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Demurrage Charges", example = "100.00")
+            @RequestParam(required = false) LocalDate demChargesTill,
+            @Parameter(description = "Percentage", example = "5.0")
+            @RequestParam(required = false) Long percentage
+    ) {
+        try {
+            byte[] pdf = importManifestService.printProformaInvoice(transactionPoid,demChargesTill,percentage);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-bl-performa-invoice-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/cargo-arrival-notice/{transactionPoid}")
+    public ResponseEntity<?> printCargoArrivalNotice(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Voyage Transaction POID", example = "67890", required = true)
+            @RequestParam Long voyageTransactionPoid
+    ) {
+        try {
+            byte[] pdf = importManifestService.printCargoArrivalNotice(voyageTransactionPoid,transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-bl-cargo-arrival-notice-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("error",e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/cargo-manifest-print/{transactionPoid}")
+    public ResponseEntity<?> printCargoManifest(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Is Cargo Manifest Print", example = "true")
+            @RequestParam(defaultValue = "false") boolean isCargoManifestPrint
+    ) {
+        try {
+            byte[] pdf = importManifestService.printCargoManifest(transactionPoid, isCargoManifestPrint);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-bl-cargo-manifest-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("error",e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/port-charges/{transactionPoid}")
+    public ResponseEntity<?> printCheckPortCharges(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid
+    ) {
+        try {
+            byte[] pdf = importManifestService.printCheckPortCharges(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=import-manifest-bl-port-charges-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("error",e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
     }
 }

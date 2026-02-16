@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Container_mate_receipts" language="groovy" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="DOC_ID" class="java.lang.String" isForPrompting="false"/>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+    <parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="SUB_FOOTER" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="SUBREPORT_CONTAINER_MATE_RECEIPTS_1" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString>
+		<![CDATA[select GET_COMPANY_NAME(HDR.COMPANY_POID)COMPANY,HDR.TRANSACTION_POID,HDR.TRANSACTION_DATE,HDR.VESSAL_AGENT_NAME,
+nvl(SHIPPER_DETAILS_MANUALLY,GET_CUST_ADDRESS(SHIPPER_POID)) shipper,get_address_Name(HDR.CONSIGNEE_POID)CONSIGNEE,
+get_address_Name(HDR.NOTIFY_POID_1)NOTIFY1,get_vessel_name(HDR.VESSEL_POID)VESSEL,HDR.VESSEL_ETA_DATE,get_LINE_NAME(HDR.LINE_POID,'Y')LINE,
+get_port_name(PORT_OF_LOADING_POID)POL,
+get_port_name(PORT_OF_DISCHARGE_POID)POD,FINAL_DESTINATION "F.DEST",
+HDR.VOYAGE_NO,HDR.BOOKING_ISSUE_NO,HDR.MATE_LOAD_DATE,HDR.MATE_LOAD_NO,HDR.TOTAL_VOLUME,
+HDR.TOTAL_WEIGHT
+from SHIP_MATE_HDR HDR
+WHERE HDR.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="COMPANY" class="java.lang.String"/>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="TRANSACTION_DATE" class="java.sql.Timestamp"/>
+	<field name="VESSAL_AGENT_NAME" class="java.lang.String"/>
+	<field name="SHIPPER" class="java.lang.String"/>
+	<field name="CONSIGNEE" class="java.lang.String"/>
+	<field name="NOTIFY1" class="java.lang.String"/>
+	<field name="VESSEL" class="java.lang.String"/>
+	<field name="VESSEL_ETA_DATE" class="java.sql.Timestamp"/>
+	<field name="LINE" class="java.lang.String"/>
+	<field name="POL" class="java.lang.String"/>
+	<field name="POD" class="java.lang.String"/>
+	<field name="F.DEST" class="java.lang.String"/>
+	<field name="VOYAGE_NO" class="java.lang.String"/>
+	<field name="BOOKING_ISSUE_NO" class="java.lang.String"/>
+	<field name="MATE_LOAD_DATE" class="java.sql.Timestamp"/>
+	<field name="MATE_LOAD_NO" class="java.math.BigDecimal"/>
+	<field name="TOTAL_VOLUME" class="java.math.BigDecimal"/>
+	<field name="TOTAL_WEIGHT" class="java.math.BigDecimal"/>
+	<group name="TRANSACTION_POID">
+		<groupExpression><![CDATA[$F{TRANSACTION_POID}]]></groupExpression>
+		<groupHeader>
+			<band height="114">
+				<textField>
+					<reportElement x="100" y="0" width="322" height="20" uuid="a3060f62-44a0-4141-b875-219044bf6e3c"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{SHIPPER}]]></textFieldExpression>
+				</textField>
+				<textField>
+					<reportElement x="100" y="60" width="176" height="20" uuid="d1ffb521-7a7f-49fb-a5dd-c0f6097ef263"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{LINE}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="13" y="60" width="87" height="20" uuid="ba81db52-282e-4f0c-992e-e6119badf6d2"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Line:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="100" y="20" width="176" height="20" uuid="93dc4cae-eef9-48aa-8b7e-962918f6c73e"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{POL}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="13" y="20" width="87" height="20" uuid="dde5f235-2c18-4f1f-afee-74a123a7dc8a"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Port of Load:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="100" y="40" width="176" height="20" uuid="def5a48d-e2f3-46e3-9c77-9fc44266cff9"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{POD}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="13" y="40" width="92" height="20" uuid="7dafd606-5428-4f03-8c85-a1375f9f45e5"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Port of Discharge:]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="13" y="0" width="87" height="20" uuid="ff7a1b00-d022-4eca-98a7-bf5194ba6533"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Shipper:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="392" y="40" width="152" height="20" uuid="7a56e1e8-d3ad-4774-a5f9-721fa9911889"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="11" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{BOOKING_ISSUE_NO}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="327" y="40" width="65" height="20" uuid="a3e5f6fc-5da9-4e4e-82ca-d5ad5eec96c5"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Booking No:]]></text>
+				</staticText>
+				<textField>
+					<reportElement x="392" y="60" width="152" height="20" uuid="73aa0788-501b-4ac7-859d-3e91d320f1b6"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{F.DEST}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement x="327" y="60" width="65" height="20" uuid="5784de68-68aa-4b45-b510-f1c7d23f8481"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+					</textElement>
+					<text><![CDATA[Final Dest :]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="453" y="82" width="90" height="30" uuid="8c922e00-c281-47ed-a67a-67a69dfe7646"/>
+					<box>
+						<pen lineWidth="0.5"/>
+						<topPen lineWidth="0.5"/>
+						<leftPen lineWidth="0.5"/>
+						<bottomPen lineWidth="0.5"/>
+						<rightPen lineWidth="0.5"/>
+					</box>
+					<textElement textAlignment="Center">
+						<font isBold="true"/>
+					</textElement>
+					<text><![CDATA[Gross Volume (CBM)]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="365" y="82" width="88" height="30" uuid="895dc3b9-b569-461c-b435-07df7b937e49"/>
+					<box>
+						<pen lineWidth="0.5"/>
+						<topPen lineWidth="0.5"/>
+						<leftPen lineWidth="0.5"/>
+						<bottomPen lineWidth="0.5"/>
+						<rightPen lineWidth="0.5"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font isBold="true"/>
+					</textElement>
+					<text><![CDATA[Gross Weight (KGS)]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="13" y="82" width="106" height="30" uuid="c9fc87d5-0436-41ab-aee4-073cce3039e1"/>
+					<box>
+						<pen lineWidth="0.5"/>
+						<topPen lineWidth="0.5"/>
+						<leftPen lineWidth="0.5"/>
+						<bottomPen lineWidth="0.5"/>
+						<rightPen lineWidth="0.5"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font isBold="true"/>
+					</textElement>
+					<text><![CDATA[Container No]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="119" y="82" width="40" height="30" uuid="f98fa6b5-5172-4cd9-9e12-de85e9bc7641"/>
+					<box>
+						<pen lineWidth="0.5"/>
+						<topPen lineWidth="0.5"/>
+						<leftPen lineWidth="0.5"/>
+						<bottomPen lineWidth="0.5"/>
+						<rightPen lineWidth="0.5"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font isBold="true"/>
+					</textElement>
+					<text><![CDATA[Size]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="159" y="82" width="42" height="30" uuid="a26cc907-8416-412b-80bc-81ef49c905e5"/>
+					<box>
+						<pen lineWidth="0.5"/>
+						<topPen lineWidth="0.5"/>
+						<leftPen lineWidth="0.5"/>
+						<bottomPen lineWidth="0.5"/>
+						<rightPen lineWidth="0.5"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font isBold="true"/>
+					</textElement>
+					<text><![CDATA[Type]]></text>
+				</staticText>
+				<staticText>
+					<reportElement x="201" y="82" width="164" height="30" uuid="528a93f6-d4ab-4d6a-8c89-94deafb2e353"/>
+					<box>
+						<pen lineWidth="0.5"/>
+						<topPen lineWidth="0.5"/>
+						<leftPen lineWidth="0.5"/>
+						<bottomPen lineWidth="0.5"/>
+						<rightPen lineWidth="0.5"/>
+					</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font isBold="true"/>
+					</textElement>
+					<text><![CDATA[Cargo]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="31" splitType="Stretch">
+			<subreport>
+				<reportElement x="11" y="0" width="533" height="31" uuid="11dd97b8-4c92-45fe-85bb-3b9358474446"/>
+				<subreportParameter name="LOGIN_COMP_POID">
+					<subreportParameterExpression><![CDATA[$P{LOGIN_COMP_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUB_HEADER}]]></subreportExpression>
+			</subreport>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="113" splitType="Stretch">
+			<staticText>
+				<reportElement x="0" y="0" width="554" height="20" uuid="b55d4736-b403-43bc-a582-ac8dad349818"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" isUnderline="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[SHIPPING ORDER / MATE'S RECEIPT]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="11" y="22" width="89" height="20" uuid="777511c5-03d1-42ef-bd67-f3458cc4bd1f"/>
+				<textElement>
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[To,]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="13" y="46" width="119" height="20" uuid="7519019e-a44f-4706-b513-9a1e1569ed60"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[The Chief Officer]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="13" y="66" width="140" height="20" uuid="58d8b8e0-9f3f-4172-ac94-6c375accdf2a"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Kindly Accept on board ]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="153" y="66" width="204" height="20" uuid="f6d7f1dc-3410-4000-bde2-7305b76049dc"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VESSEL}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="357" y="66" width="35" height="20" uuid="ddb71668-9ec8-4747-81d4-5582fe57982b"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Voy #]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="392" y="66" width="47" height="20" uuid="2978791b-29c9-4b12-b7fd-b10b87b8dc29"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VOYAGE_NO}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="440" y="66" width="35" height="20" uuid="60b7bc7a-9c3c-40fe-b522-e00b0c441114"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[ETA :]]></text>
+			</staticText>
+			<textField pattern="dd-MMM-yy">
+				<reportElement x="476" y="66" width="78" height="20" uuid="55bb0752-cf01-4c13-b59e-df5a847ba6ff"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VESSEL_ETA_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="13" y="90" width="155" height="20" uuid="32c135e8-6609-4038-be31-eaddf54621fd"/>
+				<textElement verticalAlignment="Bottom">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Cargo Detailed below:-]]></text>
+			</staticText>
+			<textField pattern="dd-MMM-yy">
+				<reportElement x="434" y="22" width="100" height="20" uuid="5b2d87d5-d4fb-48af-bf92-4108d13af511"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TRANSACTION_DATE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="392" y="22" width="42" height="20" uuid="e12aceac-cd08-4e7e-9f1f-427b312197e3"/>
+				<textElement verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[Date:]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="392" y="44" width="62" height="20" uuid="90d9e52b-f41f-4575-a5e8-2bb6ad83889e"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="454" y="44" width="40" height="20" uuid="8337ba36-6901-4d9d-8a10-1b02c7cac5ec"/>
+				<textElement>
+					<font isBold="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band height="4" splitType="Stretch">
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="2" width="554" height="1" uuid="9ec55f57-eda0-48ce-a06e-ffab81edbcc6"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="40" splitType="Stretch">
+			<frame>
+				<reportElement style="Row" mode="Opaque" x="0" y="2" width="554" height="37" uuid="6979ffce-27d2-4b83-82e4-886c2188c707"/>
+				<textField pattern="#,##0.000" isBlankWhenNull="true">
+					<reportElement x="365" y="2" width="89" height="27" uuid="a4ccaaad-aa8a-4387-b64f-f71adc33db73"/>
+					<box>
+						<pen lineWidth="0.5" lineStyle="Dotted"/>
+						<topPen lineWidth="0.5" lineStyle="Dotted"/>
+						<leftPen lineWidth="0.5" lineStyle="Dotted"/>
+						<bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+						<rightPen lineWidth="0.5" lineStyle="Dotted"/>
+					</box>
+					<textElement textAlignment="Right"/>
+					<textFieldExpression><![CDATA[$F{TOTAL_WEIGHT}]]></textFieldExpression>
+				</textField>
+				<subreport>
+					<reportElement x="14" y="0" width="351" height="33" uuid="b0d66c9a-5723-4b57-af3c-4d065eb6b976"/>
+					<subreportParameter name="P_TRAN_POID">
+						<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+					</subreportParameter>
+					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+					<subreportExpression><![CDATA[$P{SUBREPORT_CONTAINER_MATE_RECEIPTS_1}]]></subreportExpression>
+				</subreport>
+			</frame>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="454" y="4" width="90" height="27" uuid="b1d76f23-b999-4d20-9015-5cdaa38f4a8b"/>
+				<box>
+					<pen lineWidth="0.5" lineStyle="Dotted"/>
+					<topPen lineWidth="0.5" lineStyle="Dotted"/>
+					<leftPen lineWidth="0.5" lineStyle="Dotted"/>
+					<bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+					<rightPen lineWidth="0.5" lineStyle="Dotted"/>
+				</box>
+				<textElement textAlignment="Right"/>
+				<textFieldExpression><![CDATA[$F{TOTAL_VOLUME}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="260" splitType="Stretch">
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="0" y="3" width="554" height="1" uuid="d289b3ef-2b1e-48fd-b978-d9a4aded8371"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="13" y="5" width="100" height="20" uuid="90da8853-4a53-44af-9f53-18e4b111d415"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" size="12"  pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Note to Shipper: ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="13" y="33" width="530" height="181" uuid="26f46a09-2b07-4047-80f6-4acb5f90b7c4"/>
+				<textElement>
+					<font fontName="Arial"/>
+				</textElement>
+				<text><![CDATA[1. The shipping Order is not transferable and is issued subject to availability of space on the vessel for loading
+    the cargo and to the terms and conditions of the relevant Bill of Lading
+2. The Carriers or the Agents will not assume any reponsibility or liability of whatsoever nature if the cargo covered
+    by this Shipping Order is shut out.
+3. Cargo/Packages stuffed in any container should not exceed safe carrying capacity of the container and stuffed
+    container has to be delivered to the Container Terminal 8 hours before ship's arrival, with all export
+    formalities/Documentation duly completed.
+4. If cargo is of hazardous nature, please ensure that appropriate IMDG labels are affixed on the container before
+    delivering to port.  Any penalities/fines for not affixing proper IMCO lables will be to the account of shipper.
+5. Cancellation of Booking should be intimated to this office in writing at least 8 hours prior to the vessel arrival.
+    If the containers are cancelled and/or rebooked on another vessel/vessels cancellation/rebooked charges as
+    applicable will be to the shipper's account
+6. Container must be collected from the port within five working days from the date of Mate Receipt,
+    otherwise empty storage charges are to be paid by Shipper.
+7.  If export containers are not returned to port within FREE Days line demurage charges applies as per tariff.]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="13" y="214" width="530" height="40" uuid="d9fc2e39-605f-463e-a8b5-08c4f41fc07f"/>
+				<textElement textAlignment="Justified">
+					<font fontName="Arial" size="10"  pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[8. Before returning the laden container to terminal all IMCO labels must be removed, failing which all
+   charges associated with this will be debited to shipper.]]></text>
+			</staticText>
+		</band>
+	</columnFooter>
+	<pageFooter>
+		<band height="75">
+			<staticText>
+				<reportElement x="13" y="0" width="119" height="20" uuid="bd95f00a-4981-4e37-9802-aa95287f812f"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Received on Board]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="389" y="52" width="119" height="20" uuid="224ea745-9914-4f88-b6ac-bb4c351d225a"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[As Agent]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="347" y="3" width="193" height="20" uuid="d14dda13-14b7-486b-bf95-db2d3de20594"/>
+				<textElement textAlignment="Center">
+					<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{COMPANY}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="11" y="53" width="158" height="20" uuid="5c54e7ed-089b-44d4-9a2c-4aa30560e4b7"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VESSEL}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="12" y="15" width="119" height="20" uuid="6e8d5d1f-ef58-4021-bcd4-71624db9773e"/>
+				<textElement verticalAlignment="Top">
+					<font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Cheif Officer]]></text>
+			</staticText>
+		</band>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

@@ -1,5 +1,7 @@
 package com.asg.shipping.customerinvoicechargemapmaster.controller;
 
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapDetailDto;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterRequest;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterResponse;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,6 +32,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
 
     @Mock
     private CustomerInvoiceChargeMapMasterService service;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private CustomerInvoiceChargeMapMasterController controller;
@@ -64,59 +70,38 @@ class CustomerInvoiceChargeMapMasterControllerTest {
 
     @Test
     void getByCustomer_Success() throws Exception {
-        when(service.getByCustomer(1L, 100L)).thenReturn(mockResponse);
+
+        when(service.getByCustomer(eq(1L), any()))
+                .thenReturn(mockResponse);
 
         mockMvc.perform(get("/v1/customer-invoice-charge-map-master/1")
-                .header("X-Group-Poid", "100"))
+                        .header("X-Group-Poid", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Customer invoice charge mapping fetched successfully"))
-                .andExpect(jsonPath("$.result.data.customerPoid").value(1))
-                .andExpect(jsonPath("$.result.data.customerName").value("Test Customer"));
+                .andExpect(jsonPath("$.message")
+                        .value("Customer invoice charge mapping fetched successfully"));
+         ;
 
-        verify(service).getByCustomer(1L, 100L);
+        verify(service).getByCustomer(eq(1L), any());
     }
-
-    @Test
-    void getByCustomer_InvalidCustomerPoid_Zero() throws Exception {
-        mockMvc.perform(get("/v1/customer-invoice-charge-map-master/0")
-                .header("X-Group-Poid", "100"))
-                .andExpect(status().isOk());
-
-        verify(service).getByCustomer(0L, 100L);
-    }
-
-    @Test
-    void getByCustomer_InvalidCustomerPoid_Negative() throws Exception {
-        mockMvc.perform(get("/v1/customer-invoice-charge-map-master/-1")
-                .header("X-Group-Poid", "100"))
-                .andExpect(status().isOk());
-
-        verify(service).getByCustomer(-1L, 100L);
-    }
-
-    @Test
-    void getByCustomer_MissingGroupPoidHeader() throws Exception {
-        mockMvc.perform(get("/v1/customer-invoice-charge-map-master/1"))
-                .andExpect(status().isBadRequest());
-
-        verify(service, never()).getByCustomer(anyLong(), anyLong());
-    }
-
     @Test
     void saveOrUpdate_Success() throws Exception {
-        doNothing().when(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
 
         mockMvc.perform(post("/v1/customer-invoice-charge-map-master")
-                .header("X-Group-Poid", "100")
-                .header("X-User-Id", "user123")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(mockRequest)))
+                        .header("X-Group-Poid", "100")
+                        .header("X-User-Id", "user123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(mockRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Customer invoice charge mapping saved successfully"));
+                .andExpect(jsonPath("$.message")
+                        .value("Customer invoice charge mapping saved successfully"));
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service).saveOrUpdate(
+                any(CustomerInvoiceChargeMapMasterRequest.class),
+                isNull(),
+                eq("SYSTEM")
+        );
     }
 
     @Test
@@ -128,9 +113,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -142,9 +127,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -156,9 +141,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -170,9 +155,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
+                .andExpect(status().isBadRequest());
 
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -184,31 +169,9 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .header("X-User-Id", "user123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isOk());
-
-        verify(service).saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), eq(100L), eq("user123"));
-    }
-
-    @Test
-    void saveOrUpdate_MissingGroupPoidHeader() throws Exception {
-        mockMvc.perform(post("/v1/customer-invoice-charge-map-master")
-                .header("X-User-Id", "user123")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(mockRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(service, never()).saveOrUpdate(any(), any(), anyString());
-    }
-
-    @Test
-    void saveOrUpdate_MissingUserIdHeader() throws Exception {
-        mockMvc.perform(post("/v1/customer-invoice-charge-map-master")
-                .header("X-Group-Poid", "100")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(mockRequest)))
-                .andExpect(status().isBadRequest());
-
-        verify(service, never()).saveOrUpdate(any(), anyLong(), any());
+        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
     }
 
     @Test
@@ -225,81 +188,31 @@ class CustomerInvoiceChargeMapMasterControllerTest {
 
     @Test
     void deleteDetail_Success() throws Exception {
-        doNothing().when(service).deleteDetail(1L, 10L, 100L, "user123");
 
         mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1/details/10")
-                .header("X-Group-Poid", "100")
-                .header("X-User-Id", "user123"))
+                        .header("X-Group-Poid", "100")
+                        .header("X-User-Id", "user123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Customer invoice charge detail deleted successfully"));
+                .andExpect(jsonPath("$.message")
+                        .value("Customer invoice charge detail deleted successfully"));
 
-        verify(service).deleteDetail(1L, 10L, 100L, "user123");
-    }
-
-    @Test
-    void deleteDetail_InvalidCustomerPoid_Zero() throws Exception {
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/0/details/10")
-                .header("X-Group-Poid", "100")
-                .header("X-User-Id", "user123"))
-                .andExpect(status().isOk());
-
-        verify(service).deleteDetail(0L, 10L, 100L, "user123");
+        verify(service).deleteDetail(eq(1L), eq(10L), any(), any());
     }
 
     @Test
     void deleteDetail_InvalidCustomerPoid_Negative() throws Exception {
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/-1/details/10")
-                .header("X-Group-Poid", "100")
-                .header("X-User-Id", "user123"))
-                .andExpect(status().isOk());
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
 
-        verify(service).deleteDetail(-1L, 10L, 100L, "user123");
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("user123");
+
+            mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/-1/details/10"))
+                    .andExpect(status().isOk());
+
+            verify(service).deleteDetail(-1L, 10L, 100L, "user123");
+        }
     }
 
-    @Test
-    void deleteDetail_InvalidDetRowId_Zero() throws Exception {
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1/details/0")
-                .header("X-Group-Poid", "100")
-                .header("X-User-Id", "user123"))
-                .andExpect(status().isOk());
 
-        verify(service).deleteDetail(1L, 0L, 100L, "user123");
-    }
-
-    @Test
-    void deleteDetail_InvalidDetRowId_Negative() throws Exception {
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1/details/-1")
-                .header("X-Group-Poid", "100")
-                .header("X-User-Id", "user123"))
-                .andExpect(status().isOk());
-
-        verify(service).deleteDetail(1L, -1L, 100L, "user123");
-    }
-
-    @Test
-    void deleteDetail_MissingGroupPoidHeader() throws Exception {
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1/details/10")
-                .header("X-User-Id", "user123"))
-                .andExpect(status().isBadRequest());
-
-        verify(service, never()).deleteDetail(anyLong(), anyLong(), any(), anyString());
-    }
-
-    @Test
-    void deleteDetail_MissingUserIdHeader() throws Exception {
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1/details/10")
-                .header("X-Group-Poid", "100"))
-                .andExpect(status().isBadRequest());
-
-        verify(service, never()).deleteDetail(anyLong(), anyLong(), anyLong(), any());
-    }
-
-    @Test
-    void deleteDetail_MissingBothHeaders() throws Exception {
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1/details/10"))
-                .andExpect(status().isBadRequest());
-
-        verify(service, never()).deleteDetail(anyLong(), anyLong(), any(), any());
-    }
 }

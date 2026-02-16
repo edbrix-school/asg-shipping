@@ -1,10 +1,15 @@
 package com.asg.shipping.receipts.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.receipts.dto.*;
+import com.asg.shipping.receipts.enums.ButtonType;
 import com.asg.shipping.receipts.service.ReceiptsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,8 +22,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,11 +37,13 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 @RestController
 @RequestMapping("v1/receipts-shipping")
 @RequiredArgsConstructor
+@Slf4j
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "receipts-controller", description = "Manage Receipts records")
 public class ReceiptsController {
 
 	private final ReceiptsService receiptsService;
+	private final LoggingService loggingService;
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@GetMapping("/{transactionPoid}")
@@ -50,14 +60,11 @@ public class ReceiptsController {
 			@Parameter(description = "Transaction POID", required = true, example = "1001")
 			@PathVariable Long transactionPoid
 	) {
-		try {
+
 			ReceiptsBlDetailsDto response = receiptsService.getReceipt(transactionPoid);
-			return success("Receipt retrieved successfully", response);
-		} catch (ResourceNotFoundException e) {
-			return notFound(e.getMessage());
-		} catch (Exception e) {
-			return internalServerError("Failed to retrieve Receipt: " + e.getMessage());
-		}
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+		return success("Receipt retrieved successfully", response);
+
 	}
 
 	@AllowedAction(UserRolesRightsEnum.CREATE)
@@ -274,10 +281,10 @@ public class ReceiptsController {
 	})
 	public ResponseEntity<?> delete(
 			@Parameter(description = "Transaction POID", required = true, example = "1001")
-			@PathVariable Long transactionPoid
-	) {
+			@PathVariable Long transactionPoid, @RequestBody DeleteReasonDto deleteReasonDto
+			) {
 		try {
-			receiptsService.deleteReceipt(transactionPoid);
+			receiptsService.deleteReceipt(transactionPoid,deleteReasonDto);
 			return success("Receipt deleted successfully", null);
 		} catch (ResourceNotFoundException e) {
 			return notFound(e.getMessage());
@@ -462,4 +469,27 @@ public class ReceiptsController {
 			return internalServerError("Failed to calculate demurrage: " + e.getMessage());
 		}
 	}
+
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@GetMapping("/receipt-invoice/{transactionPoid}")
+	public ResponseEntity<?> receiptAndInvoicePrint(
+			@Parameter(description = "Transaction POID", example = "12345")
+			@PathVariable Long transactionPoid,
+			@Parameter(description = "BL POID", example = "67890")
+			@RequestParam Long blPoid,
+			@RequestParam ButtonType buttonType
+	) {
+		try {
+			byte[] pdf = receiptsService.receiptAndInvoicePrint(transactionPoid, blPoid,buttonType);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=receipts(shipping)" + buttonType.name().toLowerCase() + "-" +  transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF)
+					.body(pdf);
+		} catch (Exception e) {
+			log.error("error",e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+
 }

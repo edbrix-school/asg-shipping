@@ -8,8 +8,12 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestBl.dto.*;
 import com.asg.shipping.exportManifestBl.service.ExportManifestBlService;
+import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
+import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -307,6 +313,89 @@ public class ExportManifestBlController {
         log.info("Successfully retrieved FF job details for BL number: {}", blNumber);
         return ApiResponse.success("FF job details retrieved successfully", result);
     }
+    
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+	@Operation(summary = "Generate BL Print", description = "Generates BL print (original or draft)")
+	@Parameters({
+			@Parameter(name = "X-Document-Id", in = ParameterIn.HEADER, description = "Document identifier required for auditing purposes.", example = "100-352", required = true, schema = @Schema(type = "string", example = "100-352")),
+			@Parameter(name = "X-Action-Requested", in = ParameterIn.HEADER, description = "Action requested must match this endpoint's @AllowedAction (VIEW).", example = "VIEW", required = true, schema = @Schema(type = "string", example = "VIEW")) })
+	@PostMapping("/{transactionPoid}/generate-bl-print")
+	public ResponseEntity<?> generateBlPrint(
+			@Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
+			@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate BL print request", required = true) @Valid @RequestBody GenerateBlPrintRequest request) {
+		try {
+			String docId = UserContext.getDocumentId();
+			byte[] pdf = service.generateBlPrint(transactionPoid, request, docId);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=bl-print-" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for BL Print: {}", transactionPoid, e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@Operation(summary = "Generate Manifest", description = "Generates cargo manifest or freight manifest")
+	@Parameters({
+			@Parameter(name = "X-Document-Id", in = ParameterIn.HEADER, description = "Document identifier required for auditing purposes.", example = "100-352", required = true, schema = @Schema(type = "string", example = "100-352")),
+			@Parameter(name = "X-Action-Requested", in = ParameterIn.HEADER, description = "Action requested must match this endpoint's @AllowedAction (VIEW).", example = "VIEW", required = true, schema = @Schema(type = "string", example = "VIEW")) })
+	@PostMapping("/{transactionPoid}/generate-manifest")
+	public ResponseEntity<?> generateManifest(
+			@Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
+			@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate manifest request", required = true) @Valid @RequestBody GenerateManifestRequest request) {
+		try {
+			String docId = UserContext.getDocumentId();
+			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
+			String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-"
+					: "freight-manifest-";
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=" + fileName + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@Operation(summary = "Generate Detention/Storage Report", description = "Generates detention/storage report")
+	@Parameters({
+			@Parameter(name = "X-Document-Id", in = ParameterIn.HEADER, description = "Document identifier required for auditing purposes.", example = "100-352", required = true, schema = @Schema(type = "string", example = "100-352")),
+			@Parameter(name = "X-Action-Requested", in = ParameterIn.HEADER, description = "Action requested must match this endpoint's @AllowedAction (VIEW).", example = "VIEW", required = true, schema = @Schema(type = "string", example = "VIEW")) })
+	@PostMapping("/{transactionPoid}/generate-detention-storage")
+	public ResponseEntity<?> generateDetentionStorage(
+			@Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+		try {
+			String docId = UserContext.getDocumentId();
+			byte[] pdf = service.generateDetentionStorage(transactionPoid, docId);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=detention-storage-" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for detention or port storage: {}", transactionPoid, e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+	
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@Operation(summary = "Generate PDF for Draft Invoice", description = "Generate PDF report for a specific Draft Invoice")
+	@GetMapping("/exportDraftInvoice/{transactionPoid}")
+	public ResponseEntity<?> exportDraftPrint(@PathVariable Long transactionPoid) {
+		try {
+			byte[] pdf = service.exportDraftPrint(transactionPoid);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=" + "draft-invoice-em-" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for Draft Invoice: {}", transactionPoid, e);
+			return ApiResponse.error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
 }
 
 

@@ -4,7 +4,9 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.DemurrageDetentionPayableTransferCreateDTO;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.DemurrageDetentionPayableTransferDto;
@@ -42,6 +44,10 @@ class DemurrageDetentionPayableTransferServiceImplTest {
 
     @Mock
     private DocumentSearchService documentService;
+    @Mock
+    private DocumentDeleteService documentDeleteService;
+    @Mock
+    private LoggingService loggingService;
     @Mock
     private ShipDemDetnTransferHdrRepository headerRepository;
     @Mock
@@ -185,8 +191,9 @@ class DemurrageDetentionPayableTransferServiceImplTest {
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 100L, 1L))
                     .thenReturn(Optional.of(hdrEntity));
+            when(documentDeleteService.deleteDocument(any(), any(), any(), any(), any())).thenReturn(null);
 
-            assertDoesNotThrow(() -> service.deleteDemurrageDetentionPayableTransfer(1L, 1L, 100L));
+            assertDoesNotThrow(() -> service.deleteDemurrageDetentionPayableTransfer(1L, 1L, 100L, null));
 
             verify(headerRepository).save(argThat(e -> "Y".equals(e.getDeleted())));
         }
@@ -202,7 +209,7 @@ class DemurrageDetentionPayableTransferServiceImplTest {
                     .thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
-                    () -> service.deleteDemurrageDetentionPayableTransfer(1L, 1L, 100L));
+                    () -> service.deleteDemurrageDetentionPayableTransfer(1L, 1L, 100L, null));
         }
     }
 
