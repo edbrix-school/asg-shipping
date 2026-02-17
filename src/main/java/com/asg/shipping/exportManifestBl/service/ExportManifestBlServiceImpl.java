@@ -7,6 +7,7 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exportManifestBl.dto.*;
 import com.asg.shipping.exportManifestBl.dto.ShipBlToFfDto;
@@ -18,6 +19,8 @@ import com.asg.shipping.importManifestUpdate.dto.CargoDescriptionRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ChargeRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ContainerRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.GeneralCargoRequestDto;
+import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
+import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestCargoDtlId;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import net.sf.jasperreports.engine.JasperReport;
+import javax.sql.DataSource;
+
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 @Service
@@ -46,10 +52,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final ExportManifestBlCargoDtlRepository cargoDtlRepository;
     private final ExportManifestBlContainerDtlRepository containerDtlRepository;
     private final ExportManifestBlChargesDtlRepository chargesDtlRepository;
+    private final com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService manifestUpdateService;
     private final DocumentSearchService documentService;
     private final ExportManifestBlMapper mapper;
     private final JdbcTemplate jdbcTemplate;
     private final ShipBlToFfRepository shipBlToFfRepository;
+    private final PrintService printService;
+    private final DataSource dataSource;
 
     @Override
     @Transactional
@@ -213,6 +222,33 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         log.info("Successfully retrieved FF job details for BL number: {}", blNumber);
         return result;
     }
+    
+    @Override
+	public byte[] generateBlPrint(Long transactionPoid, GenerateBlPrintRequest request, String docId) throws Exception {
+		return manifestUpdateService.generateBlPrint(transactionPoid, request, docId);
+	}
+
+	@Override
+	public byte[] generateManifest(Long transactionPoid, GenerateManifestRequest request, String docId)
+			throws Exception {
+		return manifestUpdateService.generateManifest(transactionPoid, request, docId);
+	}
+
+	@Override
+	public byte[] generateDetentionStorage(Long transactionPoid, String docId) throws Exception {
+		return manifestUpdateService.generateDetentionStorage(transactionPoid, docId);
+	}
+	
+	@Override
+	public byte[] exportDraftPrint(Long transactionPoid) throws Exception {
+		String docId=UserContext.getDocumentId();
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
+	    JasperReport mainReport = printService.load("Shipping/SH/SH_INVOICE_DRAFT_EXP.jrxml");
+		params.put("DOC_BL_POID", "0000");
+//		params.put("DETAIL_SHOW_FLAG", "Y");
+		params.put("DOC_KEY_POID_CNT", transactionPoid.toString());
+	    return printService.fillReportToPdf(mainReport, params, dataSource);
+	}
 
     // ==================== Helper Methods ====================
 

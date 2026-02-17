@@ -3,6 +3,7 @@ package com.asg.shipping.bookingFormSH.service;
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 import java.io.BufferedWriter;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -883,11 +884,32 @@ public class BookingFormServiceImpl implements BookingFormService {
 	}
 
 	@Override
-	public byte[] print(Long transactionPoid) throws Exception {
+	public byte[] mateBookingPrintForm(Long transactionPoid) throws Exception {
 		Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-140");
 		JasperReport mainReport = printService.load("Shipping/SH/Container_mate_receipts.jrxml");
-		params.put("CONTAINER_MATE_RECEIPTS_SUBREPORT_1",
+		params.put("SUBREPORT_CONTAINER_MATE_RECEIPTS_1",
 				printService.load("Shipping/SH/Container_mate_receipts_subreport1.jrxml"));
+		return printService.fillReportToPdf(mainReport, params, dataSource);
+	}
+	
+	@Override
+	public byte[] cntEmptyBookingPrintForm(Long transactionPoid) throws Exception {
+		String docId=UserContext.getDocumentId();
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
+		JasperReport mainReport = printService.load("Shipping/SH/Container_Release.jrxml");
+		params.put("SUBREPORT_CONTAINER_RELEASE_1",
+				printService.load("Shipping/SH/Container_Release_subreport1.jrxml"));
+		return printService.fillReportToPdf(mainReport, params, dataSource);
+	}
+	
+	@Override
+	public byte[] cntReturnBookingPrintFormAll(Long transactionPoid,String printStamp) throws Exception {
+		String docId=UserContext.getDocumentId();
+		Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
+		JasperReport mainReport = printService.load("Shipping/SH/Container_Return_ALL.jrxml");
+		params.put("SUBREPORT_CONTAINER_RETURN_ALL_1", printService.load("Shipping/SH/Container_Return_subreport1_ALL.jrxml"));
+		params.put("PRINT_STAMP", printStamp);
+		params.put("ASG_STAMP", getClass().getClassLoader().getResource("jasper/Shipping/jpg/ASG_STAMP.jpg"));
 		return printService.fillReportToPdf(mainReport, params, dataSource);
 	}
 

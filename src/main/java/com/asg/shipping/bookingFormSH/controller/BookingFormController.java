@@ -190,15 +190,15 @@ public class BookingFormController {
     }
 
 	@AllowedAction(UserRolesRightsEnum.PRINT)
-	@GetMapping("/print/{transactionPoid}")
+	@GetMapping("/mateBookingPrintForm/{transactionPoid}")
     public ResponseEntity<?> print(
             @Parameter(description = "Transaction POID", example = "21")
             @PathVariable Long transactionPoid) {
         try {
-            byte[] pdf = bookingFormService.print(transactionPoid);
+            byte[] pdf = bookingFormService.mateBookingPrintForm(transactionPoid);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=booking-form-sh-" + transactionPoid + ".pdf")
+                            "attachment; filename=container-mate-receipts-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -206,4 +206,43 @@ public class BookingFormController {
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
+	
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@GetMapping("/empty-release/{transactionPoid}")
+    public ResponseEntity<?> cntEmptyBookingPrintForm(
+            @Parameter(description = "Transaction POID", example = "21")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = bookingFormService.cntEmptyBookingPrintForm(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=container-empty-release-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+	
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@GetMapping("/all-container/{transactionPoid}")
+    public ResponseEntity<?> cntReturnBookingPrintFormAll(
+            @Parameter(description = "Transaction POID", example = "21")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Print Stamp", example = "Y")
+            @RequestParam String printStamp) {
+        try {
+            byte[] pdf = bookingFormService.cntReturnBookingPrintFormAll(transactionPoid,printStamp);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=all-container-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+	
 }

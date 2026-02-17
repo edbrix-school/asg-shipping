@@ -27,7 +27,7 @@
 	</parameter>
     <parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
     <parameter name="SUB_FOOTER" class="net.sf.jasperreports.engine.JasperReport"/>
-    <parameter name="CONTAINER_MATE_RECEIPTS_SUBREPORT_1" class="net.sf.jasperreports.engine.JasperReport"/>
+    <parameter name="SUBREPORT_CONTAINER_MATE_RECEIPTS_1" class="net.sf.jasperreports.engine.JasperReport"/>
 	<queryString>
 		<![CDATA[select GET_COMPANY_NAME(HDR.COMPANY_POID)COMPANY,HDR.TRANSACTION_POID,HDR.TRANSACTION_DATE,HDR.VESSAL_AGENT_NAME,
 nvl(SHIPPER_DETAILS_MANUALLY,GET_CUST_ADDRESS(SHIPPER_POID)) shipper,get_address_Name(HDR.CONSIGNEE_POID)CONSIGNEE,
@@ -382,7 +382,7 @@ WHERE HDR.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 						<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
 					</subreportParameter>
 					<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-					<subreportExpression><![CDATA[$P{CONTAINER_MATE_RECEIPTS_SUBREPORT_1}]]></subreportExpression>
+					<subreportExpression><![CDATA[$P{SUBREPORT_CONTAINER_MATE_RECEIPTS_1}]]></subreportExpression>
 				</subreport>
 			</frame>
 			<textField pattern="#,##0.000" isBlankWhenNull="true">

@@ -264,12 +264,12 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     public byte[] printCargoManifest(Long transactionPoid, boolean isCargoManifestPrint) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
         params.put("P_FREIGHTCARGO", isCargoManifestPrint ? "FALSE" : "TRUE");
-        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/cargo/Mark_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/cargo/Freight_Detail_Subreport1.jrxml"));
-        params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/cargo/Container_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/cargo/Description_Info_Subreport1.jrxml"));
-        params.put("SUBREPORT_TOTAL_COUNT", printService.load("Shipping/SH/cargo/TotalCount_By_Size.jrxml"));
-        JasperReport mainReport = printService.load("Shipping/SH/cargo/Manifest_Cargo_WithCharges.jrxml");
+        params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+        params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_TOTAL_COUNT", printService.load("Shipping/SH/Cargo/TotalCount_By_Size.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
