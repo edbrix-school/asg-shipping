@@ -7,7 +7,6 @@ import java.util.List;
 
 @Setter
 @Getter
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class ShippingOFOQV2UpdateRequestDto extends  ShippingOFOQV2RequestDto {

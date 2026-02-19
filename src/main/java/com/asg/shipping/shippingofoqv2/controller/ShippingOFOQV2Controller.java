@@ -42,7 +42,7 @@ public class ShippingOFOQV2Controller {
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "OFOQ document request details",
 			required = true,
-			content = @Content(schema = @Schema(implementation = ShippingOFOQV2UpdateRequestDto.class))
+			content = @Content(schema = @Schema(implementation = ShippingOFOQV2RequestDto.class))
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Document saved and submitted successfully",
@@ -51,7 +51,7 @@ public class ShippingOFOQV2Controller {
 			@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
 	public ResponseEntity<?> saveDocument(
-			@Valid @RequestBody ShippingOFOQV2UpdateRequestDto request) {
+			@Valid @RequestBody ShippingOFOQV2RequestDto request) {
 
 		OFOQCheckStatusResponseDto response = shippingOFOQV2Service.createShippingOFOQ(request);
 

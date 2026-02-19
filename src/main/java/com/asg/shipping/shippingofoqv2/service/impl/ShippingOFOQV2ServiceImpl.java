@@ -23,7 +23,6 @@ import com.asg.shipping.shippingofoqv2.repository.*;
 import com.asg.shipping.shippingofoqv2.service.OFOQApiService;
 import com.asg.shipping.shippingofoqv2.service.ShippingOFOQV2Service;
 import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -31,6 +30,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,8 +38,8 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -148,6 +148,8 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                                     .remarks(request.getRemarks())
                                     .transactionDate(LocalDateTime.now())
                                     .deleted("N")
+                                    .manifestType("M")
+                                    .companyPoid(UserContext.getCompanyPoid())
                                     .createdBy(ASGHelperUtils.getCurrentUser())
                                     .createdDate(LocalDateTime.now())
                                     .lastModifiedBy(ASGHelperUtils.getCurrentUser())
@@ -160,7 +162,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
             loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), key);
             log.debug("OFOQ header created with transactionPoid: {}", transactionPoid);
 
-            return submitAndCheckOFOQManifest(transactionPoid, "M", null, request.getDocRef(), request.getVesselPoid());
+            return submitAndCheckOFOQManifest(transactionPoid, "M", "0", request.getDocRef(), request.getVesselPoid());
         } catch (Exception e) {
             log.error("Error creating OFOQ manifest for docRef: {}", request.getDocRef(), e);
             throw e;
@@ -275,8 +277,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .blNumber(dto.getBlNumber())
                     .createdBy(ASGHelperUtils.getCurrentUser())
                     .createdDate(LocalDateTime.now())
-                    .lastModifiedBy(ASGHelperUtils.getCurrentUser())
-                    .lastModifiedDate(LocalDateTime.now())
                     .build();
             OFOQAmendBlDtlRepository.save(entity);
             String logDetail = String.format("Row Created on Amend Bl with DetRowId: %s", detRowId);
@@ -310,30 +310,40 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
     }
 
     @Override
+    @Transactional
     public AmendBlDto amendBl(OFOQAmendBlRequestDto request) {
 
-        submitAndCheckOFOQManifest(request.getTransactionPoid(), "AM", request.getBlNumber(), request.getDocReference(), request.getVesselPoid());
-        AmendBlDto amendBlDto = new AmendBlDto();
-        OFOQAmendBlDtlEntity ofoqAmendBlDtlEntity = OFOQAmendBlDtlRepository.findByTransactionPoidAndBlNumber(
-                request.getTransactionPoid(),
-                request.getBlNumber()
+        if (request.getLineDetails() != null) {
+            updateItemDetails(request.getLineDetails(), request.getTransactionPoid());
+        }
+
+        if (request.getAmendBl() != null) {
+            updateAmendBl(request.getAmendBl(), request.getTransactionPoid());
+        }
+
+        return buildAmendBlResponse(request.getTransactionPoid(), request.getBlNumber(), request.getDocReference(), request.getVesselPoid()
         );
+    }
 
-        List<OFOQManifestAmendmentResponseDtlEntity> ofoqManifestAmendmentResponseDtlEntity =
-                OFOQManifestAmendmentResponseDtlRepository.findByTransactionPoidAndXmlBlNumber(
-                        request.getTransactionPoid(),
-                        request.getBlNumber()
-                );
 
-        amendBlDto.setAmendBL(ofoqMapper.toAmendBLDto(ofoqAmendBlDtlEntity));
-        amendBlDto.setManifestAmendmentResponses(
-                ofoqManifestAmendmentResponseDtlEntity.stream()
+    private AmendBlDto buildAmendBlResponse(Long transactionPoid, String blNumber, String docReference, Long vesselPoid
+    ) {
+
+        submitAndCheckOFOQManifest(transactionPoid, "AM", blNumber, docReference, vesselPoid);
+
+        OFOQAmendBlDtlEntity amendEntity = OFOQAmendBlDtlRepository.findByTransactionPoidAndBlNumber(transactionPoid, blNumber);
+
+        List<OFOQManifestAmendmentResponseDtlEntity> amendmentEntities =
+                OFOQManifestAmendmentResponseDtlRepository
+                        .findByTransactionPoidAndXmlBlNumber(transactionPoid, blNumber);
+
+        AmendBlDto dto = new AmendBlDto();
+        dto.setAmendBL(ofoqMapper.toAmendBLDto(amendEntity));
+        dto.setManifestAmendmentResponses(
+                amendmentEntities.stream()
                         .map(ofoqMapper::toAmendmentResponseDto)
-                        .toList()
-        );
-        return amendBlDto;
-
-
+                        .toList());
+        return dto;
     }
 
     private void validateCheckStatusRequest(OFOQCheckStatusDto request) {
@@ -357,23 +367,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                 blNumber
         );
     }
-
-    private void saveAmendBl(List<OFOQRequestAmendBlDto> amendBl, Long transactionPoid) {
-        amendBl.forEach(dto -> {
-            OFOQAmendBlDtlEntity entity = OFOQAmendBlDtlEntity.builder()
-                    .transactionPoid(transactionPoid)
-                    .detRowId(dto.getDetRowId())
-                    .blNumber(dto.getBlNumber())
-                    .createdBy(ASGHelperUtils.getCurrentUser())
-                    .createdDate(LocalDateTime.now())
-                    .build();
-            OFOQAmendBlDtlRepository.save(entity);
-            String logDetail = String.format("Row Created on Amend Bl with DetRowId: %s", entity.getDetRowId());
-            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
-        });
-    }
-
-    @Transactional
     private void saveItemDetails(List<OFOQItemDtlDto> lineDetails, Long transactionPoid) {
 
         AtomicLong detRowIdCounter =
@@ -398,8 +391,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .checked(dto.getChecked())
                     .createdBy(ASGHelperUtils.getCurrentUser())
                     .createdDate(LocalDateTime.now())
-                    .lastModifiedBy(ASGHelperUtils.getCurrentUser())
-                    .lastModifiedDate(LocalDateTime.now())
+                    .companyPoid(UserContext.getCompanyPoid())
                     .build();
 
             OFOQItemDtlRepository.save(entity);
@@ -409,10 +401,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     detRowId
             );
 
-            loggingService.createLogSummaryEntry(
-                    UserContext.getDocumentId(),
-                    transactionPoid.toString(),
-                    logDetail
+            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail
             );
         });
     }
@@ -437,54 +426,51 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                 .orElseThrow(() -> new ResourceNotFoundException("OFOQ API Data Header", "transactionPoid", transactionPoid));
     }
 
-
-    @Transactional
     private void updateItemDetails(List<OFOQItemDtlDto> lineDetails, Long transactionPoid) {
 
-        List<OFOQItemDtlEntity> itemDtlEntities =  OFOQItemDtlRepository.findByTransactionPoid(transactionPoid);
-        if (itemDtlEntities != null){
+        List<OFOQItemDtlEntity> existingEntities = OFOQItemDtlRepository.findByTransactionPoid(transactionPoid);
 
+        boolean hasExistingData = existingEntities != null && !existingEntities.isEmpty();
+
+        if (!hasExistingData) {
+            for (OFOQItemDtlDto dto : lineDetails) {
+
+                String action = Optional.ofNullable(dto.getActionType()).map(String::toUpperCase)
+                        .orElse("NOCHANGE");
+
+                if ("ISDELETED".equals(action) && dto.getDetRowId() != null) {
+
+                    OFOQItemDtlRepository.deleteByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId());
+                    loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), "Row Deleted from Line Detail with DetRowId: " + dto.getDetRowId());
+                }
+                else if ("ISCREATED".equals(action)) {
+                    saveItemDetails(List.of(dto), transactionPoid);
+                }
+            }
+            return;
         }
 
+        OFOQItemDtlRepository.deleteAllByTransactionPoid(transactionPoid);
+        OFOQAmendBlDtlRepository.flush();
+        OFOQItemDtlRepository.saveAll(existingEntities);
+        lineDetails.stream()
+                .filter(dto ->
+                        "ISDELETED".equalsIgnoreCase(dto.getActionType())
+                                && dto.getDetRowId() != null
+                )
+                .forEach(dto -> {
+                    OFOQItemDtlRepository.deleteByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId());
+                    loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), "Row Deleted from Line Detail with DetRowId: " + dto.getDetRowId());
+                });
 
+        List<OFOQItemDtlDto> createdItems = lineDetails.stream()
+                .filter(dto ->
+                        "ISCREATED".equalsIgnoreCase(dto.getActionType())
+                )
+                .collect(Collectors.toList());
 
-
-        Map<Long, OFOQItemDtlDto> deletedItemDetailsMap =
-                lineDetails.stream()
-                        .filter(dto ->
-                                dto.getActionType() != null &&
-                                        dto.getActionType().equalsIgnoreCase("ISDELETED") &&
-                                        dto.getDetRowId() != null
-                        )
-                        .collect(Collectors.toMap(
-                                OFOQItemDtlDto::getDetRowId,
-                                Function.identity()
-                        ));
-
-        for (OFOQItemDtlDto dto : lineDetails) {
-            String action = dto.getActionType() != null
-                    ? dto.getActionType().toUpperCase()
-                    : "NOCHANGE";
-
-
-            switch (action) {
-
-                case "ISDELETED":
-                    if (dto.getDetRowId() != null) {
-                        OFOQItemDtlRepository.deleteByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId());
-                        String logDetail = String.format("Row Deleted from Line Detail with DetRowId: %s", dto.getDetRowId());
-                        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
-                    }
-                    break;
-
-
-                    case "ISCREATED":
-                    saveItemDetails(List.of(dto), transactionPoid);
-                    break;
-
-                    default:
-                    break;
-            }
+        if (!createdItems.isEmpty()) {
+            saveItemDetails(createdItems, transactionPoid);
         }
     }
 
@@ -498,16 +484,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     xmlDtos.stream()
                             .map(OFOQManifestXmlDto::getXmlData)
                             .collect(Collectors.joining());
-
-            OFOQManifestSubmitResponseDto apiResponse =
-                    OFOQApiService.callOFOQApi(
-                            xmlData,
-                            manifestType,
-                            blNumber,
-                            transactionPoid,
-                            docRef
-                    );
-
+            OFOQManifestSubmitResponseDto apiResponse = OFOQApiService.callOFOQApi(xmlData, manifestType, blNumber, transactionPoid, docRef);
             if (apiResponse.getFunctionalRefId() != null) {
                 log.info("OFOQ manifest submitted successfully with functionalRefId: {}", apiResponse.getFunctionalRefId());
                 return checkStatus(OFOQCheckStatusDto.builder()
