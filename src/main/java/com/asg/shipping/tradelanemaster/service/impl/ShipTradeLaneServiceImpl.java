@@ -62,8 +62,6 @@ public class ShipTradeLaneServiceImpl implements ShipTradeLaneService {
         entity.setActive(Boolean.TRUE.equals(request.getActive()) ? FLAG_YES : FLAG_NO);
         entity.setSeqNo(request.getSeqNo().longValue());
         entity.setDeleted(FLAG_NO);
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
 
         entity = shipTradelaneMasterRepository.save(entity);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED,UserContext.getDocumentId(),entity.getTradeLanePoid().toString());
@@ -93,8 +91,6 @@ public class ShipTradeLaneServiceImpl implements ShipTradeLaneService {
         existingEntity.setRegionPoid(request.getRegionPoid());
         existingEntity.setActive(Boolean.TRUE.equals(request.getActive()) ? FLAG_YES : FLAG_NO);
         existingEntity.setSeqNo(request.getSeqNo().longValue());
-        existingEntity.setLastModifiedBy(getCurrentUser());
-        existingEntity.setLastModifiedDate(LocalDateTime.now());
 
         existingEntity = shipTradelaneMasterRepository.save(existingEntity);
         loggingService.logChanges(oldEntity,existingEntity, ShipTradelaneMaster.class,UserContext.getDocumentId(),tradeLanePoid.toString(),LogDetailsEnum.MODIFIED,"TRADELANE_POID");

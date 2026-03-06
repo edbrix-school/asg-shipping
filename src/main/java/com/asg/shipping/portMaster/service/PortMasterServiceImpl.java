@@ -69,8 +69,6 @@ public class PortMasterServiceImpl implements PortMasterService {
 		entity.setSeqno(request.getSeqno());
 		entity.setActive(request.getActive() != null ? request.getActive() : "Y");
 		entity.setDeleted("N");
-		entity.setCreatedBy(userId);
-		entity.setCreatedDate(LocalDateTime.now());
 
 		repository.save(entity);
 		Long portPoid = repository.findByGroupPoidAndPortCode(groupPoid, request.getPortCode())
@@ -115,9 +113,6 @@ public class PortMasterServiceImpl implements PortMasterService {
 		entity.setGlobalPortCode(request.getGlobalPortCode());
 		entity.setSeqno(request.getSeqno());
 
-		entity.setLastModifiedBy(userId);
-		entity.setLastModifiedDate(LocalDateTime.now());
-
 		repository.save(entity);
 		String key = entity.getPortPoid().toString();
 		String docId = UserContext.getDocumentId();
@@ -152,8 +147,6 @@ public class PortMasterServiceImpl implements PortMasterService {
 			throw new RuntimeException("Port has already been deleted.");
 
 		entity.setDeleted("Y");
-		entity.setLastModifiedBy(userId);
-		entity.setLastModifiedDate(LocalDateTime.now());
 	}
 
 	private Map<String, Object> listPorts(String docId, FilterRequestDto request, Pageable pageable) {

@@ -2,6 +2,7 @@ package com.asg.shipping.portMaster.entity;
 
 import java.time.LocalDateTime;
 
+import com.asg.common.lib.entity.BaseEntity;
 import org.hibernate.annotations.DynamicUpdate;
 
 import jakarta.persistence.Column;
@@ -19,7 +20,7 @@ import lombok.Data;
 @IdClass(PortMasterId.class)
 @DynamicUpdate
 @Data
-public class PortMaster {
+public class PortMaster extends BaseEntity {
 
 	@Id
 	@Column(name = "PORT_POID", nullable = false)
@@ -58,17 +59,5 @@ public class PortMaster {
 
 	@Column(name = "DELETED", length = 1)
 	private String deleted;
-
-	@Column(name = "CREATED_BY")
-	private String createdBy;
-
-	@Column(name = "CREATED_DATE")
-	private LocalDateTime createdDate;
-
-	@Column(name = "LASTMODIFIED_BY")
-	private String lastModifiedBy;
-
-	@Column(name = "LASTMODIFIED_DATE")
-	private LocalDateTime lastModifiedDate;
 
 }

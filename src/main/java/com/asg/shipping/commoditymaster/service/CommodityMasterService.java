@@ -119,9 +119,7 @@ public class CommodityMasterService {
 
         commodity.setDeleted("Y");
         commodity.setActive("N");
-        commodity.setLastmodifiedBy(UserContext.getUserName());
-        commodity.setLastmodifiedDate(Timestamp.from(Instant.now()));
-        
+
         commodityMasterRepository.save(commodity);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), commodityPoid.toString());

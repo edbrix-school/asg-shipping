@@ -88,12 +88,6 @@ public class ContainerTerminalTypeMapper {
         );
 
         entity.setDeleted("N");
-
-        entity.setCreatedBy(userId);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
-
         entity.setGroupPoid(groupPoid);
 
         return entity;
@@ -138,9 +132,6 @@ public class ContainerTerminalTypeMapper {
                             : "N"
             );
         }
-
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**

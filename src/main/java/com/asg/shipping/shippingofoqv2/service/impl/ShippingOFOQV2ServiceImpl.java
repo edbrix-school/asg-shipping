@@ -145,10 +145,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                                     .remarks(request.getRemarks())
                                     .transactionDate(LocalDateTime.now())
                                     .deleted("N")
-                                    .createdBy(ASGHelperUtils.getCurrentUser())
-                                    .createdDate(LocalDateTime.now())
-                                    .lastModifiedBy(ASGHelperUtils.getCurrentUser())
-                                    .lastModifiedDate(LocalDateTime.now())
                                     .build()
                     );
 
@@ -273,10 +269,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                         .transactionPoid(transactionPoid)
                         .detRowId(dto.getDetRowId())
                         .blNumber(dto.getBlNumber())
-                        .createdBy(ASGHelperUtils.getCurrentUser())
-                        .createdDate(LocalDateTime.now())
-                        .lastModifiedBy(ASGHelperUtils.getCurrentUser())
-                        .lastModifiedDate(LocalDateTime.now())
                         .build();
                 OFOQAmendBlDtlRepository.save(entity);
                 String logDetail = String.format("Row Created on Amend Bl with DetRowId: %s", entity.getDetRowId());
@@ -366,8 +358,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .transactionPoid(transactionPoid)
                     .detRowId(dto.getDetRowId())
                     .blNumber(dto.getBlNumber())
-                    .createdBy(ASGHelperUtils.getCurrentUser())
-                    .createdDate(LocalDateTime.now())
                     .build();
             OFOQAmendBlDtlRepository.save(entity);
             String logDetail = String.format("Row Created on Amend Bl with DetRowId: %s", entity.getDetRowId());
@@ -398,10 +388,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .sailDate(dto.getSailDate() != null ? dto.getSailDate().atTime(LocalTime.now()) : null)
                     .drilldownLinkInfo(dto.getDrillDownLinkInfo())
                     .checked(dto.getChecked())
-                    .createdBy(ASGHelperUtils.getCurrentUser())
-                    .createdDate(LocalDateTime.now())
-                    .lastModifiedBy(ASGHelperUtils.getCurrentUser())
-                    .lastModifiedDate(LocalDateTime.now())
                     .build();
 
             OFOQItemDtlRepository.save(entity);
