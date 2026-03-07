@@ -108,6 +108,17 @@ public class ImportManifestController {
         importManifestService.delete(transactionPoId,deleteReasonDto);
             return success("Import Manifest BL deleted successfully", null);
     }
+    @PostMapping("/{transactionPoId}/save-emails")
+    public ResponseEntity<SaveEmailsResponseDto> saveEmails(
+            @PathVariable Long transactionPoId,
+            @RequestBody SaveEmailsRequestDto request) {
+
+        String message = importManifestService.saveEmails(transactionPoId, request);
+        return ResponseEntity.ok(SaveEmailsResponseDto.builder()
+                .message(message)
+                .build());
+    }
+
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @PutMapping("/{id}")

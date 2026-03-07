@@ -48,4 +48,6 @@ public interface ImportManifestService {
     byte[] printCargoManifest(Long transactionPoid,boolean isCargoManifestPrint) throws Exception;
 
     byte[] printCheckPortCharges(Long transactionPoid) throws Exception;
+
+    String saveEmails(Long transactionPoId, SaveEmailsRequestDto request);
 }

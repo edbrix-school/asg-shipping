@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -280,7 +279,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     public SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId) {
         try {
             findEntityById(transactionPoId);
-            return procRepository.sendEdiEmails(transactionPoId);
+            return procRepository.getEdiEmails(transactionPoId);
         } catch (ResourceNotFoundException e) {
             log.error("Failed to send EDI emails: Entity not found for transactionPoId: {}", transactionPoId);
             throw e;

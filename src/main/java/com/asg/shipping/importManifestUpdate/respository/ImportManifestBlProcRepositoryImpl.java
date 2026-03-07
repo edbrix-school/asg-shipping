@@ -2,6 +2,7 @@ package com.asg.shipping.importManifestUpdate.respository;
 
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.importManifestUpdate.dto.EmailVerificationRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.EmailVerificationResponseDto;
 import com.asg.shipping.importManifestUpdate.dto.ResendCanResponseDto;
@@ -12,6 +13,7 @@ import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -74,9 +76,8 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
     }
 
     @Override
-    public SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId) {
+    public SendEdiEmailsResponseDto getEdiEmails(Long transactionPoId) {
         try {
-
 
             StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_BL_EDI_EMAILS");
             query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
@@ -92,27 +93,72 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
 
             String emailIds = (String) query.getOutputParameterValue("P_EMAI_IDS");
 
-            if (emailIds != null && emailIds.startsWith("ERRPR")) {
+            if (emailIds != null && emailIds.startsWith("ERROR")) {
                 throw new RuntimeException("EDI email processing failed: " + emailIds);
             }
 
-            if ("@".equals(emailIds)) {
+            if (emailIds == null || "@".equals(emailIds) || emailIds.trim().isEmpty()) {
                 emailIds = "";
             }
 
-            int emailsSent = (emailIds != null && !emailIds.trim().isEmpty()) ?
-                    emailIds.split(";").length : 0;
+            int emailsSent = emailIds.isEmpty() ? 0 : emailIds.split(",").length;
 
             return SendEdiEmailsResponseDto.builder()
                     .emailIds(emailIds)
                     .emailsSent(emailsSent)
                     .build();
 
+        } catch (ResourceNotFoundException e) {
+            log.error("Failed to send EDI emails: Entity not found for transactionPoId: {}", transactionPoId);
+            throw e;
         } catch (Exception e) {
             log.error("Error sending EDI emails for transactionPoId: {}", transactionPoId, e);
-            throw new RuntimeException("Failed to send EDI emails: " + e.getMessage());
+            throw new RuntimeException("Failed to send EDI emails: " + e.getMessage(), e);
         }
     }
+
+    @Override
+    public void saveEmailsToDb(Long transactionPoId, String addressType,
+                               String email1, String email2, String scope) {
+        try {
+            StoredProcedureQuery query = entityManager
+                    .createStoredProcedureQuery("SP_Save_Emails_Data_DB");
+
+            query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_USER_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DOC_ID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_ADDRESS_TYPE", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_EMAIL1", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_EMAIL2", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_SCOPE", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_STATUS", String.class, ParameterMode.OUT);
+
+            query.setParameter("P_GROUP_POID", UserContext.getGroupPoid());
+            query.setParameter("P_COMPANY_POID", UserContext.getCompanyPoid());
+            query.setParameter("P_USER_POID", UserContext.getUserPoid());
+            query.setParameter("P_DOC_ID", UserContext.getDocumentId()); // Document ID for manifest
+            query.setParameter("P_DOC_KEY_POID", transactionPoId);
+            query.setParameter("P_ADDRESS_TYPE", addressType);
+            query.setParameter("P_EMAIL1", email1);
+            query.setParameter("P_EMAIL2", email2);
+            query.setParameter("P_SCOPE", scope);
+
+            query.execute();
+
+            String status = (String) query.getOutputParameterValue("P_STATUS");
+
+            if (status != null && status.contains("ERROR")) {
+                throw new RuntimeException("Failed to save emails: " + status);
+            }
+
+        } catch (Exception e) {
+            log.error("Error saving emails for transactionPoId: {}", transactionPoId, e);
+            throw new RuntimeException("Failed to save emails: " + e.getMessage(), e);
+        }
+    }
+
 
 
 
