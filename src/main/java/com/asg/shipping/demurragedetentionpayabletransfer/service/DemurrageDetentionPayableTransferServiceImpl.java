@@ -139,13 +139,10 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         Long incomeGlPoid = dto.getIncomeGlPoid();
 
         if (dto.getLinePoid() != null && dto.getBlType() != null) {
-            // Call PROC_DEM_DEN_SET_DEFAULT to get default payable GL
             String defaultPayableGl = callProcDemDenSetDefault(dto.getLinePoid(), dto.getBlType());
             if (defaultPayableGl != null && !defaultPayableGl.equals("NO_DATA")) {
                 payableGlPoid = Long.parseLong(defaultPayableGl);
             }
-
-            // Get income GL from global parameter
             if (incomeGlPoid == null) {
                 incomeGlPoid = getIncomeGlPoidFromParameter(groupPoid);
             }
@@ -810,17 +807,17 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         Long userPoid = com.asg.common.lib.security.util.UserContext.getUserPoid();
 
         // Enrich header LOVs
-        enrichLov(dto.getLinePoid(), dto::setLinePoidDet, "LINE", groupPoid, companyPoid, userPoid);
-        enrichLov(dto.getPayableGlPoid(), dto::setPayableGlPoidDet, "GL_ACCOUNT", groupPoid, companyPoid, userPoid);
-        enrichLov(dto.getIncomeGlPoid(), dto::setIncomeGlPoidDet, "GL_ACCOUNT", groupPoid, companyPoid, userPoid);
+        enrichLov(dto.getLinePoid(), dto::setLinePoidDet, "LINE_MASTER", groupPoid, companyPoid, userPoid);
+        enrichLov(dto.getPayableGlPoid(), dto::setPayableGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid, userPoid);
+        enrichLov(dto.getIncomeGlPoid(), dto::setIncomeGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid, userPoid);
 
         // Enrich transfer detail LOVs
         if (dto.getTransferDetails() != null) {
             for (DemurrageDetentionTransferDetailDto detail : dto.getTransferDetails()) {
                 enrichLov(detail.getMainfestTransactionPoid(), detail::setMainfestTransactionPoidDet, "MANIFEST", groupPoid, companyPoid, userPoid);
-                enrichLov(detail.getLinePoid(), detail::setLinePoidDet, "LINE", groupPoid, companyPoid, userPoid);
+                enrichLov(detail.getLinePoid(), detail::setLinePoidDet, "LINE_MASTER", groupPoid, companyPoid, userPoid);
                 if (detail.getEquipmentIsoType() != null && !detail.getEquipmentIsoType().isEmpty()) {
-                    enrichLov(detail.getEquipmentIsoType(), detail::setEquipmentIsoTypeDet, "CONTAINER_TYPE", groupPoid, companyPoid, userPoid);
+                    enrichLov(detail.getEquipmentIsoType(), detail::setEquipmentIsoTypeDet, "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid);
                 }
             }
         }
@@ -828,7 +825,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         // Enrich bill detail LOVs
         if (dto.getBillDetails() != null) {
             for (DemurrageDetentionTransferBillDetailDto detail : dto.getBillDetails()) {
-                enrichLov(detail.getGlPoid(), detail::setGlPoidDet, "GL_ACCOUNT", groupPoid, companyPoid, userPoid);
+                enrichLov(detail.getGlPoid(), detail::setGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid, userPoid);
             }
         }
     }
@@ -843,6 +840,43 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 log.warn("Failed to fetch {} LOV for poid: {}", lovType, poid, e);
             }
         }
+    }
+
+    @Override
+    public Map<String, Object> getAutoPopulatedGlAccounts(Long linePoid, String blType, Long groupPoid) {
+        log.info("Getting auto-populated GL accounts for line: {}, blType: {}", linePoid, blType);
+
+        Long payableGlPoid = null;
+        Long incomeGlPoid = null;
+        LovGetListDto payableGlDet = null;
+        LovGetListDto incomeGlDet = null;
+
+        if (linePoid != null && blType != null) {
+            String defaultPayableGl = callProcDemDenSetDefault(linePoid, blType);
+            if (defaultPayableGl != null && !defaultPayableGl.equals("NO_DATA")) {
+                payableGlPoid = Long.parseLong(defaultPayableGl);
+                try {
+                    payableGlDet = lovService.getDetailsByPoidAndLovName(payableGlPoid, "GL_MASTER_LEDGERS");
+                } catch (Exception e) {
+                    log.warn("Failed to fetch GL_MASTER_LEDGERS LOV for payable GL: {}", payableGlPoid, e);
+                }
+            }
+            incomeGlPoid = getIncomeGlPoidFromParameter(groupPoid);
+            if (incomeGlPoid != null) {
+                try {
+                    incomeGlDet = lovService.getDetailsByPoidAndLovName(incomeGlPoid, "GL_MASTER_LEDGERS");
+                } catch (Exception e) {
+                    log.warn("Failed to fetch GL_MASTER_LEDGERS LOV for income GL: {}", incomeGlPoid, e);
+                }
+            }
+        }
+
+        return Map.of(
+                "payableGlPoid", payableGlPoid,
+                "payableGlDet", payableGlDet,
+                "incomeGlPoid", incomeGlPoid,
+                "incomeGlDet", incomeGlDet
+        );
     }
 
     private void enrichLov(String code, java.util.function.Consumer<LovGetListDto> setter, String lovType,
