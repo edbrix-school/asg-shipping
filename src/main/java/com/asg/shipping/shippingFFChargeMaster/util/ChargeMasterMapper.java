@@ -95,11 +95,6 @@ public class ChargeMasterMapper {
             entity.setActive("Y");
         }
 
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -143,8 +138,5 @@ public class ChargeMasterMapper {
             entity.setActive(dto.getActive());
         }
 
-        // Update audit fields (do not update createdBy/createdDate)
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 }

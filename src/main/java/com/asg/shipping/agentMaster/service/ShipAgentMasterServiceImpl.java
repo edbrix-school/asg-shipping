@@ -58,8 +58,6 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .countryPoid(request.getCountryPoid())
                 .active(Boolean.TRUE.equals(request.getActive()) ? "Y" : "N")
                 .deleted("N")
-                .createdBy(getCurrentUser())
-                .createdDate(LocalDateTime.now())
                 .build();
 
         ShipAgentMasterEntity saved = repository.save(entity);
@@ -94,8 +92,6 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         entity.setRemarks(request.getRemarks());
         entity.setSeqNo(request.getSeqNo());
         entity.setActive(Boolean.TRUE.equals(request.getActive()) ? "Y" : "N");
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         ShipAgentMasterEntity shipAgentMasterEntity =  repository.save(entity);
 

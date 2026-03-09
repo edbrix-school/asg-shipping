@@ -255,10 +255,6 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                     .excludedFromEdi(sourceCharge.getExcludedFromEdi())
                     .defaultPrintGroupEdi(sourceCharge.getDefaultPrintGroupEdi())
                     .wkyrptIncludeAs(sourceCharge.getWkyrptIncludeAs())
-                    .createdBy(getCurrentUser())
-                    .createdDate(LocalDateTime.now())
-                    .lastModifiedBy(getCurrentUser())
-                    .lastModifiedDate(LocalDateTime.now())
                     .build();
 
             chargeDtlRepository.save(newCharge);

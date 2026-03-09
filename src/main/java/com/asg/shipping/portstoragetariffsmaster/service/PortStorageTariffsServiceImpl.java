@@ -218,8 +218,6 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
 
         // 4. Soft delete the tariff
         tariff.setDeleted("Y");
-        tariff.setLastModifiedBy(getCurrentUser());
-        tariff.setLastModifiedDate(LocalDateTime.now());
 
         tariffHdrRepository.save(tariff);
 

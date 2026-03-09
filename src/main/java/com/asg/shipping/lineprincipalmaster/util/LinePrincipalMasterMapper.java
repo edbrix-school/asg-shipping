@@ -151,10 +151,6 @@ public class LinePrincipalMasterMapper {
         }
 
         // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -223,8 +219,6 @@ public class LinePrincipalMasterMapper {
         }
 
         // Update audit fields (do not update createdBy/createdDate)
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**
@@ -275,10 +269,6 @@ public class LinePrincipalMasterMapper {
                 .excludedFromEdi(dto.getExcludedFromEdi())
                 .defaultPrintGroupEdi(dto.getDefaultPrintGroupEdi())
                 .wkyrptIncludeAs(dto.getWkyrptIncludeAs())
-                .createdBy(currentUser)
-                .createdDate(LocalDateTime.now())
-                .lastModifiedBy(currentUser)
-                .lastModifiedDate(LocalDateTime.now())
                 .build();
 
         return charge;
@@ -296,8 +286,6 @@ public class LinePrincipalMasterMapper {
         charge.setExcludedFromEdi(dto.getExcludedFromEdi());
         charge.setDefaultPrintGroupEdi(dto.getDefaultPrintGroupEdi());
         charge.setWkyrptIncludeAs(dto.getWkyrptIncludeAs());
-        charge.setLastModifiedBy(currentUser);
-        charge.setLastModifiedDate(LocalDateTime.now());
     }
 }
 

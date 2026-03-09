@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,7 +21,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ShipLineMaster {
+public class ShipLineMaster extends BaseEntity {
 
     @Id
     @Column(name = "LINE_POID", nullable = false)
@@ -84,18 +85,6 @@ public class ShipLineMaster {
 
     @Column(name = "SEQNO", precision = 5)
     private Integer seqno;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;
@@ -195,9 +184,6 @@ public class ShipLineMaster {
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
         if (deleted == null) {
             deleted = "N";
         }
@@ -209,9 +195,9 @@ public class ShipLineMaster {
         }
     }
 
-    @PreUpdate
+   /* @PreUpdate
     protected void onUpdate() {
         lastModifiedDate = LocalDateTime.now();
-    }
+    }*/
 }
 

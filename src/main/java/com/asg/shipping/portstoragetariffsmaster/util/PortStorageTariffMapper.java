@@ -107,12 +107,6 @@ public class PortStorageTariffMapper {
         entity.setDocRef(dto.getDocRef());
         entity.setCompanyPoid(companyPoid);
 
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-
         // Set deleted flag
         entity.setDeleted("N");
     }
@@ -131,9 +125,6 @@ public class PortStorageTariffMapper {
         entity.setDocRef(dto.getDocRef());
         entity.setCompanyPoid(companyPoid);
 
-        // Update audit fields (do not update createdBy/createdDate)
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**
@@ -159,12 +150,6 @@ public class PortStorageTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-
-        // Set audit fields
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         return entity;
     }
@@ -193,12 +178,6 @@ public class PortStorageTariffMapper {
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
 
-        // Set audit fields
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
-
         return entity;
     }
 
@@ -224,8 +203,5 @@ public class PortStorageTariffMapper {
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
 
-        // Update audit fields (do not update createdBy/createdDate)
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 }

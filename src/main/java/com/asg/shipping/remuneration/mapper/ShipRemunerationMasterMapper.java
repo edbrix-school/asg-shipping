@@ -58,11 +58,6 @@ public class ShipRemunerationMasterMapper {
         entity.setRemunBookedByUsed(dto.getRemunBookedByUsed());
 
         entity.setDeleted("N");
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setCreatedBy(UserContext.getUserId());
-        entity.setLastModifiedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(UserContext.getUserId());
-
         return entity;
     }
 
@@ -81,7 +76,5 @@ public class ShipRemunerationMasterMapper {
         entity.setGlPoid(dto.getGlPoid());
         entity.setRemunBookedByUsed(dto.getRemunBookedByUsed());
 
-        entity.setLastModifiedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(UserContext.getUserId());
     }
 }

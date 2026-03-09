@@ -1,5 +1,6 @@
 package com.asg.shipping.portstoragetariffsmaster.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ShipPortTariffDtlId.class)
-public class ShipPortTariffDtl {
+public class ShipPortTariffDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -77,31 +78,19 @@ public class ShipPortTariffDtl {
     @Column(name = "SLAB7_RATE", precision = 18, scale = 2)
     private BigDecimal slab7Rate;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ShipPortTariffHdr tariffHdr;
 
-    @PrePersist
+  /*  @PrePersist
     protected void onCreate() {
         if (createdDate == null) {
             createdDate = LocalDateTime.now();
         }
-    }
+    }*/
 
-    @PreUpdate
+  /*  @PreUpdate
     protected void onUpdate() {
         lastModifiedDate = LocalDateTime.now();
-    }
+    }*/
 }
