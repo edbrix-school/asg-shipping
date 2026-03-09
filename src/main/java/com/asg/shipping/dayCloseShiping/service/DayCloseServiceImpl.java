@@ -1,31 +1,9 @@
 package com.asg.shipping.dayCloseShiping.service;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.sql.DataSource;
-
-import com.asg.common.lib.dto.request.LogRequestDto;
-import com.asg.shipping.bookingFormSH.dto.BookingFormContainerDetailDto;
-import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
-import org.springframework.beans.BeanUtils;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.simple.SimpleJdbcCall;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
@@ -34,7 +12,6 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDenominationDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
@@ -46,140 +23,161 @@ import com.asg.shipping.dayCloseShiping.repository.ArShDayEndCloseDtlRepository;
 import com.asg.shipping.dayCloseShiping.repository.ArShDayEndCloseHdrRepository;
 import com.asg.shipping.dayCloseShiping.repository.ArShReceiptHdrRepository;
 import com.asg.shipping.dayCloseShiping.util.DayCloseMapper;
-
+import io.micrometer.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
 import net.sf.jasperreports.engine.JasperReport;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.sql.DataSource;
+import java.math.BigDecimal;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class DayCloseServiceImpl implements DayCloseService {
 
-	private final ArShDayEndCloseHdrRepository hdrRepo;
-	private final ArShDayEndCloseDtlRepository dtlRepo;
-	private final GlobalCurrencyDenominationRepository denomRepo;
-	private final ArShReceiptHdrRepository receiptHdrRepository;
-	private final JdbcTemplate jdbcTemplate;
-	private final DocumentSearchService documentService;
-	private final DayCloseMapper mapper;
-	private final PrintService printService;
+    private final ArShDayEndCloseHdrRepository hdrRepo;
+    private final ArShDayEndCloseDtlRepository dtlRepo;
+    private final GlobalCurrencyDenominationRepository denomRepo;
+    private final ArShReceiptHdrRepository receiptHdrRepository;
+    private final JdbcTemplate jdbcTemplate;
+    private final DocumentSearchService documentService;
+    private final DayCloseMapper mapper;
+    private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
 
-	@Override
-	public DayCloseDto getDayClose(Long transactionPoid, Long groupPoid, Long companyPoid) {
+    @Override
+    public DayCloseDto getDayClose(Long transactionPoid, Long groupPoid, Long companyPoid) {
 
-		ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid).filter(h -> !"Y".equals(h.getDeleted())).orElseThrow(
-				() -> new ResourceNotFoundException("Day Close", "transactionPoid", transactionPoid.toString()));
+        ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid).filter(h -> !"Y".equals(h.getDeleted())).orElseThrow(
+                () -> new ResourceNotFoundException("Day Close", "transactionPoid", transactionPoid.toString()));
 
-		List<ArShDayEndCloseDtl> details = dtlRepo.findByTransactionPoid(transactionPoid);
+        List<ArShDayEndCloseDtl> details = dtlRepo.findByTransactionPoid(transactionPoid);
 
-		DayCloseDto dto = mapper.mapToDto(hdr);
-		dto.setDenominations(mapper.mapDtlListToDto(details));
+        DayCloseDto dto = mapper.mapToDto(hdr);
+        dto.setDenominations(mapper.mapDtlListToDto(details));
 
-		return dto;
-	}
+        return dto;
+    }
 
-	@Override
-	public DayCloseDto createDayClose(DayCloseDto dto, Long groupPoid, Long companyPoid, Long userPoid) {
+    @Override
+    public DayCloseDto createDayClose(DayCloseDto dto, Long groupPoid, Long companyPoid, Long userPoid) {
 
-		DayCloseHdrDto header = dto.getHeader();
+        DayCloseHdrDto header = dto.getHeader();
 
-		if (header.getTransactionDate() != null
-				&& hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(header.getTransactionDate(), groupPoid,
-						companyPoid) > 0) {
+        if (header.getTransactionDate() != null
+                && hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(header.getTransactionDate(), groupPoid,
+                companyPoid) > 0) {
 
-			throw new ValidationException("Transaction date already closed: " + header.getTransactionDate());
-		}
+            throw new ValidationException("Transaction date already closed: " + header.getTransactionDate());
+        }
 
-		validateAmounts(dto);
+        validateAmounts(dto);
 
-		ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
-		mapper.mapCreateDTOToEntity(header, hdr, groupPoid, companyPoid);
+        ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
+        mapper.mapCreateDTOToEntity(header, hdr, groupPoid, companyPoid);
 
-		hdr = hdrRepo.save(hdr);
+        hdr = hdrRepo.save(hdr);
 
-		saveDenominations(hdr.getTransactionPoid(), dto.getDenominations());
+        saveDenominations(hdr.getTransactionPoid(), dto.getDenominations());
 
-		callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
-				hdr.getDocRef(), groupPoid, companyPoid, userPoid);
-		loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.toString());
+        String status = callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
+                hdr.getDocRef(), groupPoid, companyPoid, userPoid);
+        if (!(StringUtils.isEmpty(status) && status.startsWith("SUCCESS"))) throw new RuntimeException(status);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
 
-		return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
-	}
+        return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
+    }
 
-	@Override
-	public DayCloseSummaryProjection getNewDayCloseData(Long groupPoid, Long companyPoid, String transactionDate) {
+    @Override
+    public DayCloseSummaryProjection getNewDayCloseData(Long groupPoid, Long companyPoid, String transactionDate) {
 
-		return receiptHdrRepository.fetchNewDayCloseSummary(groupPoid, companyPoid, transactionDate)
-				.orElseThrow(() -> new ResourceNotFoundException("Day Close", "transactionDate", transactionDate));
-	}
+        return receiptHdrRepository.fetchNewDayCloseSummary(groupPoid, companyPoid, transactionDate)
+                .orElseThrow(() -> new ResourceNotFoundException("Day Close", "transactionDate", transactionDate));
+    }
 
-	@Override
-	public List<Map<String, Object>> getDenominations(String currencyCode) {
+    @Override
+    public List<Map<String, Object>> getDenominations(String currencyCode) {
 
-		return denomRepo.findByCurrencyCodeOrderBySeqNo(currencyCode).stream().map(d -> {
-			Map<String, Object> map = new HashMap<>();
-			map.put("denomination", new BigDecimal(d.getCurrencyAmount()));
-			map.put("currencyType", d.getCurrencyType());
-			return map;
-		}).toList();
-	}
+        return denomRepo.findByCurrencyCodeOrderBySeqNo(currencyCode).stream().map(d -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("denomination", new BigDecimal(d.getCurrencyAmount()));
+            map.put("currencyType", d.getCurrencyType());
+            return map;
+        }).toList();
+    }
 
-	@Override
-	public DayCloseDto updateDayClose(DayCloseDto request, Long transactionPoid, Long groupPoid, Long companyPoid,
-			Long userPoid) {
+    @Override
+    public DayCloseDto updateDayClose(DayCloseDto request, Long transactionPoid, Long groupPoid, Long companyPoid,
+                                      Long userPoid) {
 
-		validateAmounts(request);
+        validateAmounts(request);
 
-		ArShDayEndCloseHdr existingData=hdrRepo.findById(transactionPoid).orElseThrow(()->new ResourceNotFoundException("Day close Shipping", "transactionPoid", transactionPoid));
-		ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
-		hdr.setTransactionPoid(transactionPoid);
+        ArShDayEndCloseHdr existingData = hdrRepo.findById(transactionPoid).orElseThrow(() -> new ResourceNotFoundException("Day close Shipping", "transactionPoid", transactionPoid));
+        ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
+        hdr.setTransactionPoid(transactionPoid);
 
-		mapper.mapCreateDTOToEntity(request.getHeader(), hdr, groupPoid, companyPoid);
-		hdrRepo.save(hdr);
+        mapper.mapCreateDTOToEntity(request.getHeader(), hdr, groupPoid, companyPoid);
+        hdrRepo.save(hdr);
 
-		saveDenominations(transactionPoid, request.getDenominations());
-		String docId = UserContext.getDocumentId();
-		loggingService.logChanges(existingData, hdr, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+        saveDenominations(transactionPoid, request.getDenominations());
+        String docId = UserContext.getDocumentId();
+        loggingService.logChanges(existingData, hdr, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
-		return getDayClose(transactionPoid, groupPoid, companyPoid);
-	}
+        return getDayClose(transactionPoid, groupPoid, companyPoid);
+    }
 
-	@Override
-	public Map<String, Object> searchDayClose(String docId, FilterRequestDto request, Pageable pageable) {
+    @Override
+    public Map<String, Object> searchDayClose(String docId, FilterRequestDto request, Pageable pageable) {
 
-		String operator = documentService.resolveOperator(request);
-		String isDeleted = documentService.resolveIsDeleted(request);
-		List<FilterDto> filters = documentService.resolveFilters(request);
+        String operator = documentService.resolveOperator(request);
+        String isDeleted = documentService.resolveIsDeleted(request);
+        List<FilterDto> filters = documentService.resolveFilters(request);
 
-		RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "LOCATION_CODE",
-				"TRANSACTION_POID");
+        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "LOCATION_CODE",
+                "TRANSACTION_POID");
 
-		Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+        Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
 
-		return PaginationUtil.wrapPage(page, raw.displayFields());
-	}
+        return PaginationUtil.wrapPage(page, raw.displayFields());
+    }
 
-	private void saveDenominations(Long transactionPoid, List<DayCloseDenominationDto> details) {
+    private void saveDenominations(Long transactionPoid, List<DayCloseDenominationDto> details) {
 
-		if (details == null || details.isEmpty()) {
-			return;
-		}
+        if (details == null || details.isEmpty()) {
+            return;
+        }
 
         String currentUser = getCurrentUser();
         LocalDateTime now = LocalDateTime.now();
         String docId = UserContext.getDocumentId();
         String docKeyPoid = transactionPoid.toString();
 
-		Long maxDetRowId = dtlRepo.getMaxDetRowId(transactionPoid);
+        Long maxDetRowId = dtlRepo.getMaxDetRowId(transactionPoid);
 
         List<ArShDayEndCloseDtl> toSave = new ArrayList<>();
         List<ArShDayEndCloseDtl> toUpdate = new ArrayList<>();
         List<Long> toDelete = new ArrayList<>();
         List<LogRequestDto<ArShDayEndCloseDtl>> logRequests = new ArrayList<>();
 
-		for (DayCloseDenominationDto dto : details) {
+        for (DayCloseDenominationDto dto : details) {
 
             String action = dto.getAction().toUpperCase();
 
@@ -217,7 +215,7 @@ public class DayCloseServiceImpl implements DayCloseService {
                     loggingService.logDelete(dto, docId, docKeyPoid);
                     break;
             }
-		}
+        }
 
         if (!toSave.isEmpty()) {
             List<ArShDayEndCloseDtl> saved = dtlRepo.saveAll(toSave);
@@ -234,70 +232,84 @@ public class DayCloseServiceImpl implements DayCloseService {
         if (!toDelete.isEmpty()) {
             dtlRepo.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
         }
-	}
+    }
 
-	private String callProcGlChoIntoChqMainShip(Long transactionPoid, LocalDate transactionDate, String docId,
-			String docRef, Long groupPoid, Long companyPoid, Long userPoid) {
+    private String callProcGlChoIntoChqMainShip(Long transactionPoid, LocalDate transactionDate, String docId,
+                                                String docRef, Long groupPoid, Long companyPoid, Long userPoid) {
+        String proc = "{call PROC_GL_CHO_INTO_CHQ_MAIN_SHIP(?, ?, ?, ?, ?, ?, ?, ?)}";
 
-		SimpleJdbcCall call = new SimpleJdbcCall(jdbcTemplate)
-				.withProcedureName("PROC_GL_CHO_INTO_CHQ_MAIN_SHIP");
+        return jdbcTemplate.execute((Connection con) -> {
+            try (CallableStatement cs = con.prepareCall(proc)) {
 
-		Map<String, Object> inParams = Map.of("P_CHO_ID", transactionPoid, "P_CHO_DT", transactionDate, "P_DOC_ID",
-				docId, "P_DOC_REF", docRef, "P_LOGIN_GROUP_POID", groupPoid, "P_LOGIN_COMPANY_POID", companyPoid,
-				"P_LOGIN_USER_POID", userPoid);
+                cs.setLong(1, transactionPoid);
+                cs.setString(2, transactionDate.toString());
+                cs.setLong(3, groupPoid);
+                cs.setLong(4, companyPoid);
+                cs.setLong(5, userPoid);
+                cs.setString(6, docId);
+                cs.setString(7, docRef);
+                cs.registerOutParameter(8, Types.VARCHAR);
 
-		Map<String, Object> out = call.execute(inParams);
-		return (String) out.get("P_STATUS");
-	}
+                cs.execute();
 
-	private void validateAmounts(DayCloseDto request) {
+                return cs.getString(8);
 
-		DayCloseHdrDto header = request.getHeader();
-		List<DayCloseDenominationDto> details = request.getDenominations();
+            } catch (SQLException ex) {
+                throw new RuntimeException(
+                        "Error calling PROC_GL_CHO_INTO_CHQ_MAIN_SHIP: " + ex.getMessage(), ex);
+            }
+        });
 
-		BigDecimal cash = header.getCashAmount();
-		BigDecimal cheque = header.getChequeAmount();
-		BigDecimal total = header.getTotalAmount();
+    }
 
-		if (cash != null && cheque != null && total != null && cash.add(cheque).compareTo(total) != 0) {
+    private void validateAmounts(DayCloseDto request) {
 
-			throw new ValidationException("Receipt Total and Cheque, Cash total amount not match.");
-		}
+        DayCloseHdrDto header = request.getHeader();
+        List<DayCloseDenominationDto> details = request.getDenominations();
 
-		if (details == null || details.isEmpty()) {
-			return;
-		}
+        BigDecimal cash = header.getCashAmount();
+        BigDecimal cheque = header.getChequeAmount();
+        BigDecimal total = header.getTotalAmount();
 
-		BigDecimal denomTotal = details.stream().map(this::calculateDenominationAmount).reduce(BigDecimal.ZERO,
-				BigDecimal::add);
+        if (cash != null && cheque != null && total != null && cash.add(cheque).compareTo(total) != 0) {
 
-		if (cash != null && denomTotal.compareTo(cash) != 0) {
-			throw new ValidationException("Receipt total and Denomination total amount not match.");
-		}
-	}
+            throw new ValidationException("Receipt Total and Cheque, Cash total amount not match.");
+        }
 
-	private BigDecimal calculateDenominationAmount(DayCloseDenominationDto dto) {
+        if (details == null || details.isEmpty()) {
+            return;
+        }
 
-		if (dto == null) {
-			return BigDecimal.ZERO;
-		}
+        BigDecimal denomTotal = details.stream().map(this::calculateDenominationAmount).reduce(BigDecimal.ZERO,
+                BigDecimal::add);
 
-		if (dto.getCashAmount() != null) {
-			return dto.getCashAmount();
-		}
+        if (cash != null && denomTotal.compareTo(cash) != 0) {
+            throw new ValidationException("Receipt total and Denomination total amount not match.");
+        }
+    }
 
-		if (dto.getDenomination() != null && dto.getNoOfTran() != null) {
-			return dto.getDenomination().multiply(BigDecimal.valueOf(dto.getNoOfTran()));
-		}
+    private BigDecimal calculateDenominationAmount(DayCloseDenominationDto dto) {
 
-		return BigDecimal.ZERO;
-	}
+        if (dto == null) {
+            return BigDecimal.ZERO;
+        }
+
+        if (dto.getCashAmount() != null) {
+            return dto.getCashAmount();
+        }
+
+        if (dto.getDenomination() != null && dto.getNoOfTran() != null) {
+            return dto.getDenomination().multiply(BigDecimal.valueOf(dto.getNoOfTran()));
+        }
+
+        return BigDecimal.ZERO;
+    }
 
     private String getCurrentUser() {
         return UserContext.getUserId() != null ? String.valueOf(UserContext.getUserId()) : "SYSTEM";
     }
 
-    private void mapDayCloseDtlFromDto(DayCloseDenominationDto dto,ArShDayEndCloseDtl entity,Long transactionPoid){
+    private void mapDayCloseDtlFromDto(DayCloseDenominationDto dto, ArShDayEndCloseDtl entity, Long transactionPoid) {
         entity.setTransactionPoid(transactionPoid);
         entity.setCurrencyAmount(dto.getDenomination());
         entity.setDetRowId(dto.getDetRowId());
@@ -305,8 +317,8 @@ public class DayCloseServiceImpl implements DayCloseService {
         entity.setNoOfTran(dto.getNoOfTran());
         entity.setCashAmount(dto.getCashAmount());
     }
-	
-	@Override
+
+    @Override
     public byte[] print(Long transactionPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-106");
         params.put("SH_DAY_CLOSE_CASH_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CASH_subreport1.jrxml"));

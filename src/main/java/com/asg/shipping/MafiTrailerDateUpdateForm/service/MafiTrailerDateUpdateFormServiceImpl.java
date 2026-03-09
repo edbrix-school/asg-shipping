@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtlId;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDateTime;
 import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtl;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -139,13 +141,9 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
                 newEntity.setMafiRef(dto.getMafiRef());
                 newEntity.setMafiSize(dto.getMafiSize());
                 newEntity.setMafiFreeDays(dto.getMafiFreeDays());
-                newEntity.setBackLoadDate(dto.getBackLoadDate());
-                newEntity.setMafiEmptyDate(dto.getMafiEmptyDate());
+                newEntity.setBackLoadDate(convertDate(dto.getBackLoadDate().atStartOfDay()));
+                newEntity.setMafiEmptyDate(convertDate(dto.getMafiEmptyDate().atStartOfDay()));
                 newEntity.setRemarks(dto.getRemarks());
-                newEntity.setCreatedBy(entity.getCreatedBy());
-                newEntity.setCreatedDate(entity.getCreatedDate());
-                newEntity.setLastModifiedBy(userId);
-                newEntity.setLastModifiedDate(LocalDateTime.now());
                 logRequests.add(new LogRequestDto<>(entity, newEntity, ShipBlMafiDtl.class, docId,
                         docKeyPoid, "BLMAFIDTL DET_ROW_ID: " + dto.getDetRowId()));
 			}
