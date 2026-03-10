@@ -16,8 +16,7 @@ class ShipTradelaneMasterTest {
     void testAllArgsConstructor() {
         LocalDateTime now = LocalDateTime.now();
         ShipTradelaneMaster entity = new ShipTradelaneMaster(
-                1L, 2L, "TL001", "Trade Lane 1", "TL1", "Y", 1L,
-                "user1", now, "user2", now, "N", 3L
+                1L, 2L, "TL001", "Trade Lane 1", "TL1", "Y", 1L, "N", 3L
         );
         
         assertEquals(1L, entity.getTradeLanePoid());
@@ -27,10 +26,6 @@ class ShipTradelaneMasterTest {
         assertEquals("TL1", entity.getTradeLaneName2());
         assertEquals("Y", entity.getActive());
         assertEquals(1L, entity.getSeqNo());
-        assertEquals("user1", entity.getCreatedBy());
-        assertEquals(now, entity.getCreatedDate());
-        assertEquals("user2", entity.getLastModifiedBy());
-        assertEquals(now, entity.getLastModifiedDate());
         assertEquals("N", entity.getDeleted());
         assertEquals(3L, entity.getRegionPoid());
     }

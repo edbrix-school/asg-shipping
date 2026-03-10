@@ -41,7 +41,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -100,7 +99,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
         String status = callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
                 hdr.getDocRef(), groupPoid, companyPoid, userPoid);
-        if (!StringUtils.isEmpty(status) && !status.startsWith("SUCCESS")) throw new RuntimeException(status);
+        if (status!=null && !status.startsWith("SUCCESS")) throw new RuntimeException(status);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
 
         return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
@@ -165,8 +164,6 @@ public class DayCloseServiceImpl implements DayCloseService {
             return;
         }
 
-        String currentUser = getCurrentUser();
-        LocalDateTime now = LocalDateTime.now();
         String docId = UserContext.getDocumentId();
         String docKeyPoid = transactionPoid.toString();
 
@@ -186,8 +183,6 @@ public class DayCloseServiceImpl implements DayCloseService {
                 case "ISCREATED":
                     ArShDayEndCloseDtl entity = mapper.mapDtlFromDto(dto, transactionPoid, null);
                     entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
-                    entity.setCreatedBy(currentUser);
-                    entity.setCreatedDate(now);
                     toSave.add(entity);
                     break;
 
@@ -203,8 +198,6 @@ public class DayCloseServiceImpl implements DayCloseService {
                     BeanUtils.copyProperties(existingData, existing);
 
                     mapDayCloseDtlFromDto(dto, existing, transactionPoid);
-                    existing.setLastModifiedBy(currentUser);
-                    existing.setLastModifiedDate(now);
                     toUpdate.add(existing);
                     logRequests.add(new LogRequestDto<>(oldEntity, existing, ArShDayEndCloseDtl.class, docId,
                             docKeyPoid, "DAYENDCLOSE DET_ROW_ID: " + dto.getDetRowId()));

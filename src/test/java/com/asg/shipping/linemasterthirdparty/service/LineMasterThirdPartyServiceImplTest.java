@@ -80,8 +80,6 @@ class LineMasterThirdPartyServiceImplTest {
                 .lineType("THIRD_PARTY")
                 .groupPoid(1L)
                 .companyPoid(1L)
-                .createdBy("testuser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         testDto = LineMasterThirdPartyDto.builder()

@@ -60,10 +60,6 @@ class VesselMasterMapperTest {
                 .lineName("Test Line")
                 .active("Y")
                 .seqno(1)
-                .createdBy("admin")
-                .createdDate(LocalDateTime.of(2020, 1, 1, 10, 0))
-                .lastModifiedBy("admin")
-                .lastModifiedDate(LocalDateTime.of(2020, 1, 2, 10, 0))
                 .deleted("N")
                 .build();
 
@@ -237,10 +233,6 @@ class VesselMasterMapperTest {
             assertEquals(createDTO.getRemarks(), entity.getRemarks());
             assertEquals(createDTO.getActive(), entity.getActive());
             assertEquals(createDTO.getSeqno(), entity.getSeqno());
-            assertEquals("testuser", entity.getCreatedBy());
-            assertNotNull(entity.getCreatedDate());
-            assertEquals("testuser", entity.getLastModifiedBy());
-            assertNotNull(entity.getLastModifiedDate());
             assertEquals("N", entity.getDeleted());
         }
     }
@@ -344,11 +336,6 @@ class VesselMasterMapperTest {
             assertEquals(updateDTO.getRemarks(), vessel.getRemarks());
             assertEquals(updateDTO.getActive(), vessel.getActive());
             assertEquals(updateDTO.getSeqno(), vessel.getSeqno());
-            assertEquals("testuser", vessel.getLastModifiedBy());
-            assertNotNull(vessel.getLastModifiedDate());
-            // Created fields should not be updated
-            assertEquals(originalCreatedDate, vessel.getCreatedDate());
-            assertEquals(originalCreatedBy, vessel.getCreatedBy());
         }
     }
 

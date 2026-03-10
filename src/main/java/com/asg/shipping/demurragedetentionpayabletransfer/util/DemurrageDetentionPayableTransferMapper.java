@@ -1,5 +1,7 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.util;
 
+import com.asg.common.lib.utility.DateUtil;
+import com.asg.shipping.common.utility.DateTimeHandler;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.entity.*;
 import org.springframework.stereotype.Component;
@@ -50,19 +52,13 @@ public class DemurrageDetentionPayableTransferMapper {
     public void mapCreateDTOToEntity(DemurrageDetentionPayableTransferCreateDTO dto, ShipDemDetnTransferHdr entity, Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setTransactionDate(dto.getTransactionDate()==null? DateUtil.getCurrentDateInUserTimeZone(): DateTimeHandler.convertDate(dto.getTransactionDate().atStartOfDay()));
         entity.setLinePoid(dto.getLinePoid());
         entity.setBlType(dto.getBlType());
         entity.setEmptyFromDate(dto.getEmptyFromDate());
         entity.setEmptyToDate(dto.getEmptyToDate());
         entity.setPayableGlPoid(dto.getPayableGlPoid());
         entity.setIncomeGlPoid(dto.getIncomeGlPoid());
-
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -94,9 +90,6 @@ public class DemurrageDetentionPayableTransferMapper {
             entity.setIncomeGlPoid(dto.getIncomeGlPoid());
         }
 
-        // Update audit fields
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     // Detail mapping methods - Transfer DTL

@@ -1,11 +1,14 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for SHIP_DEM_DETN_TRANSFER_DTL table
@@ -17,7 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class ShipDemDetnTransferDtl {
+public class ShipDemDetnTransferDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -96,36 +99,14 @@ public class ShipDemDetnTransferDtl {
     @Column(name = "IS_SELECT", length = 25)
     private String isSelect;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ShipDemDetnTransferHdr shipDemDetnTransferHdr;
 
     @PrePersist
     protected void onCreate() {
-        createdDate = LocalDateTime.now();
-        if (createdBy == null) {
-            createdBy = com.asg.common.lib.security.util.UserContext.getUserName();
-        }
         if (isSelect == null) {
             isSelect = "n";
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        lastModifiedBy = com.asg.common.lib.security.util.UserContext.getUserName();
     }
 }

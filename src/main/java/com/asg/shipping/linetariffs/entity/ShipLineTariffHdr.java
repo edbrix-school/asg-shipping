@@ -1,25 +1,24 @@
 package com.asg.shipping.linetariffs.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
+import com.asg.common.lib.utility.DateUtil;
 import jakarta.persistence.*;
-
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for SHIP_LINE_TARIFF_HDR table
  */
 @Entity
 @Table(name = "SHIP_LINE_TARIFF_HDR",
-       uniqueConstraints = {
-           @UniqueConstraint(name = "UK_DOCREFFSHIP_LINE_TARIFF_HDR", columnNames = {"DOC_REF"})
-       })
+        uniqueConstraints = {
+                @UniqueConstraint(name = "UK_DOCREFFSHIP_LINE_TARIFF_HDR", columnNames = {"DOC_REF"})
+        })
 @Data
 @NoArgsConstructor
-public class ShipLineTariffHdr {
+public class ShipLineTariffHdr extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -28,7 +27,7 @@ public class ShipLineTariffHdr {
     private Long transactionPoid;
 
     @Column(name = "TRANSACTION_DATE")
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
 
     @Column(name = "GROUP_POID")
     private Long groupPoid;
@@ -44,18 +43,6 @@ public class ShipLineTariffHdr {
 
     @Column(name = "PERIOD_TO")
     private LocalDate periodTo;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;
@@ -107,20 +94,14 @@ public class ShipLineTariffHdr {
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
+
         if (transactionDate == null) {
-            transactionDate = LocalDateTime.now();
+            transactionDate = DateUtil.getCurrentDateInUserTimeZone();
         }
         if (deleted == null) {
             deleted = "N";
         }
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-    }
 }
 

@@ -220,12 +220,6 @@ public class LineTariffMapper {
         entity.setCompanyPoid(dto.getCompanyPoid());
         entity.setSeqno(dto.getSeqno());
 
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-
         // Set deleted flag
         entity.setDeleted("N");
     }
@@ -326,9 +320,6 @@ public class LineTariffMapper {
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
 
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
-
         return entity;
     }
 
@@ -356,10 +347,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
         return entity;
     }
 
@@ -387,9 +374,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
 
@@ -416,8 +400,6 @@ public class LineTariffMapper {
                 .slab6Rate(dto.getSlab6Rate())
                 .slab7Tilldays(dto.getSlab7Tilldays())
                 .slab7Rate(dto.getSlab7Rate())
-                .createdBy(currentUser)
-                .createdDate(LocalDateTime.now())
                 .build();
     }
 
@@ -444,10 +426,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
         return entity;
     }
 
@@ -471,8 +449,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**
@@ -498,8 +474,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
         return entity;
     }
 
@@ -526,10 +500,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
         return entity;
     }
 
@@ -553,8 +523,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**
@@ -580,8 +548,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
         return entity;
     }
 
@@ -608,10 +574,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setCreatedBy(currentUser);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
         return entity;
     }
 
@@ -635,8 +597,6 @@ public class LineTariffMapper {
         entity.setSlab6Rate(dto.getSlab6Rate());
         entity.setSlab7Tilldays(dto.getSlab7Tilldays());
         entity.setSlab7Rate(dto.getSlab7Rate());
-        entity.setLastModifiedBy(currentUser);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 }
 

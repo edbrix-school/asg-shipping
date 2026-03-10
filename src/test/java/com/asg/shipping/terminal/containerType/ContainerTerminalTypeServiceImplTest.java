@@ -79,8 +79,6 @@ class ContainerTerminalTypeServiceImplTest {
                 .seqno(BigInteger.valueOf(10))
                 .active("Y")
                 .deleted("N")
-                .createdBy("SYSTEM")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         response = new ContainerTerminalTypeResponse();
