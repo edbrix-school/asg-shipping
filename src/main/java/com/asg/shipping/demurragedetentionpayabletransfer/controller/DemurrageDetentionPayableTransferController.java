@@ -140,7 +140,7 @@ public class DemurrageDetentionPayableTransferController {
     /**
      * Get auto-populated GL accounts when Line and BL Type are provided
      */
-    @PostMapping("/auto-populate-gl-accounts")
+    @GetMapping("/auto-populate-gl-accounts")
     public ResponseEntity<?> getAutoPopulatedGlAccounts(
             @RequestParam Long linePoid,
             @RequestParam String blType) {
