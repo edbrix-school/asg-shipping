@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -100,7 +101,7 @@ class CommodityMapperTest {
         existingEntity.setGroupPoid(1L);
         existingEntity.setCommodityCode("TEST001");
         existingEntity.setCreatedBy("originaluser");
-        existingEntity.setCreatedDate(Timestamp.from(Instant.now().minusSeconds(3600)).toLocalDateTime());
+        existingEntity.setCreatedDate(LocalDateTime.now());
 
         String userPoid = "updateuser";
 

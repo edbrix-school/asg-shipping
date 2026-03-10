@@ -60,6 +60,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final JdbcTemplate jdbcTemplate;
     private final DataSource dataSource;
     private final PrintService printService;
+
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> searchSalesInvoice(String docId, FilterRequestDto request, Pageable pageable) {
@@ -318,9 +319,9 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     @Override
     public byte[] print(Long transactionPoid, Long blPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
-        params.put("DOC_BL_POID",blPoid);
+        params.put("DOC_BL_POID", blPoid);
         JasperReport mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
-        return printService.fillReportToPdf(mainReport,params,dataSource);
+        return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
 
@@ -540,20 +541,20 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     }
 
     @Override
-    public byte[] printInvoice(Long transactionPoid,Long blPoid) throws Exception {
+    public byte[] printInvoice(Long transactionPoid, Long blPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
-        params.put("DOC_BL_POID",blPoid);
+        params.put("DOC_BL_POID", blPoid);
         JasperReport mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP_USD.jrxml");
-        return printService.fillReportToPdf(mainReport,params,dataSource);
+        return printService.fillReportToPdf(mainReport, params, dataSource);
 
     }
 
     @Override
     public byte[] printCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-102");
-        params.put("DOC_BL_POID",blPoid);
+        params.put("DOC_BL_POID", blPoid);
         JasperReport mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP_CUSTOMER.jrxml");
-        return printService.fillReportToPdf(mainReport,params,dataSource);
+        return printService.fillReportToPdf(mainReport, params, dataSource);
 
     }
 
@@ -1054,7 +1055,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 ResultSet rs = (ResultSet) cs.getObject(8);
                 if (rs != null) {
                     while (rs.next()) {
-                        if(lovName.equals("ALLBLNUMBER_INV")) {
+                        if (lovName.equals("ALLBLNUMBER_INV")) {
 
                             result.put("companyPoid", rs.getString("COMPANY_POID"));
                             result.put("blTypeInvoice", rs.getString("BL_TYPE_INVOICE"));
@@ -1063,8 +1064,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                             result.put("ownInvoiceNo", rs.getString("OWN_INVOICE_NO"));
                             result.put("bookingPartyPoid", rs.getString("BOOKING_PARTY_POID"));
                             result.put("creditDays", rs.getString("CREDIT_DAYS"));
-                        }
-                        else if(lovName.equals("ALLBLNUMBER")){
+                        } else if (lovName.equals("ALLBLNUMBER")) {
 
                             result.put("blTypeInvoice", rs.getString("BL_TYPE_INVOICE"));
                             result.put("customerPoid", rs.getString("CUSTOMER_POID"));
@@ -1073,8 +1073,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                     }
                 }
                 log.info("Result Map : {}", result);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 log.error("Error : ", e);
             }
             return result;
@@ -1101,119 +1100,119 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         if ("IMPORT".equalsIgnoreCase(blType)) {
             // IMPORT BL - Demurrage calculation
             sql.append(
-                "SELECT BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
-                "NVL(DM_TILL_DATE, FROMDATE) FMDATE, NVL(DM_TILL_DATE, TODATE) TODATE, " +
-                "(TO_DATE(NVL(DM_TILL_DATE, TODATE)) - NVL(DM_TILL_DATE, FROMDATE)) + 1 DAYS, " +
-                "FUNC_RTN_DEM_DETTN_FULL(GROUP_POID, COMPANY_POID, ?, BL_POID, CONTAINER_NO, " +
-                "GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE(ARRIVAL_DATE), " +
-                "TO_DATE(NVL(DM_TILL_DATE, TODATE)), 'DEMM', NVL(EXTRA_FREE_DAYS,0)) DM_AMT, " +
-                "EQUIPMENT_ISO_TYPE, FREE_DAYS, EMPTY_IN " +
-                "FROM ( " +
-                "  SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) ARRIVAL_DATE, BLHDR.GROUP_POID, " +
-                "  BLHDR.COMPANY_POID, EQUIPMENT_ISO_TYPE, VHDR.LINE_POID, EXTRA_FREE_DAYS, " +
-                "  CONTAINERDTL.TRANSACTION_POID BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
-                "  TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) + " +
-                "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FROMDATE, " +
-                "  CASE WHEN (TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))+DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)))<=TO_DATE(SYSDATE) " +
-                "  THEN TO_DATE(SYSDATE) ELSE NULL END AS TODATE, " +
-                "  (SELECT MAX(DM_TO_DATE)+1 FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL " +
-                "   WHERE ARCONTAINERDTL.BL_POID=CONTAINERDTL.TRANSACTION_POID " +
-                "   AND ARCONTAINERDTL.CONTAINER_NO=CONTAINERDTL.CONTAINER_NO " +
-                "   AND TRANSACTION_POID<>?) DM_TILL_DATE, " +
-                "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FREE_DAYS, " +
-                "  (SELECT TO_DATE(TRUNC(MOVES_DATE_TIME)) FROM SHIP_CONTAINER_INVENTORY " +
-                "   WHERE MOVES_TYPE='MTIN' AND LINK_TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
-                "   AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) EMPTY_IN " +
-                "  FROM SHIP_VOYAGE_HDR VHDR " +
-                "  INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-                "  INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
-                "  INNER JOIN SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID " +
-                "  AND DECODE(VHDR.LINE_POID,'1123',TO_DATE(SYSDATE),TO_DATE(TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)))) " +
-                "  BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-                "  INNER JOIN SHIP_LINE_TARIFF_IMP_DTL CONTAINERTRIFIMP ON " +
-                "  SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID " +
-                "  AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID=GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE) " +
-                "  WHERE BL_TYPE='IMPORT' AND BLHDR.TRANSACTION_POID=? " +
-                ")");
+                    "SELECT BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
+                            "NVL(DM_TILL_DATE, FROMDATE) FMDATE, NVL(DM_TILL_DATE, TODATE) TODATE, " +
+                            "(TO_DATE(NVL(DM_TILL_DATE, TODATE)) - NVL(DM_TILL_DATE, FROMDATE)) + 1 DAYS, " +
+                            "FUNC_RTN_DEM_DETTN_FULL(GROUP_POID, COMPANY_POID, ?, BL_POID, CONTAINER_NO, " +
+                            "GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE(ARRIVAL_DATE), " +
+                            "TO_DATE(NVL(DM_TILL_DATE, TODATE)), 'DEMM', NVL(EXTRA_FREE_DAYS,0)) DM_AMT, " +
+                            "EQUIPMENT_ISO_TYPE, FREE_DAYS, EMPTY_IN " +
+                            "FROM ( " +
+                            "  SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) ARRIVAL_DATE, BLHDR.GROUP_POID, " +
+                            "  BLHDR.COMPANY_POID, EQUIPMENT_ISO_TYPE, VHDR.LINE_POID, EXTRA_FREE_DAYS, " +
+                            "  CONTAINERDTL.TRANSACTION_POID BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
+                            "  TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) + " +
+                            "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FROMDATE, " +
+                            "  CASE WHEN (TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))+DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)))<=TO_DATE(SYSDATE) " +
+                            "  THEN TO_DATE(SYSDATE) ELSE NULL END AS TODATE, " +
+                            "  (SELECT MAX(DM_TO_DATE)+1 FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL " +
+                            "   WHERE ARCONTAINERDTL.BL_POID=CONTAINERDTL.TRANSACTION_POID " +
+                            "   AND ARCONTAINERDTL.CONTAINER_NO=CONTAINERDTL.CONTAINER_NO " +
+                            "   AND TRANSACTION_POID<>?) DM_TILL_DATE, " +
+                            "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FREE_DAYS, " +
+                            "  (SELECT TO_DATE(TRUNC(MOVES_DATE_TIME)) FROM SHIP_CONTAINER_INVENTORY " +
+                            "   WHERE MOVES_TYPE='MTIN' AND LINK_TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
+                            "   AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) EMPTY_IN " +
+                            "  FROM SHIP_VOYAGE_HDR VHDR " +
+                            "  INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                            "  INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
+                            "  INNER JOIN SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID " +
+                            "  AND DECODE(VHDR.LINE_POID,'1123',TO_DATE(SYSDATE),TO_DATE(TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)))) " +
+                            "  BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                            "  INNER JOIN SHIP_LINE_TARIFF_IMP_DTL CONTAINERTRIFIMP ON " +
+                            "  SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID " +
+                            "  AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID=GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE) " +
+                            "  WHERE BL_TYPE='IMPORT' AND BLHDR.TRANSACTION_POID=? " +
+                            ")");
         } else if ("EXPORT".equalsIgnoreCase(blType)) {
             // EXPORT BL - Two parts: EXTRA_TARIFF='N' and EXTRA_TARIFF='Y'
             // Part 1: EXTRA_TARIFF='N'
             sql.append(
-                "SELECT BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
-                "NVL(DM_TILL_DATE, FROMDATE) FMDATE, NVL(DM_TILL_DATE, TODATE) TODATE, " +
-                "(TO_DATE(NVL(DM_TILL_DATE, TODATE)) - NVL(DM_TILL_DATE, FROMDATE)) + 1 DAYS, " +
-                "FUNC_RTN_DEM_DETTN_FULL(GROUP_POID, COMPANY_POID, ?, BL_POID, CONTAINER_NO, " +
-                "GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE(ISSUE_DATE), " +
-                "TO_DATE(NVL(DM_TILL_DATE, TODATE)), 'DETN', NVL(EXTRA_FREE_DAYS,0)) DM_AMT, " +
-                "EQUIPMENT_ISO_TYPE, FREE_DAYS, NULL EMPTY_IN " +
-                "FROM ( " +
-                "  SELECT TO_DATE(NVL(SAIL_DATE,BERTH_DATE)) SAIL_DATE, BLHDR.GROUP_POID, " +
-                "  BLHDR.COMPANY_POID, EQUIPMENT_ISO_TYPE, VHDR.LINE_POID, EXTRA_FREE_DAYS, " +
-                "  CONTAINERDTL.TRANSACTION_POID BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
-                "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
-                "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
-                "   AND MOVES_TYPE='VAN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) ISSUE_DATE, " +
-                "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
-                "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
-                "   AND MOVES_TYPE='VAN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) + " +
-                "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FROMDATE, " +
-                "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
-                "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
-                "   AND MOVES_TYPE=DECODE(VHDR.LINE_POID,'114','LDFULL','EXPIN') " +
-                "   AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) TODATE, " +
-                "  (SELECT MAX(DM_TO_DATE)+1 FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL " +
-                "   WHERE ARCONTAINERDTL.BL_POID=CONTAINERDTL.TRANSACTION_POID " +
-                "   AND ARCONTAINERDTL.CONTAINER_NO=CONTAINERDTL.CONTAINER_NO " +
-                "   AND TRANSACTION_POID<>?) DM_TILL_DATE, " +
-                "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FREE_DAYS " +
-                "  FROM SHIP_VOYAGE_HDR VHDR " +
-                "  INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-                "  INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
-                "  INNER JOIN SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID " +
-                "  AND DECODE(VHDR.LINE_POID,'1123',TO_DATE(SYSDATE),TO_DATE(TO_DATE(NVL(SAIL_DATE,BERTH_DATE)))) " +
-                "  BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-                "  INNER JOIN SHIP_LINE_TARIFF_EXP_DTL CONTAINERTRIFIMP ON " +
-                "  SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID " +
-                "  AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID=GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE) " +
-                "  WHERE BL_TYPE='EXPORT' AND EXTRA_TARIFF='N' AND BLHDR.TRANSACTION_POID=? " +
-                ") " +
-                "UNION ALL " +
-                // Part 2: EXTRA_TARIFF='Y'
-                "SELECT BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
-                "NVL(DM_TILL_DATE, FROMDATE) FMDATE, NVL(DM_TILL_DATE, TODATE) TODATE, " +
-                "(TO_DATE(NVL(DM_TILL_DATE, TODATE)) - NVL(DM_TILL_DATE, FROMDATE)) + 1 DAYS, " +
-                "FUNC_RTN_DEM_DETTN_FULL(GROUP_POID, COMPANY_POID, ?, BL_POID, CONTAINER_NO, " +
-                "GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE(ISSUE_DATE), " +
-                "TO_DATE(NVL(DM_TILL_DATE, TODATE)), 'DETN', NVL(EXTRA_FREE_DAYS,0)) DM_AMT, " +
-                "EQUIPMENT_ISO_TYPE, 0 FREE_DAYS, NULL EMPTY_IN " +
-                "FROM ( " +
-                "  SELECT TO_DATE(NVL(SAIL_DATE,BERTH_DATE)) SAIL_DATE, BLHDR.GROUP_POID, " +
-                "  BLHDR.COMPANY_POID, EQUIPMENT_ISO_TYPE, VHDR.LINE_POID, EXTRA_FREE_DAYS, " +
-                "  CONTAINERDTL.TRANSACTION_POID BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
-                "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
-                "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
-                "   AND MOVES_TYPE='EXPIN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) ISSUE_DATE, " +
-                "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
-                "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
-                "   AND MOVES_TYPE='EXPIN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) FROMDATE, " +
-                "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
-                "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
-                "   AND MOVES_TYPE='LDFULL' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) TODATE, " +
-                "  (SELECT MAX(DM_TO_DATE)+1 FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL " +
-                "   WHERE ARCONTAINERDTL.BL_POID=CONTAINERDTL.TRANSACTION_POID " +
-                "   AND ARCONTAINERDTL.CONTAINER_NO=CONTAINERDTL.CONTAINER_NO " +
-                "   AND TRANSACTION_POID<>?) DM_TILL_DATE " +
-                "  FROM SHIP_VOYAGE_HDR VHDR " +
-                "  INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-                "  INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
-                "  INNER JOIN SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID " +
-                "  AND DECODE(VHDR.LINE_POID,'1123',TO_DATE(SYSDATE),TO_DATE(TO_DATE(NVL(SAIL_DATE,BERTH_DATE)))) " +
-                "  BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-                "  INNER JOIN SHIP_LINE_TARIFF_EXP_DTL CONTAINERTRIFIMP ON " +
-                "  SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID " +
-                "  AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID=GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE) " +
-                "  WHERE BL_TYPE='EXPORT' AND EXTRA_TARIFF='Y' AND BLHDR.TRANSACTION_POID=? " +
-                ")");
+                    "SELECT BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
+                            "NVL(DM_TILL_DATE, FROMDATE) FMDATE, NVL(DM_TILL_DATE, TODATE) TODATE, " +
+                            "(TO_DATE(NVL(DM_TILL_DATE, TODATE)) - NVL(DM_TILL_DATE, FROMDATE)) + 1 DAYS, " +
+                            "FUNC_RTN_DEM_DETTN_FULL(GROUP_POID, COMPANY_POID, ?, BL_POID, CONTAINER_NO, " +
+                            "GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE(ISSUE_DATE), " +
+                            "TO_DATE(NVL(DM_TILL_DATE, TODATE)), 'DETN', NVL(EXTRA_FREE_DAYS,0)) DM_AMT, " +
+                            "EQUIPMENT_ISO_TYPE, FREE_DAYS, NULL EMPTY_IN " +
+                            "FROM ( " +
+                            "  SELECT TO_DATE(NVL(SAIL_DATE,BERTH_DATE)) SAIL_DATE, BLHDR.GROUP_POID, " +
+                            "  BLHDR.COMPANY_POID, EQUIPMENT_ISO_TYPE, VHDR.LINE_POID, EXTRA_FREE_DAYS, " +
+                            "  CONTAINERDTL.TRANSACTION_POID BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
+                            "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
+                            "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
+                            "   AND MOVES_TYPE='VAN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) ISSUE_DATE, " +
+                            "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
+                            "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
+                            "   AND MOVES_TYPE='VAN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) + " +
+                            "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FROMDATE, " +
+                            "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
+                            "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
+                            "   AND MOVES_TYPE=DECODE(VHDR.LINE_POID,'114','LDFULL','EXPIN') " +
+                            "   AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) TODATE, " +
+                            "  (SELECT MAX(DM_TO_DATE)+1 FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL " +
+                            "   WHERE ARCONTAINERDTL.BL_POID=CONTAINERDTL.TRANSACTION_POID " +
+                            "   AND ARCONTAINERDTL.CONTAINER_NO=CONTAINERDTL.CONTAINER_NO " +
+                            "   AND TRANSACTION_POID<>?) DM_TILL_DATE, " +
+                            "  DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FREE_DAYS " +
+                            "  FROM SHIP_VOYAGE_HDR VHDR " +
+                            "  INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                            "  INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
+                            "  INNER JOIN SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID " +
+                            "  AND DECODE(VHDR.LINE_POID,'1123',TO_DATE(SYSDATE),TO_DATE(TO_DATE(NVL(SAIL_DATE,BERTH_DATE)))) " +
+                            "  BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                            "  INNER JOIN SHIP_LINE_TARIFF_EXP_DTL CONTAINERTRIFIMP ON " +
+                            "  SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID " +
+                            "  AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID=GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE) " +
+                            "  WHERE BL_TYPE='EXPORT' AND EXTRA_TARIFF='N' AND BLHDR.TRANSACTION_POID=? " +
+                            ") " +
+                            "UNION ALL " +
+                            // Part 2: EXTRA_TARIFF='Y'
+                            "SELECT BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
+                            "NVL(DM_TILL_DATE, FROMDATE) FMDATE, NVL(DM_TILL_DATE, TODATE) TODATE, " +
+                            "(TO_DATE(NVL(DM_TILL_DATE, TODATE)) - NVL(DM_TILL_DATE, FROMDATE)) + 1 DAYS, " +
+                            "FUNC_RTN_DEM_DETTN_FULL(GROUP_POID, COMPANY_POID, ?, BL_POID, CONTAINER_NO, " +
+                            "GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE(ISSUE_DATE), " +
+                            "TO_DATE(NVL(DM_TILL_DATE, TODATE)), 'DETN', NVL(EXTRA_FREE_DAYS,0)) DM_AMT, " +
+                            "EQUIPMENT_ISO_TYPE, 0 FREE_DAYS, NULL EMPTY_IN " +
+                            "FROM ( " +
+                            "  SELECT TO_DATE(NVL(SAIL_DATE,BERTH_DATE)) SAIL_DATE, BLHDR.GROUP_POID, " +
+                            "  BLHDR.COMPANY_POID, EQUIPMENT_ISO_TYPE, VHDR.LINE_POID, EXTRA_FREE_DAYS, " +
+                            "  CONTAINERDTL.TRANSACTION_POID BL_POID, EQUIPMENT_SHIPPER_OWN, CONTAINER_NO, " +
+                            "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
+                            "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
+                            "   AND MOVES_TYPE='EXPIN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) ISSUE_DATE, " +
+                            "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
+                            "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
+                            "   AND MOVES_TYPE='EXPIN' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) FROMDATE, " +
+                            "  (SELECT TRUNC(MOVES_DATE_TIME) FROM SHIP_CONTAINER_INVENTORY " +
+                            "   WHERE BOOKING_TRANSACTION_POID=CONTAINERDTL.MATE_TRANSACTION_POID " +
+                            "   AND MOVES_TYPE='LDFULL' AND CONTAINER_NO=CONTAINERDTL.CONTAINER_NO) TODATE, " +
+                            "  (SELECT MAX(DM_TO_DATE)+1 FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL " +
+                            "   WHERE ARCONTAINERDTL.BL_POID=CONTAINERDTL.TRANSACTION_POID " +
+                            "   AND ARCONTAINERDTL.CONTAINER_NO=CONTAINERDTL.CONTAINER_NO " +
+                            "   AND TRANSACTION_POID<>?) DM_TILL_DATE " +
+                            "  FROM SHIP_VOYAGE_HDR VHDR " +
+                            "  INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                            "  INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
+                            "  INNER JOIN SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID " +
+                            "  AND DECODE(VHDR.LINE_POID,'1123',TO_DATE(SYSDATE),TO_DATE(TO_DATE(NVL(SAIL_DATE,BERTH_DATE)))) " +
+                            "  BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                            "  INNER JOIN SHIP_LINE_TARIFF_EXP_DTL CONTAINERTRIFIMP ON " +
+                            "  SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID " +
+                            "  AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID=GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE) " +
+                            "  WHERE BL_TYPE='EXPORT' AND EXTRA_TARIFF='Y' AND BLHDR.TRANSACTION_POID=? " +
+                            ")");
         } else {
             // Unknown BL type, return empty list
             return new ArrayList<>();
@@ -1315,69 +1314,69 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         // Build UNION ALL query for late collection and revalidation charges
         String sql =
-            "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
-            "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-            "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-            "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-            "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-            "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
-            "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-            "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-            "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-            "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-            "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
-            "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
-            "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
-            "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
-            "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
-            "       FROM SHIP_VOYAGE_HDR VHDR " +
-            "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-            "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
-            "       AND BLHDR.TRANSACTION_POID=?) " +
-            "BETWEEN PERIOD_FROM AND PERIOD_TO " +
-            "AND NVL(CHARGE_LINE_POID,'0')='0' " +
-            "AND CHARGE_TYPE_APPLICABLE IN ('LATECOLLECTIONIMP','LATECOLLECTIONBOTH') " +
-            "AND NVL(DELETED,'N')='N' " +
-            "AND (SELECT (TO_DATE(SYSDATE)-TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)))+1 " +
-            "     FROM SHIP_VOYAGE_HDR VHDR " +
-            "     INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-            "     INNER JOIN SHIP_BL_MANIFEST_CHARGES_DTL CNTDTL ON CNTDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
-            "     WHERE NVL(BLHDR.TRANSACTION_POID,0) NOT IN " +
-            "       (SELECT NVL(BL_POID,0) FROM AR_SH_RECEIPT_HDR " +
-            "        UNION ALL SELECT NVL(BL_POID,0) FROM AR_SH_SALES_INVOICE_HDR " +
-            "        WHERE NVL(INVOICE_TYPE,'xx')<>'AUTOCAN') " +
-            "     AND BLHDR.TRANSACTION_POID=? " +
-            "     GROUP BY TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)),BLHDR.TRANSACTION_POID) " +
-            ">= (SELECT TO_NUMBER(PARAMETER_VALUE) FROM GLOBAL_PARAMETERS " +
-            "    WHERE PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%' AND ROWNUM=1) " +
-            "UNION ALL " +
-            "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
-            "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-            "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-            "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-            "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-            "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
-            "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-            "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-            "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-            "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-            "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
-            "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
-            "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
-            "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
-            "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
-            "       FROM SHIP_VOYAGE_HDR VHDR " +
-            "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-            "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
-            "       AND BLHDR.TRANSACTION_POID IN " +
-            "         (SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_CHARGES_DTL " +
-            "          WHERE RECEIPT_INVOICE_POID IS NOT NULL) " +
-            "       AND BLHDR.TRANSACTION_POID=?) " +
-            "BETWEEN PERIOD_FROM AND PERIOD_TO " +
-            "AND NVL(CHARGE_LINE_POID,'0')='0' " +
-            "AND CHARGE_TYPE_APPLICABLE IN ('REVALIDATEIMP','REVALIDATEBOTH') " +
-            "AND NVL(DELETED,'N')='N' " +
-            "ORDER BY CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE";
+                "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
+                        "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
+                        "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
+                        "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
+                        "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
+                        "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
+                        "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
+                        "       FROM SHIP_VOYAGE_HDR VHDR " +
+                        "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                        "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
+                        "       AND BLHDR.TRANSACTION_POID=?) " +
+                        "BETWEEN PERIOD_FROM AND PERIOD_TO " +
+                        "AND NVL(CHARGE_LINE_POID,'0')='0' " +
+                        "AND CHARGE_TYPE_APPLICABLE IN ('LATECOLLECTIONIMP','LATECOLLECTIONBOTH') " +
+                        "AND NVL(DELETED,'N')='N' " +
+                        "AND (SELECT (TO_DATE(SYSDATE)-TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)))+1 " +
+                        "     FROM SHIP_VOYAGE_HDR VHDR " +
+                        "     INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                        "     INNER JOIN SHIP_BL_MANIFEST_CHARGES_DTL CNTDTL ON CNTDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
+                        "     WHERE NVL(BLHDR.TRANSACTION_POID,0) NOT IN " +
+                        "       (SELECT NVL(BL_POID,0) FROM AR_SH_RECEIPT_HDR " +
+                        "        UNION ALL SELECT NVL(BL_POID,0) FROM AR_SH_SALES_INVOICE_HDR " +
+                        "        WHERE NVL(INVOICE_TYPE,'xx')<>'AUTOCAN') " +
+                        "     AND BLHDR.TRANSACTION_POID=? " +
+                        "     GROUP BY TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)),BLHDR.TRANSACTION_POID) " +
+                        ">= (SELECT TO_NUMBER(PARAMETER_VALUE) FROM GLOBAL_PARAMETERS " +
+                        "    WHERE PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%' AND ROWNUM=1) " +
+                        "UNION ALL " +
+                        "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
+                        "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
+                        "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
+                        "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
+                        "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
+                        "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
+                        "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
+                        "       FROM SHIP_VOYAGE_HDR VHDR " +
+                        "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                        "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
+                        "       AND BLHDR.TRANSACTION_POID IN " +
+                        "         (SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_CHARGES_DTL " +
+                        "          WHERE RECEIPT_INVOICE_POID IS NOT NULL) " +
+                        "       AND BLHDR.TRANSACTION_POID=?) " +
+                        "BETWEEN PERIOD_FROM AND PERIOD_TO " +
+                        "AND NVL(CHARGE_LINE_POID,'0')='0' " +
+                        "AND CHARGE_TYPE_APPLICABLE IN ('REVALIDATEIMP','REVALIDATEBOTH') " +
+                        "AND NVL(DELETED,'N')='N' " +
+                        "ORDER BY CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE";
 
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             String chargeApplicable = rs.getString("CHARGE_APPLICABLE");
@@ -1432,8 +1431,8 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         if (dto.getChargesDetails() != null && demChargeCode != null) {
             for (SalesInvoiceChargesDtlDto charge : dto.getChargesDetails()) {
                 if ("Y".equals(charge.getAmountSelect()) &&
-                    demChargeCode.equals(charge.getChargePoid().toString()) &&
-                    charge.getAmount() != null) {
+                        demChargeCode.equals(charge.getChargePoid().toString()) &&
+                        charge.getAmount() != null) {
                     totalDemCharge = totalDemCharge.add(charge.getAmount());
                 }
             }

@@ -23,8 +23,8 @@ import com.asg.shipping.dayCloseShiping.repository.ArShDayEndCloseDtlRepository;
 import com.asg.shipping.dayCloseShiping.repository.ArShDayEndCloseHdrRepository;
 import com.asg.shipping.dayCloseShiping.repository.ArShReceiptHdrRepository;
 import com.asg.shipping.dayCloseShiping.util.DayCloseMapper;
-import io.micrometer.common.util.StringUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -49,6 +49,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class DayCloseServiceImpl implements DayCloseService {
 
     private final ArShDayEndCloseHdrRepository hdrRepo;
@@ -99,7 +100,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
         String status = callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
                 hdr.getDocRef(), groupPoid, companyPoid, userPoid);
-        if (status!=null && !status.startsWith("SUCCESS")) throw new RuntimeException(status);
+        if (status != null && !status.startsWith("SUCCESS")) throw new RuntimeException(status);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
 
         return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
@@ -144,17 +145,53 @@ public class DayCloseServiceImpl implements DayCloseService {
     }
 
     @Override
-    public Map<String, Object> searchDayClose(String docId, FilterRequestDto request, Pageable pageable) {
+    public void deleteDayClose(Long id) {
+        log.info("Deleting DayClose Shipping with id: {}", id);
+
+        Long groupPoid = UserContext.getGroupPoid();
+
+        ArShDayEndCloseHdr entity = hdrRepo.findByTransactionPoidAndGroupPoid(id, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Dayclose Shipping", "transactionPoid", id.toString()));
+
+        if ("Y".equals(entity.getDeleted())) {
+            log.info("DayClose Shipping with id: {} is already deleted", id);
+            return;
+        }
+
+        entity.setDeleted("Y");
+
+        hdrRepo.save(entity);
+
+        log.info("Successfully deleted dayclose shipping with id: {}", id);
+    }
+
+    @Override
+    public Map<String, Object> searchDayClose(String docId, FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = documentService.resolveFilters(request);
 
-        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "LOCATION_CODE",
-                "TRANSACTION_POID");
+        if (startDate != null && endDate != null) {
+            // Add date range filter for TRANSACTION_DATE field
+            filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        }
 
-        Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+        RawSearchResult raw = documentService.search(
+                docId,
+                filters,
+                operator,
+                pageable,
+                isDeleted,
+                "LOCATION_CODE",
+                "TRANSACTION_POID"
+        );
 
+        Page<Map<String, Object>> page = new PageImpl<>(
+                raw.records(),
+                pageable,
+                raw.totalRecords()
+        );
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 

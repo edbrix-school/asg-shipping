@@ -68,7 +68,7 @@ class CustomerAutoChargeExportBlControllerTest {
                 .periodFrom(LocalDate.of(2024, 1, 1))
                 .periodTo(LocalDate.of(2024, 12, 31))
                 .createdBy("user1")
-                .createdDate(Timestamp.valueOf(LocalDateTime.now()))
+                .createdDate(LocalDateTime.now())
                 .build();
     }
 

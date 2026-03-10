@@ -17,11 +17,11 @@ public interface ShippingOFOQV2Service {
 
     OFOQLoadItemDetailsResponse loadOFOQDetails(LoadOFOQDetailsRequest request);
 
-    OFOQCheckStatusResponseDto createShippingOFOQ(ShippingOFOQV2Request request);
+    OFOQCheckStatusResponseDto createShippingOFOQ(ShippingOFOQV2RequestDto request);
 
     OFOQCheckStatusResponseDto checkStatus(@Valid OFOQCheckStatusDto request,String manifestType);
 
-    OFOQCheckStatusResponseDto updateShippingOFOQ(Long transactionPoid, ShippingOFOQV2Request request);
+    OFOQCheckStatusResponseDto updateShippingOFOQ(Long transactionPoid, ShippingOFOQV2UpdateRequestDto request);
 
     void deleteShippingOFOQ(Long transactionPoid, DeleteReasonDto deleteReasonDto);
 

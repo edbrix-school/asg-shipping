@@ -1,18 +1,21 @@
 package com.asg.shipping.customerautochargeexportbl.util;
 
-import com.asg.shipping.customerautochargeexportbl.dto.*;
-import com.asg.shipping.customerautochargeexportbl.entity.*;
+import com.asg.common.lib.utility.DateUtil;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeDetailDto;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLCreateDTO;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLDto;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLUpdateDTO;
+import com.asg.shipping.customerautochargeexportbl.entity.ShipCustomerChargesDtlEntity;
+import com.asg.shipping.customerautochargeexportbl.entity.ShipCustomerChargesHdrEntity;
 import org.springframework.stereotype.Component;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
 
 /**
  * Mapper utility for converting between Entity and DTO
@@ -54,12 +57,8 @@ public class CustomerAutoChargeExportBLMapper {
         entity.setDescription(dto.getDescription());
         entity.setPeriodFrom(java.sql.Date.valueOf(dto.getPeriodFrom()));
         entity.setPeriodTo(java.sql.Date.valueOf(dto.getPeriodTo()));
-        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : convertDate(dto.getTransactionDate().atStartOfDay()));
         entity.setDocRef(dto.getDocRef());
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(new Timestamp(System.currentTimeMillis()));
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()));
         entity.setDeleted("N");
     }
 
@@ -85,8 +84,6 @@ public class CustomerAutoChargeExportBLMapper {
         if (dto.getDocRef() != null) {
             entity.setDocRef(dto.getDocRef());
         }
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()));
     }
 
     public CustomerAutoChargeDetailDto mapDtlToDto(ShipCustomerChargesDtlEntity entity) {
@@ -133,8 +130,6 @@ public class CustomerAutoChargeExportBLMapper {
                 .amountOtherCost(dto.getAmountOtherCost())
                 .amount53(dto.getAmount53())
                 .amount53Cost(dto.getAmount53Cost())
-                .createdBy(getCurrentUser())
-                .createdDate(LocalDateTime.now())
                 .build();
     }
 
@@ -169,8 +164,6 @@ public class CustomerAutoChargeExportBLMapper {
         if (dto.getAmountOtherCost() != null) entity.setAmountOtherCost(dto.getAmountOtherCost());
         if (dto.getAmount53() != null) entity.setAmount53(dto.getAmount53());
         if (dto.getAmount53Cost() != null) entity.setAmount53Cost(dto.getAmount53Cost());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
 }

@@ -5,15 +5,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
-
 import java.time.LocalDate;
-import java.util.List;
 
-@Data
-@Builder
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class ShippingOFOQV2Request {
+@Builder
+public class ShippingOFOQV2RequestDto {
 
     @Schema(description = "Document reference number", example = "ASG00001")
     private String docRef;
@@ -36,12 +35,4 @@ public class ShippingOFOQV2Request {
 
     @Schema(description = "Remarks or comments", example = "Test OFOQ creation")
     private String remarks;
-
-    @Schema(description = "OFOQ line item details")
-    private List<OFOQItemDtlDto> lineDetails;
-
-    @Schema(description = "BL amendment details ")
-    private List<OFOQRequestAmendBlDto> amendBl;
-
-
 }

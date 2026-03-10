@@ -87,7 +87,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
         headerEntity.setDocRef("DOC001");
         headerEntity.setDeleted("N");
         headerEntity.setCreatedBy("user1");
-        headerEntity.setCreatedDate(Timestamp.valueOf(LocalDateTime.now()));
+        headerEntity.setCreatedDate(LocalDateTime.now());
 
         responseDto = CustomerAutoChargeExportBLDto.builder()
                 .transactionPoid(1L)
@@ -97,7 +97,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
                 .periodFrom(LocalDate.of(2024, 1, 1))
                 .periodTo(LocalDate.of(2024, 12, 31))
                 .createdBy("user1")
-                .createdDate(Timestamp.valueOf(LocalDateTime.now()))
+                .createdDate(LocalDateTime.now())
                 .build();
     }
 
