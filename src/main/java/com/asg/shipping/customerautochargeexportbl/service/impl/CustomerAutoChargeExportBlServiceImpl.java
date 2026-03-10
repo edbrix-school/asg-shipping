@@ -221,8 +221,6 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
                         ShipCustomerChargesDtlEntity oldEntity = new ShipCustomerChargesDtlEntity();
                         BeanUtils.copyProperties(entity,oldEntity);
                         mapper.updateDtlEntity(dto, entity);
-                        entity.setLastModifiedBy(getUserName());
-                        entity.setLastModifiedDate(LocalDateTime.now());
                         toUpdate.add(entity);
                         String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
                         logRequests.add(new LogRequestDto<>(oldEntity, entity, ShipCustomerChargesDtlEntity.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));

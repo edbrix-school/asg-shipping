@@ -336,7 +336,6 @@ class VesselMasterMapperTest {
             assertEquals(updateDTO.getRemarks(), vessel.getRemarks());
             assertEquals(updateDTO.getActive(), vessel.getActive());
             assertEquals(updateDTO.getSeqno(), vessel.getSeqno());
-            // Created fields should not be updated
         }
     }
 

@@ -1,13 +1,11 @@
 package com.asg.shipping.salesinvoice.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.*;
 
 /**
  * Entity class for AR_SH_SALES_INVOICE_CHARG_DTL table
@@ -21,7 +19,7 @@ import static com.asg.common.lib.utility.ASGHelperUtils.*;
 @Builder
 @EqualsAndHashCode(callSuper = false)
 @IdClass(ArShSalesInvoiceChargDtlId.class)
-public class ArShSalesInvoiceChargDtl {
+public class ArShSalesInvoiceChargDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -107,40 +105,14 @@ public class ArShSalesInvoiceChargDtl {
     @Column(name = "PRINT_RATE_AMT", precision = 18, scale = 3)
     private BigDecimal printRateAmt;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ArShSalesInvoiceHdr header;
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-        if (createdBy == null) {
-            createdBy = getCurrentUser();
-        }
         if (chargeNewRecord == null) {
             chargeNewRecord = "N";
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        if (lastModifiedBy == null) {
-            lastModifiedBy = getCurrentUser();
         }
     }
 }

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
 import org.springframework.stereotype.Component;
 
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDenominationDto;
@@ -19,7 +20,7 @@ public class DayCloseMapper {
 
 		entity.setGroupPoid(groupPoid);
 		entity.setCompanyPoid(companyPoid);
-		entity.setTransactionDate(dto.getTransactionDate());
+		entity.setTransactionDate(convertDate(dto.getTransactionDate().atStartOfDay()));
 		entity.setLocationCode(dto.getLocationCode() != null ? dto.getLocationCode() : "PORT");
 		entity.setCashAmount(dto.getCashAmount());
 		entity.setChequeAmount(dto.getChequeAmount());

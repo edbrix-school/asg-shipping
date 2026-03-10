@@ -1,15 +1,10 @@
 package com.asg.shipping.shipcommisiontransfer.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-import static com.asg.common.lib.security.util.UserContext.getUserName;
 
 /**
  * Entity class for SHIP_BL_COMMISSION_DTL table
@@ -17,11 +12,12 @@ import static com.asg.common.lib.security.util.UserContext.getUserName;
 @Entity
 @Table(name = "SHIP_BL_COMMISSION_DTL")
 @IdClass(ShipBlCommissionDtlId.class)
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class ShipBlCommissionDtl {
+public class ShipBlCommissionDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -94,33 +90,8 @@ public class ShipBlCommissionDtl {
     @Column(name = "SHORT_LEG_SELECTED", length = 25)
     private String shortLegSelected;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ShipBlCommissionHdr shipBlCommissionHdr;
 
-    @PrePersist
-    protected void onCreate() {
-        createdDate = LocalDateTime.now();
-        if (createdBy == null) {
-            createdBy = getUserName();
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        lastModifiedBy = getUserName();
-    }
 }

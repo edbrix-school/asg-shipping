@@ -607,8 +607,6 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             target.setSlab6Rate(source.getSlab6Rate());
             target.setSlab7Tilldays(source.getSlab7Tilldays());
             target.setSlab7Rate(source.getSlab7Rate());
-            target.setCreatedBy(currentUser);
-            target.setCreatedDate(LocalDateTime.now());
             impDtlRepository.save(target);
         }
 
@@ -636,8 +634,6 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     .slab6Rate(source.getSlab6Rate())
                     .slab7Tilldays(source.getSlab7Tilldays())
                     .slab7Rate(source.getSlab7Rate())
-                    .createdBy(currentUser)
-                    .createdDate(LocalDateTime.now())
                     .build();
             impPayDtlRepository.save(target);
         }
@@ -666,8 +662,6 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             target.setSlab6Rate(source.getSlab6Rate());
             target.setSlab7Tilldays(source.getSlab7Tilldays());
             target.setSlab7Rate(source.getSlab7Rate());
-            target.setCreatedBy(currentUser);
-            target.setCreatedDate(LocalDateTime.now());
             expDtlRepository.save(target);
         }
 
@@ -695,8 +689,6 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             target.setSlab6Rate(source.getSlab6Rate());
             target.setSlab7Tilldays(source.getSlab7Tilldays());
             target.setSlab7Rate(source.getSlab7Rate());
-            target.setCreatedBy(currentUser);
-            target.setCreatedDate(LocalDateTime.now());
             expPayDtlRepository.save(target);
         }
     }

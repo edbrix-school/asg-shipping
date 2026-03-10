@@ -1,21 +1,14 @@
 package com.asg.shipping.dayCloseShiping.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
+import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
+import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjectionImpl;
+import com.asg.shipping.dayCloseShiping.service.DayCloseService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,15 +23,17 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.enums.LogDetailsEnum;
-import com.asg.common.lib.security.util.UserContext;
-import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjectionImpl;
-import com.asg.shipping.dayCloseShiping.service.DayCloseService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
 class DayCloseControllerTest {
@@ -149,11 +144,11 @@ class DayCloseControllerTest {
                 .companyPoid(2001L)
                 .transactionDate(LocalDate.now())
                 .build();
-        
+
         DayCloseDto request = DayCloseDto.builder()
                 .header(header)
                 .build();
-        
+
         DayCloseDto response = new DayCloseDto();
 
         when(dayCloseService.createDayClose(any(), eq(1001L), eq(2001L), eq(9001L)))
@@ -200,7 +195,7 @@ class DayCloseControllerTest {
         Map<String, Object> responseMap = new HashMap<>();
         responseMap.put("data", Map.of("content", List.of()));
 
-        when(dayCloseService.searchDayClose(eq("DOC123"), eq(filters), any(Pageable.class)))
+        when(dayCloseService.searchDayClose(anyString(), any(FilterRequestDto.class), any(Pageable.class), any(), any()))
                 .thenReturn(responseMap);
 
         mockMvc.perform(
@@ -210,7 +205,8 @@ class DayCloseControllerTest {
                 .andExpect(status().isOk());
 
         verify(dayCloseService)
-                .searchDayClose(eq("DOC123"), eq(filters), any(Pageable.class));
+                .searchDayClose(anyString(), any(FilterRequestDto.class), any(Pageable.class), any(), any());
+
     }
 
     /* -------------------- PRINT (SUCCESS ONLY) -------------------- */

@@ -1,10 +1,10 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for SHIP_DEM_DETN_TRANSFER_HDR table
@@ -14,11 +14,12 @@ import java.time.LocalDateTime;
         uniqueConstraints = {
                 @UniqueConstraint(name = "UK_SHIP_DEM_DETN_TRANSFER_HDR", columnNames = {"DOC_REF"})
         })
-@Data
+@Setter
+@Getter
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class ShipDemDetnTransferHdr {
+public class ShipDemDetnTransferHdr extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -58,32 +59,10 @@ public class ShipDemDetnTransferHdr {
     @Column(name = "DELETED", length = 1)
     private String deleted;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @PrePersist
     protected void onCreate() {
-        createdDate = LocalDateTime.now();
-        if (createdBy == null) {
-            createdBy = com.asg.common.lib.security.util.UserContext.getUserName();
-        }
         if (deleted == null) {
             deleted = "N";
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        lastModifiedBy = com.asg.common.lib.security.util.UserContext.getUserName();
     }
 }

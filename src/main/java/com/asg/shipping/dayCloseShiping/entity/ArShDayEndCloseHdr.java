@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -21,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ArShDayEndCloseHdr {
+public class ArShDayEndCloseHdr extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -69,16 +70,4 @@ public class ArShDayEndCloseHdr {
 
 	@Column(name = "DELETED")
 	private String deleted;
-
-	@Column(name = "CREATED_BY")
-	private String createdBy;
-
-	@Column(name = "CREATED_DATE")
-	private LocalDateTime createdDate;
-
-	@Column(name = "LASTMODIFIED_BY")
-	private String lastModifiedBy;
-
-	@Column(name = "LASTMODIFIED_DATE")
-	private LocalDateTime lastModifiedDate;
 }
