@@ -63,8 +63,6 @@ public class MafiTrailerDateUpdateFormMapper {
 		}
 		entity.setAgentReference(request.getMafiHeader().getAgentReference());
 		entity.setRemarks(request.getMafiHeader().getRemarks());
-		entity.setLastModifiedBy(userId);
-		entity.setLastModifiedDate(LocalDateTime.now());
 
 	}
 

@@ -471,8 +471,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 	private void saveDetailTables(Long transactionPoid, List<BookingFormCargoDetailDto> cargoDetails,
 			List<BookingFormChargesDetailDto> chargesDetails, List<BookingFormContainerDetailDto> containerDetails) {
 
-		String currentUser = getCurrentUser();
-		LocalDateTime now = LocalDateTime.now();
 		String docId = UserContext.getDocumentId();
 		String docKeyPoid = transactionPoid.toString();
 
@@ -496,8 +494,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 				case "ISCREATED":
 					ShipMateCargoDtl newEntity = mapper.mapCargoDtlFromDto(dto, transactionPoid);
 					newEntity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
-					newEntity.setCreatedBy(currentUser);
-					newEntity.setCreatedDate(now);
 					toSave.add(newEntity);
 					break;
 
@@ -515,8 +511,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 					BeanUtils.copyProperties(existingData, existing);
 
 					mapCargoDtlFromDto(dto, existing, transactionPoid);
-					existing.setLastModifiedBy(currentUser);
-					existing.setLastModifiedDate(now);
 
 					toUpdate.add(existing);
 
@@ -570,8 +564,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 				case "ISCREATED":
 					ShipMateChargesDtl entity = mapper.mapChargesDtlFromDto(dto, transactionPoid);
 					entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
-					entity.setCreatedBy(currentUser);
-					entity.setCreatedDate(now);
 					toSave.add(entity);
 					break;
 
@@ -587,8 +579,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 					BeanUtils.copyProperties(existingData, existing);
 					
 					mapChargesDtlFromDto(dto, existing, transactionPoid);
-					existing.setLastModifiedBy(currentUser);
-					existing.setLastModifiedDate(now);
 					toUpdate.add(existing);
 					logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateChargesDtl.class, docId,
 							docKeyPoid, "CHARGES DET_ROW_ID: " + dto.getDetRowId()));
@@ -639,8 +629,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 				case "ISCREATED":
 					ShipMateContainerDtl entity = mapper.mapContainerDtlFromDto(dto, transactionPoid);
 					entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
-					entity.setCreatedBy(currentUser);
-					entity.setCreatedDate(now);
 					toSave.add(entity);
 					break;
 
@@ -656,8 +644,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 					BeanUtils.copyProperties(existingData, existing);
 
 					mapContainerDtlFromDto(dto, existing, transactionPoid);
-					existing.setLastModifiedBy(currentUser);
-					existing.setLastModifiedDate(now);
 					toUpdate.add(existing);
 					logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateContainerDtl.class, docId,
 							docKeyPoid, "CONTAINER DET_ROW_ID: " + dto.getDetRowId()));

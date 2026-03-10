@@ -150,10 +150,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                                     .deleted("N")
                                     .manifestType("M")
                                     .companyPoid(UserContext.getCompanyPoid())
-                                    .createdBy(ASGHelperUtils.getCurrentUser())
-                                    .createdDate(LocalDateTime.now())
-                                    .lastModifiedBy(ASGHelperUtils.getCurrentUser())
-                                    .lastModifiedDate(LocalDateTime.now())
                                     .build()
                     );
 
@@ -275,8 +271,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .transactionPoid(transactionPoid)
                     .detRowId(detRowId)
                     .blNumber(dto.getBlNumber())
-                    .createdBy(ASGHelperUtils.getCurrentUser())
-                    .createdDate(LocalDateTime.now())
                     .build();
             OFOQAmendBlDtlRepository.save(entity);
             String logDetail = String.format("Row Created on Amend Bl with DetRowId: %s", detRowId);
@@ -389,8 +383,6 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     .sailDate(dto.getSailDate() != null ? dto.getSailDate().atTime(LocalTime.now()) : null)
                     .drilldownLinkInfo(dto.getDrillDownLinkInfo())
                     .checked(dto.getChecked())
-                    .createdBy(ASGHelperUtils.getCurrentUser())
-                    .createdDate(LocalDateTime.now())
                     .companyPoid(UserContext.getCompanyPoid())
                     .build();
 

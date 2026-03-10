@@ -1,6 +1,7 @@
 package com.asg.shipping.chargeGroupMaster.entity;
 
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +22,7 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(name = "SHIP_CHARGE_GROUP_MAST_UK_NAME", columnNames = "CHARGE_GROUP_NAME")
         }
 )
-public class ShipChargeGroupMaster {
+public class ShipChargeGroupMaster extends BaseEntity {
 
 
     @Id
@@ -61,18 +62,6 @@ public class ShipChargeGroupMaster {
 
     @Column(name = "SEQNO")
     private Long seqNo;
-
-    @Column(name = "CREATED_BY")
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY")
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "GL_PREFIX")
     private String glPrefix;

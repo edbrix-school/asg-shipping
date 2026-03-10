@@ -55,12 +55,6 @@ public class ContainerGroupMapper {
             entity.setActive("Y");
         }
 
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-        
         // Set deleted flag
         entity.setDeleted("N");
     }
@@ -78,10 +72,7 @@ public class ContainerGroupMapper {
         if (dto.getActive() != null && !dto.getActive().isEmpty()) {
             entity.setActive(dto.getActive());
         }
-        
-        // Update audit fields (do not update createdBy/createdDate)
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
+
     }
 }
 

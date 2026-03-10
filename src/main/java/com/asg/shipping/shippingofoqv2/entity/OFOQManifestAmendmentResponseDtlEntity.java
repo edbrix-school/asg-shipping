@@ -1,5 +1,6 @@
 package com.asg.shipping.shippingofoqv2.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 @Builder
 //manifest amendment response
 @ToString
-public class OFOQManifestAmendmentResponseDtlEntity {
+public class OFOQManifestAmendmentResponseDtlEntity extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -55,18 +56,6 @@ public class OFOQManifestAmendmentResponseDtlEntity {
 
     @Column(name = "PROV_MANIFEST_NO", length = 500)
     private String provManifestNo;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "XML_BL_NUMBER", length = 100)
     private String xmlBlNumber;

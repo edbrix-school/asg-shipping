@@ -1,14 +1,20 @@
 package com.asg.shipping.MafiTrailerDateUpdateForm.service;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.*;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtlId;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiHdr;
+import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiDtlRepository;
+import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiHdrRepository;
+import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipReadOnlyRepository;
+import com.asg.shipping.MafiTrailerDateUpdateForm.util.MafiTrailerDateUpdateFormMapper;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,26 +26,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.RawSearchResult;
-import com.asg.common.lib.enums.LogDetailsEnum;
-import com.asg.common.lib.security.util.UserContext;
-import com.asg.common.lib.service.DocumentSearchService;
-import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiDetailDto;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormResponse;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafitrailerHeaderDTO;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.VoyageProjection;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtlId;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiHdr;
-import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiDtlRepository;
-import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiHdrRepository;
-import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipReadOnlyRepository;
-import com.asg.shipping.MafiTrailerDateUpdateForm.util.MafiTrailerDateUpdateFormMapper;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-import jakarta.persistence.EntityNotFoundException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MafiTrailerDateUpdateFormServiceImplTest {
@@ -70,10 +64,13 @@ class MafiTrailerDateUpdateFormServiceImplTest {
     private ShipBlMafiHdr header;
     private ShipBlMafiDtl detail;
 
+
     @BeforeEach
     void setUp() {
         mockedUserContext = mockStatic(UserContext.class);
         mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+        mockedUserContext.when(UserContext::getTimeZoneCode).thenReturn("UTC");
+
 
         header = new ShipBlMafiHdr();
         header.setTransactionPoid(1L);
@@ -94,6 +91,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         detail.setBackLoadDate(LocalDate.now());
         detail.setMafiEmptyDate(LocalDate.now());
     }
+
 
     @AfterEach
     void tearDown() {
@@ -178,6 +176,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
     // -------------------------------------------------
     @Test
     void update_HeaderAndDetailUpdated_Success() {
+
         MafitrailerHeaderDTO headerDto = new MafitrailerHeaderDTO();
         headerDto.setAgentReference("NEW_AGENT");
         headerDto.setRemarks("NEW");
@@ -185,6 +184,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         MafiDetailDto detailDto = new MafiDetailDto();
         detailDto.setDetRowId(1L);
         detailDto.setRemarks("NEW");
+        detailDto.setBlPoid(100L);
         detailDto.setBackLoadDate(LocalDate.now().plusDays(1));
         detailDto.setMafiEmptyDate(LocalDate.now().plusDays(1));
 
@@ -201,11 +201,12 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         service.update(1L, request, 10L, 20L, "admin");
 
-        verify(headerRepository).updateByTransactionPoid(
-                eq(1L), any(), any(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), any(), any(), eq("admin"));
 
         verify(detailRepository).updateByTransactionPoidAndDetRowId(
                 eq(1L), eq(1L), any(), any(), any(), eq("admin"));
+
+        verify(loggingService).createLogBatch(anyList());
 
         verify(loggingService).logChanges(
                 any(ShipBlMafiHdr.class),

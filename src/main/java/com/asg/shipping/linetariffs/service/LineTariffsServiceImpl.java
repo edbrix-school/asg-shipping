@@ -143,9 +143,13 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         ShipLineTariffHdr saved;
         try {
             saved = tariffHdrRepository.save(tariff);
+            tariffHdrRepository.flush(); // Force flush to catch constraint violations immediately
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             if (e.getMessage().contains("UK_DOCREFFSHIP_LINE_TARIFF_HDR")) {
                 throw new ValidationException("Document Reference " + dto.getDocRef() + " already exists. Please use a different reference.");
+            }
+            if (e.getMessage().contains("SHIP_TF_HDR_LINPERION_UK")) {
+                throw new ValidationException("A tariff with the same line and period already exists. Please use a different period.");
             }
             throw e;
         }
@@ -193,7 +197,19 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         // Update header entity
         mapper.mapUpdateDTOToEntity(dto, tariff, groupPoid, userPoid);
-        ShipLineTariffHdr saved = tariffHdrRepository.save(tariff);
+        ShipLineTariffHdr saved;
+        try {
+            saved = tariffHdrRepository.save(tariff);
+            tariffHdrRepository.flush(); // Force flush to catch constraint violations immediately
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            if (e.getMessage().contains("UK_DOCREFFSHIP_LINE_TARIFF_HDR")) {
+                throw new ValidationException("Document Reference " + dto.getDocRef() + " already exists. Please use a different reference.");
+            }
+            if (e.getMessage().contains("SHIP_TF_HDR_LINPERION_UK")) {
+                throw new ValidationException("A tariff with the same line and period already exists. Please use a different period.");
+            }
+            throw e;
+        }
 
         loggingService.logChanges(oldTariff, saved, ShipLineTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 

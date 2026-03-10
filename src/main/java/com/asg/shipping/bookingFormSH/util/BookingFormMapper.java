@@ -6,6 +6,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.asg.common.lib.utility.DateUtil;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDateTime;
 import org.springframework.stereotype.Component;
 
 import com.asg.shipping.bookingFormSH.dto.BookingFormCargoDetailDto;
@@ -63,7 +66,7 @@ public class BookingFormMapper {
 	public void mapCreateDTOToEntity(BookingFormCreateDTO dto, ShipMateHdr entity, Long groupPoid, Long companyPoid) {
 		entity.setGroupPoid(groupPoid);
 		entity.setCompanyPoid(companyPoid);
-		entity.setTransactionDate(dto.getTransactionDate());
+		entity.setTransactionDate(dto.getTransactionDate()==null? DateUtil.getCurrentDateInUserTimeZone(): convertDate(dto.getTransactionDate().atStartOfDay()));
 		entity.setVessalAgentName(dto.getVessalAgentName());
 		entity.setShipperPoid(dto.getShipperPoid());
 		entity.setShipperAddressPoid(dto.getShipperAddressPoid());
@@ -75,7 +78,7 @@ public class BookingFormMapper {
 		entity.setNotifyAddressPoid2(dto.getNotifyAddressPoid2());
 		entity.setQuotationTransactionPoid(dto.getQuotationTransactionPoid());
 		entity.setVesselPoid(dto.getVesselPoid());
-		entity.setVesselEtaDate(dto.getVesselEtaDate());
+		entity.setVesselEtaDate(convertDate(dto.getVesselEtaDate().atStartOfDay()));
 		entity.setLinePoid(dto.getLinePoid());
 		entity.setSalesmanPoid(dto.getSalesmanPoid());
 		entity.setComodityPoid(dto.getComodityPoid());
@@ -91,7 +94,7 @@ public class BookingFormMapper {
 		entity.setMateStatus(dto.getMateStatus());
 		entity.setVoyageNo(dto.getVoyageNo());
 		entity.setBookingIssueNo(dto.getBookingIssueNo());
-		entity.setMateLoadDate(dto.getMateLoadDate());
+		entity.setMateLoadDate(convertDate(dto.getMateLoadDate().atStartOfDay()));
 		entity.setMateLoadNo(dto.getMateLoadNo());
 		entity.setMateLoadVoyagePoid(dto.getMateLoadVoyagePoid());
 		entity.setIssueType(dto.getIssueType());
@@ -100,12 +103,6 @@ public class BookingFormMapper {
 		entity.setSplitBookingNo(dto.getSplitBookingNo());
 		entity.setFinalDestination(dto.getFinalDestination());
 		entity.setShipperDetailsManually(dto.getShipperDetailsManually());
-
-		// Set audit fields
-		entity.setCreatedBy(getCurrentUser());
-		entity.setCreatedDate(LocalDateTime.now());
-		entity.setLastModifiedBy(getCurrentUser());
-		entity.setLastModifiedDate(LocalDateTime.now());
 
 		// Set deleted flag
 		entity.setDeleted("N");
@@ -152,7 +149,7 @@ public class BookingFormMapper {
 			entity.setVesselPoid(dto.getVesselPoid());
 		}
 		if (dto.getVesselEtaDate() != null) {
-			entity.setVesselEtaDate(dto.getVesselEtaDate());
+			entity.setVesselEtaDate(convertDate(dto.getVesselEtaDate().atStartOfDay()));
 		}
 		if (dto.getLinePoid() != null) {
 			entity.setLinePoid(dto.getLinePoid());
@@ -200,7 +197,7 @@ public class BookingFormMapper {
 			entity.setBookingIssueNo(dto.getBookingIssueNo());
 		}
 		if (dto.getMateLoadDate() != null) {
-			entity.setMateLoadDate(dto.getMateLoadDate());
+			entity.setMateLoadDate(convertDate(dto.getMateLoadDate().atStartOfDay()));
 		}
 		if (dto.getMateLoadNo() != null) {
 			entity.setMateLoadNo(dto.getMateLoadNo());
@@ -226,10 +223,6 @@ public class BookingFormMapper {
 		if (dto.getShipperDetailsManually() != null) {
 			entity.setShipperDetailsManually(dto.getShipperDetailsManually());
 		}
-
-		// Update audit fields
-		entity.setLastModifiedBy(getCurrentUser());
-		entity.setLastModifiedDate(LocalDateTime.now());
 	}
 
 	// Detail mapping methods - Cargo DTL
