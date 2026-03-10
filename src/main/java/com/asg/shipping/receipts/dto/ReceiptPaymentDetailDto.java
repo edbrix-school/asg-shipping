@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @AllArgsConstructor
@@ -17,13 +17,12 @@ public class ReceiptPaymentDetailDto {
 
 	@Schema(description = "Action Type: ISCREATED, ISUPDATED, ISDELETED, NOCHANGES", example = "ISCREATED")
 	private String actionType;
-
 	private Long detRowId;
 	private String pymtType;
 	private BigDecimal amount;
 	private Long ttBankPoid;
 	private String chqCardno;
-	private LocalDateTime chqDate;
+	private LocalDate chqDate;
 	private String accountName;
 	private String accountNo;
 	private Long bankPoid;

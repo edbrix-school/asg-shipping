@@ -63,12 +63,12 @@ public class ImportManifestMapper {
 
                 .descriptionsAndMarks(mapToDescriptionAndMarks(dto.getCargoDescriptions()))
                 .mafiDetails(mapToMafiDetails(dto.getMafiDetails()))
-                .otherNotifies()
-                .generalCargoDetails(mapToGeneralCargoDetails(dto.getGeneralCargoDetails()))
-                .containers(mapToContainers(dto.getContainers()))
-                .charges()
-                .otherCharges()
-                .partBls()
+//                .otherNotifies()
+//                .generalCargoDetails(mapToGeneralCargoDetails(dto.getGeneralCargoDetails()))
+//                .containers(mapToContainers(dto.getContainers()))
+//                .charges()
+//                .otherCharges()
+//                .partBls()
 
                 .build();
     }
@@ -93,60 +93,60 @@ public class ImportManifestMapper {
                 .toList();
     }
 
-    private static List<ContainerDto> mapToContainers(List<ContainerRequestDto> containers) {
-        if (containers == null || containers.isEmpty()) {
-            return List.of();
-        }
-
-        return containers.stream()
-                .map(dto -> ContainerDto.builder()
-                        .detRowId(dto.getDetRowId())
-                        .socType(dto.get)
-                        .containerNumber()
-                        .sealNumber()
-                        .isoTypePoid()
-                        .shortDescription()
-                        .commodityPoid()
-                        .cbm()
-                        .grossWeight()
-                        .netWeight()
-                        .tareWeight()
-                        .packs()
-                        .packsType()
-                        .hsCode()
-                        .hsDescription()
-                        .customerDays()
-                        .principalDays()
-                        .imco()
-                        .reefer()
-                        .oog()
-                        .grantFlag()
-                        .grantBy()
-                        .amountPerDayAfterFree()
-                        .actualDischargeDate()
-                        .emptyDate()
-                        .collectionDate()
-                        .collectionAmount()
-                        .collectionDays()
-                        .imcoTypePoid()
-                        .imcoNumber()
-                        .imcoClassDescription()
-                        .rfType()
-                        .rfHumidity()
-                        .rfVent()
-                        .rfTemperature()
-                        .oogTypePoid()
-                        .oogBack()
-                        .oogLeftWidth()
-                        .oogRightWidth()
-                        .oogHeight()
-                        .oogLength()
-                        .oogAdditional()
-                        .oogFront()
-                        .actionType()
-                        .build()
-                );
-    }
+//    private static List<ContainerDto> mapToContainers(List<ContainerRequestDto> containers) {
+//        if (containers == null || containers.isEmpty()) {
+//            return List.of();
+//        }
+//
+//        return containers.stream()
+//                .map(dto -> ContainerDto.builder()
+//                        .detRowId(dto.getDetRowId())
+//                        .socType(dto.get)
+//                        .containerNumber()
+//                        .sealNumber()
+//                        .isoTypePoid()
+//                        .shortDescription()
+//                        .commodityPoid()
+//                        .cbm()
+//                        .grossWeight()
+//                        .netWeight()
+//                        .tareWeight()
+//                        .packs()
+//                        .packsType()
+//                        .hsCode()
+//                        .hsDescription()
+//                        .customerDays()
+//                        .principalDays()
+//                        .imco()
+//                        .reefer()
+//                        .oog()
+//                        .grantFlag()
+//                        .grantBy()
+//                        .amountPerDayAfterFree()
+//                        .actualDischargeDate()
+//                        .emptyDate()
+//                        .collectionDate()
+//                        .collectionAmount()
+//                        .collectionDays()
+//                        .imcoTypePoid()
+//                        .imcoNumber()
+//                        .imcoClassDescription()
+//                        .rfType()
+//                        .rfHumidity()
+//                        .rfVent()
+//                        .rfTemperature()
+//                        .oogTypePoid()
+//                        .oogBack()
+//                        .oogLeftWidth()
+//                        .oogRightWidth()
+//                        .oogHeight()
+//                        .oogLength()
+//                        .oogAdditional()
+//                        .oogFront()
+//                        .actionType()
+//                        .build()
+//                );
+//    }
 
     private static List<GeneralCargoDto> mapToGeneralCargoDetails(
             List<GeneralCargoRequestDto> cargoDescriptions) {

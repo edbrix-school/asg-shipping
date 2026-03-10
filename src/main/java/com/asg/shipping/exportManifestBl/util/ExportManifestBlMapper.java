@@ -531,9 +531,6 @@ public class ExportManifestBlMapper {
         
         // Always keep BL_TYPE as 'EXPORT'
         entity.setBlType("EXPORT");
-        
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(java.time.LocalDateTime.now());
     }
 }
 

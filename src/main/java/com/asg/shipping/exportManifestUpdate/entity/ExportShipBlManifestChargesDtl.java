@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestUpdate.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ExportShipBlManifestChargesDtlId.class)
-public class ExportShipBlManifestChargesDtl {
+public class ExportShipBlManifestChargesDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -46,18 +47,6 @@ public class ExportShipBlManifestChargesDtl {
 
     @Column(name = "PAID_AT_PORT_POID")
     private Long paidAtPortPoid;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "CHARGE_TYPE", nullable = false, length = 25)
     private String chargeType;
@@ -127,9 +116,6 @@ public class ExportShipBlManifestChargesDtl {
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
         if (chargeType == null) {
             chargeType = "MANIFEST";
         }
@@ -144,13 +130,5 @@ public class ExportShipBlManifestChargesDtl {
         }
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        // Trigger logic: If DOC_REF_LINK_NO is not null and AUTO_CAN_INVOICE_NO is null, set AUTO_CAN_INVOICE_NO = DOC_REF_LINK_NO
-        if (docRefLinkNo != null && autoCanInvoiceNo == null) {
-            autoCanInvoiceNo = docRefLinkNo;
-        }
-    }
 }
 

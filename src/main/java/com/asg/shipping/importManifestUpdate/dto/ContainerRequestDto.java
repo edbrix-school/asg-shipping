@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 @Data
 @Builder
@@ -39,8 +40,8 @@ public class ContainerRequestDto {
     private String refferTemp;
     private String refferHum;
     private String refferVent;
-    private LocalDateTime issueToConsignee;
-    private LocalDateTime returnFromConsignee;
+    private LocalDate issueToConsignee;
+    private LocalDate returnFromConsignee;
     private String isImco;
     private String isOog;
     private String isRefer;
@@ -56,7 +57,7 @@ public class ContainerRequestDto {
     private String oogA;
     private String oogType;
     private String imcoClassActual;
-    private LocalDateTime displayCollectedDate;
+    private LocalDate displayCollectedDate;
     private Long totalDaysCollected;
     private Long totalAmountCollected;
     private String printReturnFormDefault;
@@ -65,6 +66,6 @@ public class ContainerRequestDto {
     private String hsCode;
     private String hsDescription;
     private Long amountPerDayAfterFree;
-    private LocalDateTime actualDischargeDate;
+    private LocalDate actualDischargeDate;
 
 }

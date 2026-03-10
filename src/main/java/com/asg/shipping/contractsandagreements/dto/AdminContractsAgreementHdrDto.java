@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public class AdminContractsAgreementHdrDto {
     private Long transactionPoid;
     private Long groupPoid;
     private Long companyPoid;
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
     private String docRef;
     private String agreementId;
     @NotBlank(message = "Agreement Name is required")
@@ -45,16 +46,16 @@ public class AdminContractsAgreementHdrDto {
     private String partyContactPhone;
     private String partyAddress;
 
-    private LocalDateTime referenceDate;
-    private LocalDateTime effectiveDate;
-    private LocalDateTime expiryDate;
+    private LocalDate referenceDate;
+    private LocalDate effectiveDate;
+    private LocalDate expiryDate;
     private Integer noticePeriodDays;
     @NotBlank(message = "Renewal Type is required")
     private String renewalType;
     @NotBlank(message = "Renewal Cycle is required")
     private String renewalCycle;
-    private LocalDateTime renewalDueDate;
-    private LocalDateTime lastRenewalDate;
+    private LocalDate renewalDueDate;
+    private LocalDate lastRenewalDate;
 
     private BigDecimal totalContractValue;
     private BigDecimal annualValue;
@@ -62,7 +63,7 @@ public class AdminContractsAgreementHdrDto {
     private String paymentFrequency;
 
     private String terminated;
-    private LocalDateTime terminationDate;
+    private LocalDate terminationDate;
     private String terminationReason;
 
     private String agreementCaption;

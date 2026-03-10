@@ -1,13 +1,11 @@
 package com.asg.shipping.lineprofile.service;
 
-import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.LovGetListDto;
-import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.*;
 import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -21,6 +19,7 @@ import com.asg.shipping.lineprofile.entity.ShipLineProfileMasterEntity;
 import com.asg.shipping.lineprofile.repository.ShipLineProfileContactDtlRepository;
 import com.asg.shipping.lineprofile.repository.ShipLineProfileMasterRepository;
 import com.asg.shipping.lineprofile.util.LineProfileMapper;
+import com.asg.shipping.tradelanemaster.entity.ShipTradelaneMaster;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.Query;
@@ -58,6 +57,7 @@ public class LineProfileServiceImpl implements LineProfileService {
     private final DocumentSearchService documentService;
     private final ShipLineProfileMasterRepository masterRepository;
     private final ShipLineProfileContactDtlRepository contactRepository;
+    private final DocumentDeleteService deleteService;
     private final LineProfileMapper mapper;
     private final EntityManager entityManager;
     private final LoggingService loggingService;
@@ -165,23 +165,16 @@ public class LineProfileServiceImpl implements LineProfileService {
 
     @Override
     @Transactional
-    public void delete(Long lineProfilePoid, Long groupPoid, String userId) {
-        if (lineProfilePoid == null) throw new ValidationException("lineProfilePoid is required");
-        if (groupPoid == null) throw new ValidationException("groupPoid is required");
-        if (userId == null) throw new ValidationException("userId is required");
+    public void delete(Long lineProfilePoid, DeleteReasonDto deleteReasonDto) {
 
         ShipLineProfileMasterEntity master = masterRepository
-                .findByLineProfilePoidAndGroupPoid(lineProfilePoid, groupPoid)
+                .findByLineProfilePoidAndGroupPoid(lineProfilePoid, UserContext.getGroupPoid())
                 .orElseThrow(() -> new ResourceNotFoundException("LineProfile", "lineProfilePoid", lineProfilePoid));
 
-        master.setDeleted("Y");
-        master.setActive("N");
-        master.setLastModifiedBy(userId);
-        master.setLastModifiedDate(java.time.LocalDateTime.now());
-        masterRepository.save(master);
+        deleteService.deleteDocument(lineProfilePoid,"SH_LINE_PROFILE_MASTER",
+                    "TRADELANE_POID",deleteReasonDto,null);
+        }
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), lineProfilePoid.toString());
-    }
 
     @Override
     @Transactional(readOnly = true)

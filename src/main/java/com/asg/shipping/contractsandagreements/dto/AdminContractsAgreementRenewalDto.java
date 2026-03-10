@@ -2,6 +2,7 @@ package com.asg.shipping.contractsandagreements.dto;
 
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -13,11 +14,11 @@ public class AdminContractsAgreementRenewalDto {
 
     private Long detRowId;
 
-    private LocalDateTime effectiveStartDate;
+    private LocalDate effectiveStartDate;
 
-    private LocalDateTime expiryDate;
+    private LocalDate expiryDate;
 
-    private LocalDateTime renewalDate;
+    private LocalDate renewalDate;
 
     private String lastUpdatedBy;
 

@@ -1,5 +1,6 @@
 package com.asg.shipping.shippingmanifestcorrector.util;
 
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.shippingmanifestcorrector.dto.*;
 import com.asg.shipping.shippingmanifestcorrector.entity.*;
 import org.springframework.stereotype.Component;
@@ -67,7 +68,7 @@ public class ManifestCorrectorMapper {
      * Map CreateDTO to Header Entity
      */
     public void mapCreateDTOToEntity(ManifestCorrectorCreateDTO dto, ShipBlReprintHdr entity, Long companyPoid) {
-        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : DateUtil.getCurrentDateInUserTimeZone());
         entity.setBlNumber(dto.getBlNumber());
         entity.setDoReprint(dto.getDoReprint() != null ? dto.getDoReprint() : "N");
         entity.setContainerReprint(dto.getContainerReprint() != null ? dto.getContainerReprint() : "N");
@@ -104,7 +105,7 @@ public class ManifestCorrectorMapper {
      */
     public void mapUpdateDTOToEntity(ManifestCorrectorUpdateDTO dto, ShipBlReprintHdr entity) {
         if (dto.getTransactionDate() != null) {
-            entity.setTransactionDate(dto.getTransactionDate());
+            entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : DateUtil.getCurrentDateInUserTimeZone());
         }
         if (dto.getBlNumber() != null) {
             entity.setBlNumber(dto.getBlNumber());

@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestUpdate.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ExportShipBlManifestCargoDtlId.class)
-public class ExportShipBlManifestCargoDtl {
+public class ExportShipBlManifestCargoDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -39,39 +40,6 @@ public class ExportShipBlManifestCargoDtl {
     @Column(name = "RECORD_ORDER", precision = 10, scale = 0)
     private Long recordOrder;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
 
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
-    @PrePersist
-    protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-        if (descriptionType == null) {
-            descriptionType = "CARGO";
-        }
-        // Trigger logic: Uppercase cargo description
-        if (cargoDescription != null) {
-            cargoDescription = cargoDescription.toUpperCase();
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        // Trigger logic: Uppercase cargo description
-        if (cargoDescription != null) {
-            cargoDescription = cargoDescription.toUpperCase();
-        }
-    }
 }
 

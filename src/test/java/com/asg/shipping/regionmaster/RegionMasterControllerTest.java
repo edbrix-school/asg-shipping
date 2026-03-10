@@ -156,9 +156,11 @@ class RegionMasterControllerTest {
     @Test
     void testDeleteRegionMaster() throws Exception {
         doNothing().when(service)
-                .delete(1L, 1L, "admin");
+                .delete(eq(1L), any());
 
-        mockMvc.perform(delete("/v1/region-master/1"))
+        mockMvc.perform(delete("/v1/region-master/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deleteReason\":\"Test deletion\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")

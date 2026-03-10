@@ -1,25 +1,26 @@
 package com.asg.shipping.receipts.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "AR_SH_RECEIPT_HDR")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ArShReceiptHdr {
+public class ArShReceiptHdr extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,7 +28,7 @@ public class ArShReceiptHdr {
 	private Long transactionPoid;
 
 	@Column(name = "TRANSACTION_DATE")
-	private LocalDateTime transactionDate;
+	private LocalDate transactionDate;
 
 	@Column(name = "GROUP_POID")
 	private Long groupPoid;
@@ -46,18 +47,6 @@ public class ArShReceiptHdr {
 
 	@Column(name = "DELETED")
 	private String deleted;
-
-	@Column(name = "CREATED_BY")
-	private String createdBy;
-
-	@Column(name = "CREATED_DATE")
-	private LocalDateTime createdDate;
-
-	@Column(name = "LASTMODIFIED_BY")
-	private String lastModifiedBy;
-
-	@Column(name = "LASTMODIFIED_DATE")
-	private LocalDateTime lastModifiedDate;
 
 	@Column(name = "DO_RELASED_ID_PERSON")
 	private String doReleasedIdPerson;

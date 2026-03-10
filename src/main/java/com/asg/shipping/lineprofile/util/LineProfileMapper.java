@@ -27,10 +27,6 @@ public class LineProfileMapper {
         entity.setSeqNo(request.getSeqNo());
         entity.setLogoImage(decodeBase64(request.getLogoImageBase64()));
         entity.setDeleted("N");
-        entity.setCreatedBy(userId);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
         return entity;
     }
 
@@ -45,8 +41,6 @@ public class LineProfileMapper {
         if (request.getLogoImageBase64() != null) {
             entity.setLogoImage(decodeBase64(request.getLogoImageBase64()));
         }
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     public LineProfileResponse toResponse(ShipLineProfileMasterEntity entity, List<ShipLineProfileContactDtlEntity> contacts) {
@@ -92,8 +86,6 @@ public class LineProfileMapper {
         entity.setMobile(dto.getMobile());
         entity.setLandline(dto.getLandline());
         entity.setEmailAddress(dto.getEmailAddress());
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     private LineProfileContactDto toContactDto(ShipLineProfileContactDtlEntity entity) {

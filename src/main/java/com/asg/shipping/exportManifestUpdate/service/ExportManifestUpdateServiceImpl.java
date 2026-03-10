@@ -157,10 +157,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 .blIssueType(request.getBlIssueType() != null ? request.getBlIssueType() : "1")
                 .bookedByPp(request.getBookedByPp() != null ? request.getBookedByPp() : "N")
                 .allInOneFreight(request.getAllInOneFreight() != null ? request.getAllInOneFreight() : "Y")
-                .createdBy(userId)
-                .createdDate(LocalDateTime.now())
-                .lastModifiedBy(userId)
-                .lastModifiedDate(LocalDateTime.now())
                 .build();
         
         // Map request fields to entity
@@ -257,9 +253,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Soft delete
         entity.setDeleted("Y");
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
-        
+
         hdrRepository.save(entity);
         
         log.info("Successfully deleted Export BL with ID: {}", transactionPoid);
@@ -323,9 +317,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                     if (dto.getNoOfPacks() != null) entity.setNoOfPacks(dto.getNoOfPacks());
                     if (dto.getPackUnit() != null) entity.setPackUnit(dto.getPackUnit());
                     if (dto.getDestinationPortPoid() != null) entity.setDestinationPortPoid(dto.getDestinationPortPoid());
-                    entity.setLastModifiedBy(userId);
-                    entity.setLastModifiedDate(LocalDateTime.now());
-                    
+
                     generalDtlRepository.save(entity);
                 }
             }
@@ -404,9 +396,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         }
                         entity.setContainerNo(newContainerNo);
                     }
-                    // Update other fields...
-                    entity.setLastModifiedBy(userId);
-                    entity.setLastModifiedDate(LocalDateTime.now());
                     
                     containerDtlRepository.save(entity);
                 }
@@ -461,8 +450,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                     
                     if (dto.getCargoDescription() != null) entity.setCargoDescription(dto.getCargoDescription());
                     if (dto.getRecordOrder() != null) entity.setRecordOrder(dto.getRecordOrder());
-                    entity.setLastModifiedBy(userId);
-                    entity.setLastModifiedDate(LocalDateTime.now());
                     
                     cargoDtlRepository.save(entity);
                 }
@@ -511,8 +498,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                     
                     if (dto.getCargoDescription() != null) entity.setCargoDescription(dto.getCargoDescription());
                     if (dto.getRecordOrder() != null) entity.setRecordOrder(dto.getRecordOrder());
-                    entity.setLastModifiedBy(userId);
-                    entity.setLastModifiedDate(LocalDateTime.now());
                     
                     cargoDtlRepository.save(entity);
                 }
@@ -585,9 +570,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                     if (dto.getQuantity() != null) entity.setQuantity(dto.getQuantity());
                     if (dto.getBuyPercharge() != null) entity.setBuyPercharge(dto.getBuyPercharge());
                     if (dto.getPerQuantityAmount() != null) entity.setPerQuantityAmount(dto.getPerQuantityAmount());
-                    // Update other fields...
-                    entity.setLastModifiedBy(userId);
-                    entity.setLastModifiedDate(LocalDateTime.now());
+
                     
                     chargesDtlRepository.save(entity);
                 }

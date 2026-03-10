@@ -111,7 +111,7 @@ class CommodityMapperTest {
         assertEquals(testRequest.getCommodityName2(), existingEntity.getCommodityName2());
         assertEquals(testRequest.getActive(), existingEntity.getActive());
         assertEquals(testRequest.getSeqno(), existingEntity.getSeqno());
-        
+
         // These should remain unchanged
         assertEquals(1L, existingEntity.getCommodityPoid());
         assertEquals(1L, existingEntity.getGroupPoid());

@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestBl.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
                         columnNames = {"DOC_REF"})
         }
 )
-public class ExportManifestBlHdr {
+public class ExportManifestBlHdr extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -224,20 +225,6 @@ public class ExportManifestBlHdr {
     @Column(name = "RELEASED_GRANT_REASON", length = 200)
     private String releasedGrantReason;
 
-    /* ================= AUDIT ================= */
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     /* ================= TYPE & DOC ================= */
 
     @Column(name = "CARGO_TYPE", length = 25)
@@ -429,12 +416,7 @@ public class ExportManifestBlHdr {
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-        if (transactionDate == null) {
-            transactionDate = LocalDate.now();
-        }
+
         if (deleted == null) {
             deleted = "N";
         }

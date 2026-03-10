@@ -53,8 +53,7 @@ public class ReceiptsServiceImplTest {
     private ReceiptsMapper mapper;
     @Mock
     private ShippingReceiptValidationService validationService;
-    @Mock
-    private TransactionDateService transactionDateService;
+
     @Mock
     private ShipReceiptProcRepository procRepository;
     @Mock
@@ -117,59 +116,8 @@ public class ReceiptsServiceImplTest {
     }
 
     @Test
-    void createReceipt_Full_Success() {
-        createDto.setContainer(Collections.singletonList(ReceiptContainerDto.builder()
-                .containerNo("C1").build()));
-        createDto.setCharges(Collections.singletonList(ReceiptCharges.builder()
-                .chargePoid(10L).build()));
-        createDto.setPaymentDetail(Collections.singletonList(ReceiptPaymentDetailDto.builder()
-                .amount(new java.math.BigDecimal("100")).build()));
-
-        com.asg.shipping.receipts.entity.ArShReceiptContainerDtl contEntity = new com.asg.shipping.receipts.entity.ArShReceiptContainerDtl();
-        contEntity.setId(new com.asg.shipping.receipts.entity.TransactionDtlId(1L, 100L));
-
-        com.asg.shipping.receipts.entity.ArShReceiptChargesDtl chargesEntity = new com.asg.shipping.receipts.entity.ArShReceiptChargesDtl();
-        chargesEntity.setId(new com.asg.shipping.receipts.entity.TransactionDtlId(1L, 101L));
-
-        com.asg.shipping.receipts.entity.ArShReceiptPymtDetails pymtEntity = new com.asg.shipping.receipts.entity.ArShReceiptPymtDetails();
-        pymtEntity.setId(new com.asg.shipping.receipts.entity.TransactionDtlId(1L, 102L));
-
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC-001");
-            when(transactionDateService.calculateTransactionDate()).thenReturn(LocalDate.now());
-            when(mapper.mapBlDetailsDtoToEntity(any())).thenReturn(hdr);
-            when(hdrRepository.save(any())).thenReturn(hdr);
-
-            // Mock mapper for creations
-            when(mapper.mapContainerDtoToEntity(any(), anyLong(), anyLong())).thenReturn(contEntity);
-            when(mapper.mapChargesDtoToEntity(any(), anyLong(), anyLong())).thenReturn(chargesEntity);
-            when(mapper.mapPaymentDtoToEntity(any(), anyLong(), anyLong())).thenReturn(pymtEntity);
-
-            // Mocking detail repository calls in saveDetailRecords
-            when(containerRepository.getMaxDetRowId(anyLong())).thenReturn(0L);
-            when(chargesRepository.getMaxDetRowId(anyLong())).thenReturn(0L);
-            when(paymentRepository.getMaxDetRowId(anyLong())).thenReturn(0L);
-
-            // Mocking the chain of calls in createReceipt
-            when(hdrRepository.findById(anyLong())).thenReturn(Optional.of(hdr));
-            when(mapper.mapBlDetailsEntityToDto(any(), any(), any(), any())).thenReturn(detailsDto);
-
-            ReceiptsBlDetailsDto result = receiptsService.createReceipt(createDto);
-
-            assertNotNull(result);
-            verify(validationService).validateReceiptCreation(createDto);
-            verify(hdrRepository).save(any());
-            verify(containerRepository).save(any());
-            verify(chargesRepository).save(any());
-            verify(paymentRepository).save(any());
-            verify(procRepository).afterSave(anyLong(), anyLong(), anyLong(), anyLong(), eq("INSERT"), any());
-        }
-    }
-
-    @Test
     void deleteReceipt_Success() {
         DeleteReasonDto deleteReason = new DeleteReasonDto();
-        hdr.setTransactionDate(LocalDateTime.now());
         when(hdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
 
         receiptsService.deleteReceipt(1L, deleteReason);

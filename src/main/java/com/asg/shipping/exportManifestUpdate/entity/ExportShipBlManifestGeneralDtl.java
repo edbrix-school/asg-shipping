@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestUpdate.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ExportShipBlManifestGeneralDtlId.class)
-public class ExportShipBlManifestGeneralDtl {
+public class ExportShipBlManifestGeneralDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -62,23 +63,8 @@ public class ExportShipBlManifestGeneralDtl {
     @Column(name = "DESTINATION_PORT_POID")
     private Long destinationPortPoid;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
         // Trigger logic: If NET_VOLUME is null and GRS_VOLUME is not null, set NET_VOLUME = GRS_VOLUME
         if (netVolume == null && grsVolume != null) {
             netVolume = grsVolume;
@@ -91,7 +77,6 @@ public class ExportShipBlManifestGeneralDtl {
 
     @PreUpdate
     protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
         // Trigger logic: If NET_VOLUME is null and GRS_VOLUME is not null, set NET_VOLUME = GRS_VOLUME
         if (netVolume == null && grsVolume != null) {
             netVolume = grsVolume;

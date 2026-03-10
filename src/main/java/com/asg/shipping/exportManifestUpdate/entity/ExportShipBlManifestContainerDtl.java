@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestUpdate.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -23,7 +24,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ExportShipBlManifestContainerDtlId.class)
-public class ExportShipBlManifestContainerDtl {
+public class ExportShipBlManifestContainerDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -108,18 +109,6 @@ public class ExportShipBlManifestContainerDtl {
     @Column(name = "REFFER_VENT", length = 20)
     private String refferVent;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @Column(name = "ISSUE_TO_CONSIGNEE")
     private LocalDate issueToConsignee;
 
@@ -203,9 +192,7 @@ public class ExportShipBlManifestContainerDtl {
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
+
         if (equipmentShipperOwn == null || (!equipmentShipperOwn.equals("N") && !equipmentShipperOwn.equals("L") && !equipmentShipperOwn.equals("Y"))) {
             equipmentShipperOwn = "N";
         }
@@ -228,7 +215,6 @@ public class ExportShipBlManifestContainerDtl {
 
     @PreUpdate
     protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
         if (equipmentShipperOwn == null || (!equipmentShipperOwn.equals("N") && !equipmentShipperOwn.equals("L") && !equipmentShipperOwn.equals("Y"))) {
             equipmentShipperOwn = "N";
         }

@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestBl.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ExportManifestBlGeneralDtl {
+public class ExportManifestBlGeneralDtl extends BaseEntity {
 
     @EmbeddedId
     private ShipBlManifestDtlId id;
@@ -54,16 +55,5 @@ public class ExportManifestBlGeneralDtl {
     @Column(name = "DESTINATION_PORT_POID")
     private Long destinationPortPoid;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }
 

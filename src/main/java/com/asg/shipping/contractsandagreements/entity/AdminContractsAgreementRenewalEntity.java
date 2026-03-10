@@ -1,50 +1,34 @@
 package com.asg.shipping.contractsandagreements.entity;
 
 import com.asg.common.lib.annotation.AuditIgnore;
+import com.asg.common.lib.entity.BaseEntity;
 import com.asg.shipping.contractsandagreements.entity.key.AdminContractsAgreementDtlId;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "ADMIN_CONTRACTS_AGREEMENT_RENEWAL_DTL"
-)
+@Table(name = "ADMIN_CONTRACTS_AGREEMENT_RENEWAL_DTL")
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AdminContractsAgreementRenewalEntity {
+public class AdminContractsAgreementRenewalEntity extends BaseEntity {
 
     @EmbeddedId
     private AdminContractsAgreementDtlId id;
 
-
     @Column(name = "EFFECTIVE_START_DATE")
-    private LocalDateTime effectiveStartDate;
+    private LocalDate effectiveStartDate;
 
     @Column(name = "EXPIRY_DATE")
-    private LocalDateTime expiryDate;
+    private LocalDate expiryDate;
 
     @Column(name = "RENEWAL_DATE")
-    private LocalDateTime renewalDate;
-
-
-    @Column(name = "LAST_UPDATED_BY", length = 50)
-    private String lastUpdatedBy;
-
-    @Column(name = "LAST_UPDATED_DATE")
-    private LocalDateTime lastUpdatedDate;
-
-    @AuditIgnore
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @AuditIgnore
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
+    private LocalDate renewalDate;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;

@@ -52,7 +52,7 @@ public class ShippingReceiptValidationServiceTest {
                                 .blPoid(1001L)
                                 .token(12345L)
                                 .companyPoid(100L)
-                                .transactionDate(LocalDateTime.now())
+                                .transactionDate(LocalDate.now())
                                 .printDoCustomerPoid(5001L)
                                 .charges(Collections.singletonList(ReceiptCharges.builder()
                                                 .amount(new BigDecimal("100.00"))
@@ -81,7 +81,7 @@ public class ShippingReceiptValidationServiceTest {
 
                 existingReceipt = new ArShReceiptHdr();
                 existingReceipt.setBlPoid(1001L);
-                existingReceipt.setTransactionDate(LocalDateTime.now());
+                existingReceipt.setTransactionDate(LocalDate.now());
                 existingReceipt.setPrintStatus("N");
                 existingReceipt.setBlReleaseTypeOffice("ORIGINAL");
                 existingReceipt.setOrignalBlReleaseType("ORIGINAL");
@@ -177,7 +177,7 @@ public class ShippingReceiptValidationServiceTest {
                                 .chqCardno("123")
                                 .accountNo("ACC123")
                                 .bankPoid(1L)
-                                .chqDate(LocalDateTime.now())
+                                .chqDate(LocalDate.now())
                                 .build()));
                 createDto.setCharges(Collections.singletonList(ReceiptCharges.builder()
                                 .amount(new BigDecimal("100.00"))
@@ -297,7 +297,7 @@ public class ShippingReceiptValidationServiceTest {
                 createDto.setPaymentDetail(List.of(
                                 ReceiptPaymentDetailDto.builder().pymtType("CHEQUE").amount(new BigDecimal("50.00"))
                                                 .chqCardno("123").accountNo("ACC123").bankPoid(1L)
-                                                .chqDate(LocalDateTime.now()).build(),
+                                                .chqDate(LocalDate.now()).build(),
                                 ReceiptPaymentDetailDto.builder().pymtType("TT").amount(new BigDecimal("50.00"))
                                                 .ttBankPoid(1L).build()));
                 createDto.setCharges(Collections.singletonList(ReceiptCharges.builder()

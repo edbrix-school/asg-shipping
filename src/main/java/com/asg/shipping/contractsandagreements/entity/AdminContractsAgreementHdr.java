@@ -2,11 +2,12 @@ package com.asg.shipping.contractsandagreements.entity;
 
 
 import com.asg.common.lib.annotation.AuditIgnore;
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 @Getter
 @Setter
 @Builder
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(
         name = "ADMIN_CONTRACTS_AGREEMENT_HDR"
 )
-public class AdminContractsAgreementHdr {
+public class AdminContractsAgreementHdr extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,7 +35,7 @@ public class AdminContractsAgreementHdr {
     private Long companyPoid;
 
     @Column(name = "TRANSACTION_DATE")
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
 
     @Column(name = "DOC_REF", length = 25)
     @AuditIgnore
@@ -94,13 +95,13 @@ public class AdminContractsAgreementHdr {
 
 
     @Column(name = "REFERENCE_DATE")
-    private LocalDateTime referenceDate;
+    private LocalDate referenceDate;
 
     @Column(name = "EFFECTIVE_DATE")
-    private LocalDateTime effectiveDate;
+    private LocalDate effectiveDate;
 
     @Column(name = "EXPIRY_DATE")
-    private LocalDateTime expiryDate;
+    private LocalDate expiryDate;
 
     @Column(name = "NOTICE_PERIOD_DAYS")
     private Integer noticePeriodDays;
@@ -112,11 +113,10 @@ public class AdminContractsAgreementHdr {
     private String renewalCycle;
 
     @Column(name = "RENEWAL_DUE_DATE")
-    private LocalDateTime renewalDueDate;
+    private LocalDate renewalDueDate;
 
     @Column(name = "LAST_RENEWAL_DATE")
-    private LocalDateTime lastRenewalDate;
-
+    private LocalDate lastRenewalDate;
 
     @Column(name = "TOTAL_CONTRACT_VALUE", precision = 18, scale = 2)
     private BigDecimal totalContractValue;
@@ -134,11 +134,10 @@ public class AdminContractsAgreementHdr {
     private String terminated;
 
     @Column(name = "TERMINATION_DATE")
-    private LocalDateTime terminationDate;
+    private LocalDate terminationDate;
 
     @Column(name = "TERMINATION_REASON", length = 500)
     private String terminationReason;
-
 
     @Column(name = "AGREEMENT_CAPTION", length = 200)
     private String agreementCaption;
@@ -149,23 +148,6 @@ public class AdminContractsAgreementHdr {
 
     @Column(name = "SIGNATORY", length = 500)
     private String signatory;
-
-
-    @AuditIgnore
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @AuditIgnore
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    @AuditIgnore
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    @AuditIgnore
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;

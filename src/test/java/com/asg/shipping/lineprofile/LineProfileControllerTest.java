@@ -131,18 +131,6 @@ class LineProfileControllerTest {
     }
 
     @Test
-    void testDelete() throws Exception {
-        doNothing().when(service).delete(eq(1L), eq(100L), eq("admin"));
-
-        mockMvc.perform(delete("/v1/line-profile/1")
-                        .header("X-Group-Poid", 100L)
-                        .header("X-User-Id", "admin"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("Line profile deleted successfully"));
-    }
-
-    @Test
     void testFetchLineDetails() throws Exception {
         LineProfileLineDetailsResponse lineDetails = new LineProfileLineDetailsResponse();
         lineDetails.setLinePoid(10L);

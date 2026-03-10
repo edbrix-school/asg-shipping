@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,7 +20,7 @@ public class ReceiptsCreateDto {
 	private String docRef;
 
 	@Schema(description = "Transaction Date", example = "2025-01-15")
-	private LocalDateTime transactionDate;
+	private LocalDate transactionDate;
 
 	@Schema(description = "BL POID", example = "1001")
 	private Long blPoid;

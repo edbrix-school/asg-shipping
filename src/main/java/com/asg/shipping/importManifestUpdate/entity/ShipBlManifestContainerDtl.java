@@ -4,6 +4,7 @@ package com.asg.shipping.importManifestUpdate.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -102,10 +103,10 @@ public class ShipBlManifestContainerDtl {
     private String refferVent;
 
     @Column(name = "ISSUE_TO_CONSIGNEE")
-    private LocalDateTime issueToConsignee;
+    private LocalDate issueToConsignee;
 
     @Column(name = "RETURN_FROM_CONSIGNEE")
-    private LocalDateTime returnFromConsignee;
+    private LocalDate returnFromConsignee;
 
     @Column(name = "IS_IMCO", length = 1)
     private String isImco;
@@ -153,7 +154,7 @@ public class ShipBlManifestContainerDtl {
     private String imcoClassActual;
 
     @Column(name = "DISPLAY_COLLECTED_DATE")
-    private LocalDateTime displayCollectedDate;
+    private LocalDate displayCollectedDate;
 
     @Column(name = "TOTAL_DAYS_COLLECTED")
     private Long totalDaysCollected;
@@ -180,7 +181,7 @@ public class ShipBlManifestContainerDtl {
     private Long amountPerDayAfterFree;
 
     @Column(name = "ACTUAL_DISCHARGE_DATE")
-    private LocalDateTime actualDischargeDate;
+    private LocalDate actualDischargeDate;
 
     @Column(name = "CREATED_BY", length = 20)
     private String createdBy;
