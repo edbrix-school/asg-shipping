@@ -1,10 +1,14 @@
 package com.asg.shipping.collectionhandover.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * Entity class for AR_SH_DAY_END_CLOSE_HDR table
@@ -15,7 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ArShDayEndCloseHdr {
+public class ArShDayEndCloseHdr extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -23,7 +27,7 @@ public class ArShDayEndCloseHdr {
     private Long transactionPoid;
 
     @Column(name = "TRANSACTION_DATE")
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
 
     @Column(name = "GROUP_POID")
     private Long groupPoid;
@@ -64,23 +68,8 @@ public class ArShDayEndCloseHdr {
     @Column(name = "DELETED", length = 1)
     private String deleted;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
         // Don't auto-set transactionDate - let it be set explicitly
         if (deleted == null) {
             deleted = "N";
@@ -88,11 +77,6 @@ public class ArShDayEndCloseHdr {
         if (verifiedRcvd == null) {
             verifiedRcvd = "N";
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
     }
 }
 

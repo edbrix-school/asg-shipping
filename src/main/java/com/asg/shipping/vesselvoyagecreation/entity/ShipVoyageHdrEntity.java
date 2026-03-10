@@ -1,17 +1,13 @@
 package com.asg.shipping.vesselvoyagecreation.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.SequenceGenerator;
-import jakarta.persistence.Table;
+import com.asg.common.lib.entity.BaseEntity;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,7 +16,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ShipVoyageHdrEntity {
+public class ShipVoyageHdrEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,7 +30,7 @@ public class ShipVoyageHdrEntity {
     private Long companyPoid;
 
     @Column(name = "TRANSACTION_DATE")
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
 
     // Populated by DB trigger SHIP_VOYAGE_HDR_TRG (DOC_REF / JOB_NO generation)
     @Column(name = "JOB_NO", length = 20)
@@ -131,17 +127,6 @@ public class ShipVoyageHdrEntity {
     @Column(name = "DELETED", length = 1)
     private String deleted;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }
 
 

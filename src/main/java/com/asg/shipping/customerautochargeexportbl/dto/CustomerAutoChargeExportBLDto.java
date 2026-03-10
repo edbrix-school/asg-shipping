@@ -6,8 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -51,13 +51,13 @@ public class CustomerAutoChargeExportBLDto {
     private String createdBy;
 
     @Schema(description = "Created Date")
-    private Timestamp createdDate;
+    private LocalDateTime createdDate;
 
     @Schema(description = "Last Modified By", example = "admin")
     private String lastModifiedBy;
 
     @Schema(description = "Last Modified Date")
-    private Timestamp lastModifiedDate;
+    private LocalDateTime lastModifiedDate;
 
     @Schema(description = "List of charge details")
     private List<CustomerAutoChargeDetailDto> chargeDetails;

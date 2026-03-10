@@ -53,6 +53,11 @@ class RegionMasterControllerTest {
 
     @BeforeEach
     void setup() {
+        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
+        userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+        userContextMock.when(UserContext::getUserId).thenReturn("admin");
+        userContextMock.when(UserContext::getDocumentId).thenReturn("100-480");
+
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
@@ -67,22 +72,6 @@ class RegionMasterControllerTest {
         response.setRegionCode("ME");
         response.setRegionName("Middle East");
         response.setActive("Y");
-    }
-    @BeforeEach
-    void mockUserContext() {
-        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
-
-        userContextMock.when(UserContext::getGroupPoid)
-                .thenReturn(1L);
-        userContextMock.when(UserContext::getUserId)
-                .thenReturn("admin");
-        userContextMock.when(UserContext::getDocumentId)
-                .thenReturn("100-480");
-    }
-
-    @AfterEach
-    void closeMock() {
-        userContextMock.close();
     }
 
     private FilterRequestDto buildFilterRequest() {
@@ -174,6 +163,13 @@ class RegionMasterControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
                         .value("Region master deleted successfully"));
+    }
+
+    @AfterEach
+    void closeMock() {
+        if (userContextMock != null) {
+            userContextMock.close();
+        }
     }
 }
 

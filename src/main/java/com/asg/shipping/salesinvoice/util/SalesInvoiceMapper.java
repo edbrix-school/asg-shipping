@@ -1,5 +1,7 @@
 package com.asg.shipping.salesinvoice.util;
 
+import com.asg.common.lib.utility.DateUtil;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceChargDtl;
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceContnrDtl;
@@ -21,7 +23,7 @@ public class SalesInvoiceMapper {
     public void mapCreateDTOToEntity(SalesInvoiceShippingCreateDTO dto, ArShSalesInvoiceHdr entity, Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : LocalDate.now());
+        entity.setTransactionDate(dto.getTransactionDate() != null ? convertDate(dto.getTransactionDate().atStartOfDay()) : DateUtil.getCurrentDateInUserTimeZone());
         entity.setInvDate(dto.getInvDate());
         entity.setJobnoPoid(dto.getJobnoPoid());
         entity.setCustomerAddrPoid(dto.getCustomerAddrPoid());

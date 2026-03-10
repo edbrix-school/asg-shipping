@@ -10,47 +10,32 @@ import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.vesselvoyagecreation.dto.CurrencyUpdateRequest;
-import com.asg.shipping.vesselvoyagecreation.dto.TranshipmentTransferRequest;
-import com.asg.shipping.vesselvoyagecreation.dto.TranshipmentUpdateItem;
-import com.asg.shipping.vesselvoyagecreation.dto.TranshipmentUpdateRequest;
-import com.asg.shipping.vesselvoyagecreation.dto.VoyageBlFilter;
-import com.asg.shipping.vesselvoyagecreation.dto.VoyageBlRow;
-import com.asg.shipping.vesselvoyagecreation.dto.VoyageBlTab;
-import com.asg.shipping.vesselvoyagecreation.dto.VoyageResponse;
-import com.asg.shipping.vesselvoyagecreation.dto.VoyageUpsertRequest;
+import com.asg.shipping.vesselvoyagecreation.dto.*;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageTranshipDtlEntity;
 import com.asg.shipping.vesselvoyagecreation.entity.VwShipEdiExceptionUploadEntity;
 import com.asg.shipping.vesselvoyagecreation.entity.VwShipVoyageCurrencyEntity;
-import com.asg.shipping.vesselvoyagecreation.repository.ShipVoyageHdrRepository;
-import com.asg.shipping.vesselvoyagecreation.repository.VoyageLineMasterRepository;
-import com.asg.shipping.vesselvoyagecreation.repository.ShipVoyageTranshipDtlRepository;
-import com.asg.shipping.vesselvoyagecreation.repository.VoyageBillsRepository;
-import com.asg.shipping.vesselvoyagecreation.repository.VwShipEdiExceptionUploadRepository;
-import com.asg.shipping.vesselvoyagecreation.repository.VwShipVoyageCurrencyRepository;
-import com.asg.shipping.vesselvoyagecreation.repository.StoredProcedureRepository;
+import com.asg.shipping.vesselvoyagecreation.repository.*;
 import com.asg.shipping.vesselvoyagecreation.service.VesselVoyageService;
 import com.asg.shipping.vesselvoyagecreation.util.DateValidationUtil;
 import com.asg.shipping.vesselvoyagecreation.util.VoyageMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
-
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -60,7 +45,7 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import javax.sql.DataSource;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
 
 @Service
 @RequiredArgsConstructor
@@ -104,7 +89,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         String operator = documentSearchService.resolveOperator(request);
         String isDeleted = documentSearchService.resolveIsDeleted(request);
         var filters = documentSearchService.resolveFilters(request);
-        
+
         // Add date filters if provided
         if (startDate != null && endDate != null) {
             // Add date range filter for TRANSACTION_DATE field
@@ -181,7 +166,10 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         for (String part : s.split(",")) {
             String p = part.trim();
             if (p.isEmpty()) continue;
-            try { out.add(Long.parseLong(p)); } catch (NumberFormatException ignore) {}
+            try {
+                out.add(Long.parseLong(p));
+            } catch (NumberFormatException ignore) {
+            }
         }
         return out;
     }
@@ -189,7 +177,11 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private Long toLong(Object v) {
         if (v == null) return null;
         if (v instanceof Number n) return n.longValue();
-        try { return Long.parseLong(v.toString()); } catch (Exception e) { return null; }
+        try {
+            return Long.parseLong(v.toString());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override
@@ -223,7 +215,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         if (dup) throw new ResourceAlreadyExistsException("Duplicate Job, Check Line, Vessel, Voyage...");
 
         ShipVoyageHdrEntity entity = voyageMapper.toEntityForCreate(request, groupPoid, companyPoid, userId);
-        entity.setTransactionDate(LocalDateTime.now());
+        entity.setTransactionDate(convertDate(null));
 
         ShipVoyageHdrEntity saved = voyageHdrRepository.save(entity);
         // Reload to get trigger-populated docRef/jobNo if needed
@@ -317,7 +309,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         if (!voyageHdrRepository.existsById(voyagePoid)) {
             throw new ResourceNotFoundException("Voyage not found: " + voyagePoid);
         }
-        
+
         log.info("Reprocess EDI | voyagePoid={} groupPoid={} companyPoid={} docId={} user={}", voyagePoid, groupPoid, companyPoid, docId, userPoid);
         return storedProcedureRepository.procAttachmentsEdiProcNew(
                 groupPoid, companyPoid, docId, voyagePoid, voyagePoid, userPoid);
@@ -358,7 +350,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         for (TranshipmentUpdateItem item : request.getItems()) {
             ShipVoyageTranshipDtlEntity e = map.get(item.getDetRowId());
-            if (e == null) throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
+            if (e == null)
+                throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
             if (item.getContainerNo() != null) e.setContainerNo(item.getContainerNo());
             e.setContainerType(item.getContainerType());
             e.setIsoCode(item.getIsoCode());
@@ -386,8 +379,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             e.setOutboundVessel(item.getOutboundVessel());
             e.setLoadOrigin(item.getLoadOrigin());
             e.setLoadFinalDestination(item.getLoadFinalDestination());
-            e.setLastModifiedBy(userId);
-            e.setLastModifiedDate(LocalDateTime.now());
         }
 
         transhipDtlRepository.saveAll(existing);
@@ -405,8 +396,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             if (!ids.contains(e.getDetRowId())) continue;
             e.setIsLoaded("Y");
             e.setLoadTransactionPoid(request.getTargetVoyagePoid());
-            e.setLastModifiedBy(userId);
-            e.setLastModifiedDate(LocalDateTime.now());
             updated++;
         }
         transhipDtlRepository.saveAll(rows);
@@ -534,7 +523,10 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             throw new ResourceNotFoundException("Export file not found: " + f.toAbsolutePath());
         }
         return new ByteArrayResource(Files.readAllBytes(f)) {
-            @Override public String getFilename() { return fileName; }
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
         };
     }
 
@@ -556,7 +548,10 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         }
         byte[] zipBytes = baos.toByteArray();
         return new ByteArrayResource(zipBytes) {
-            @Override public String getFilename() { return zipName; }
+            @Override
+            public String getFilename() {
+                return zipName;
+            }
         };
     }
 
@@ -578,8 +573,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         }
 
         entity.setDeleted("Y");
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
         voyageHdrRepository.save(entity);
 
         // Add logging
@@ -590,20 +583,20 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         log.info("Successfully deleted vessel voyage with id: {}", voyagePoid);
     }
-    
-    
+
+
     @Override
     public byte[] print(Long transactionPoid, String freightCargo, String importExport) throws Exception {
 
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-101");
-		params.put("P_FREIGHTCARGO", freightCargo);
+        params.put("P_FREIGHTCARGO", freightCargo);
         params.put("P_IMPORT_EXPORT", importExport);
         params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
-	    params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
-	    params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
-	    params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
-	    JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
-	    return printService.fillReportToPdf(mainReport, params, dataSource);
+        params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
+        params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
 }

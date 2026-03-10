@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,7 +20,7 @@ import java.util.List;
 public class CollectionHandoverDto {
 
     private Long transactionPoid;
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
     private Long groupPoid;
     private Long companyPoid;
     private String docRef;

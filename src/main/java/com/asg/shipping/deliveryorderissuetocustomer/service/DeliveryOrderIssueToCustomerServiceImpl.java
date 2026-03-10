@@ -133,8 +133,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             throw new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString());
         }
 
-        blManifest.setLastModifiedBy(username);
-        blManifest.setLastModifiedDate(LocalDateTime.now());
         blManifestRepository.save(blManifest);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
 
@@ -155,8 +153,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     public Long updateDeliveryOrder(Long transactionPoid, UpdateDeliveryOrderRequestDto request) {
 
         log.info("Updating delivery order for BL transaction: {}", transactionPoid);
-
-        String username = getUserName();
 
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString()));
@@ -183,8 +179,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             blManifest.setRemarks(request.getRemarks());
         }
 
-        blManifest.setLastModifiedBy(username);
-        blManifest.setLastModifiedDate(LocalDateTime.now());
         blManifestRepository.save(blManifest);
         loggingService.logChanges(oldBlManifest,blManifest,ShipBlManifestHDR.class,UserContext.getDocumentId(),blManifest.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
 
@@ -207,8 +201,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             doShPrintingDtl.setDoReleasedAddrsPerson(request.getDoReleasedAddressPerson());
         }
 
-        doShPrintingDtl.setLastModifiedBy(username);
-        doShPrintingDtl.setLastModifiedDate(LocalDateTime.now());
         doShPrintingDtlRepository.save(doShPrintingDtl);
         loggingService.logChanges(oldDoShPrintingDtl,doShPrintingDtl,DoShPrintingDtl.class,UserContext.getDocumentId(),doShPrintingDtl.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
         return transactionPoid;

@@ -1,19 +1,21 @@
 package com.asg.shipping.deliveryorderissuetocustomer.entity;
 
 import com.asg.common.lib.annotation.AuditIgnore;
+import com.asg.common.lib.entity.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-import jakarta.persistence.*;
-
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
 @Table(name = "DO_SH_PRINTING_DTL")
-public class DoShPrintingDtl {
+public class DoShPrintingDtl extends BaseEntity {
 
     @Id
     @Column(name = "DO_PRINT_POID", nullable = false)
@@ -35,22 +37,6 @@ public class DoShPrintingDtl {
     @AuditIgnore
     @Column(name = "TRANSACTION_POID")
     private Long transactionPoid;
-
-    @AuditIgnore
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @AuditIgnore
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @AuditIgnore
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @AuditIgnore
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DO_DELETED", length = 1)
     private String doDeleted;

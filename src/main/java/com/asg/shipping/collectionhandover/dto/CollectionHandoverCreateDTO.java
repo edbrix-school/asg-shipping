@@ -10,7 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -23,7 +23,7 @@ import java.util.List;
 public class CollectionHandoverCreateDTO {
 
     @NotNull(message = "Transaction date is required")
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
 
     @NotNull(message = "Company POID is required")
     private Long companyPoid;

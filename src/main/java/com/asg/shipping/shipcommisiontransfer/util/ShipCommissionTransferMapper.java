@@ -1,5 +1,7 @@
 package com.asg.shipping.shipcommisiontransfer.util;
 
+import com.asg.common.lib.utility.DateUtil;
+import com.asg.shipping.common.utility.DateTimeHandler;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionDetailDto;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
@@ -8,11 +10,8 @@ import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionDtl;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 /**
  * Mapper utility for converting between Entity and DTO
@@ -53,18 +52,12 @@ public class ShipCommissionTransferMapper {
     public void mapCreateDTOToEntity(ShipCommissionTransferCreateDTO dto, ShipBlCommissionHdr entity, Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : DateTimeHandler.convertDate(dto.getTransactionDate().atStartOfDay()));
         entity.setVoyageTransactionPoid(dto.getVoyageTransactionPoid());
         entity.setRemarks(dto.getRemarks());
         entity.setCurrencyExchange(dto.getCurrencyExchange());
         entity.setCurrencyCode(dto.getCurrencyCode());
         entity.setFdaTransactionPoid(dto.getFdaTransactionPoid());
-
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -93,9 +86,6 @@ public class ShipCommissionTransferMapper {
             entity.setFdaTransactionPoid(dto.getFdaTransactionPoid());
         }
 
-        // Update audit fields
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     // Detail mapping methods

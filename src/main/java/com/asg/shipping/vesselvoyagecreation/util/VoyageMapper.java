@@ -7,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
+
 @Component
 public class VoyageMapper {
 
@@ -48,7 +50,7 @@ public class VoyageMapper {
         return ShipVoyageHdrEntity.builder()
                 .groupPoid(groupPoid)
                 .companyPoid(companyPoid)
-                .transactionDate(now)
+                .transactionDate(convertDate(null))
                 .voyageNo(req.getVoyageNo())
                 .linePoid(req.getLinePoid())
                 .vesselPoid(req.getVesselPoid())
@@ -72,10 +74,6 @@ public class VoyageMapper {
                 .entryInMarassi(req.getEntryInMarassi())
                 .mscVesselVoyageReff(req.getMscVesselVoyageReff())
                 .deleted("N")
-                .createdBy(userId)
-                .createdDate(now)
-                .lastModifiedBy(userId)
-                .lastModifiedDate(now)
                 .build();
     }
 
@@ -102,8 +100,6 @@ public class VoyageMapper {
         e.setEntryInGctos(req.getEntryInGctos());
         e.setEntryInMarassi(req.getEntryInMarassi());
         e.setMscVesselVoyageReff(req.getMscVesselVoyageReff());
-        e.setLastModifiedBy(userId);
-        e.setLastModifiedDate(LocalDateTime.now());
     }
 }
 

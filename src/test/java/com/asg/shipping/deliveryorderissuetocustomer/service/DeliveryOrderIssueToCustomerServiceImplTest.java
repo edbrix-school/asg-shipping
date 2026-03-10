@@ -82,8 +82,6 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         mockEntity.setCompanyPoid(100L);
         mockEntity.setBlNumber("BL001");
         mockEntity.setDeleted("N");
-        mockEntity.setCreatedBy("testuser");
-        mockEntity.setCreatedDate(LocalDateTime.now());
 
         mockPrintingDtl = new DoShPrintingDtl();
         mockPrintingDtl.setTransactionPoid(1L);

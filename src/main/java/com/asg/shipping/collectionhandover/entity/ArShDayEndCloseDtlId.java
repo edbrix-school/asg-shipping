@@ -24,7 +24,7 @@ public class ArShDayEndCloseDtlId implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         ArShDayEndCloseDtlId that = (ArShDayEndCloseDtlId) o;
         return Objects.equals(transactionPoid, that.transactionPoid) &&
-               Objects.equals(detRowId, that.detRowId);
+                Objects.equals(detRowId, that.detRowId);
     }
 
     @Override

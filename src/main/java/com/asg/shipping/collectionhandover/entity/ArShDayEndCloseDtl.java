@@ -1,10 +1,13 @@
 package com.asg.shipping.collectionhandover.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for AR_SH_DAY_END_CLOSE_DTL table
@@ -16,7 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ArShDayEndCloseDtl {
+public class ArShDayEndCloseDtl extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -38,32 +41,8 @@ public class ArShDayEndCloseDtl {
     @Column(name = "CASH_AMOUNT", precision = 18, scale = 2)
     private BigDecimal cashAmount;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ArShDayEndCloseHdr header;
-
-    @PrePersist
-    protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-    }
 }
 
