@@ -1,5 +1,6 @@
 package com.asg.shipping.shippingofoqv2.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OfoqApiDataHdrEntity {
+public class OfoqApiDataHdrEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,18 +35,6 @@ public class OfoqApiDataHdrEntity {
 
     @Column(name = "ARRIVAL_DATE_TO")
     private LocalDateTime arrivalDateTo;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "VESSEL_NAME", length = 500)
     private String vesselName;

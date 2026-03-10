@@ -59,8 +59,6 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
                 .active(request.getActive())
                 .deleted("N")
                 .seqNo(request.getSeqNo())
-                .createdBy(getCurrentUser())
-                .createdDate(LocalDateTime.now())
                 .build();
 
         ShipChargeGroupMaster saveChargeGroup =repository.save(entity);
@@ -92,8 +90,6 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         entity.setLinewisePayablePosting(request.getLinewisePayablePosting());
         entity.setActive(request.getActive());
         entity.setSeqNo(request.getSeqNo());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         ShipChargeGroupMaster updatedEntity = repository.save(entity);
 
@@ -121,9 +117,6 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
                 .orElseThrow(() -> new ResourceNotFoundException("Charge Group not found","ChargeGroupPoid",poid));
         entity.setDeleted("Y");
         entity.setActive("N");
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-
         String docId = UserContext.getDocumentId();
         String key = poid.toString();
 

@@ -58,11 +58,6 @@ public class VesselTypeMapper {
         } else {
             entity.setActive("Y");
         }
-
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         entity.setDeleted("N");
     }
 

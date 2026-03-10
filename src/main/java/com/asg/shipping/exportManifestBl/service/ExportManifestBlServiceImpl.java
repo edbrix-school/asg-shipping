@@ -3,10 +3,13 @@ package com.asg.shipping.exportManifestBl.service;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.request.LogRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exportManifestBl.dto.*;
@@ -23,6 +26,7 @@ import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestCargoDtlId;
+import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +63,19 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final ShipBlToFfRepository shipBlToFfRepository;
     private final PrintService printService;
     private final DataSource dataSource;
+    private final LoggingService loggingService;
+
+    private String normalizeActionType(String actionType) {
+        return actionType == null ? "" : actionType.trim().toLowerCase();
+    }
+
+    private String normalizeContainerNo(String containerNo) {
+        if (containerNo == null) {
+            return null;
+        }
+        String trimmed = containerNo.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 
     @Override
     @Transactional
@@ -91,6 +108,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         Long transactionPoid = saved.getTransactionPoid();
         log.info("Export Manifest BL header saved with transactionPoid: {}", transactionPoid);
 
+        
+        loggingService.createLogSummaryEntry(
+                LogDetailsEnum.CREATED,
+                UserContext.getDocumentId(),
+                transactionPoid.toString()
+        );
+
         saveDetailTables(dto, transactionPoid);
 
         ExportManifestBlRequestDto result = mapper.mapToDto(saved);
@@ -108,6 +132,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         ExportManifestBlHdr entity = repository.findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", id.toString()));
+
+        ExportManifestBlHdr oldEntity = new ExportManifestBlHdr();
+        BeanUtils.copyProperties(entity, oldEntity);
 
         if (dto.getBlNumber() != null && !dto.getBlNumber().trim().equals(entity.getBlNumber())) {
             String trimmedBlNumber = dto.getBlNumber().trim();
@@ -131,6 +158,17 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         if (hasDetailUpdates(dto)) {
             applyDetailActions(dto, id);
         }
+
+       
+        loggingService.logChanges(
+                oldEntity,
+                saved,
+                ExportManifestBlHdr.class,
+                UserContext.getDocumentId(),
+                id.toString(),
+                LogDetailsEnum.MODIFIED,
+                "TRANSACTION_POID"
+        );
 
         ExportManifestBlRequestDto result = mapper.mapToDto(saved);
         loadDetailTables(result, id);
@@ -178,6 +216,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         ExportManifestBlRequestDto dto = mapper.mapToDto(entity);
         loadDetailTables(dto, id);
+
+        
+        loggingService.createLogSummaryEntry(
+                LogDetailsEnum.VIEWED,
+                UserContext.getDocumentId(),
+                id.toString()
+        );
 
         log.info("Successfully retrieved Export Manifest BL with id: {}", id);
         return dto;
@@ -435,6 +480,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .createdDate(LocalDateTime.now())
                 .build();
         generalDtlRepository.save(entity);
+
+        
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Created on Export Manifest BL General Cargo Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
     private void updateGeneralDetail(GeneralCargoRequestDto detail, Long transactionPoid) {
@@ -442,6 +493,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(transactionPoid, detRowId);
         ExportManifestBlGeneralDtl entity = generalDtlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("General Cargo Detail", "detRowId", detRowId.toString()));
+
+        ExportManifestBlGeneralDtl oldEntity = new ExportManifestBlGeneralDtl();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         entity.setComodityPoid(detail.getComodityPoid());
         entity.setCargoDescription(detail.getCargoDescription());
         entity.setQuantity(detail.getQuantity());
@@ -456,11 +511,31 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
         generalDtlRepository.save(entity);
+
+       
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
+        loggingService.createLogBatch(
+                List.of(new LogRequestDto<>(
+                        oldEntity,
+                        entity,
+                        ExportManifestBlGeneralDtl.class,
+                        docId,
+                        docKeyPoid,
+                        logDetail
+                ))
+        );
     }
 
     private void deleteGeneralDetail(GeneralCargoRequestDto detail, Long transactionPoid) {
         Long detRowId = detail.getDetRowId();
         generalDtlRepository.deleteById(new ShipBlManifestDtlId(transactionPoid, detRowId));
+
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Deleted on Export Manifest BL General Cargo Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
     private void createCargoDetail(CargoDescriptionRequestDto detail, Long transactionPoid) {
@@ -474,6 +549,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .createdDate(LocalDateTime.now())
                 .build();
         cargoDtlRepository.save(entity);
+
+        
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Created on Export Manifest BL Cargo Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
     private void updateCargoDetail(CargoDescriptionRequestDto detail, Long transactionPoid) {
@@ -482,17 +563,42 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         ShipBlManifestCargoDtlId id = new ShipBlManifestCargoDtlId(transactionPoid, detRowId, descriptionType);
         ExportManifestBlCargoDtl entity = cargoDtlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cargo Description Detail", "detRowId", detRowId.toString()));
+
+        ExportManifestBlCargoDtl oldEntity = new ExportManifestBlCargoDtl();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         entity.setCargoDescription(detail.getCargoDescription());
         entity.setRecordOrder(detail.getRecordOrder());
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
         cargoDtlRepository.save(entity);
+
+        
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
+        loggingService.createLogBatch(
+                List.of(new LogRequestDto<>(
+                        oldEntity,
+                        entity,
+                        ExportManifestBlCargoDtl.class,
+                        docId,
+                        docKeyPoid,
+                        logDetail
+                ))
+        );
     }
 
     private void deleteCargoDetail(CargoDescriptionRequestDto detail, Long transactionPoid) {
         Long detRowId = detail.getDetRowId();
         String descriptionType = detail.getDescriptionType();
         cargoDtlRepository.deleteById(new ShipBlManifestCargoDtlId(transactionPoid, detRowId, descriptionType));
+
+       
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Deleted on Export Manifest BL Cargo Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
     private void createContainerDetail(ContainerRequestDto detail, Long transactionPoid) {
@@ -516,6 +622,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setCreatedBy(getCurrentUser());
         entity.setCreatedDate(LocalDateTime.now());
         containerDtlRepository.save(entity);
+
+       
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Created on Export Manifest BL Container Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
     private void updateContainerDetail(ContainerRequestDto detail, Long transactionPoid) {
@@ -523,6 +635,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(transactionPoid, detRowId);
         ExportManifestBlContainerDtl entity = containerDtlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Container Detail", "detRowId", detRowId.toString()));
+
+        ExportManifestBlContainerDtl oldEntity = new ExportManifestBlContainerDtl();
+        BeanUtils.copyProperties(entity, oldEntity);
         String containerNo = normalizeContainerNo(detail.getContainerNo());
         if (containerNo != null) {
             containerDtlRepository
@@ -538,11 +653,32 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
         containerDtlRepository.save(entity);
+
+       
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
+        loggingService.createLogBatch(
+                List.of(new LogRequestDto<>(
+                        oldEntity,
+                        entity,
+                        ExportManifestBlContainerDtl.class,
+                        docId,
+                        docKeyPoid,
+                        logDetail
+                ))
+        );
     }
 
     private void deleteContainerDetail(ContainerRequestDto detail, Long transactionPoid) {
         Long detRowId = detail.getDetRowId();
         containerDtlRepository.deleteById(new ShipBlManifestDtlId(transactionPoid, detRowId));
+
+        
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Deleted on Export Manifest BL Container Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
     private void applyContainerFields(ExportManifestBlContainerDtl entity, ContainerRequestDto detail) {
@@ -600,14 +736,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setActualDischargeDate(detail.getActualDischargeDate());
     }
 
-    private String normalizeContainerNo(String containerNo) {
-        if (containerNo == null) {
-            return null;
-        }
-        String trimmed = containerNo.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
     private void createChargeDetail(ChargeRequestDto detail, Long transactionPoid) {
         Long detRowId = detail.getDetRowId();
         ExportManifestBlChargesDtl entity = ExportManifestBlChargesDtl.builder()
@@ -644,6 +772,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .createdDate(LocalDateTime.now())
                 .build();
         chargesDtlRepository.save(entity);
+
+        
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Created on Export Manifest BL Charge Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
     private void updateChargeDetail(ChargeRequestDto detail, Long transactionPoid) {
@@ -651,6 +785,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(transactionPoid, detRowId);
         ExportManifestBlChargesDtl entity = chargesDtlRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Charge Detail", "detRowId", detRowId.toString()));
+
+        ExportManifestBlChargesDtl oldEntity = new ExportManifestBlChargesDtl();
+        BeanUtils.copyProperties(entity, oldEntity);
         entity.setChargePoid(detail.getChargePoid());
         entity.setCurrencyExchange(detail.getCurrencyExchange());
         entity.setQuantity(detail.getQuantity());
@@ -682,22 +819,38 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setLastModifiedBy(getCurrentUser());
         entity.setLastModifiedDate(LocalDateTime.now());
         chargesDtlRepository.save(entity);
+
+       
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
+        loggingService.createLogBatch(
+                List.of(new LogRequestDto<>(
+                        oldEntity,
+                        entity,
+                        ExportManifestBlChargesDtl.class,
+                        docId,
+                        docKeyPoid,
+                        logDetail
+                ))
+        );
     }
 
     private void deleteChargeDetail(ChargeRequestDto detail, Long transactionPoid) {
         Long detRowId = detail.getDetRowId();
         chargesDtlRepository.deleteById(new ShipBlManifestDtlId(transactionPoid, detRowId));
+
+       
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
+        String logDetail = "Row Deleted on Export Manifest BL Charge Detail with detRowId: " + detRowId;
+        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
-
-    private String normalizeActionType(String actionType) {
-        return actionType == null ? "" : actionType.trim().toLowerCase();
-    }
-
-   
-
 
     private void saveDetailTables(ExportManifestBlCreateDto dto, Long transactionPoid) {
         Long detRowId = 1L;
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
 
         // Save General Details
         if (dto.getGeneralCargoDetails() != null) {
@@ -720,6 +873,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .createdDate(LocalDateTime.now())
                         .build();
                 generalDtlRepository.save(entity);
+
+                Long rowId = entity.getId().getDetRowId();
+                String logDetail = "Row Created on Export Manifest BL General Cargo Detail with detRowId: " + rowId;
+                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
             }
         }
 
@@ -738,6 +895,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .createdDate(LocalDateTime.now())
                         .build();
                 cargoDtlRepository.save(entity);
+
+                Long rowId = entity.getId().getDetRowId();
+                String logDetail = "Row Created on Export Manifest BL Cargo Detail with detRowId: " + rowId;
+                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
             }
         }
 
@@ -803,6 +964,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .createdDate(LocalDateTime.now())
                         .build();
                 containerDtlRepository.save(entity);
+
+                Long rowId = entity.getId().getDetRowId();
+                String logDetail = "Row Created on Export Manifest BL Container Detail with detRowId: " + rowId;
+                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
             }
         }
 
@@ -844,6 +1009,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .createdDate(LocalDateTime.now())
                         .build();
                 chargesDtlRepository.save(entity);
+
+                Long rowId = entity.getId().getDetRowId();
+                String logDetail = "Row Created on Export Manifest BL Charge Detail with detRowId: " + rowId;
+                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
             }
         }
     }

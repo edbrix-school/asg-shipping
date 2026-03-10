@@ -69,4 +69,9 @@ public interface DemurrageDetentionPayableTransferService {
      */
     @Deprecated
     void updateFreeDays(Long id, UpdateFreeDaysRequestDTO request);
+
+    /**
+     * Get auto-populated GL accounts when Line and BL Type are provided
+     */
+    Map<String, Object> getAutoPopulatedGlAccounts(Long linePoid, String blType, Long groupPoid);
 }

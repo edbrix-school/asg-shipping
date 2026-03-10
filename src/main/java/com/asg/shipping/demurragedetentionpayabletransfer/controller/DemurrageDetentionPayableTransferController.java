@@ -137,4 +137,18 @@ public class DemurrageDetentionPayableTransferController {
         return ApiResponse.success("Principal extra days updated successfully");
     }
 
+    /**
+     * Get auto-populated GL accounts when Line and BL Type are provided
+     */
+    @PostMapping("/auto-populate-gl-accounts")
+    public ResponseEntity<?> getAutoPopulatedGlAccounts(
+            @RequestParam Long linePoid,
+            @RequestParam String blType) {
+        log.info("Get auto-populated GL accounts for line: {}, blType: {}", linePoid, blType);
+        Long groupPoid = getGroupPoid();
+        Map<String, Object> result = service.getAutoPopulatedGlAccounts(linePoid, blType, groupPoid);
+        return ApiResponse.success("GL accounts auto-populated successfully", result);
+    }
+
+
 }

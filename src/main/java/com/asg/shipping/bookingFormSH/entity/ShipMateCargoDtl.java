@@ -3,6 +3,7 @@ package com.asg.shipping.bookingFormSH.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.asg.common.lib.entity.BaseEntity;
 import com.asg.common.lib.security.util.UserContext;
 
 import jakarta.persistence.Column;
@@ -27,7 +28,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class ShipMateCargoDtl {
+public class ShipMateCargoDtl extends BaseEntity {
 
 	@Id
 	@Column(name = "TRANSACTION_POID", nullable = false)
@@ -103,33 +104,8 @@ public class ShipMateCargoDtl {
 	@Column(name = "OOG_A", length = 20)
 	private String oogA;
 
-	@Column(name = "CREATED_BY", length = 20)
-	private String createdBy;
-
-	@Column(name = "CREATED_DATE")
-	private LocalDateTime createdDate;
-
-	@Column(name = "LASTMODIFIED_BY", length = 20)
-	private String lastModifiedBy;
-
-	@Column(name = "LASTMODIFIED_DATE")
-	private LocalDateTime lastModifiedDate;
-
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
 	private ShipMateHdr shipMateHdr;
 
-	@PrePersist
-	protected void onCreate() {
-		createdDate = LocalDateTime.now();
-		if (createdBy == null) {
-			createdBy = UserContext.getUserName();
-		}
-	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		lastModifiedDate = LocalDateTime.now();
-		lastModifiedBy = UserContext.getUserName();
-	}
 }
