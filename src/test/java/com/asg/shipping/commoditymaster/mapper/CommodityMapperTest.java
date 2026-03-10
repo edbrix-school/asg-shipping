@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,8 +31,6 @@ class CommodityMapperTest {
         testEntity.setCommodityName2("Test Commodity 2");
         testEntity.setActive("Y");
         testEntity.setSeqno(1L);
-        testEntity.setCreatedBy("testuser");
-        testEntity.setCreatedDate(Timestamp.from(Instant.now()));
         testEntity.setDeleted("N");
 
         testRequest = CommodityMasterRequest.builder()
@@ -78,9 +78,7 @@ class CommodityMapperTest {
         assertEquals(testRequest.getActive(), entity.getActive());
         assertEquals(testRequest.getSeqno(), entity.getSeqno());
         assertEquals(groupPoid, entity.getGroupPoid());
-        assertEquals(userPoid, entity.getCreatedBy());
         assertEquals("N", entity.getDeleted());
-        assertNotNull(entity.getCreatedDate());
     }
 
     @Test
@@ -103,7 +101,7 @@ class CommodityMapperTest {
         existingEntity.setGroupPoid(1L);
         existingEntity.setCommodityCode("TEST001");
         existingEntity.setCreatedBy("originaluser");
-        existingEntity.setCreatedDate(Timestamp.from(Instant.now().minusSeconds(3600)));
+        existingEntity.setCreatedDate(LocalDateTime.now());
 
         String userPoid = "updateuser";
 
@@ -113,8 +111,6 @@ class CommodityMapperTest {
         assertEquals(testRequest.getCommodityName2(), existingEntity.getCommodityName2());
         assertEquals(testRequest.getActive(), existingEntity.getActive());
         assertEquals(testRequest.getSeqno(), existingEntity.getSeqno());
-        assertEquals(userPoid, existingEntity.getLastmodifiedBy());
-        assertNotNull(existingEntity.getLastmodifiedDate());
         
         // These should remain unchanged
         assertEquals(1L, existingEntity.getCommodityPoid());

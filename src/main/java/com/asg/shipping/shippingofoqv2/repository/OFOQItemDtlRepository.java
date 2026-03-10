@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface OFOQItemDtlRepository extends JpaRepository<OFOQItemDtlEntity, TransactionDetailId> {
@@ -22,5 +23,5 @@ public interface OFOQItemDtlRepository extends JpaRepository<OFOQItemDtlEntity, 
     @Query("SELECT COALESCE(MAX(e.detRowId), 0) FROM OFOQItemDtlEntity e WHERE e.transactionPoid = :transactionPoid")
     Long findMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 
-
+    void deleteAllByTransactionPoid(Long transactionPoid);
 }

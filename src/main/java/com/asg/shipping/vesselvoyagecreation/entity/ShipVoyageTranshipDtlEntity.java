@@ -1,16 +1,11 @@
 package com.asg.shipping.vesselvoyagecreation.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.IdClass;
-import jakarta.persistence.Table;
+import com.asg.common.lib.entity.BaseEntity;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_VOYAGE_TRANSHIP_DTL")
@@ -19,7 +14,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ShipVoyageTranshipDtlId.class)
-public class ShipVoyageTranshipDtlEntity {
+public class ShipVoyageTranshipDtlEntity extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -110,17 +105,6 @@ public class ShipVoyageTranshipDtlEntity {
     @Column(name = "LOAD_FINAL_DESTINATION", length = 100)
     private String loadFinalDestination;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }
 
 

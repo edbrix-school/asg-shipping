@@ -133,8 +133,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             throw new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString());
         }
 
-        blManifest.setLastModifiedBy(username);
-        blManifest.setLastModifiedDate(LocalDateTime.now());
         blManifestRepository.save(blManifest);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
 
@@ -155,8 +153,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     public Long updateDeliveryOrder(Long transactionPoid, UpdateDeliveryOrderRequestDto request) {
 
         log.info("Updating delivery order for BL transaction: {}", transactionPoid);
-
-        String username = getUserName();
 
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString()));
@@ -183,8 +179,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             blManifest.setRemarks(request.getRemarks());
         }
 
-        blManifest.setLastModifiedBy(username);
-        blManifest.setLastModifiedDate(LocalDateTime.now());
         blManifestRepository.save(blManifest);
         loggingService.logChanges(oldBlManifest,blManifest,ShipBlManifestHDR.class,UserContext.getDocumentId(),blManifest.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
 
@@ -207,8 +201,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             doShPrintingDtl.setDoReleasedAddrsPerson(request.getDoReleasedAddressPerson());
         }
 
-        doShPrintingDtl.setLastModifiedBy(username);
-        doShPrintingDtl.setLastModifiedDate(LocalDateTime.now());
         doShPrintingDtlRepository.save(doShPrintingDtl);
         loggingService.logChanges(oldDoShPrintingDtl,doShPrintingDtl,DoShPrintingDtl.class,UserContext.getDocumentId(),doShPrintingDtl.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
         return transactionPoid;
@@ -342,7 +334,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         if (!validatePrintDocument(transactionPoid, "DO")) {
             return null;
         }
-        JasperReport mainReport = printService.load("shipping/SH/DO_SH.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/DO_SH.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
@@ -352,12 +344,12 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
         String pLineCode = viewRepository.getPlineCode(transactionPoid);
         String templatePath = "HANJN".equalsIgnoreCase(pLineCode) ?
-                "shipping/SH/Container_Delivery_ValidityHJS_Currently_not.jrxml" :
-                "shipping/SH/Container_Delivery_Validity.jrxml";
+                "Shipping/SH/Container_Delivery_ValidityHJS_Currently_not.jrxml" :
+                "Shipping/SH/Container_Delivery_Validity.jrxml";
         JasperReport mainReport = printService.load(templatePath);
 
         try {
-            InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/shipping/jpg/FSL_STAMP.jpg");
+            InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/FSL_STAMP.jpg");
             if (stampStream == null) {
                 log.warn("FSL_STAMP.jpg not found in classpath");
                 params.put("FSL_STAMP", null);
@@ -373,7 +365,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         if ("HANJN".equalsIgnoreCase(pLineCode)) {
-            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("jasper/shipping/jpg/hidd_map4.jpg");
+            InputStream imageStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/hidd_map4.jpg");
             if (imageStream != null) {
                 params.put("IMAGE_MAP", imageStream);
             }
@@ -386,18 +378,16 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         if (!validatePrintDocument(transactionPoid, "RTNCNT")) {
             return null;
         }
-        JasperReport mainReport = printService.load("shipping/SH/Container_Return_Validity.jrxml");
+        JasperReport mainReport = printService.load("Shipping/SH/Container_Return_Validity.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
     private boolean validatePrintDocument(Long transactionPoid, String docType) {
         String printCheck = checkPrintDocumentData(transactionPoid, docType);
-        log.info("print check {} ", printCheck);
         if ("N".equalsIgnoreCase(printCheck)) {
             return false;
         }
         String alreadyPrinted = viewRepository.printDocumentAlreadyPrinted(docType, transactionPoid);
-        log.info("print alreadyPrinted {} ", alreadyPrinted);
         return !"Y".equalsIgnoreCase(alreadyPrinted);
     }
 

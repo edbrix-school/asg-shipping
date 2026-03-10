@@ -147,14 +147,14 @@ class DayCloseServiceImplTest {
                 1L
         );
 
-        when(documentService.resolveOperator(filters)).thenReturn("OR");
-        when(documentService.resolveIsDeleted(filters)).thenReturn("false");
-        when(documentService.resolveFilters(filters)).thenReturn(List.of());
-        when(documentService.search(any(), any(), any(), eq(pageable), any(), any(), any()))
+        when(documentService.resolveOperator(any())).thenReturn("OR");
+        when(documentService.resolveIsDeleted(any())).thenReturn("false");
+        when(documentService.resolveFilters(any())).thenReturn(List.of());
+        when(documentService.search(anyString(), anyList(), anyString(), any(Pageable.class), anyString(), anyString(), anyString()))
                 .thenReturn(raw);
 
         Map<String, Object> result =
-                service.searchDayClose("DOC1", filters, pageable);
+                service.searchDayClose("DOC1", filters, pageable, null, null);
 
         assertNotNull(result);
     }

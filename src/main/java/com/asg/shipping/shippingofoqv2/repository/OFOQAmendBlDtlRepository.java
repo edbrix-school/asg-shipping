@@ -3,6 +3,7 @@ package com.asg.shipping.shippingofoqv2.repository;
 import com.asg.shipping.shippingofoqv2.entity.OFOQAmendBlDtlEntity;
 import com.asg.shipping.shippingofoqv2.entity.TransactionDetailId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,4 +17,7 @@ public interface OFOQAmendBlDtlRepository extends JpaRepository<OFOQAmendBlDtlEn
     List<OFOQAmendBlDtlEntity> findByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
     OFOQAmendBlDtlEntity findByTransactionPoidAndBlNumber(Long transactionPoid, String blNumber);
-}
+
+    @Modifying
+    @Query("DELETE FROM OFOQAmendBlDtlEntity e WHERE e.transactionPoid = :transactionPoid")
+    void deleteAllByTransactionPoid(@Param("transactionPoid") Long transactionPoid);}

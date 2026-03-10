@@ -83,8 +83,6 @@ public class ShipAgentMasterServiceTest {
                 .seqNo(1)
                 .active("Y")
                 .deleted("N")
-                .createdBy("testUser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         responseDto = ShipAgentMasterResponseDto.builder()

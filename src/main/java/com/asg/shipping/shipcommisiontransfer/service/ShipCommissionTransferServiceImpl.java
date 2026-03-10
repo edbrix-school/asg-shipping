@@ -102,8 +102,8 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         enrichWithLovData(dto);
 
         // Log view
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, 
-                com.asg.common.lib.security.util.UserContext.getDocumentId(), 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED,
+                com.asg.common.lib.security.util.UserContext.getDocumentId(),
                 id.toString());
 
         return dto;
@@ -136,8 +136,8 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 com.asg.common.lib.security.util.UserContext.getUserPoid());
 
         // Log creation
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, 
-                com.asg.common.lib.security.util.UserContext.getDocumentId(), 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED,
+                com.asg.common.lib.security.util.UserContext.getDocumentId(),
                 entity.getTransactionPoid().toString());
 
         // Reload and return
@@ -174,8 +174,8 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 com.asg.common.lib.security.util.UserContext.getUserPoid());
 
         // Log update
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, 
-                com.asg.common.lib.security.util.UserContext.getDocumentId(), 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED,
+                com.asg.common.lib.security.util.UserContext.getDocumentId(),
                 id.toString());
 
         // Reload and return
@@ -199,8 +199,8 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         headerRepository.save(entity);
 
         // Log deletion
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, 
-                com.asg.common.lib.security.util.UserContext.getDocumentId(), 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED,
+                com.asg.common.lib.security.util.UserContext.getDocumentId(),
                 id.toString());
     }
 

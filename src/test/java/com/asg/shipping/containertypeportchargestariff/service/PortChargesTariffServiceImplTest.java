@@ -135,6 +135,7 @@ class PortChargesTariffServiceImplTest {
 
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getGroupPoid).thenReturn(groupPoid);
+            userContext.when(UserContext::getTimeZoneCode).thenReturn("UTC");
 
             PortChargesTariffDto result = service.createPortChargesTariff(createDto, groupPoid, userPoid);
 

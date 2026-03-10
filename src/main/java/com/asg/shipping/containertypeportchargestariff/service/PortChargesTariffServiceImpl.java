@@ -9,6 +9,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesDtl;
@@ -94,7 +95,7 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         validateDateOverlap(dto.getPortPoid(), dto.getChargeLinePoid(), dto.getChargeDivision(), dto.getPeriodFrom(), dto.getPeriodTo(), null, groupPoid);
 
         ShipPortChargesHdr hdr = new ShipPortChargesHdr();
-        hdr.setTransactionDate(LocalDate.now());
+        hdr.setTransactionDate(DateUtil.getCurrentDateInUserTimeZone());
         hdr.setGroupPoid(groupPoid);
         hdr.setPortPoid(dto.getPortPoid());
         hdr.setDescription(dto.getDescription());
@@ -103,10 +104,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdr.setSeqNo(dto.getSeqNo());
         hdr.setChargeLinePoid(dto.getChargeLinePoid());
         hdr.setChargeDivision(dto.getChargeDivision());
-        hdr.setCreatedBy(getCurrentUser());
-        hdr.setCreatedDate(LocalDateTime.now());
-        hdr.setLastModifiedBy(getCurrentUser());
-        hdr.setLastModifiedDate(LocalDateTime.now());
         hdr.setDeleted("N");
 
         ShipPortChargesHdr savedHdr = hdrRepository.save(hdr);
@@ -150,8 +147,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdr.setSeqNo(dto.getSeqNo());
         hdr.setChargeLinePoid(dto.getChargeLinePoid());
         hdr.setChargeDivision(dto.getChargeDivision());
-        hdr.setLastModifiedBy(getCurrentUser());
-        hdr.setLastModifiedDate(LocalDateTime.now());
 
         // 🔑 flush so DB reflects new state
         hdrRepository.saveAndFlush(hdr);
@@ -321,8 +316,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         entity.setAmount53Cost(dto.getAmount53Cost());
         entity.setAmountOtherCost(dto.getAmountOtherCost());
         entity.setShipChargeType(dto.getShipChargeType());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         entitiesToSave.add(entity);
     }
 
@@ -345,10 +338,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         newEntity.setAmount53Cost(dto.getAmount53Cost());
         newEntity.setAmountOtherCost(dto.getAmountOtherCost());
         newEntity.setShipChargeType(dto.getShipChargeType());
-        newEntity.setCreatedBy(getCurrentUser());
-        newEntity.setCreatedDate(LocalDateTime.now());
-        newEntity.setLastModifiedBy(getCurrentUser());
-        newEntity.setLastModifiedDate(LocalDateTime.now());
         entitiesToSave.add(newEntity);
     }
 
@@ -375,10 +364,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
             entity.setAmount53Cost(dto.getAmount53Cost());
             entity.setAmountOtherCost(dto.getAmountOtherCost());
             entity.setShipChargeType(dto.getShipChargeType());
-            entity.setCreatedBy(getCurrentUser());
-            entity.setCreatedDate(LocalDateTime.now());
-            entity.setLastModifiedBy(getCurrentUser());
-            entity.setLastModifiedDate(LocalDateTime.now());
             entitiesToSave.add(entity);
         }
 

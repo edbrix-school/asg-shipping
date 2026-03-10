@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
+import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
 
 /**
  * Mapper utility for converting between Entity and DTO
@@ -77,7 +78,7 @@ public class CollectionHandoverMapper {
      * Map CreateDTO to Header Entity
      */
     public void mapCreateDTOToEntity(CollectionHandoverCreateDTO dto, ArShDayEndCloseHdr entity, Long groupPoid, Long userPoid) {
-        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setTransactionDate(convertDate(dto.getTransactionDate().atStartOfDay()));
         entity.setCompanyPoid(dto.getCompanyPoid());
         entity.setGroupPoid(groupPoid);
         entity.setDocRef(dto.getDocRef());
@@ -90,12 +91,6 @@ public class CollectionHandoverMapper {
         entity.setLocRemarks(dto.getLocRemarks());
         entity.setVerifiedRcvd(dto.getVerifiedRcvd() != null ? dto.getVerifiedRcvd() : "N");
         entity.setMainOfcRemarks(dto.getMainOfcRemarks());
-
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -135,10 +130,6 @@ public class CollectionHandoverMapper {
         if (dto.getMainOfcRemarks() != null) {
             entity.setMainOfcRemarks(dto.getMainOfcRemarks());
         }
-
-        // Update audit fields
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**
@@ -149,8 +140,6 @@ public class CollectionHandoverMapper {
         entity.setCurrencyType(dto.getCurrencyType());
         entity.setNoOfTran(dto.getNoOfTran());
         entity.setCashAmount(dto.getCashAmount());
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
     }
 
     /**
@@ -161,8 +150,6 @@ public class CollectionHandoverMapper {
         entity.setCurrencyType(dto.getCurrencyType());
         entity.setNoOfTran(dto.getNoOfTran());
         entity.setCashAmount(dto.getCashAmount());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 }
 

@@ -1,16 +1,11 @@
 package com.asg.shipping.shipcommisiontransfer.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-
-import static com.asg.common.lib.security.util.UserContext.getUserName;
 
 /**
  * Entity class for SHIP_BL_COMMISSION_HDR table
@@ -20,11 +15,12 @@ import static com.asg.common.lib.security.util.UserContext.getUserName;
         uniqueConstraints = {
                 @UniqueConstraint(name = "UK_DOCRESHIPBLCOMMISSIONHDR", columnNames = {"DOC_REF"})
         })
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class ShipBlCommissionHdr {
+public class ShipBlCommissionHdr extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -61,36 +57,14 @@ public class ShipBlCommissionHdr {
     @Column(name = "FDA_TRANSACTION_POID")
     private Long fdaTransactionPoid;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
     @PrePersist
     protected void onCreate() {
-        createdDate = LocalDateTime.now();
-        if (createdBy == null) {
-            createdBy = getUserName();
-        }
         if (deleted == null) {
             deleted = "N";
         }
         if (transactionDate == null) {
             transactionDate = LocalDate.now();
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        lastModifiedBy = getUserName();
     }
 }
 

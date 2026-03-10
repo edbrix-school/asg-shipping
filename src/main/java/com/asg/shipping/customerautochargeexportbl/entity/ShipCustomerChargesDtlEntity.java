@@ -1,22 +1,20 @@
 package com.asg.shipping.customerautochargeexportbl.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_CUSTOMER_CHARGES_DTL")
 @IdClass(CustomerChargesDetailId.class)
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipCustomerChargesDtlEntity {
+public class ShipCustomerChargesDtlEntity extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -73,18 +71,6 @@ public class ShipCustomerChargesDtlEntity {
 
     @Column(name = "AMOUNT_53_COST", precision = 25, scale = 3)
     private BigDecimal amount53Cost;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private java.time.LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", nullable = false, insertable = false, updatable = false)

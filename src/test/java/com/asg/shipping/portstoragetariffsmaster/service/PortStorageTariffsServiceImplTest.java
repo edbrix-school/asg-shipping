@@ -82,8 +82,6 @@ class PortStorageTariffsServiceImplTest {
                 .docRef("DOC001")
                 .companyPoid(1L)
                 .deleted("N")
-                .createdBy("testuser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         testDto = PortStorageTariffDto.builder()
@@ -138,7 +136,7 @@ class PortStorageTariffsServiceImplTest {
 
             when(documentService.resolveOperator(any())).thenReturn("AND");
             when(documentService.resolveIsDeleted(any())).thenReturn("N");
-            when(documentService.resolveFilters(any())).thenReturn(new ArrayList<>());
+//            when(documentService.resolveFilters(any())).thenReturn(new ArrayList<>());
             when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                     .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 

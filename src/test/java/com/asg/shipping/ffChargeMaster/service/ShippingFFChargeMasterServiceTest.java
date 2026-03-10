@@ -100,8 +100,6 @@ public class ShippingFFChargeMasterServiceTest {
                 .divisionCode("DIV001")
                 .active("Y")
                 .deleted("N")
-                .createdBy("testUser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         responseDto = ChargeDto.builder()

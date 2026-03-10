@@ -37,12 +37,28 @@ public class ShippingOFOQV2Controller {
 
 
 	@PostMapping
-	@Operation(summary = "Save OFOQ Document and Submit to External API",
-			description = "Create and save a new OFOQ document, then submit it to external API")
+	@Operation(
+			summary = "Save  Document and Submit to OFOQ API",
+			description = "Create and save a new  document, then submit it to OFOQ API"
+	)
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "OFOQ document request details",
 			required = true,
-			content = @Content(schema = @Schema(implementation = ShippingOFOQV2Request.class))
+			content = @Content(
+					mediaType = "application/json",
+					examples = @ExampleObject(
+							name = "OFOQ Request Example",
+							value = """
+                                {
+                                  "voyageNo": "2445",
+                                  "vesselPoid": 9542,
+                                  "arrivalDate": "2024-12-02",
+                                  "rotationNumber": 2600005410,
+                                  "remarks": "Test OFOQ creation"
+                                }
+                                """
+					)
+			)
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Document saved and submitted successfully",
@@ -51,12 +67,11 @@ public class ShippingOFOQV2Controller {
 			@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
 	public ResponseEntity<?> saveDocument(
-			@Valid @RequestBody ShippingOFOQV2Request request) {
-
+			@Valid @RequestBody ShippingOFOQV2RequestDto request) {
 		OFOQCheckStatusResponseDto response = shippingOFOQV2Service.createShippingOFOQ(request);
-
 		return success("Document saved and submitted successfully", response);
 	}
+
 
 	@Operation(
 			summary = "Get OFOQ API Data by ID",
@@ -75,7 +90,7 @@ public class ShippingOFOQV2Controller {
 	) {
 		OFOQVoyageDataResponse result = shippingOFOQV2Service.getShippingOFOQById(transactionPoid);
 		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
-		return success("OFOQ API data retrieved successfully", result);
+		return success("OFOQ data retrieved successfully", result);
 	}
 
 	@Operation(
@@ -102,7 +117,7 @@ public class ShippingOFOQV2Controller {
 			@PageableDefault(size = 20) Pageable pageable
 	) {
 		Map<String, Object> result = shippingOFOQV2Service.listShippingOFOQ(UserContext.getDocumentId(), filters, startDate, endDate, pageable);
-		return success("OFOQ API data retrieved successfully", result);
+		return success("OFOQ data retrieved successfully", result);
 	}
 
 
@@ -126,7 +141,7 @@ public class ShippingOFOQV2Controller {
 			@RequestBody LoadOFOQDetailsRequest request
 	) {
 		OFOQLoadItemDetailsResponse result = shippingOFOQV2Service.loadOFOQDetails(request);
-		return success("OFOQ details loaded successfully", result);
+		return success("item details loaded successfully", result);
 	}
 
 
@@ -236,7 +251,42 @@ public class ShippingOFOQV2Controller {
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "OFOQ document update request",
 			required = true,
-			content = @Content(schema = @Schema(implementation = ShippingOFOQV2Request.class))
+			content = @Content(
+					mediaType = "application/json",
+					examples = @ExampleObject(
+							name = "OFOQ Update Request Example",
+							value = """
+                                {
+                                  "voyageNo": "2445",
+                                  "vesselPoid": 9542,
+                                  "arrivalDate": "2024-12-02",
+                                  "rotationNumber": 2600005412,
+                                  "remarks": "Test OFOQ creation",
+                                  "lineDetails": [
+                                    {
+                                      "vesselVoyagePoid": 406973,
+                                      "lineName": "DOLPHIN SHIPPING LINE",
+                                      "vesselName": "MV BORKUM",
+                                      "voyageNo": "2445",
+                                      "jobNo": "ASG7017",
+                                      "arrivalDate": "2024-12-02",
+                                      "sailDate": "2024-12-02",
+                                      "checked": "Y",
+                                      "drillDownLinkInfo": "TARGET_DOC_ID=100-101,DOC_KEY_POID=406973",
+                                      "linePoid": 103,
+                                      "actionType": "ISCREATED"
+                                    }
+                                  ],
+                                  "amendBl": [
+                                    {
+                                      "blNumber": "25130504",
+                                      "actionType": "ISCREATED"
+                                    }
+                                  ]
+                                }
+                                """
+					)
+			)
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Document updated successfully",
@@ -249,12 +299,14 @@ public class ShippingOFOQV2Controller {
 	public ResponseEntity<?> updateDocument(
 			@Parameter(description = "Transaction POID", required = true)
 			@PathVariable Long transactionPoid,
-			@Valid @RequestBody ShippingOFOQV2Request request
+			@Valid @RequestBody ShippingOFOQV2UpdateRequestDto request
 	) {
-		OFOQCheckStatusResponseDto response = shippingOFOQV2Service.updateShippingOFOQ(transactionPoid, request);
-		return success("Document updated successfully", response);
+		OFOQCheckStatusResponseDto response =
+				shippingOFOQV2Service.updateShippingOFOQ(transactionPoid, request);
 
+		return success("Document updated successfully", response);
 	}
+
 
 	@Operation(
 			summary = "Delete OFOQ Document",
@@ -337,7 +389,7 @@ public class ShippingOFOQV2Controller {
 			@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
 	@PostMapping("/amend-bl")
-	public ResponseEntity<?> amendBl(@Valid @RequestBody OFOQAmendBlRequestDto request) {
+	public ResponseEntity<?> amendBl(@RequestBody OFOQAmendBlRequestDto request) {
 
 		AmendBlDto response = shippingOFOQV2Service.amendBl(request);
 		return success("Amend bl successfully", response);

@@ -98,9 +98,6 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                                 userId
                         ));
 
-        // Update audit fields on every save
-        master.setLastModifiedBy(getCurrentUser());
-        master.setLastModifiedDate(LocalDateTime.now());
         masterRepo.save(master);
 
         if (isNewRecord) {
@@ -161,10 +158,6 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         master.setGroupPoid(groupPoid);
         master.setActive("Y");
         master.setDeleted("N");
-        master.setCreatedBy(getCurrentUser());
-        master.setCreatedDate(LocalDateTime.now());
-        master.setLastModifiedBy(getCurrentUser());
-        master.setLastModifiedDate(LocalDateTime.now());
 
         return masterRepo.save(master);
     }
@@ -191,8 +184,6 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         entity.setChargePoid(dto.getChargePoid());
         entity.setLineChargeDescription(dto.getLineChargeDescription());
         entity.setValidUntil(dto.getValidUntil());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         detailRepo.save(entity);
     }
