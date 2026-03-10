@@ -138,17 +138,15 @@ public class DemurrageDetentionPayableTransferController {
     }
 
     /**
-     * Get auto-populated GL accounts when Line and BL Type are provided
+     * Get GL accounts directly via stored procedure
      */
-    @GetMapping("/auto-populate-gl-accounts")
-    public ResponseEntity<?> getAutoPopulatedGlAccounts(
+    @GetMapping("/get-gl-accounts-direct")
+    public ResponseEntity<?> getGlAccountsDirect(
             @RequestParam Long linePoid,
             @RequestParam String blType) {
-        log.info("Get auto-populated GL accounts for line: {}, blType: {}", linePoid, blType);
-        Long groupPoid = getGroupPoid();
-        Map<String, Object> result = service.getAutoPopulatedGlAccounts(linePoid, blType, groupPoid);
-        return ApiResponse.success("GL accounts auto-populated successfully", result);
+        log.info("Get GL accounts direct for line: {}, blType: {}", linePoid, blType);
+        Map<String, Object> result = service.getGlAccountsDirect(linePoid, blType);
+        return ApiResponse.success("GL accounts retrieved successfully", result);
     }
-
 
 }

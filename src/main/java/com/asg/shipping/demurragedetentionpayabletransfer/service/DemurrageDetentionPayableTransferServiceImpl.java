@@ -818,7 +818,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 enrichLov(detail.getMainfestTransactionPoid(), detail::setMainfestTransactionPoidDet, "MANIFEST", groupPoid, companyPoid, userPoid);
                 enrichLov(detail.getLinePoid(), detail::setLinePoidDet, "LINE_MASTER", groupPoid, companyPoid, userPoid);
                 if (detail.getEquipmentIsoType() != null && !detail.getEquipmentIsoType().isEmpty()) {
-                    enrichLov(detail.getEquipmentIsoType(), detail::setEquipmentIsoTypeDet, "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid);
+                    enrichLov(Long.valueOf(detail.getEquipmentIsoType()), detail::setEquipmentIsoTypeDet, "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid);
                 }
             }
         }
@@ -878,6 +878,31 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 "incomeGlPoid", incomeGlPoid,
                 "incomeGlDet", incomeGlDet
         );
+    }
+
+    @Override
+    public Map<String, Object> getGlAccountsDirect(Long linePoid, String blType) {
+        log.info("Getting GL accounts directly via SP for line: {}, blType: {}", linePoid, blType);
+
+        Long payableGlPoid = null;
+
+        if (linePoid != null && blType != null) {
+            String defaultPayableGl = callProcDemDenSetDefault(linePoid, blType);
+            log.info("SP returned payable GL: {}", defaultPayableGl);
+            if (defaultPayableGl != null && !defaultPayableGl.isEmpty() && !defaultPayableGl.equals("NO_DATA")) {
+                try {
+                    payableGlPoid = Long.parseLong(defaultPayableGl);
+                } catch (NumberFormatException e) {
+                    log.warn("Failed to parse payable GL POID: {}", defaultPayableGl, e);
+                }
+            }
+        }
+
+        Map<String, Object> result = Map.of(
+                "payableGlPoid", payableGlPoid != null ? payableGlPoid : ""
+        );
+        log.info("Returning GL accounts: {}", result);
+        return result;
     }
 
     private void enrichLov(String code, java.util.function.Consumer<LovGetListDto> setter, String lovType,
