@@ -77,8 +77,6 @@ public class ChargeGroupMasterServiceTest {
                 .active("Y")
                 .deleted("N")
                 .seqNo(1L)
-                .createdBy("testUser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         responseDto = ChargeGroupMasterResponseDto.builder()

@@ -82,8 +82,6 @@ class PortStorageTariffsServiceImplTest {
                 .docRef("DOC001")
                 .companyPoid(1L)
                 .deleted("N")
-                .createdBy("testuser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         testDto = PortStorageTariffDto.builder()

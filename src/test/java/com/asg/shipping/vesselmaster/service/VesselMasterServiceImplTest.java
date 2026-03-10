@@ -94,10 +94,6 @@ class VesselMasterServiceImplTest {
                 .lineName("Test Line")
                 .active("Y")
                 .seqno(1)
-                .createdBy("admin")
-                .createdDate(LocalDateTime.now())
-                .lastModifiedBy("admin")
-                .lastModifiedDate(LocalDateTime.now())
                 .deleted("N")
                 .build();
 

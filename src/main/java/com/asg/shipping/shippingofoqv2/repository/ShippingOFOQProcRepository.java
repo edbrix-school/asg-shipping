@@ -1,7 +1,6 @@
 package com.asg.shipping.shippingofoqv2.repository;
 
 import com.asg.shipping.shippingofoqv2.dto.LoadOFOQDetailsRequest;
-import com.asg.shipping.shippingofoqv2.dto.ShippingOFOQV2Request;
 import com.asg.shipping.shippingofoqv2.dto.OFOQLoadItemDetailsResponse;
 import com.asg.shipping.shippingofoqv2.dto.OFOQManifestXmlDto;
 

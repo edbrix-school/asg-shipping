@@ -67,8 +67,6 @@ class VesselTypeServiceImplTest {
                 .active("Y")
                 .deleted("N")
                 .groupPoid(1L)
-                .createdBy("testuser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         testDto = VesselTypeDto.builder()
