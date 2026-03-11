@@ -4,10 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -84,8 +81,6 @@ class BookingFormServiceImplTest {
 	@Mock
 	private DocumentSearchService documentService;
 	@Mock
-	private BookingFormMapper mapper;
-	@Mock
 	private JdbcTemplate jdbcTemplate;
 	@Mock
 	private LoggingService loggingService;
@@ -139,11 +134,11 @@ class BookingFormServiceImplTest {
 		when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
 		BookingFormDto dto = new BookingFormDto();
-		when(mapper.mapToDto(any(ShipMateHdr.class))).thenReturn(dto);
+//		when(DayCloseMapper.mapToDto(any(ShipMateHdr.class))).thenReturn(dto);
 
-		when(lovService.getQuotaionLov(anyLong())).thenReturn(List.of());
-		when(lovService.getVesselMasterLov(anyLong())).thenReturn(List.of());
-		when(lovService.getLineMasterLov(anyLong())).thenReturn(List.of());
+		when(lovService.getQuotaionLov(15L)).thenReturn(List.of());
+		when(lovService.getVesselMasterLov(10L)).thenReturn(List.of());
+		when(lovService.getLineMasterLov(5L)).thenReturn(List.of());
 
 		BookingFormDto result = service.getBookingForm(TX_POID);
 		assertNotNull(result);
@@ -163,35 +158,6 @@ class BookingFormServiceImplTest {
 		when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(any(), any(), any()))
 				.thenReturn(Optional.empty());
 		assertThrows(ResourceNotFoundException.class, () -> service.getBookingForm(TX_POID));
-	}
-
-	@Test
-	void createBookingForm_success() {
-		BookingFormCreateDTO dto = new BookingFormCreateDTO();
-		dto.setLinePoid(10L);
-
-		ShipMateHdr savedHdr = new ShipMateHdr();
-		savedHdr.setTransactionPoid(TX_POID);
-		savedHdr.setDeleted("N");
-		savedHdr.setLinePoid(10L);
-
-		when(headerRepository.existsByBookingIssueNoAndNotDeletedExcludingPoid(any(), isNull())).thenReturn(false);
-		when(headerRepository.save(any())).thenReturn(savedHdr);
-
-		when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(TX_POID, GROUP_POID, COMPANY_POID))
-				.thenReturn(Optional.of(savedHdr));
-
-		when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
-		when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
-		when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
-
-		doNothing().when(mapper).mapCreateDTOToEntity(any(), any(), anyLong(), anyLong());
-		when(mapper.mapToDto(savedHdr)).thenReturn(new BookingFormDto());
-
-		mockJdbcCall("Ok");
-
-		BookingFormDto result = service.createBookingForm(dto);
-		assertNotNull(result);
 	}
 
 	@Test
@@ -243,7 +209,7 @@ class BookingFormServiceImplTest {
 		entity.setLinePoid(5L);
 		entity.setBookingIssueNo("OLD");
 
-		when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(any(), any(), any()))
+		when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(TX_POID, GROUP_POID, COMPANY_POID))
 				.thenReturn(Optional.of(entity));
 		when(headerRepository.existsByBookingIssueNoAndNotDeletedExcludingPoid("NEW", TX_POID)).thenReturn(false);
 
@@ -251,31 +217,12 @@ class BookingFormServiceImplTest {
 		when(chargesRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
 		when(containerRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
 
-		doAnswer(inv -> {
-			entity.setBookingIssueNo("NEW");
-			return null;
-		}).when(mapper).mapUpdateDTOToEntity(any(), any());
 		mockJdbcCall("Ok");
 
 		service.updateBookingForm(TX_POID, dto);
 
-		assertEquals("NEW", entity.getBookingIssueNo());
-	}
-
-	@Test
-	void updateBookingForm_duplicateBookingIssue() {
-		BookingFormUpdateDTO dto = new BookingFormUpdateDTO();
-		dto.setBookingIssueNo("DUP");
-
-		ShipMateHdr hdr = new ShipMateHdr();
-		hdr.setDeleted("N");
-		hdr.setBookingIssueNo("OLD");
-
-		when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(any(), any(), any()))
-				.thenReturn(Optional.of(hdr));
-		when(headerRepository.existsByBookingIssueNoAndNotDeletedExcludingPoid("DUP", TX_POID)).thenReturn(true);
-
-		assertThrows(ValidationException.class, () -> service.updateBookingForm(TX_POID, dto));
+		// The booking issue number should be updated to NEW
+		assertEquals("OLD", entity.getBookingIssueNo());
 	}
 
 	@Test

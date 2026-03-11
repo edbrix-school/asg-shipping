@@ -1,16 +1,14 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.util;
 
 import com.asg.common.lib.utility.DateUtil;
-import com.asg.shipping.common.utility.DateTimeHandler;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
-import com.asg.shipping.demurragedetentionpayabletransfer.entity.*;
+import com.asg.shipping.demurragedetentionpayabletransfer.entity.ShipDemDetnTransferDtl;
+import com.asg.shipping.demurragedetentionpayabletransfer.entity.ShipDemDetnTransferHdr;
+import com.asg.shipping.demurragedetentionpayabletransfer.entity.ShipDemDtnTransferBillDtl;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 /**
  * Mapper utility for converting between Entity and DTO
@@ -52,7 +50,7 @@ public class DemurrageDetentionPayableTransferMapper {
     public void mapCreateDTOToEntity(DemurrageDetentionPayableTransferCreateDTO dto, ShipDemDetnTransferHdr entity, Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate()==null? DateUtil.getCurrentDateInUserTimeZone(): DateTimeHandler.convertDate(dto.getTransactionDate().atStartOfDay()));
+        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : dto.getTransactionDate());
         entity.setLinePoid(dto.getLinePoid());
         entity.setBlType(dto.getBlType());
         entity.setEmptyFromDate(dto.getEmptyFromDate());

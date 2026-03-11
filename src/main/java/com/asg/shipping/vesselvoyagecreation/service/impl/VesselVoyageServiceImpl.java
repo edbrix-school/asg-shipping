@@ -7,6 +7,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -40,12 +41,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
 
 @Service
 @RequiredArgsConstructor
@@ -60,7 +58,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private final StoredProcedureRepository storedProcedureRepository;
     private final DocumentSearchService documentSearchService;
     private final VoyageBillsRepository voyageBillsRepository;
-    private final VoyageMapper voyageMapper;
     private final LoggingService loggingService;
     private final PrintService printService;
     private final DataSource dataSource;
@@ -195,7 +192,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), voyagePoid.toString());
 
-        return voyageMapper.toResponse(e, lineCode);
+        return VoyageMapper.toResponse(e, lineCode);
     }
 
     @Override
@@ -214,8 +211,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         );
         if (dup) throw new ResourceAlreadyExistsException("Duplicate Job, Check Line, Vessel, Voyage...");
 
-        ShipVoyageHdrEntity entity = voyageMapper.toEntityForCreate(request, groupPoid, companyPoid, userId);
-        entity.setTransactionDate(convertDate(null));
+        ShipVoyageHdrEntity entity = VoyageMapper.toEntityForCreate(request, groupPoid, companyPoid, userId);
+        entity.setTransactionDate(DateUtil.getCurrentDateInUserTimeZone());
 
         ShipVoyageHdrEntity saved = voyageHdrRepository.save(entity);
         // Reload to get trigger-populated docRef/jobNo if needed
@@ -227,7 +224,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(fresh.getLinePoid()).orElse(null);
-        return voyageMapper.toResponse(fresh, lineCode);
+        return VoyageMapper.toResponse(fresh, lineCode);
     }
 
     @Override
@@ -253,7 +250,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         ShipVoyageHdrEntity oldEntity = new ShipVoyageHdrEntity();
         BeanUtils.copyProperties(entity, oldEntity);
 
-        voyageMapper.updateEntity(entity, request, userId);
+        VoyageMapper.updateEntity(entity, request, userId);
         voyageHdrRepository.save(entity);
 
         // Add logging
@@ -262,7 +259,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         loggingService.logChanges(oldEntity, entity, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(entity.getLinePoid()).orElse(null);
-        return voyageMapper.toResponse(entity, lineCode);
+        return VoyageMapper.toResponse(entity, lineCode);
     }
 
     private void validateVoyageRequest(VoyageUpsertRequest r) {

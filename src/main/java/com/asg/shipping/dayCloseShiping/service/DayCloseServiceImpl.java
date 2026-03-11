@@ -61,7 +61,6 @@ public class DayCloseServiceImpl implements DayCloseService {
     private final JdbcTemplate jdbcTemplate;
     private final DocumentSearchService documentService;
     private final DocumentDeleteService documentDeleteService;
-    private final DayCloseMapper mapper;
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
@@ -74,8 +73,8 @@ public class DayCloseServiceImpl implements DayCloseService {
 
         List<ArShDayEndCloseDtl> details = dtlRepo.findByTransactionPoid(transactionPoid);
 
-        DayCloseDto dto = mapper.mapToDto(hdr);
-        dto.setDenominations(mapper.mapDtlListToDto(details));
+        DayCloseDto dto = DayCloseMapper.mapToDto(hdr);
+        dto.setDenominations(DayCloseMapper.mapDtlListToDto(details));
 
         return dto;
     }
@@ -95,7 +94,7 @@ public class DayCloseServiceImpl implements DayCloseService {
         validateAmounts(dto);
 
         ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
-        mapper.mapCreateDTOToEntity(header, hdr, groupPoid, companyPoid);
+        DayCloseMapper.mapCreateDTOToEntity(header, hdr, groupPoid, companyPoid);
 
         hdr = hdrRepo.save(hdr);
 
@@ -137,7 +136,7 @@ public class DayCloseServiceImpl implements DayCloseService {
         ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
         hdr.setTransactionPoid(transactionPoid);
 
-        mapper.mapCreateDTOToEntity(request.getHeader(), hdr, groupPoid, companyPoid);
+        DayCloseMapper.mapCreateDTOToEntity(request.getHeader(), hdr, groupPoid, companyPoid);
         hdrRepo.save(hdr);
 
         saveDenominations(transactionPoid, request.getDenominations());
@@ -152,7 +151,7 @@ public class DayCloseServiceImpl implements DayCloseService {
         log.info("Deleting DayClose Shipping with id: {}", id);
 
 
-        hdrRepo.findByTransactionPoidAndDeleted(id, "N")
+        hdrRepo.findByTransactionPoidDeleted(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dayclose Shipping", "transactionPoid", id));
 
         // Use DocumentDeleteService for deletion (handles logging internally)
@@ -220,7 +219,7 @@ public class DayCloseServiceImpl implements DayCloseService {
             switch (action) {
 
                 case "ISCREATED":
-                    ArShDayEndCloseDtl entity = mapper.mapDtlFromDto(dto, transactionPoid, null);
+                    ArShDayEndCloseDtl entity = DayCloseMapper.mapDtlFromDto(dto, transactionPoid, null);
                     entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
                     toSave.add(entity);
                     break;

@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselvoyagecreation.util;
 
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.vesselvoyagecreation.dto.VoyageResponse;
 import com.asg.shipping.vesselvoyagecreation.dto.VoyageUpsertRequest;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
@@ -7,12 +8,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
-import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
-
-@Component
 public class VoyageMapper {
 
-    public VoyageResponse toResponse(ShipVoyageHdrEntity e, String lineCode) {
+    public static VoyageResponse toResponse(ShipVoyageHdrEntity e, String lineCode) {
         if (e == null) return null;
         return VoyageResponse.builder()
                 .transactionPoid(e.getTransactionPoid())
@@ -45,12 +43,12 @@ public class VoyageMapper {
                 .build();
     }
 
-    public ShipVoyageHdrEntity toEntityForCreate(VoyageUpsertRequest req, Long groupPoid, Long companyPoid, String userId) {
+    public static ShipVoyageHdrEntity toEntityForCreate(VoyageUpsertRequest req, Long groupPoid, Long companyPoid, String userId) {
         LocalDateTime now = LocalDateTime.now();
         return ShipVoyageHdrEntity.builder()
                 .groupPoid(groupPoid)
                 .companyPoid(companyPoid)
-                .transactionDate(convertDate(null))
+                .transactionDate(DateUtil.getCurrentDateInUserTimeZone())
                 .voyageNo(req.getVoyageNo())
                 .linePoid(req.getLinePoid())
                 .vesselPoid(req.getVesselPoid())
@@ -77,7 +75,7 @@ public class VoyageMapper {
                 .build();
     }
 
-    public void updateEntity(ShipVoyageHdrEntity e, VoyageUpsertRequest req, String userId) {
+    public static void updateEntity(ShipVoyageHdrEntity e, VoyageUpsertRequest req, String userId) {
         e.setVoyageNo(req.getVoyageNo());
         e.setLinePoid(req.getLinePoid());
         e.setVesselPoid(req.getVesselPoid());
