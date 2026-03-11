@@ -25,4 +25,6 @@ public interface ArShDayEndCloseHdrRepository extends JpaRepository<ArShDayEndCl
                                                           @Param("groupPoid") Long groupPoid, @Param("companyPoid") Long companyPoid);
 
     Optional<ArShDayEndCloseHdr> findByTransactionPoidAndGroupPoid(Long id, Long groupPoid);
+
+    Optional<ArShDayEndCloseHdr> findByTransactionPoidAndDeleted(Long id, String n);
 }

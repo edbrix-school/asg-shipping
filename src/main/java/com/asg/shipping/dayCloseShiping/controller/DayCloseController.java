@@ -1,6 +1,7 @@
 package com.asg.shipping.dayCloseShiping.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
@@ -118,9 +119,12 @@ public class DayCloseController {
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete DayClose Shipping")
-    public ResponseEntity<?> deleteCollectionHandover(@PathVariable Long id) {
+    public ResponseEntity<?> deleteCollectionHandover(
+            @Parameter(description = "Dayclose ID to delete", required = true)
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting DayClose Shipping with id: {}", id);
-        dayCloseService.deleteDayClose(id);
+        dayCloseService.deleteDayClose(id,deleteReasonDto);
         return success("DayClose Shipping deleted successfully");
     }
 
@@ -132,8 +136,8 @@ public class DayCloseController {
     public ResponseEntity<?> searchDayClose(
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters,
-            @RequestParam(required = false) LocalDate startDate,
-            @RequestParam(required = false) LocalDate endDate
+            @RequestParam LocalDate startDate,
+            @RequestParam LocalDate endDate
     ) {
         if ((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
             return badRequest("Both startDate and endDate should be specified or both dates should be empty.");
