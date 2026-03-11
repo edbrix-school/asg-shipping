@@ -1,16 +1,13 @@
 package com.asg.shipping.collectionhandover.util;
 
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.collectionhandover.dto.*;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtl;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
-import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
 
 /**
  * Mapper utility for converting between Entity and DTO
@@ -78,7 +75,7 @@ public class CollectionHandoverMapper {
      * Map CreateDTO to Header Entity
      */
     public void mapCreateDTOToEntity(CollectionHandoverCreateDTO dto, ArShDayEndCloseHdr entity, Long groupPoid, Long userPoid) {
-        entity.setTransactionDate(convertDate(dto.getTransactionDate().atStartOfDay()));
+        entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : DateUtil.getCurrentDateInUserTimeZone());
         entity.setCompanyPoid(dto.getCompanyPoid());
         entity.setGroupPoid(groupPoid);
         entity.setDocRef(dto.getDocRef());

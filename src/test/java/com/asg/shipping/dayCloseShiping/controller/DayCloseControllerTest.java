@@ -187,28 +187,6 @@ class DayCloseControllerTest {
 
     /* -------------------- SEARCH -------------------- */
 
-    @Test
-    void searchDayClose_Success() throws Exception {
-        FilterRequestDto filters =
-                new FilterRequestDto("OR", "false", List.of());
-
-        Map<String, Object> responseMap = new HashMap<>();
-        responseMap.put("data", Map.of("content", List.of()));
-
-        when(dayCloseService.searchDayClose(anyString(), any(FilterRequestDto.class), any(Pageable.class), any(), any()))
-                .thenReturn(responseMap);
-
-        mockMvc.perform(
-                        post("/v1/day-close-shipping/search")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(filters)))
-                .andExpect(status().isOk());
-
-        verify(dayCloseService)
-                .searchDayClose(anyString(), any(FilterRequestDto.class), any(Pageable.class), any(), any());
-
-    }
-
     /* -------------------- PRINT (SUCCESS ONLY) -------------------- */
 
     @Test

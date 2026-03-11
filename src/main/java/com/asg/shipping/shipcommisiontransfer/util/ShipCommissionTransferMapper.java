@@ -1,7 +1,6 @@
 package com.asg.shipping.shipcommisiontransfer.util;
 
 import com.asg.common.lib.utility.DateUtil;
-import com.asg.shipping.common.utility.DateTimeHandler;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionDetailDto;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
@@ -52,7 +51,7 @@ public class ShipCommissionTransferMapper {
     public void mapCreateDTOToEntity(ShipCommissionTransferCreateDTO dto, ShipBlCommissionHdr entity, Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : DateTimeHandler.convertDate(dto.getTransactionDate().atStartOfDay()));
+        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : dto.getTransactionDate());
         entity.setVoyageTransactionPoid(dto.getVoyageTransactionPoid());
         entity.setRemarks(dto.getRemarks());
         entity.setCurrencyExchange(dto.getCurrencyExchange());

@@ -15,8 +15,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
-
 /**
  * Mapper utility for converting between Entity and DTO
  */
@@ -57,7 +55,7 @@ public class CustomerAutoChargeExportBLMapper {
         entity.setDescription(dto.getDescription());
         entity.setPeriodFrom(java.sql.Date.valueOf(dto.getPeriodFrom()));
         entity.setPeriodTo(java.sql.Date.valueOf(dto.getPeriodTo()));
-        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : convertDate(dto.getTransactionDate().atStartOfDay()));
+        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : dto.getTransactionDate());
         entity.setDocRef(dto.getDocRef());
         entity.setDeleted("N");
     }

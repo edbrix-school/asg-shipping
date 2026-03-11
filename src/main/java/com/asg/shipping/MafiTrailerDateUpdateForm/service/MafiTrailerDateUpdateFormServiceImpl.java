@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static com.asg.shipping.common.utility.DateTimeHandler.convertDate;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -132,8 +130,8 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
                 newEntity.setMafiRef(dto.getMafiRef());
                 newEntity.setMafiSize(dto.getMafiSize());
                 newEntity.setMafiFreeDays(dto.getMafiFreeDays());
-                newEntity.setBackLoadDate(convertDate(dto.getBackLoadDate().atStartOfDay()));
-                newEntity.setMafiEmptyDate(convertDate(dto.getMafiEmptyDate().atStartOfDay()));
+                newEntity.setBackLoadDate(dto.getBackLoadDate());
+                newEntity.setMafiEmptyDate(dto.getMafiEmptyDate());
                 newEntity.setRemarks(dto.getRemarks());
                 logRequests.add(new LogRequestDto<>(entity, newEntity, ShipBlMafiDtl.class, docId,
                         docKeyPoid, "BLMAFIDTL DET_ROW_ID: " + dto.getDetRowId()));

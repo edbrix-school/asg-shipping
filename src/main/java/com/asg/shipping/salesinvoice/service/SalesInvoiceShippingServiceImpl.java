@@ -6,7 +6,6 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.DocumentSearchService;
-import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.salesinvoice.dto.*;
@@ -19,7 +18,6 @@ import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceHdrRepository;
 import com.asg.shipping.salesinvoice.util.SalesInvoiceMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperReport;
 import oracle.jdbc.OracleTypes;
 import org.springframework.data.domain.Page;
@@ -36,7 +34,10 @@ import java.sql.ResultSet;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -56,7 +57,6 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final ArShSalesInvoiceContnrDtlRepository contnrDtlRepository;
     private final ArShSalesInvoiceChargDtlRepository chargDtlRepository;
     private final DocumentSearchService documentService;
-    private final SalesInvoiceMapper mapper;
     private final JdbcTemplate jdbcTemplate;
     private final DataSource dataSource;
     private final PrintService printService;
@@ -97,7 +97,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         ArShSalesInvoiceHdr entity = hdrRepository.findActiveByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
 
-        SalesInvoiceShippingDto dto = mapper.mapToDto(entity);
+        SalesInvoiceShippingDto dto = SalesInvoiceMapper.mapToDto(entity);
 
         loadDetailTables(dto, id);
 //        enrichLovData(dto);
@@ -117,7 +117,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         validateCreateDTO(createDTO, companyPoid);
 
         ArShSalesInvoiceHdr entity = new ArShSalesInvoiceHdr();
-        mapper.mapCreateDTOToEntity(createDTO, entity, groupPoid, companyPoid);
+        SalesInvoiceMapper.mapCreateDTOToEntity(createDTO, entity, groupPoid, companyPoid);
 
         autoPopulateDefaults(entity, companyPoid);
 
@@ -136,7 +136,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "INVSHRCPTPRINTUPDATE");
 
-        SalesInvoiceShippingDto result = mapper.mapToDto(saved);
+        SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
 //        enrichLovData(result);
 
@@ -157,7 +157,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         validateUpdateDTO(updateDTO, id, companyPoid);
 
-        mapper.mapUpdateDTOToEntity(updateDTO, entity);
+        SalesInvoiceMapper.mapUpdateDTOToEntity(updateDTO, entity);
         autoPopulateDefaults(entity, companyPoid);
 
         ArShSalesInvoiceHdr saved = hdrRepository.saveAndFlush(entity);
@@ -173,7 +173,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "INVSHRCPTPRINTUPDATE");
 
-        SalesInvoiceShippingDto result = mapper.mapToDto(saved);
+        SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
         loadDetailTables(result, id);
 //        enrichLovData(result);
 
@@ -723,12 +723,12 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private void loadDetailTables(SalesInvoiceShippingDto dto, Long transactionPoid) {
         List<ArShSalesInvoiceContnrDtl> containerDetails = contnrDtlRepository.findByTransactionPoid(transactionPoid);
         dto.setContainerDetails(containerDetails.stream()
-                .map(mapper::mapContainerDtlToDto)
+                .map(SalesInvoiceMapper::mapContainerDtlToDto)
                 .collect(Collectors.toList()));
 
         List<ArShSalesInvoiceChargDtl> chargesDetails = chargDtlRepository.findByTransactionPoid(transactionPoid);
         dto.setChargesDetails(chargesDetails.stream()
-                .map(mapper::mapChargesDtlToDto)
+                .map(SalesInvoiceMapper::mapChargesDtlToDto)
                 .collect(Collectors.toList()));
     }
 
@@ -740,7 +740,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             Long maxDetRowId = contnrDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
             maxDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
             for (SalesInvoiceContainerDtlDto detailDto : dto.getContainerDetails()) {
-                ArShSalesInvoiceContnrDtl entity = mapper.mapContainerDtlFromDto(detailDto, transactionPoid);
+                ArShSalesInvoiceContnrDtl entity = SalesInvoiceMapper.mapContainerDtlFromDto(detailDto, transactionPoid);
                 if (entity.getDetRowId() == null) {
                     entity.setDetRowId(++maxDetRowId);
                 }
@@ -752,7 +752,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             Long maxDetRowId = chargDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
             maxDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
             for (SalesInvoiceChargesDtlDto detailDto : dto.getChargesDetails()) {
-                ArShSalesInvoiceChargDtl entity = mapper.mapChargesDtlFromDto(detailDto, transactionPoid);
+                ArShSalesInvoiceChargDtl entity = SalesInvoiceMapper.mapChargesDtlFromDto(detailDto, transactionPoid);
                 if (entity.getDetRowId() == null) {
                     entity.setDetRowId(++maxDetRowId);
                 }
@@ -767,7 +767,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             Long maxDetRowId = contnrDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
             maxDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
             for (SalesInvoiceContainerDtlDto detailDto : dto.getContainerDetails()) {
-                ArShSalesInvoiceContnrDtl entity = mapper.mapContainerDtlFromDto(detailDto, transactionPoid);
+                ArShSalesInvoiceContnrDtl entity = SalesInvoiceMapper.mapContainerDtlFromDto(detailDto, transactionPoid);
                 if (entity.getDetRowId() == null) {
                     entity.setDetRowId(++maxDetRowId);
                 }
@@ -779,7 +779,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             Long maxDetRowId = chargDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
             maxDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
             for (SalesInvoiceChargesDtlDto detailDto : dto.getChargesDetails()) {
-                ArShSalesInvoiceChargDtl entity = mapper.mapChargesDtlFromDto(detailDto, transactionPoid);
+                ArShSalesInvoiceChargDtl entity = SalesInvoiceMapper.mapChargesDtlFromDto(detailDto, transactionPoid);
                 if (entity.getDetRowId() == null) {
                     entity.setDetRowId(++maxDetRowId);
                 }
