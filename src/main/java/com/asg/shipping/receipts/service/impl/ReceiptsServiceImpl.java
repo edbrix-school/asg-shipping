@@ -63,7 +63,6 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private final ArShReceiptPymtDetailsRepository paymentRepository;
 	private final ReceiptsMapper mapper;
 	private final ShippingReceiptValidationService validationService;
-	private final TransactionDateService transactionDateService;
 	private final ShipReceiptProcRepository procRepository;
 	private final ReceiptAutoPopulateRepository autoPopulateRepository;
 	private final PrintService printService;
@@ -88,7 +87,9 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	public ReceiptsBlDetailsDto createReceipt(ReceiptsCreateDto createDto) {
 		log.info("Creating receipt with docRef: {}", createDto.getDocRef());
 
-		LocalDate transactionDate = (createDto.getTransactionDate() == null ? transactionDateService.calculateTransactionDate() : createDto.getTransactionDate().toLocalDate());
+		LocalDate transactionDate = createDto.getTransactionDate() != null 
+				? createDto.getTransactionDate()
+				: com.asg.common.lib.utility.DateUtil.getCurrentDateInUserTimeZone();
 
 
 		validationService.validateReceiptCreation(createDto);
@@ -96,7 +97,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		ArShReceiptHdr hdr = mapper.mapBlDetailsDtoToEntity(
 				ReceiptsBlDetailsDto.builder()
 						.docRef(createDto.getDocRef())
-						.date(transactionDate.atStartOfDay())
+						.date(transactionDate)
 						.blPoid(createDto.getBlPoid())
 						.companyPoid(createDto.getCompanyPoid())
 						.releaseType(createDto.getReleaseType())
@@ -147,7 +148,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		validationService.validateReceiptUpdate(updateDto, existingReceipt);
 
 		// Preserve original transaction date
-		LocalDateTime originalTransactionDate = existingReceipt.getTransactionDate();
+		LocalDate originalTransactionDate = existingReceipt.getTransactionDate();
 
 		ArShReceiptHdr updated = mapper.mapBlDetailsDtoToEntity(
 				ReceiptsBlDetailsDto.builder()
@@ -429,8 +430,6 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 						ArShReceiptContainerDtl oldEntity = new ArShReceiptContainerDtl();
 						BeanUtils.copyProperties(entity, oldEntity);
 						mapper.updateContainerEntity(dto, entity);
-						entity.setLastModifiedBy(UserContext.getUserName());
-						entity.setLastModifiedDate(LocalDateTime.now());
 						toUpdate.add(entity);
 						String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
 						logRequests.add(new LogRequestDto<>(oldEntity, entity, ArShReceiptContainerDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
@@ -475,9 +474,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 								.orElseThrow(() -> new ResourceNotFoundException("Charges Detail", "detRowId", dto.getDetRowId()));
 						ArShReceiptChargesDtl oldEntity = new ArShReceiptChargesDtl();
 						BeanUtils.copyProperties(entity, oldEntity);
-						mapper.updateChargesEntity(dto, entity);
-						entity.setLastModifiedBy(UserContext.getUserName());
-						entity.setLastModifiedDate(LocalDateTime.now());
+						mapper.updateChargesEntity(dto, entity);;
 						toUpdate.add(entity);
 
 						String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
@@ -522,8 +519,6 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 						ArShReceiptPymtDetails oldEntity = new ArShReceiptPymtDetails();
 						BeanUtils.copyProperties(entity, oldEntity);
 						mapper.updatePaymentEntity(dto, entity);
-						entity.setLastModifiedBy(UserContext.getUserName());
-						entity.setLastModifiedDate(LocalDateTime.now());
 						toUpdate.add(entity);
 
 						String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());

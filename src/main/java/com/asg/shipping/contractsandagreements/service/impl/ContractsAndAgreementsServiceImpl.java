@@ -81,9 +81,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         AdminContractsAgreementHdr entity = new AdminContractsAgreementHdr();
         ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
 
-        entity.setCreatedBy(UserContext.getUserName());
-        entity.setCreatedDate(LocalDateTime.now());
-
         AdminContractsAgreementHdr saved = headerRepo.saveAndFlush(entity);
         log.info("Created new Contracts and Agreements with ID: {}", saved.getTransactionPoid());
 
@@ -152,9 +149,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         );
 
         ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
-
-        entity.setLastModifiedBy(UserContext.getUserName());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         headerRepo.save(entity);
 
@@ -260,9 +254,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
 
             AdminContractsAgreementPicDtl entity =
                     ContractsAndAgreementsMapper.mapPicDtlDtoToEntity(dto);
-            entity.setCreatedBy(UserContext.getUserName());
-            entity.setCreatedDate(LocalDateTime.now());
-
             entity.setId(new AdminContractsAgreementDtlId(
                     transactionPoid,
                     nextDetRowId
@@ -327,9 +318,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     BeanUtils.copyProperties(entity, old);
 
                     ContractsAndAgreementsMapper.updateRenewalDtlEntity(dto, entity);
-                    entity.setLastUpdatedBy(UserContext.getUserName());
-                    entity.setLastUpdatedDate(LocalDateTime.now());
-
                     toUpdate.add(entity);
 
                     String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
@@ -392,8 +380,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                     BeanUtils.copyProperties(entity, old);
 
                     ContractsAndAgreementsMapper.updatePicDtlEntity(dto, entity);
-                    entity.setLastModifiedBy(UserContext.getUserName());
-                    entity.setLastModifiedDate(LocalDateTime.now());
                     toUpdate.add(entity);
 
                     String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());

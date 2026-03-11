@@ -93,8 +93,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
 
         ExportManifestBlHdr entity = mapper.mapToEntity(dto);
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
         entity.setCompanyPoid(UserContext.getCompanyPoid());
         entity.setGroupPoid(UserContext.getGroupPoid());
         
@@ -243,8 +241,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
 
         entity.setDeleted("Y");
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         repository.save(entity);
 
         log.info("Successfully deleted Export Manifest BL with id: {}", id);
@@ -476,8 +472,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .noOfPacks(detail.getNoOfPacks())
                 .packUnit(detail.getPackUnit())
                 .destinationPortPoid(detail.getDestinationPortPoid())
-                .createdBy(getCurrentUser())
-                .createdDate(LocalDateTime.now())
                 .build();
         generalDtlRepository.save(entity);
 
@@ -508,8 +502,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setNoOfPacks(detail.getNoOfPacks());
         entity.setPackUnit(detail.getPackUnit());
         entity.setDestinationPortPoid(detail.getDestinationPortPoid());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         generalDtlRepository.save(entity);
 
        
@@ -545,8 +537,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .id(new ShipBlManifestCargoDtlId(transactionPoid, detRowId, descriptionType))
                 .cargoDescription(detail.getCargoDescription())
                 .recordOrder(detail.getRecordOrder())
-                .createdBy(getCurrentUser())
-                .createdDate(LocalDateTime.now())
                 .build();
         cargoDtlRepository.save(entity);
 
@@ -569,8 +559,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         entity.setCargoDescription(detail.getCargoDescription());
         entity.setRecordOrder(detail.getRecordOrder());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         cargoDtlRepository.save(entity);
 
         
@@ -619,8 +607,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .id(new ShipBlManifestDtlId(transactionPoid, detRowId))
                 .build();
         applyContainerFields(entity, detail);
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
         containerDtlRepository.save(entity);
 
        
@@ -650,8 +636,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                     });
         }
         applyContainerFields(entity, detail);
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         containerDtlRepository.save(entity);
 
        
@@ -768,8 +752,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .cnRefDetRowId(detail.getCnRefDetRowId())
                 .cnIssueInvoice(detail.getCnIssueInvoice())
                 .selectRow(detail.getSelectRow())
-                .createdBy(getCurrentUser())
-                .createdDate(LocalDateTime.now())
                 .build();
         chargesDtlRepository.save(entity);
 
@@ -816,8 +798,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setCnRefDetRowId(detail.getCnRefDetRowId());
         entity.setCnIssueInvoice(detail.getCnIssueInvoice());
         entity.setSelectRow(detail.getSelectRow());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         chargesDtlRepository.save(entity);
 
        
@@ -869,8 +849,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .noOfPacks(detail.getNoOfPacks())
                         .packUnit(detail.getPackUnit())
                         .destinationPortPoid(detail.getDestinationPortPoid())
-                        .createdBy(getCurrentUser())
-                        .createdDate(LocalDateTime.now())
                         .build();
                 generalDtlRepository.save(entity);
 
@@ -891,8 +869,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                                 detail.getDescriptionType()))
                         .cargoDescription(detail.getCargoDescription())
                         .recordOrder(detail.getRecordOrder())
-                        .createdBy(getCurrentUser())
-                        .createdDate(LocalDateTime.now())
                         .build();
                 cargoDtlRepository.save(entity);
 
@@ -960,8 +936,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .hsDescription(detail.getHsDescription())
                         .amountPerDayAfterFree(detail.getAmountPerDayAfterFree())
                         .actualDischargeDate(detail.getActualDischargeDate())
-                        .createdBy(getCurrentUser())
-                        .createdDate(LocalDateTime.now())
                         .build();
                 containerDtlRepository.save(entity);
 
@@ -1005,8 +979,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .cnRefDetRowId(detail.getCnRefDetRowId())
                         .cnIssueInvoice(detail.getCnIssueInvoice())
                         .selectRow(detail.getSelectRow())
-                        .createdBy(getCurrentUser())
-                        .createdDate(LocalDateTime.now())
                         .build();
                 chargesDtlRepository.save(entity);
 

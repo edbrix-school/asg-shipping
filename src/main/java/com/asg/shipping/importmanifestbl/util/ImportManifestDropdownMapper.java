@@ -4,8 +4,6 @@ import com.asg.shipping.importmanifestbl.dto.CommodityDTO;
 import com.asg.shipping.importmanifestbl.dto.ContainerTypeDTO;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
-
 public class ImportManifestDropdownMapper {
 
     public static ContainerTypeDTO mapContainer(Object[] row) {

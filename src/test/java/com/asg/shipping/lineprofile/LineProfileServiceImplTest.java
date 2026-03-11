@@ -1,11 +1,9 @@
 package com.asg.shipping.lineprofile;
 
-import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.LovGetListDto;
-import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.*;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.lineprofile.dto.LineProfileAgreementDetailsResponse;
@@ -47,9 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -70,6 +66,8 @@ class LineProfileServiceImplTest {
     private EntityManager entityManager;
     @Mock
     private LoggingService loggingService;
+    @Mock
+    private DocumentDeleteService deleteService;
 
     @InjectMocks
     private LineProfileServiceImpl service;
@@ -238,11 +236,29 @@ class LineProfileServiceImplTest {
 
     @Test
     void testDelete_Success() {
-        when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
+        DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
+
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(eq(1L), any()))
                 .thenReturn(Optional.of(masterEntity));
 
-        assertDoesNotThrow(() -> service.delete(1L, 10L, "user1"));
-        verify(masterRepository).save(any());
+        when(deleteService.deleteDocument(
+                eq(1L),
+                eq("SH_LINE_PROFILE_MASTER"),
+                eq("TRADELANE_POID"),
+                eq(deleteReasonDto),
+                isNull()
+        )).thenReturn("SUCCESS");
+
+        assertDoesNotThrow(() -> service.delete(1L, deleteReasonDto));
+
+        verify(deleteService).deleteDocument(
+                eq(1L),
+                eq("SH_LINE_PROFILE_MASTER"),
+                eq("TRADELANE_POID"),
+                eq(deleteReasonDto),
+                isNull()
+        );
     }
 
     @Test

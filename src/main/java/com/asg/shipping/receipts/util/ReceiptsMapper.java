@@ -56,8 +56,6 @@ public class ReceiptsMapper {
 				.cntTaxAmount(dto.getCntTaxAmount())
 				.emptyIn(dto.getEmptyIn())
 				.cntTaxPoid(dto.getCntTaxPoid())
-				.createdBy(ASGHelperUtils.getCurrentUser())
-				.createdDate(new Timestamp(System.currentTimeMillis()).toLocalDateTime())
 				.build();
 	}
 
@@ -76,8 +74,6 @@ public class ReceiptsMapper {
 		entity.setCntTaxAmount(dto.getCntTaxAmount());
 		entity.setEmptyIn(dto.getEmptyIn());
 		entity.setCntTaxPoid(dto.getCntTaxPoid());
-		entity.setLastModifiedBy(ASGHelperUtils.getCurrentUser());
-		entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()).toLocalDateTime());
 	}
 
 	public List<ReceiptContainerDto> mapContainerDtlListToDto(List<ArShReceiptContainerDtl> entities) {
@@ -113,8 +109,6 @@ public class ReceiptsMapper {
 				.taxAmount(dto.getTaxAmount())
 				.taxPoid(dto.getTaxPoid())
 				.amountSelect(dto.getAmountSelect())
-				.createdBy(ASGHelperUtils.getCurrentUser())
-				.createdDate(new Timestamp(System.currentTimeMillis()).toLocalDateTime())
 				.build();
 	}
 
@@ -127,8 +121,6 @@ public class ReceiptsMapper {
 		entity.setTaxAmount(dto.getTaxAmount());
 		entity.setTaxPoid(dto.getTaxPoid());
 		entity.setAmountSelect(dto.getAmountSelect());
-		entity.setLastModifiedBy(ASGHelperUtils.getCurrentUser());
-		entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()).toLocalDateTime());
 	}
 
 	public List<ReceiptCharges> mapChargesDtlListToDto(List<ArShReceiptChargesDtl> entities) {
@@ -166,8 +158,6 @@ public class ReceiptsMapper {
 				.accountName(dto.getAccountName())
 				.accountNo(dto.getAccountNo())
 				.bankPoid(dto.getBankPoid())
-				.createdBy(ASGHelperUtils.getCurrentUser())
-				.createdDate(new Timestamp(System.currentTimeMillis()).toLocalDateTime())
 				.build();
 	}
 
@@ -181,8 +171,6 @@ public class ReceiptsMapper {
 		entity.setAccountName(dto.getAccountName());
 		entity.setAccountNo(dto.getAccountNo());
 		entity.setBankPoid(dto.getBankPoid());
-		entity.setLastModifiedBy(ASGHelperUtils.getCurrentUser());
-		entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()).toLocalDateTime());
 	}
 
 	public List<ReceiptPaymentDetailDto> mapPaymentDtlListToDto(List<ArShReceiptPymtDetails> entities) {
@@ -236,8 +224,6 @@ public class ReceiptsMapper {
 				.remarks(dto.getRemarks())
 				.tokenNumber(dto.getToken())
 				.rcptAmount(BigDecimal.valueOf(dto.getAmount()))
-				.createdBy(ASGHelperUtils.getCurrentUser())
-				.createdDate(new Timestamp(System.currentTimeMillis()).toLocalDateTime())
 				.build();
 	}
 }

@@ -78,12 +78,6 @@ public class RegionMasterMapper {
         );
 
         entity.setDeleted("N");
-
-        entity.setCreatedBy(userId);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
-
         entity.setGroupPoid(groupPoid);
 
         return entity;
@@ -126,9 +120,6 @@ public class RegionMasterMapper {
                             : "N"
             );
         }
-
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**

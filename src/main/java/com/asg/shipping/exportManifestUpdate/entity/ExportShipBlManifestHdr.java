@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestUpdate.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,7 +25,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ExportShipBlManifestHdr {
+public class ExportShipBlManifestHdr extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -201,18 +202,6 @@ public class ExportShipBlManifestHdr {
 
     @Column(name = "RELEASED_GRANT_REASON", length = 200)
     private String releasedGrantReason;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "CARGO_TYPE", length = 25)
     private String cargoType;
@@ -399,9 +388,7 @@ public class ExportShipBlManifestHdr {
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
+
         if (transactionDate == null) {
             transactionDate = LocalDate.now();
         }
@@ -438,11 +425,6 @@ public class ExportShipBlManifestHdr {
         if (allInOneFreight == null) {
             allInOneFreight = "Y";
         }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
     }
 }
 

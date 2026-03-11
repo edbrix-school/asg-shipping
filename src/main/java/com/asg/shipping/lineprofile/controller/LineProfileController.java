@@ -1,6 +1,7 @@
 package com.asg.shipping.lineprofile.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -132,13 +133,8 @@ public class LineProfileController {
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @Operation(summary = "Delete Line Profile (Soft delete)", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> delete(@PathVariable @NotNull @Positive Long lineProfilePoid,
-                                    @RequestHeader(value = "X-Group-Poid", required = false) Long groupPoid,
-                                    @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        Long resolvedGroupPoid = resolveGroupPoid(groupPoid);
-        String resolvedUserId = resolveUserId(userId);
-        log.info("Delete LineProfile request | lineProfilePoid={}, groupPoid={}, userId={}",
-                lineProfilePoid, resolvedGroupPoid, resolvedUserId);
-        service.delete(lineProfilePoid, resolvedGroupPoid, resolvedUserId);
+                                    @RequestBody DeleteReasonDto deleteReasonDto) {
+        service.delete(lineProfilePoid, deleteReasonDto);
         return success("Line profile deleted successfully");
     }
 

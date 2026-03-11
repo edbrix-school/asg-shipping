@@ -258,14 +258,8 @@ public class ReceiptsController {
 			@PathVariable Long transactionPoid,
 			@Valid @RequestBody ReceiptsUpdateDto updateDto
 	) {
-		try {
 			ReceiptsBlDetailsDto response = receiptsService.updateReceipt(transactionPoid, updateDto);
 			return success("Receipt updated successfully", response);
-		} catch (ResourceNotFoundException e) {
-			return notFound(e.getMessage());
-		} catch (Exception e) {
-			return internalServerError("Failed to update Receipt: " + e.getMessage());
-		}
 	}
 
 	@AllowedAction(UserRolesRightsEnum.DELETE)
@@ -283,14 +277,8 @@ public class ReceiptsController {
 			@Parameter(description = "Transaction POID", required = true, example = "1001")
 			@PathVariable Long transactionPoid, @RequestBody DeleteReasonDto deleteReasonDto
 			) {
-		try {
 			receiptsService.deleteReceipt(transactionPoid,deleteReasonDto);
 			return success("Receipt deleted successfully", null);
-		} catch (ResourceNotFoundException e) {
-			return notFound(e.getMessage());
-		} catch (Exception e) {
-			return internalServerError("Failed to delete Receipt: " + e.getMessage());
-		}
 	}
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
@@ -334,12 +322,8 @@ public class ReceiptsController {
 			@ParameterObject Pageable pageable,
 			@RequestBody(required = false) FilterRequestDto filters
 	) {
-		try {
 			Map<String, Object> response = receiptsService.list(filters, pageable);
 			return success("Receipt list retrieved successfully", response);
-		} catch (Exception e) {
-			return internalServerError("Failed to retrieve Receipt list: " + e.getMessage());
-		}
 	}
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
@@ -393,12 +377,9 @@ public class ReceiptsController {
 	public ResponseEntity<?> autoPopulateFields(
 			@Valid @RequestBody ReceiptAutoPopulateRequestDto requestDto
 	) {
-		try {
 			ReceiptAutoPopulateDto dto = receiptsService.autoPopulateFields(requestDto.getBlPoid(), requestDto.getTransactionPoid());
 			return success("Successfully auto-populated the fields", dto);
-		} catch (Exception e) {
-			return internalServerError("Failed to auto populate fields: " + e.getMessage());
-		}
+
 	}
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
@@ -462,12 +443,9 @@ public class ReceiptsController {
 	public ResponseEntity<?> calculateDemurrage(
 			@Valid @RequestBody ReceiptCalculateDemurrageRequestDto requestDto
 	) {
-		try {
 			ReceiptCalculateDemurrageResponseDto response = receiptsService.calculateDemurrage(requestDto);
 			return success("Demurrage calculated successfully", response);
-		} catch (Exception e) {
-			return internalServerError("Failed to calculate demurrage: " + e.getMessage());
-		}
+
 	}
 
 	@AllowedAction(UserRolesRightsEnum.PRINT)

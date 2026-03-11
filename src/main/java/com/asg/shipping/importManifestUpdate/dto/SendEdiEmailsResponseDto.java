@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class SendEdiEmailsResponseDto {
-    private String status;
     private Integer emailsSent;
     private String emailIds;
 }

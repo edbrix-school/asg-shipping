@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprofile.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(name = "SH_LINE_PROFILE_MASTER")
 @Getter
 @Setter
-public class ShipLineProfileMasterEntity {
+public class ShipLineProfileMasterEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,17 +49,6 @@ public class ShipLineProfileMasterEntity {
     @Column(name = "SEQNO")
     private Long seqNo;
 
-    @Column(name = "CREATED_BY")
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY")
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DELETED")
     private String deleted;

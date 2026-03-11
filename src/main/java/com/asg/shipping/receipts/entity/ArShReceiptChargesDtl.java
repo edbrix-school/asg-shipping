@@ -3,6 +3,7 @@ package com.asg.shipping.receipts.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -10,18 +11,16 @@ import jakarta.persistence.ForeignKey;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "AR_SH_RECEIPT_CHARGES_DTL")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ArShReceiptChargesDtl {
+public class ArShReceiptChargesDtl extends BaseEntity {
 
 	@EmbeddedId
 	private TransactionDtlId id;
@@ -37,18 +36,6 @@ public class ArShReceiptChargesDtl {
 
 	@Column(name = "AMOUNT")
 	private BigDecimal amount;
-
-	@Column(name = "CREATED_BY")
-	private String createdBy;
-
-	@Column(name = "CREATED_DATE")
-	private LocalDateTime createdDate;
-
-	@Column(name = "LASTMODIFIED_BY")
-	private String lastModifiedBy;
-
-	@Column(name = "LASTMODIFIED_DATE")
-	private LocalDateTime lastModifiedDate;
 
 	@Column(name = "AMOUNT_SELECT")
 	private String amountSelect;
@@ -68,8 +55,5 @@ public class ArShReceiptChargesDtl {
 	@Column(name = "TAX_AMOUNT")
 	private BigDecimal taxAmount;
 
-	@ManyToOne
-	@JoinColumn(name = "TRANSACTION_POID", referencedColumnName = "TRANSACTION_POID", 
-		foreignKey = @ForeignKey(name = "AR_SH_RECEIPT_CHARGES_DTL_FK1"), insertable = false, updatable = false)
-	private ArShReceiptHdr receiptHdr;
+
 }

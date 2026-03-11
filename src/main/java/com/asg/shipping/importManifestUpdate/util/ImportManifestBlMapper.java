@@ -527,10 +527,10 @@ public class ImportManifestBlMapper {
                 .refferHum(dto.getRefferHum())
                 .refferVent(dto.getRefferVent())
 
-                .issueToConsignee(toLocalDateTime(dto.getIssueToConsignee()))
-                .returnFromConsignee(toLocalDateTime(dto.getReturnFromConsignee()))
-                .displayCollectedDate(toLocalDateTime(dto.getDisplayCollectedDate()))
-                .actualDischargeDate(toLocalDateTime(dto.getActualDischargeDate()))
+                .issueToConsignee(dto.getIssueToConsignee())
+                .returnFromConsignee(dto.getReturnFromConsignee())
+                .displayCollectedDate(dto.getDisplayCollectedDate())
+                .actualDischargeDate(dto.getActualDischargeDate())
 
                 .isImco(dto.getIsImco())
                 .isOog(dto.getIsOog())
@@ -896,9 +896,9 @@ public class ImportManifestBlMapper {
         entity.setRefferHum(dto.getRefferHum());
         entity.setRefferVent(dto.getRefferVent());
 
-        entity.setIssueToConsignee(toLocalDateTime(dto.getIssueToConsignee()));
-        entity.setReturnFromConsignee(toLocalDateTime(dto.getReturnFromConsignee()));
-        entity.setActualDischargeDate(toLocalDateTime(dto.getActualDischargeDate()));
+        entity.setIssueToConsignee(dto.getIssueToConsignee());
+        entity.setReturnFromConsignee(dto.getReturnFromConsignee());
+        entity.setActualDischargeDate(dto.getActualDischargeDate());
 
         entity.setIsImco(dto.getIsImco());
         entity.setIsOog(dto.getIsOog());

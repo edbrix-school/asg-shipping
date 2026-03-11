@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -14,7 +16,7 @@ import java.util.List;
 public class ReceiptsBlDetailsDto {
 
     private String docRef;
-    private LocalDateTime date;
+    private LocalDate date;
     private Long blPoid;
     private Long companyPoid;
     private String releaseType;

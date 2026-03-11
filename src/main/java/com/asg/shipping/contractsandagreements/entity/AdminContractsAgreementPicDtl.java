@@ -1,24 +1,22 @@
 package com.asg.shipping.contractsandagreements.entity;
-
-import com.asg.common.lib.annotation.AuditIgnore;
+import com.asg.common.lib.entity.BaseEntity;
 import com.asg.shipping.contractsandagreements.entity.key.AdminContractsAgreementDtlId;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
 
 @Entity
-@Table(
-        name = "ADMIN_CONTRACTS_AGREEMENT_PIC_DTL"
-)
-@Data
+@Table(name = "ADMIN_CONTRACTS_AGREEMENT_PIC_DTL")
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AdminContractsAgreementPicDtl {
+public class AdminContractsAgreementPicDtl extends BaseEntity {
 
     @EmbeddedId
     private AdminContractsAgreementDtlId id;
-
 
     @Column(name = "DEPARTMENT_POID")
     private Long departmentPoid;
@@ -27,30 +25,13 @@ public class AdminContractsAgreementPicDtl {
     private Long handledUserPoid;
 
     @Column(name = "PERIOD_FROM")
-    private LocalDateTime periodFrom;
+    private LocalDate periodFrom;
 
     @Column(name = "PERIOD_TO")
-    private LocalDateTime periodTo;
+    private LocalDate periodTo;
 
     @Column(name = "REMARKS", length = 500)
     private String remarks;
-
-
-    @AuditIgnore
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @AuditIgnore
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    @AuditIgnore
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    @AuditIgnore
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;

@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprofile.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 @IdClass(ShipLineProfileContactDtlId.class)
 @Getter
 @Setter
-public class ShipLineProfileContactDtlEntity {
+public class ShipLineProfileContactDtlEntity extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -40,16 +41,5 @@ public class ShipLineProfileContactDtlEntity {
     @Column(name = "EMAIL_ADDRESS")
     private String emailAddress;
 
-    @Column(name = "CREATED_BY")
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY")
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }
 

@@ -18,7 +18,7 @@ class ShipTradelaneMasterTest {
         ShipTradelaneMaster entity = new ShipTradelaneMaster(
                 1L, 2L, "TL001", "Trade Lane 1", "TL1", "Y", 1L, "N", 3L
         );
-        
+
         assertEquals(1L, entity.getTradeLanePoid());
         assertEquals(2L, entity.getGroupPoid());
         assertEquals("TL001", entity.getTradeLaneCode());

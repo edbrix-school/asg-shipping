@@ -1,6 +1,7 @@
 package com.asg.shipping.regionmaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -243,8 +244,7 @@ public class RegionMasterController {
             description = "Soft deletes a region master by setting DELETED='Y' and ACTIVE='N'",
             security = @SecurityRequirement(name = "bearerAuth")
     )
-    public ResponseEntity<?> delete(
-            @PathVariable @NotNull @Positive Long regionPoid) {
+    public ResponseEntity<?> delete(@PathVariable @NotNull @Positive Long regionPoid,@RequestBody DeleteReasonDto deleteReasonDto) {
         
         Long groupPoid = UserContext.getGroupPoid();
         String userId = UserContext.getUserId();
@@ -254,7 +254,7 @@ public class RegionMasterController {
                 groupPoid,
                 userId);
         
-        regionMasterService.delete(regionPoid, groupPoid, userId);
+        regionMasterService.delete(regionPoid, deleteReasonDto);
         
         log.info("Delete Region Master completed successfully | regionPoid={}", regionPoid);
         

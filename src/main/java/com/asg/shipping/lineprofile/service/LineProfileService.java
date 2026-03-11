@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprofile.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.lineprofile.dto.LineProfileAgreementDetailsResponse;
 import com.asg.shipping.lineprofile.dto.LineProfileLineDetailsResponse;
@@ -18,7 +19,7 @@ public interface LineProfileService {
 
     LineProfileResponse update(Long lineProfilePoid, LineProfileRequest request, Long groupPoid, String userId, String docId);
 
-    void delete(Long lineProfilePoid, Long groupPoid, String userId);
+    void delete(Long lineProfilePoid, DeleteReasonDto deleteReasonDto);
 
     LineProfileLineDetailsResponse fetchLineDetails(Long linePoid, Long groupPoid, Long companyPoid, Long userPoid);
 

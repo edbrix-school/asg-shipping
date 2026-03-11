@@ -2,6 +2,8 @@ package com.asg.shipping.contractsandagreements.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -18,8 +20,8 @@ public class AdminContractsAgreementPicDtlDto {
     @NotNull(message = "Handled By is required")
     private Long handledUserPoid;
     @NotNull(message = "Period From is required")
-    private LocalDateTime periodFrom;
-    private LocalDateTime periodTo;
+    private LocalDate periodFrom;
+    private LocalDate periodTo;
     private String remarks;
     private String actionType;
 

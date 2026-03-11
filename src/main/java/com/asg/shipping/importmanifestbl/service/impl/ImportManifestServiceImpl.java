@@ -129,7 +129,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     public SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId) {
         try {
             findEntityById(transactionPoId);
-            return procRepository.sendEdiEmails(transactionPoId);
+            return procRepository.getEdiEmails(transactionPoId);
         } catch (ResourceNotFoundException e) {
             log.error("Failed to send EDI emails: Entity not found for transactionPoId: {}", transactionPoId);
             throw e;
@@ -220,6 +220,47 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 docId
         );
 
+
+    }
+
+    @Override
+    @Transactional
+    public String saveEmails(Long transactionPoId, SaveEmailsRequestDto request) {
+
+        // Validation
+        if (!request.getUpdateConsignee() && !request.getUpdateNotify()) {
+            throw new IllegalArgumentException("Select at least Consignee or Notify");
+        }
+
+        if (request.getEmailsText() == null || request.getEmailsText().trim().isEmpty()) {
+            throw new IllegalArgumentException("Emails cannot be empty");
+        }
+
+        String addressType;
+        if (request.getUpdateConsignee() && request.getUpdateNotify()) {
+            addressType = "B";
+        } else if (request.getUpdateConsignee()) {
+            addressType = "C";
+        } else {
+            addressType = "N";
+        }
+
+        String[] emails = request.getEmailsText().split(",");
+
+        for (int i = 0; i < emails.length; i += 2) {
+            String email1 = emails[i].trim();
+            String email2 = (i + 1 < emails.length) ? emails[i + 1].trim() : null;
+
+            procRepository.saveEmailsToDb(
+                    transactionPoId,
+                    addressType,
+                    email1,
+                    email2,
+                    request.getScope()
+            );
+        }
+
+        return "Emails saved successfully";
 
     }
 

@@ -103,8 +103,8 @@ public  class ContractsAndAgreementsMapper {
                         .effectiveStartDate(renewal.getEffectiveStartDate())
                         .expiryDate(renewal.getExpiryDate())
                         .renewalDate(renewal.getRenewalDate())
-                        .lastUpdatedBy(renewal.getLastUpdatedBy())
-                        .lastUpdatedDate(renewal.getLastUpdatedDate())
+                        .lastUpdatedBy(renewal.getLastModifiedBy())
+                        .lastUpdatedDate(renewal.getLastModifiedDate())
                         .build()
                 )
                 .toList();
@@ -197,9 +197,6 @@ public  class ContractsAndAgreementsMapper {
 
         // reuse update logic to avoid duplication
         updateRenewalDtlEntity(dto, entity);
-
-        entity.setCreatedBy(UserContext.getUserName());
-        entity.setCreatedDate(LocalDateTime.now());
         entity.setDeleted("N");
 
         return entity;

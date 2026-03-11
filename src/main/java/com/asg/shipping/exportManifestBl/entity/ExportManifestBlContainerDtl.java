@@ -1,9 +1,10 @@
 package com.asg.shipping.exportManifestBl.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(
@@ -20,7 +21,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ExportManifestBlContainerDtl {
+public class ExportManifestBlContainerDtl extends BaseEntity {
 
     @EmbeddedId
     private ShipBlManifestDtlId id;
@@ -101,10 +102,10 @@ public class ExportManifestBlContainerDtl {
     private String refferVent;
 
     @Column(name = "ISSUE_TO_CONSIGNEE")
-    private LocalDateTime issueToConsignee;
+    private LocalDate issueToConsignee;
 
     @Column(name = "RETURN_FROM_CONSIGNEE")
-    private LocalDateTime returnFromConsignee;
+    private LocalDate returnFromConsignee;
 
     @Column(name = "IS_IMCO", length = 1)
     private String isImco;
@@ -152,7 +153,7 @@ public class ExportManifestBlContainerDtl {
     private String imcoClassActual;
 
     @Column(name = "DISPLAY_COLLECTED_DATE")
-    private LocalDateTime displayCollectedDate;
+    private LocalDate displayCollectedDate;
 
     @Column(name = "TOTAL_DAYS_COLLECTED")
     private Long totalDaysCollected;
@@ -179,18 +180,7 @@ public class ExportManifestBlContainerDtl {
     private Long amountPerDayAfterFree;
 
     @Column(name = "ACTUAL_DISCHARGE_DATE")
-    private LocalDateTime actualDischargeDate;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
+    private LocalDate actualDischargeDate;
+    
 }
 

@@ -316,7 +316,6 @@ public class ExportManifestUpdateMapper {
         // Set audit fields
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setLastModifiedBy(userId);
     }
 
     /**
@@ -369,8 +368,6 @@ public class ExportManifestUpdateMapper {
         entity.setNoOfPacks(dto.getNoOfPacks());
         entity.setPackUnit(dto.getPackUnit());
         entity.setDestinationPortPoid(dto.getDestinationPortPoid());
-        entity.setCreatedBy(userId);
-        entity.setLastModifiedBy(userId);
         return entity;
     }
 
@@ -492,8 +489,6 @@ public class ExportManifestUpdateMapper {
         entity.setOogA(dto.getOogA());
         entity.setOogType(dto.getOogType());
         entity.setImcoClassActual(dto.getImcoClassActual());
-        entity.setCreatedBy(userId);
-        entity.setLastModifiedBy(userId);
         return entity;
     }
 
@@ -531,8 +526,6 @@ public class ExportManifestUpdateMapper {
         entity.setDescriptionType("CARGO");
         entity.setCargoDescription(dto.getCargoDescription());
         entity.setRecordOrder(dto.getRecordOrder());
-        entity.setCreatedBy(userId);
-        entity.setLastModifiedBy(userId);
         return entity;
     }
 
@@ -570,8 +563,6 @@ public class ExportManifestUpdateMapper {
         entity.setDescriptionType("MARKS");
         entity.setCargoDescription(dto.getCargoDescription());
         entity.setRecordOrder(dto.getRecordOrder());
-        entity.setCreatedBy(userId);
-        entity.setLastModifiedBy(userId);
         return entity;
     }
 
@@ -674,8 +665,6 @@ public class ExportManifestUpdateMapper {
         entity.setCnRefDetRowId(dto.getCnRefDetRowId());
         entity.setCnIssueInvoice(dto.getCnIssueInvoice());
         entity.setSelectRow(dto.getSelectRow());
-        entity.setCreatedBy(userId);
-        entity.setLastModifiedBy(userId);
         return entity;
     }
 

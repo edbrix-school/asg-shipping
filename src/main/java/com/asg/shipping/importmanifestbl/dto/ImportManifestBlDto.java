@@ -59,7 +59,8 @@ public class ImportManifestBlDto {
     private Long notify1Poid;
 
     private String notifyEdiAddress;
-    private List<AddressDetailsDto> addressDetails;
+    private List<AddressDetailsDto> addressDetailsConsignee;
+    private List<AddressDetailsDto> addressDetailsNotify1;
 
     private String  holdCanAuto;
     private String manualCanSend;
