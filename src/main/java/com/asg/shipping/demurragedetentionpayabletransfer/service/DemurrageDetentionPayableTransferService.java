@@ -74,4 +74,9 @@ public interface DemurrageDetentionPayableTransferService {
      * Get auto-populated GL accounts when Line and BL Type are provided
      */
     Map<String, Object> getAutoPopulatedGlAccounts(Long linePoid, String blType, Long groupPoid);
+
+    /**
+     * Get GL accounts directly from stored procedure without LOV enrichment
+     */
+    Map<String, Object> getGlAccountsDirectFromSp(Long linePoid, String blType);
 }

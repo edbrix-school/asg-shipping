@@ -150,5 +150,17 @@ public class DemurrageDetentionPayableTransferController {
         return ApiResponse.success("GL accounts auto-populated successfully", result);
     }
 
+    /**
+     * Get GL accounts directly from stored procedure without LOV enrichment
+     */
+    @GetMapping("/get-gl-accounts-direct")
+    public ResponseEntity<?> getGlAccountsDirect(
+            @RequestParam Long linePoid,
+            @RequestParam String blType) {
+        log.info("Get GL accounts directly from SP for line: {}, blType: {}", linePoid, blType);
+        Map<String, Object> result = service.getGlAccountsDirectFromSp(linePoid, blType);
+        return ApiResponse.success("GL accounts retrieved successfully", result);
+    }
+
 
 }

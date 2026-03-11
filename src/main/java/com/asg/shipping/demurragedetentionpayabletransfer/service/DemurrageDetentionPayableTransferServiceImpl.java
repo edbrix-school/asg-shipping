@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
+import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -754,25 +755,29 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             return jdbcTemplate.execute(
                     "{call PROC_DEM_DEN_SET_DEFAULT(?, ?, ?)}",
                     (CallableStatement cs) -> {
-                        cs.setLong(1, linePoid); // P_LINE_POID is NUMBER
-                        cs.setString(2, blType); // P_BL_TYPE is VARCHAR2
-                        cs.registerOutParameter(3, Types.NUMERIC); // P_AC_PAYABLE is OUT NUMBER
+                        cs.setLong(1, linePoid);
+                        cs.setString(2, blType);
+                        cs.registerOutParameter(3, Types.NUMERIC);
                         cs.execute();
-
-                        // Handle the case where SP sets P_AC_PAYABLE to 'NO_DATA' (which is invalid for NUMBER)
-                        // The SP has a bug - it tries to assign string to NUMBER parameter
+                        
                         try {
-                            Long result = cs.getLong(3);
-                            return result != null ? String.valueOf(result) : "NO_DATA";
-                        } catch (Exception e) {
-                            // If SP fails due to invalid assignment, return NO_DATA
+                            Object result = cs.getObject(3);
+                            if (result != null) {
+                                if (result instanceof Number) {
+                                    return String.valueOf(((Number) result).longValue());
+                                } else {
+                                    return String.valueOf(result);
+                                }
+                            }
+                            return "NO_DATA";
+                        } catch (SQLException e) {
                             log.warn("SP returned invalid value for NUMBER parameter: {}", e.getMessage());
                             return "NO_DATA";
                         }
                     }
             );
         } catch (Exception e) {
-            log.error("Error calling PROC_DEM_DEN_SET_DEFAULT", e);
+            log.error("Error calling PROC_DEM_DEN_SET_DEFAULT for linePoid: {}, blType: {}", linePoid, blType, e);
             return "NO_DATA";
         }
     }
@@ -847,37 +852,37 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     public Map<String, Object> getAutoPopulatedGlAccounts(Long linePoid, String blType, Long groupPoid) {
         log.info("Getting auto-populated GL accounts for line: {}, blType: {}", linePoid, blType);
 
-        Long payableGlPoid = null;
-        Long incomeGlPoid = null;
-        LovGetListDto payableGlDet = null;
-        LovGetListDto incomeGlDet = null;
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("payableGlPoid", null);
+        result.put("payableGlDet", null);
+        result.put("incomeGlPoid", null);
+        result.put("incomeGlDet", null);
 
         if (linePoid != null && blType != null) {
             String defaultPayableGl = callProcDemDenSetDefault(linePoid, blType);
             if (defaultPayableGl != null && !defaultPayableGl.equals("NO_DATA")) {
-                payableGlPoid = Long.parseLong(defaultPayableGl);
+                Long payableGlPoid = Long.parseLong(defaultPayableGl);
+                result.put("payableGlPoid", payableGlPoid);
                 try {
-                    payableGlDet = lovService.getDetailsByPoidAndLovName(payableGlPoid, "GL_MASTER_LEDGERS");
+                    LovGetListDto payableGlDet = lovService.getDetailsByPoidAndLovName(payableGlPoid, "GL_MASTER_LEDGERS");
+                    result.put("payableGlDet", payableGlDet);
                 } catch (Exception e) {
                     log.warn("Failed to fetch GL_MASTER_LEDGERS LOV for payable GL: {}", payableGlPoid, e);
                 }
             }
-            incomeGlPoid = getIncomeGlPoidFromParameter(groupPoid);
+            Long incomeGlPoid = getIncomeGlPoidFromParameter(groupPoid);
             if (incomeGlPoid != null) {
+                result.put("incomeGlPoid", incomeGlPoid);
                 try {
-                    incomeGlDet = lovService.getDetailsByPoidAndLovName(incomeGlPoid, "GL_MASTER_LEDGERS");
+                    LovGetListDto incomeGlDet = lovService.getDetailsByPoidAndLovName(incomeGlPoid, "GL_MASTER_LEDGERS");
+                    result.put("incomeGlDet", incomeGlDet);
                 } catch (Exception e) {
                     log.warn("Failed to fetch GL_MASTER_LEDGERS LOV for income GL: {}", incomeGlPoid, e);
                 }
             }
         }
 
-        return Map.of(
-                "payableGlPoid", payableGlPoid,
-                "payableGlDet", payableGlDet,
-                "incomeGlPoid", incomeGlPoid,
-                "incomeGlDet", incomeGlDet
-        );
+        return result;
     }
 
     private void enrichLov(String code, java.util.function.Consumer<LovGetListDto> setter, String lovType,
@@ -890,5 +895,16 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 log.warn("Failed to fetch {} LOV for code: {}", lovType, code, e);
             }
         }
+    }
+
+    public Map<String, Object> getGlAccountsDirectFromSp(Long linePoid, String blType) {
+        log.info("Getting GL accounts directly from SP for line: {}, blType: {}", linePoid, blType);
+        Map<String, Object> result = new java.util.HashMap<>();
+        
+        if (linePoid != null && blType != null) {
+            String payableGl = callProcDemDenSetDefault(linePoid, blType);
+            result.put("payableGlPoid", payableGl != null && !payableGl.equals("NO_DATA") ? payableGl : null);
+        }
+        return result;
     }
 }
