@@ -1,5 +1,6 @@
 package com.asg.shipping.dayCloseShiping.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -8,6 +9,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
@@ -58,6 +60,7 @@ public class DayCloseServiceImpl implements DayCloseService {
     private final ArShReceiptHdrRepository receiptHdrRepository;
     private final JdbcTemplate jdbcTemplate;
     private final DocumentSearchService documentService;
+    private final DocumentDeleteService documentDeleteService;
     private final DayCloseMapper mapper;
     private final PrintService printService;
     private final DataSource dataSource;
@@ -145,22 +148,21 @@ public class DayCloseServiceImpl implements DayCloseService {
     }
 
     @Override
-    public void deleteDayClose(Long id) {
+    public void deleteDayClose(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting DayClose Shipping with id: {}", id);
 
-        Long groupPoid = UserContext.getGroupPoid();
 
-        ArShDayEndCloseHdr entity = hdrRepo.findByTransactionPoidAndGroupPoid(id, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Dayclose Shipping", "transactionPoid", id.toString()));
+        hdrRepo.findByTransactionPoidAndDeleted(id, "N")
+                .orElseThrow(() -> new ResourceNotFoundException("Dayclose Shipping", "transactionPoid", id));
 
-        if ("Y".equals(entity.getDeleted())) {
-            log.info("DayClose Shipping with id: {} is already deleted", id);
-            return;
-        }
-
-        entity.setDeleted("Y");
-
-        hdrRepo.save(entity);
+        // Use DocumentDeleteService for deletion (handles logging internally)
+        documentDeleteService.deleteDocument(
+                id,
+                "AR_SH_DAY_END_CLOSE_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                null
+        );
 
         log.info("Successfully deleted dayclose shipping with id: {}", id);
     }
@@ -320,7 +322,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
     private BigDecimal calculateDenominationAmount(DayCloseDenominationDto dto) {
 
-        if (dto == null) {
+        if (dto == null || dto.getAction().equalsIgnoreCase("ISDELETED")) {
             return BigDecimal.ZERO;
         }
 
@@ -333,10 +335,6 @@ public class DayCloseServiceImpl implements DayCloseService {
         }
 
         return BigDecimal.ZERO;
-    }
-
-    private String getCurrentUser() {
-        return UserContext.getUserId() != null ? String.valueOf(UserContext.getUserId()) : "SYSTEM";
     }
 
     private void mapDayCloseDtlFromDto(DayCloseDenominationDto dto, ArShDayEndCloseDtl entity, Long transactionPoid) {

@@ -1,5 +1,6 @@
 package com.asg.shipping.dayCloseShiping.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
 import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjection;
@@ -26,5 +27,5 @@ public interface DayCloseService {
 
     byte[] print(Long transactionPoid) throws Exception;
 
-    void deleteDayClose(Long id);
+    void deleteDayClose(Long id, DeleteReasonDto deleteReasonDto);
 }
