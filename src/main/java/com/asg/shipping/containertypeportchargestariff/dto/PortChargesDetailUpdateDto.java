@@ -20,7 +20,8 @@ public class PortChargesDetailUpdateDto {
     
     @NotNull(message = "Charge code POID is required")
     private Long chargeCodePoid;
-    
+
+    @NotBlank(message = "Action type is required")
     private String actionType;
 
     @NotBlank(message = "Charge type applicable is required")
