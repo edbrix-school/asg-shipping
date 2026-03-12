@@ -232,4 +232,115 @@ public class ShipAgentMasterServiceTest {
             assertEquals("SYSTEM", result);
         }
     }
+
+    @Test
+    void createAgentMaster_WithNullEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(null);
+            when(repository.save(any(ShipAgentMasterEntity.class))).thenReturn(entity);
+
+            ShipAgentMasterResponseDto result = service.createAgentMaster(requestDto);
+
+            assertNotNull(result);
+            verify(repository).save(any(ShipAgentMasterEntity.class));
+        }
+    }
+
+    @Test
+    void createAgentMaster_WithEmptyEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(Collections.emptyList());
+            when(repository.save(any(ShipAgentMasterEntity.class))).thenReturn(entity);
+
+            ShipAgentMasterResponseDto result = service.createAgentMaster(requestDto);
+
+            assertNotNull(result);
+            verify(repository).save(any(ShipAgentMasterEntity.class));
+        }
+    }
+
+    @Test
+    void createAgentMaster_WithActiveFalse() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setActive("N");
+            entity.setActive("N");
+            when(repository.save(any(ShipAgentMasterEntity.class))).thenReturn(entity);
+
+            ShipAgentMasterResponseDto result = service.createAgentMaster(requestDto);
+
+            assertNotNull(result);
+            assertEquals("N", result.getActive());
+            verify(repository).save(any(ShipAgentMasterEntity.class));
+        }
+    }
+
+    @Test
+    void updateAgentMaster_WithNullEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(null);
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            ShipAgentMasterResponseDto result = service.updateAgentMaster(1L, requestDto);
+
+            assertNotNull(result);
+            verify(repository).findById(1L);
+        }
+    }
+
+    @Test
+    void updateAgentMaster_WithEmptyEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(Collections.emptyList());
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            ShipAgentMasterResponseDto result = service.updateAgentMaster(1L, requestDto);
+
+            assertNotNull(result);
+            verify(repository).findById(1L);
+        }
+    }
+
+    @Test
+    void updateAgentMaster_WithActiveFalse() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setActive("N");
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            ShipAgentMasterResponseDto result = service.updateAgentMaster(1L, requestDto);
+
+            assertNotNull(result);
+            assertEquals("N", result.getActive());
+            verify(repository).findById(1L);
+        }
+    }
+
+    @Test
+    void deleteAgentMaster_AlreadyDeleted() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            entity.setDeleted("Y");
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            service.deleteAgentMaster(1L);
+
+            verify(repository).findById(1L);
+            verify(repository, never()).save(any(ShipAgentMasterEntity.class));
+        }
+    }
 }

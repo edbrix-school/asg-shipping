@@ -169,4 +169,96 @@ class ManifestCorrectorServiceImplTest {
 
         assertThrows(ResourceNotFoundException.class, () -> service.deleteManifestCorrector(1L, null));
     }
+
+    @Test
+    void updateManifestCorrector_Success() {
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(hdrRepository.saveAndFlush(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(responseDTO);
+        when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
+        when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any())).thenReturn(1);
+
+        ManifestCorrectorDto result = service.updateManifestCorrector(1L, updateDTO);
+
+        assertNotNull(result);
+        verify(hdrRepository).saveAndFlush(any());
+    }
+
+    @Test
+    void validateRefundAmounts_Success() {
+        var request = com.asg.shipping.shippingmanifestcorrector.dto.ValidateRefundAmountRequest.builder()
+                .blPoid(1L)
+                .containerNumber("CONT123")
+                .revPayable(java.math.BigDecimal.valueOf(100))
+                .revIncome(java.math.BigDecimal.valueOf(50))
+                .perQuantityAmount(java.math.BigDecimal.valueOf(200))
+                .build();
+
+        when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
+                .thenAnswer(invocation -> {
+                    org.springframework.jdbc.core.CallableStatementCallback<?> callback = invocation.getArgument(1);
+                    return null;
+                });
+
+        var result = service.validateRefundAmounts(request);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void validateRefundAmounts_InvalidAmount() {
+        var request = com.asg.shipping.shippingmanifestcorrector.dto.ValidateRefundAmountRequest.builder()
+                .blPoid(1L)
+                .containerNumber("CONT123")
+                .revPayable(java.math.BigDecimal.valueOf(150))
+                .revIncome(java.math.BigDecimal.valueOf(100))
+                .perQuantityAmount(java.math.BigDecimal.valueOf(200))
+                .build();
+
+        var result = service.validateRefundAmounts(request);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void searchManifestCorrector_EmptyResult() {
+        FilterRequestDto filterRequest = new FilterRequestDto("OR", "N", List.of());
+        Pageable pageable = PageRequest.of(0, 10);
+
+        RawSearchResult raw = new RawSearchResult(
+                List.of(),
+                Map.of(),
+                0L
+        );
+
+        when(documentSearchService.resolveOperator(filterRequest)).thenReturn("OR");
+        when(documentSearchService.resolveIsDeleted(filterRequest)).thenReturn("N");
+        when(documentSearchService.resolveFilters(filterRequest)).thenReturn(List.of());
+        when(documentSearchService.search(anyString(), any(), eq("OR"), eq(pageable), eq("N"), any(), any()))
+                .thenReturn(raw);
+
+        Map<String, Object> result = service.searchManifestCorrector("100-143", filterRequest, pageable);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void getManifestCorrectorById_WithDetails() {
+        var chargeDtl = new com.asg.shipping.shippingmanifestcorrector.entity.ShipBlReprintChargeDtl();
+        var containerDtl = new com.asg.shipping.shippingmanifestcorrector.entity.ShipBlReprintContainerDtl();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of(chargeDtl));
+        when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of(containerDtl));
+        when(mapper.mapToDto(any())).thenReturn(responseDTO);
+        when(mapper.mapChargeDtlListToDto(any())).thenReturn(List.of());
+        when(mapper.mapContainerDtlListToDto(any())).thenReturn(List.of());
+
+        ManifestCorrectorDto result = service.getManifestCorrectorById(1L);
+
+        assertNotNull(result);
+        verify(chargeDtlRepository).findByTransactionPoid(1L);
+        verify(containerDtlRepository).findByTransactionPoid(1L);
+    }
 }

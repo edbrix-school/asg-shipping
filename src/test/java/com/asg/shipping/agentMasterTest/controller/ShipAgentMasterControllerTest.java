@@ -170,4 +170,61 @@ public class ShipAgentMasterControllerTest {
         }
     }
 
+    @Test
+    void searchAgents_WithDifferentSortFields() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-063");
+            
+            Map<String, Object> searchResult = Map.of("content", "test");
+            when(service.listAgents(eq("100-063"), any(), any(Pageable.class)))
+                    .thenReturn(searchResult);
+
+            controller.searchAgents(null, 0, 10, "agentName2,asc");
+            verify(service).listAgents(eq("100-063"), any(), 
+                    eq(PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "AGENT_NAME2"))));
+
+            controller.searchAgents(null, 0, 10, "contactPerson,asc");
+            verify(service, times(2)).listAgents(eq("100-063"), any(), any(Pageable.class));
+
+            controller.searchAgents(null, 0, 10, "email,asc");
+            verify(service, times(3)).listAgents(eq("100-063"), any(), any(Pageable.class));
+        }
+    }
+
+    @Test
+    void searchAgents_WithInvalidSortFormat() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-063");
+            
+            Map<String, Object> searchResult = Map.of("content", "test");
+            when(service.listAgents(eq("100-063"), any(), any(Pageable.class)))
+                    .thenReturn(searchResult);
+
+            ResponseEntity<?> response = controller.searchAgents(null, 0, 10, "invalidFormat");
+
+            assertNotNull(response);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            verify(service).listAgents(eq("100-063"), any(), 
+                    eq(PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "AGENT_NAME"))));
+        }
+    }
+
+    @Test
+    void searchAgents_WithUnknownSortField() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-063");
+            
+            Map<String, Object> searchResult = Map.of("content", "test");
+            when(service.listAgents(eq("100-063"), any(), any(Pageable.class)))
+                    .thenReturn(searchResult);
+
+            ResponseEntity<?> response = controller.searchAgents(null, 0, 10, "unknownField,asc");
+
+            assertNotNull(response);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            verify(service).listAgents(eq("100-063"), any(), 
+                    eq(PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "AGENT_NAME"))));
+        }
+    }
+
 }

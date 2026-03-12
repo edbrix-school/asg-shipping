@@ -1,7 +1,13 @@
 package com.asg.shipping.linepayabletransfetasperreporting.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
+import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
@@ -15,14 +21,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.CallableStatementCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.math.BigDecimal;
+import java.sql.CallableStatement;
+import java.sql.ResultSet;
+import java.sql.Types;
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -37,6 +50,9 @@ class LinePayableTransferReportingServiceImplTest {
 
     @Mock
     private ShipLineReportTransferDtlRepository dtlRepository;
+
+    @Mock
+    private DocumentSearchService documentSearchService;
 
     @Mock
     private DocumentDeleteService documentDeleteService;
@@ -56,6 +72,9 @@ class LinePayableTransferReportingServiceImplTest {
     private ShipLineReportTransferHdr testEntity;
     private LinePayableTransferReportingDto testDto;
     private LinePayableTransferReportingCreateDTO createDTO;
+    private LinePayableTransferReportingUpdateDTO updateDTO;
+    private ShipLineReportTransferDtl testDetailEntity;
+    private LinePayableTransferReportingDtlDto testDetailDto;
 
     @BeforeEach
     void setUp() {
@@ -86,6 +105,32 @@ class LinePayableTransferReportingServiceImplTest {
                 .reportStartDate(LocalDate.of(2024, 1, 1))
                 .reportEndDate(LocalDate.of(2024, 1, 31))
                 .docRef("LPT-2024-001")
+                .build();
+
+        updateDTO = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("EXPORT")
+                .reportStartDate(LocalDate.of(2024, 2, 1))
+                .reportEndDate(LocalDate.of(2024, 2, 28))
+                .build();
+
+        testDetailEntity = ShipLineReportTransferDtl.builder()
+                .transactionPoid(1L)
+                .detRowId(1L)
+                .mainfestTransactionPoid(100L)
+                .blNumber("BL123")
+                .acutalAmount(BigDecimal.valueOf(1000))
+                .totalAmountTransfer(BigDecimal.valueOf(1000))
+                .isSelect("Y")
+                .build();
+
+        testDetailDto = LinePayableTransferReportingDtlDto.builder()
+                .detRowId(1L)
+                .mainfestTransactionPoid(100L)
+                .blNumber("BL123")
+                .acutalAmount(BigDecimal.valueOf(1000))
+                .totalAmountTransfer(BigDecimal.valueOf(1000))
+                .isSelect("Y")
                 .build();
     }
 
@@ -228,5 +273,301 @@ class LinePayableTransferReportingServiceImplTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(0);
 
         assertThrows(ValidationException.class, () -> service.loadDataByDateRange(1L, request));
+    }
+
+    @Test
+    void loadDataByDateRange_Success() throws Exception {
+        LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .build();
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+            doNothing().when(dtlRepository).deleteByTransactionPoid(1L);
+            when(dtlRepository.findMaxDetRowIdByTransactionPoid(1L)).thenReturn(0L);
+            when(dtlRepository.save(any())).thenReturn(testDetailEntity);
+            when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+
+            CallableStatement cs = mock(CallableStatement.class);
+            ResultSet rs = mock(ResultSet.class);
+            when(rs.next()).thenReturn(true).thenReturn(false);
+            when(rs.getObject("MAINFEST_TRANSACTION_POID")).thenReturn(100L);
+            when(rs.getString("BL_NUMBER")).thenReturn("BL123");
+            when(rs.getObject("ACUTAL_AMOUNT")).thenReturn(BigDecimal.valueOf(1000));
+            when(rs.getObject("CHARGE_POID")).thenReturn(1L);
+            when(rs.getString("FREIGHT_TYPE")).thenReturn("PREPAID");
+            when(rs.getString("CURRENCY_CODE")).thenReturn("USD");
+            when(rs.getObject("CURRENCY_EXCHANGE")).thenReturn(BigDecimal.ONE);
+            when(rs.getObject("CURRENCY_AMOUNT")).thenReturn(BigDecimal.valueOf(1000));
+            when(cs.getObject(8)).thenReturn(rs);
+
+            when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class))).thenAnswer(invocation -> {
+                CallableStatementCallback<?> callback = invocation.getArgument(1);
+                return callback.doInCallableStatement(cs);
+            });
+
+            List<LinePayableTransferReportingDtlDto> result = service.loadDataByDateRange(1L, request);
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            verify(dtlRepository).deleteByTransactionPoid(1L);
+        }
+    }
+
+    @Test
+    void createLinePayableTransfer_LineNotFound() {
+        LinePayableTransferReportingCreateDTO dto = LinePayableTransferReportingCreateDTO.builder()
+                .linePoid(9999L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .build();
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(0);
+
+        assertThrows(ValidationException.class, () -> service.createLinePayableTransfer(dto));
+    }
+
+    @Test
+    void createLinePayableTransfer_MissingLinePoid() {
+        LinePayableTransferReportingCreateDTO dto = LinePayableTransferReportingCreateDTO.builder()
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .build();
+
+        assertThrows(ValidationException.class, () -> service.createLinePayableTransfer(dto));
+    }
+
+    @Test
+    void updateLinePayableTransfer_InvalidBlType() {
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .blType("INVALID")
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+
+        assertThrows(ValidationException.class, () -> service.updateLinePayableTransfer(1L, dto));
+    }
+
+    @Test
+    void updateLinePayableTransfer_InvalidDateRange() {
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .reportStartDate(LocalDate.of(2024, 1, 31))
+                .reportEndDate(LocalDate.of(2024, 1, 1))
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+
+        assertThrows(ValidationException.class, () -> service.updateLinePayableTransfer(1L, dto));
+    }
+
+    @Test
+    void searchLinePayableTransfer_Success() {
+        FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
+        Pageable pageable = PageRequest.of(0, 10);
+        RawSearchResult rawResult = new RawSearchResult(
+                Collections.emptyList(),
+                Collections.emptyMap(),
+                0L
+        );
+
+        when(documentSearchService.resolveOperator(any())).thenReturn("AND");
+        when(documentSearchService.resolveIsDeleted(any())).thenReturn("N");
+        when(documentSearchService.resolveFilters(any())).thenReturn(Collections.emptyList());
+        when(documentSearchService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                .thenReturn(rawResult);
+
+        Map<String, Object> result = service.searchLinePayableTransfer("100-432", filterRequest, pageable);
+
+        assertNotNull(result);
+        verify(documentSearchService).search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void processWeeklyBlReport_Success() throws Exception {
+        LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .build();
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            doNothing().when(dtlRepository).deleteByTransactionPoid(1L);
+            when(dtlRepository.save(any())).thenReturn(testDetailEntity);
+            when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+
+            CallableStatement cs = mock(CallableStatement.class);
+            ResultSet rs = mock(ResultSet.class);
+            when(rs.next()).thenReturn(true).thenReturn(false);
+            when(rs.getObject("BL_POID")).thenReturn(100L);
+            when(rs.getString("BL_NUMBER")).thenReturn("BL123");
+            when(rs.getObject("manifest_amount")).thenReturn(BigDecimal.valueOf(1000));
+            when(rs.getObject("chargeamount_local")).thenReturn(BigDecimal.valueOf(1000));
+            when(rs.getObject("WKYRPT_INCLUDE_POID")).thenReturn(1L);
+            when(rs.getString("BL_TYPE")).thenReturn("IMPORT");
+            when(rs.getString("CURRENCY_CODE")).thenReturn("USD");
+            when(rs.getObject("CURRENCY_EXCHANGE")).thenReturn(BigDecimal.ONE);
+            when(rs.getObject("THC_AMOUNT")).thenReturn(BigDecimal.valueOf(100));
+            when(cs.getObject(5)).thenReturn(rs);
+
+            when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class))).thenAnswer(invocation -> {
+                CallableStatementCallback<?> callback = invocation.getArgument(1);
+                return callback.doInCallableStatement(cs);
+            });
+
+            List<LinePayableTransferReportingDtlDto> result = service.processWeeklyBlReport(1L, request);
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            verify(dtlRepository).deleteByTransactionPoid(1L);
+        }
+    }
+
+    @Test
+    void processWeeklyBlReport_InvalidDateRange() {
+        LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .reportStartDate(LocalDate.of(2024, 1, 31))
+                .reportEndDate(LocalDate.of(2024, 1, 1))
+                .build();
+
+        assertThrows(ValidationException.class, () -> service.processWeeklyBlReport(1L, request));
+    }
+
+    @Test
+    void loadDataBeforeCreate_Success() throws Exception {
+        LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .build();
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            CallableStatement cs = mock(CallableStatement.class);
+            ResultSet rs = mock(ResultSet.class);
+            when(rs.next()).thenReturn(true).thenReturn(false);
+            when(rs.getObject("MAINFEST_TRANSACTION_POID")).thenReturn(100L);
+            when(rs.getString("BL_NUMBER")).thenReturn("BL123");
+            when(rs.getObject("ACUTAL_AMOUNT")).thenReturn(BigDecimal.valueOf(1000));
+            when(rs.getObject("CHARGE_POID")).thenReturn(1L);
+            when(rs.getString("FREIGHT_TYPE")).thenReturn("PREPAID");
+            when(rs.getString("CURRENCY_CODE")).thenReturn("USD");
+            when(rs.getObject("CURRENCY_EXCHANGE")).thenReturn(BigDecimal.ONE);
+            when(rs.getObject("CURRENCY_AMOUNT")).thenReturn(BigDecimal.valueOf(1000));
+            when(cs.getObject(8)).thenReturn(rs);
+
+            when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class))).thenAnswer(invocation -> {
+                CallableStatementCallback<?> callback = invocation.getArgument(1);
+                return callback.doInCallableStatement(cs);
+            });
+
+            List<LinePayableTransferReportingDtlDto> result = service.loadDataBeforeCreate(request);
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+        }
+    }
+
+    @Test
+    void loadDataBeforeCreate_InvalidDateRange() {
+        LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 31))
+                .reportEndDate(LocalDate.of(2024, 1, 1))
+                .build();
+
+        assertThrows(ValidationException.class, () -> service.loadDataBeforeCreate(request));
+    }
+
+    @Test
+    void processWeeklyBeforeCreate_Success() throws Exception {
+        LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .build();
+
+        CallableStatement cs = mock(CallableStatement.class);
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.next()).thenReturn(true).thenReturn(false);
+        when(rs.getObject("BL_POID")).thenReturn(100L);
+        when(rs.getString("BL_NUMBER")).thenReturn("BL123");
+        when(rs.getObject("manifest_amount")).thenReturn(BigDecimal.valueOf(1000));
+        when(rs.getObject("chargeamount_local")).thenReturn(BigDecimal.valueOf(1000));
+        when(rs.getObject("WKYRPT_INCLUDE_POID")).thenReturn(1L);
+        when(rs.getString("BL_TYPE")).thenReturn("IMPORT");
+        when(rs.getString("CURRENCY_CODE")).thenReturn("USD");
+        when(rs.getObject("CURRENCY_EXCHANGE")).thenReturn(BigDecimal.ONE);
+        when(rs.getObject("THC_AMOUNT")).thenReturn(BigDecimal.valueOf(100));
+        when(cs.getObject(5)).thenReturn(rs);
+
+        when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class))).thenAnswer(invocation -> {
+            CallableStatementCallback<?> callback = invocation.getArgument(1);
+            return callback.doInCallableStatement(cs);
+        });
+
+        List<LinePayableTransferReportingDtlDto> result = service.processWeeklyBeforeCreate(request);
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void processWeeklyBeforeCreate_InvalidDateRange() {
+        LoadDataByDateRangeRequest request = LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .reportStartDate(LocalDate.of(2024, 1, 31))
+                .reportEndDate(LocalDate.of(2024, 1, 1))
+                .build();
+
+        assertThrows(ValidationException.class, () -> service.processWeeklyBeforeCreate(request));
+    }
+
+    @Test
+    void deleteLinePayableTransfer_WithDeleteReason() {
+        DeleteReasonDto deleteReason = new DeleteReasonDto();
+        deleteReason.setDeleteReason("Test deletion");
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(documentDeleteService.deleteDocument(any(), any(), any(), any(), any())).thenReturn(null);
+
+        service.deleteLinePayableTransfer(1L, deleteReason);
+
+        verify(hdrRepository).save(argThat(entity -> "Y".equals(entity.getDeleted())));
+        verify(documentDeleteService).deleteDocument(any(), any(), any(), eq(deleteReason), any());
+    }
+
+    @Test
+    void getLinePayableTransferById_WithDetails() {
+        List<ShipLineReportTransferDtl> details = Arrays.asList(testDetailEntity);
+        List<LinePayableTransferReportingDtlDto> detailDtos = Arrays.asList(testDetailDto);
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(mapper.mapToDto(testEntity)).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(1L)).thenReturn(details);
+        when(mapper.mapDtlListToDto(details)).thenReturn(detailDtos);
+        when(jdbcTemplate.queryForMap(anyString(), anyLong())).thenReturn(Map.of("LINE_NAME", "Test Line", "LINE_CODE", "TL"));
+
+        LinePayableTransferReportingDto result = service.getLinePayableTransferById(1L);
+
+        assertNotNull(result);
+        assertNotNull(result.getDetails());
+        assertEquals(1, result.getDetails().size());
     }
 }

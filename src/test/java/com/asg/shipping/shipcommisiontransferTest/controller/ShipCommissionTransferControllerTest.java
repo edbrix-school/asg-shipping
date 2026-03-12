@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,10 +27,13 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ExtendWith(MockitoExtension.class)
 class ShipCommissionTransferControllerTest {
@@ -51,6 +55,7 @@ class ShipCommissionTransferControllerTest {
     void setup() {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new com.asg.shipping.exceptions.GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
 
@@ -167,5 +172,91 @@ class ShipCommissionTransferControllerTest {
         mockMvc.perform(post("/v1/ship-commission-transfer/1/insert-pda"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void testCalculateCommissionWithNullRequest() throws Exception {
+        Map<String, Object> result = new HashMap<>();
+        result.put("calculatedDetails", 5);
+        result.put("totalCommission", new BigDecimal("1000.00"));
+
+        when(commissionTransferService.calculateCommission(eq(1L), any(CalculateCommissionRequestDTO.class)))
+                .thenReturn(result);
+
+        mockMvc.perform(post("/v1/ship-commission-transfer/1/calculate-commission"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Commission calculated successfully"));
+    }
+
+    @Test
+    void testListWithException() throws Exception {
+        when(commissionTransferService.searchShipCommissionTransfer(any(), any(), any()))
+                .thenThrow(new RuntimeException("Database error"));
+
+        mockMvc.perform(post("/v1/ship-commission-transfer/list")
+                        .header("X-Document-Id", "DOC-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testGetWithInvalidId() throws Exception {
+
+        when(commissionTransferService.getShipCommissionTransfer(eq(0L)))
+                .thenThrow(new IllegalArgumentException("Invalid ID"));
+
+        mockMvc.perform(get("/v1/ship-commission-transfer/0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testUpdateWithInvalidId() throws Exception {
+        when(commissionTransferService.updateShipCommissionTransfer(eq(-1L), any(ShipCommissionTransferUpdateDTO.class)))
+                .thenThrow(new IllegalArgumentException("Invalid ID"));
+
+        mockMvc.perform(put("/v1/ship-commission-transfer/-1")
+                        .header("X-Document-Id", "DOC-001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDTO)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testDeleteWithInvalidId() throws Exception {
+        doThrow(new IllegalArgumentException("Invalid ID"))
+                .when(commissionTransferService).deleteShipCommissionTransfer(eq(0L));
+
+        mockMvc.perform(delete("/v1/ship-commission-transfer/0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testGetNotFound() throws Exception {
+        when(commissionTransferService.getShipCommissionTransfer(eq(1L)))
+                .thenThrow(new com.asg.shipping.exceptions.ResourceNotFoundException(
+                        "Ship Commission Transfer", "transactionPoid", "1"));
+
+        mockMvc.perform(get("/v1/ship-commission-transfer/1"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testCalculateCommissionNotFound() throws Exception {
+        when(commissionTransferService.calculateCommission(eq(1L), any(CalculateCommissionRequestDTO.class)))
+                .thenThrow(new com.asg.shipping.exceptions.ResourceNotFoundException(
+                        "Ship Commission Transfer", "transactionPoid", "1"));
+
+        mockMvc.perform(post("/v1/ship-commission-transfer/1/calculate-commission")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(CalculateCommissionRequestDTO.builder().build())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
     }
 }

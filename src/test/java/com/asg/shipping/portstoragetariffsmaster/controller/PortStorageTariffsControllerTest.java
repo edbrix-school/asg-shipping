@@ -1,6 +1,8 @@
 package com.asg.shipping.portstoragetariffsmaster.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
@@ -15,10 +17,8 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -40,6 +40,7 @@ class PortStorageTariffsControllerTest {
     private PortStorageTariffDto testDto;
     private PortStorageTariffCreateDTO createDto;
     private PortStorageTariffUpdateDTO updateDto;
+    private DeleteReasonDto deleteReasonDto;
 
     @BeforeEach
     void setUp() {
@@ -67,6 +68,9 @@ class PortStorageTariffsControllerTest {
                 .periodFrom(LocalDate.of(2024, 1, 1))
                 .periodTo(LocalDate.of(2024, 12, 31))
                 .build();
+
+        deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion reason");
     }
 
     @Test
@@ -105,13 +109,19 @@ class PortStorageTariffsControllerTest {
 
     @Test
     void getTariff_Success() {
-        when(tariffService.getTariff(1L)).thenReturn(testDto);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC_ID");
+            
+            when(tariffService.getTariff(1L)).thenReturn(testDto);
+            doNothing().when(loggingService).createLogSummaryEntry(any(LogDetailsEnum.class), eq("DOC_ID"), eq("1"));
 
-        ResponseEntity<?> response = controller.getTariff(1L);
+            ResponseEntity<?> response = controller.getTariff(1L);
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        verify(tariffService).getTariff(1L);
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(tariffService).getTariff(1L);
+            verify(loggingService).createLogSummaryEntry(any(LogDetailsEnum.class), eq("DOC_ID"), eq("1"));
+        }
     }
 
     @Test
@@ -240,6 +250,83 @@ class PortStorageTariffsControllerTest {
             assertNotNull(response);
             assertEquals(200, response.getStatusCode().value());
             verify(tariffService).deleteTariff(1L, 1L, 1L, null);
+        }
+    }
+
+    // Additional tests for 100% coverage
+    @Test
+    void searchTariffs_WithDifferentSortFormats() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(tariffService.searchTariffs(anyString(), any(), any())).thenReturn(result);
+
+            // Test with single field sort
+            ResponseEntity<?> response1 = controller.searchTariffs(null, 0, 20, "description");
+            assertNotNull(response1);
+            assertEquals(200, response1.getStatusCode().value());
+
+            // Test with desc sort
+            ResponseEntity<?> response2 = controller.searchTariffs(null, 0, 20, "description,desc");
+            assertNotNull(response2);
+            assertEquals(200, response2.getStatusCode().value());
+
+            // Test with empty sort
+            ResponseEntity<?> response3 = controller.searchTariffs(null, 0, 20, "");
+            assertNotNull(response3);
+            assertEquals(200, response3.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void deleteTariff_WithDeleteReason() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            doNothing().when(tariffService).deleteTariff(1L, 1L, 1L, deleteReasonDto);
+
+            ResponseEntity<?> response = controller.deleteTariff(1L, deleteReasonDto);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(tariffService).deleteTariff(1L, 1L, 1L, deleteReasonDto);
+        }
+    }
+
+    @Test
+    void searchTariffs_WithComplexFilterRequest() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            FilterRequestDto complexFilter = new FilterRequestDto("OR", "Y", null);
+            Map<String, Object> result = new HashMap<>();
+            when(tariffService.searchTariffs(anyString(), any(), any())).thenReturn(result);
+
+            ResponseEntity<?> response = controller.searchTariffs(complexFilter, 1, 50, "periodFrom,desc");
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(tariffService).searchTariffs(anyString(), eq(complexFilter), any());
+        }
+    }
+
+    @Test
+    void createPageable_EdgeCases() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(tariffService.searchTariffs(anyString(), any(), any())).thenReturn(result);
+
+            // Test with invalid sort format (more than 2 parts)
+            ResponseEntity<?> response = controller.searchTariffs(null, 0, 20, "field,asc,extra");
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
         }
     }
 }

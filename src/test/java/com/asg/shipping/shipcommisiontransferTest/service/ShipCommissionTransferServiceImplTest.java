@@ -7,11 +7,10 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionDetailDto;
+import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferUpdateDTO;
-import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionDtl;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionHdrRepository;
@@ -146,6 +145,54 @@ class ShipCommissionTransferServiceImplTest {
     }
 
     @Test
+    void testGetShipCommissionTransfer_Success() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
+                    .thenReturn(List.of());
+            when(mapper.mapToDto(hdrEntity)).thenReturn(dto);
+            when(mapper.mapDtlListToDto(any())).thenReturn(List.of());
+
+            ShipCommissionTransferDto result = service.getShipCommissionTransfer(1L);
+
+            assertNotNull(result);
+            assertEquals(1L, result.getTransactionPoid());
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.VIEWED), eq("DOC-001"), eq("1"));
+        }
+    }
+
+    @Test
+    void testCreateShipCommissionTransfer_Success() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getUserPoid).thenReturn(1L);
+
+            when(headerRepository.save(any(ShipBlCommissionHdr.class))).thenReturn(hdrEntity);
+            when(jdbcTemplate.queryForObject(anyString(), eq(String.class), any())).thenReturn("COM-001");
+            
+            // Mock the service call to getShipCommissionTransfer for the return
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+            when(mapper.mapToDto(hdrEntity)).thenReturn(dto);
+            when(mapper.mapDtlListToDto(any())).thenReturn(List.of());
+
+            ShipCommissionTransferDto result = service.createShipCommissionTransfer(createDTO);
+
+            assertNotNull(result);
+            verify(headerRepository).save(any(ShipBlCommissionHdr.class));
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("DOC-001"), eq("1"));
+        }
+    }
+
+    @Test
     void testUpdateShipCommissionTransfer_NotFound() {
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
@@ -158,7 +205,31 @@ class ShipCommissionTransferServiceImplTest {
         }
     }
 
+    @Test
+    void testUpdateShipCommissionTransfer_Success() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getUserPoid).thenReturn(1L);
 
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+            when(headerRepository.save(any(ShipBlCommissionHdr.class))).thenReturn(hdrEntity);
+            
+            // Mock the service call to getShipCommissionTransfer for the return
+            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+            when(mapper.mapToDto(hdrEntity)).thenReturn(dto);
+            when(mapper.mapDtlListToDto(any())).thenReturn(List.of());
+
+            ShipCommissionTransferDto result = service.updateShipCommissionTransfer(1L, updateDTO);
+
+            assertNotNull(result);
+            verify(headerRepository).save(any(ShipBlCommissionHdr.class));
+            verify(detailRepository).deleteByTransactionPoid(1L);
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.MODIFIED), eq("DOC-001"), eq("1"));
+        }
+    }
 
     @Test
     void testDeleteShipCommissionTransfer_NotFound() {
@@ -170,6 +241,153 @@ class ShipCommissionTransferServiceImplTest {
                     .thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () -> service.deleteShipCommissionTransfer(1L));
+        }
+    }
+
+    @Test
+    void testDeleteShipCommissionTransfer_Success() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class);
+             var mockedHelperUtils = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
+            
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
+            mockedHelperUtils.when(com.asg.common.lib.utility.ASGHelperUtils::getCurrentUser).thenReturn("testuser");
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+            when(headerRepository.save(any(ShipBlCommissionHdr.class))).thenReturn(hdrEntity);
+
+            service.deleteShipCommissionTransfer(1L);
+
+            verify(headerRepository).save(any(ShipBlCommissionHdr.class));
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.DELETED), eq("DOC-001"), eq("1"));
+        }
+    }
+
+    @Test
+    void testCalculateCommission_Success() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getUserPoid).thenReturn(1L);
+
+            hdrEntity.setVoyageTransactionPoid(100L);
+            hdrEntity.setCurrencyExchange(BigDecimal.ONE);
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
+                    .thenReturn(List.of());
+
+            CalculateCommissionRequestDTO request = CalculateCommissionRequestDTO.builder()
+                    .recalculateAll(true)
+                    .build();
+
+            Map<String, Object> result = service.calculateCommission(1L, request);
+
+            assertNotNull(result);
+            assertEquals(1L, result.get("transactionPoid"));
+            assertEquals(0, result.get("calculatedDetails"));
+            assertEquals(BigDecimal.ZERO, result.get("totalCommission"));
+        }
+    }
+
+    @Test
+    void testLoadFromVoyage_Success() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class);
+             var mockedHelperUtils = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
+            
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedHelperUtils.when(com.asg.common.lib.utility.ASGHelperUtils::getCurrentUser).thenReturn("testuser");
+
+            hdrEntity.setDocRef("COM-001");
+            hdrEntity.setVoyageTransactionPoid(100L);
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
+                    .thenReturn(List.of());
+            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class))).thenReturn("Success");
+
+            Map<String, Object> result = service.loadFromVoyage(1L);
+
+            assertNotNull(result);
+            assertEquals(1L, result.get("transactionPoid"));
+            assertEquals(0, result.get("loadedDetails"));
+        }
+    }
+
+    @Test
+    void testLoadFromVoyage_ValidationError_NoDocRef() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+
+            hdrEntity.setDocRef(null);
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+
+            assertThrows(com.asg.common.lib.exception.ValidationException.class, 
+                () -> service.loadFromVoyage(1L));
+        }
+    }
+
+    @Test
+    void testLoadFromVoyage_ValidationError_NoVoyageTransactionPoid() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+
+            hdrEntity.setDocRef("COM-001");
+            hdrEntity.setVoyageTransactionPoid(null);
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+
+            assertThrows(com.asg.common.lib.exception.ValidationException.class, 
+                () -> service.loadFromVoyage(1L));
+        }
+    }
+
+    @Test
+    void testInsertPdaCommission_Success() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class);
+             var mockedHelperUtils = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
+            
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedHelperUtils.when(com.asg.common.lib.utility.ASGHelperUtils::getCurrentUser).thenReturn("testuser");
+
+            hdrEntity.setFdaTransactionPoid(200L);
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class))).thenReturn("Success");
+
+            Map<String, Object> result = service.insertPdaCommission(1L);
+
+            assertNotNull(result);
+            assertEquals(1L, result.get("transactionPoid"));
+            assertEquals("SUCCESS", result.get("pdaStatus"));
+        }
+    }
+
+    @Test
+    void testInsertPdaCommission_ValidationError_NoFdaTransactionPoid() {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+
+            hdrEntity.setFdaTransactionPoid(null);
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));
+
+            assertThrows(com.asg.common.lib.exception.ValidationException.class, 
+                () -> service.insertPdaCommission(1L));
         }
     }
 }
