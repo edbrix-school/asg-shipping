@@ -3,18 +3,10 @@ package com.asg.shipping.bookingFormSH.controller;
 import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Map;
-
-import com.asg.common.lib.dto.excel.ExcelFileData;
-import com.asg.common.lib.service.ExcelExportService;
-import com.asg.common.lib.service.LoggingService;
 
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,9 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.ExcelExportService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
@@ -56,8 +51,8 @@ import lombok.extern.slf4j.Slf4j;
 public class BookingFormController {
 
 	private final BookingFormService bookingFormService;
-    private final ExcelExportService excelExportService;
-    private final LoggingService loggingService;
+	private final ExcelExportService excelExportService;
+	private final LoggingService loggingService;
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@Operation(summary = "Get all Booking Form SH", description = "Fetches all Booking Form SH records for the given group", responses = {
@@ -82,7 +77,7 @@ public class BookingFormController {
 			@Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
 		log.info("Get request for Booking Form with id: {}", id);
 		BookingFormDto dto = bookingFormService.getBookingForm(id);
-		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(),id.toString());
+		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 		return success("Booking Form retrieved successfully.", dto);
 	}
 
@@ -125,7 +120,7 @@ public class BookingFormController {
 			@Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
 		log.info("Delete request for Booking Form with id: {}", id);
 		bookingFormService.deleteBookingForm(id);
-		loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(),id.toString());
+		loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
 		return success("Booking Form deleted successfully");
 	}
 
@@ -169,80 +164,71 @@ public class BookingFormController {
 		return success(status);
 	}
 
-    @AllowedAction(UserRolesRightsEnum.PRINT)
-    @Operation(summary = "Generate Excel for VgmCustXLGenerateXL")
-    @GetMapping("/excel/vgmCustXLGenerateXL/{transactionPoid}")
-    public ResponseEntity<?> exportExcel(
-            @Parameter(description = "Transaction POID", example = "476")
-            @PathVariable Long transactionPoid) {
-        try {
-            Map<String, Object> parameters = new HashMap<>();
-            ExcelFileData data = excelExportService.generateExcel("100-311", String.valueOf(transactionPoid), null, "VGMCustXLFile.xlsx");
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=" + data.getFileName())
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(data.getContent());
-        } catch (Exception e) {
-            log.error("Failed to generate Excel", e);
-            return error("Failed to generate Excel: " + e.getMessage(), 500);
-        }
-    }
+	@AllowedAction(UserRolesRightsEnum.PRINT)
+	@Operation(summary = "Generate Excel for VgmCustXLGenerateXL")
+	@GetMapping("/excel/vgmCustXLGenerateXL/{transactionPoid}")
+	public ResponseEntity<?> exportExcel(
+			@Parameter(description = "Transaction POID", example = "476") @PathVariable Long transactionPoid) {
+		try {
+
+			ExcelFileData data = excelExportService.generateExcel("100-311", String.valueOf(transactionPoid), null,
+					"VGMCustXLFile.xlsx");
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + data.getFileName())
+					.contentType(MediaType.APPLICATION_OCTET_STREAM).body(data.getContent());
+		} catch (Exception e) {
+			log.error("Failed to generate Excel", e);
+			return error("Failed to generate Excel: " + e.getMessage(), 500);
+		}
+	}
 
 	@AllowedAction(UserRolesRightsEnum.PRINT)
 	@GetMapping("/mateBookingPrintForm/{transactionPoid}")
-    public ResponseEntity<?> print(
-            @Parameter(description = "Transaction POID", example = "21")
-            @PathVariable Long transactionPoid) {
-        try {
-            byte[] pdf = bookingFormService.mateBookingPrintForm(transactionPoid);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=container-mate-receipts-" + transactionPoid + ".pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdf);
-        } catch (Exception e) {
-            log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
-            return error("Failed to generate PDF: " + e.getMessage(), 500);
-        }
-    }
-	
+	public ResponseEntity<?> print(
+			@Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid) {
+		try {
+			byte[] pdf = bookingFormService.mateBookingPrintForm(transactionPoid);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=container-mate-receipts-" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+
 	@AllowedAction(UserRolesRightsEnum.PRINT)
 	@GetMapping("/empty-release/{transactionPoid}")
-    public ResponseEntity<?> cntEmptyBookingPrintForm(
-            @Parameter(description = "Transaction POID", example = "21")
-            @PathVariable Long transactionPoid) {
-        try {
-            byte[] pdf = bookingFormService.cntEmptyBookingPrintForm(transactionPoid);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=container-empty-release-" + transactionPoid + ".pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdf);
-        } catch (Exception e) {
-            log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
-            return error("Failed to generate PDF: " + e.getMessage(), 500);
-        }
-    }
-	
+	public ResponseEntity<?> cntEmptyBookingPrintForm(
+			@Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid) {
+		try {
+			byte[] pdf = bookingFormService.cntEmptyBookingPrintForm(transactionPoid);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=container-empty-release-" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+
 	@AllowedAction(UserRolesRightsEnum.PRINT)
 	@GetMapping("/all-container/{transactionPoid}")
-    public ResponseEntity<?> cntReturnBookingPrintFormAll(
-            @Parameter(description = "Transaction POID", example = "21")
-            @PathVariable Long transactionPoid,
-            @Parameter(description = "Print Stamp", example = "Y")
-            @RequestParam String printStamp) {
-        try {
-            byte[] pdf = bookingFormService.cntReturnBookingPrintFormAll(transactionPoid,printStamp);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=all-container-" + transactionPoid + ".pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdf);
-        } catch (Exception e) {
-            log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
-            return error("Failed to generate PDF: " + e.getMessage(), 500);
-        }
-    }
-	
+	public ResponseEntity<?> cntReturnBookingPrintFormAll(
+			@Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid,
+			@Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp) {
+		try {
+			byte[] pdf = bookingFormService.cntReturnBookingPrintFormAll(transactionPoid, printStamp);
+			return ResponseEntity.ok()
+					.header(HttpHeaders.CONTENT_DISPOSITION,
+							"attachment; filename=all-container-" + transactionPoid + ".pdf")
+					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (Exception e) {
+			log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
+			return error("Failed to generate PDF: " + e.getMessage(), 500);
+		}
+	}
+
 }

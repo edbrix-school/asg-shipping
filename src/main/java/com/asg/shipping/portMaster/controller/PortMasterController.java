@@ -54,9 +54,9 @@ public class PortMasterController {
 			@ApiResponse(responseCode = "401", description = "Unauthorized") }, security = @SecurityRequirement(name = "bearerAuth"))
 	@PostMapping
 	public ResponseEntity<?> create(
-			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam Long groupPoid,
+			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam("groupPoid") Long groupPoid,
 
-			@Parameter(description = "User ID performing the action", required = true, example = "admin") @RequestParam String userPoid,
+			@Parameter(description = "User ID performing the action", required = true, example = "admin") @RequestParam("userPoid") String userPoid,
 
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Port details to be created", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = PortMasterRequest.class))) @Valid @RequestBody PortMasterRequest request) {
 		Map<String,Object >response=service.createPort(groupPoid, request, userPoid);
@@ -71,11 +71,11 @@ public class PortMasterController {
 			@ApiResponse(responseCode = "401", description = "Unauthorized") }, security = @SecurityRequirement(name = "bearerAuth"))
 	@PutMapping("/{portPoid}")
 	public ResponseEntity<?> update(
-			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam Long groupPoid,
+			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam("groupPoid") Long groupPoid,
 
-			@Parameter(description = "User ID performing the action", required = true, example = "admin") @RequestParam String userPoid,
+			@Parameter(description = "User ID performing the action", required = true, example = "admin") @RequestParam("userPoid") String userPoid,
 
-			@Parameter(description = "Port POID to be updated", required = true, example = "5001") @PathVariable Long portPoid,
+			@Parameter(description = "Port POID to be updated", required = true, example = "5001") @PathVariable("portPoid") Long portPoid,
 
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated Port details", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = PortMasterRequest.class))) @Valid @RequestBody PortMasterRequest request) {
 		PortMasterResponse response = service.updatePort(groupPoid, portPoid, request, userPoid);
@@ -100,9 +100,9 @@ public class PortMasterController {
 			@ApiResponse(responseCode = "401", description = "Unauthorized") }, security = @SecurityRequirement(name = "bearerAuth"))
 	@GetMapping("/{portPoid}")
 	public ResponseEntity<?> getById(
-			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam Long groupPoid,
+			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam("groupPoid") Long groupPoid,
 
-			@Parameter(description = "Port POID", required = true, example = "5001") @PathVariable Long portPoid) {
+			@Parameter(description = "Port POID", required = true, example = "5001") @PathVariable("portPoid") Long portPoid) {
 		PortMasterResponse response = service.getPortById(groupPoid, portPoid);
 		loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(),portPoid.toString());
 		return success("Port fetched successfully", response);
@@ -115,11 +115,11 @@ public class PortMasterController {
 			@ApiResponse(responseCode = "401", description = "Unauthorized") }, security = @SecurityRequirement(name = "bearerAuth"))
 	@DeleteMapping("/{portPoid}")
 	public ResponseEntity<?> delete(
-			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam Long groupPoid,
+			@Parameter(description = "Group POID", required = true, example = "1001") @RequestParam("groupPoid") Long groupPoid,
 
-			@Parameter(description = "User ID performing the action", required = true, example = "admin") @RequestParam String userPoid,
+			@Parameter(description = "User ID performing the action", required = true, example = "admin") @RequestParam("userPoid") String userPoid,
 
-			@Parameter(description = "Port POID to be deleted", required = true, example = "5001") @PathVariable Long portPoid) {
+			@Parameter(description = "Port POID to be deleted", required = true, example = "5001") @PathVariable("portPoid") Long portPoid) {
 		service.deletePort(groupPoid, portPoid, userPoid);
 		loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(),portPoid.toString());
 		return success("Port deleted successfully");
