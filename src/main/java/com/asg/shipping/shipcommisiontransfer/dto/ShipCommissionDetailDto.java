@@ -1,6 +1,7 @@
 package com.asg.shipping.shipcommisiontransfer.dto;
 
 
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +22,7 @@ public class ShipCommissionDetailDto {
     private Long detRowId;
     private String description;
     private Long blTransactionPoid;
-    private LovItem blTransactionPoidDet; // LOV data
+    private LovGetListDto blTransactionPoidDet; // LOV data
     private String currencyCode;
     private BigDecimal currencyExchange;
     private BigDecimal quantity20;

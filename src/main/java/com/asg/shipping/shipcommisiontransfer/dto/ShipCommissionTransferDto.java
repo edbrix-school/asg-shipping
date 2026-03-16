@@ -1,6 +1,7 @@
 package com.asg.shipping.shipcommisiontransfer.dto;
 
 
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,16 +25,17 @@ public class ShipCommissionTransferDto {
     private Long transactionPoid;
     private Long groupPoid;
     private Long companyPoid;
+    private LovGetListDto companyDtl;
     private String docRef;
     private LocalDate transactionDate;
     private Long voyageTransactionPoid;
-    private LovItem voyageTransactionPoidDet; // LOV data
+    private LovGetListDto voyageTransactionPoidDet; // LOV data
     private String remarks;
     private String deleted;
     private BigDecimal currencyExchange;
     private String currencyCode;
     private Long fdaTransactionPoid;
-    private LovItem fdaTransactionPoidDet; // LOV data
+    private LovGetListDto fdaTransactionPoidDet; // LOV data
     private String createdBy;
     private LocalDateTime createdDate;
     private String lastModifiedBy;

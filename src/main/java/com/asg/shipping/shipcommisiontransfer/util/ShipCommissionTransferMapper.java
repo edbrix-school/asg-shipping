@@ -1,5 +1,6 @@
 package com.asg.shipping.shipcommisiontransfer.util;
 
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionDetailDto;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
@@ -18,6 +19,12 @@ import java.util.stream.Collectors;
 @Component
 public class ShipCommissionTransferMapper {
 
+    private final LovDataService lovService;
+
+    public ShipCommissionTransferMapper(LovDataService lovService) {
+        this.lovService = lovService;
+    }
+
     /**
      * Convert Header Entity to DTO
      */
@@ -30,14 +37,17 @@ public class ShipCommissionTransferMapper {
                 .transactionPoid(entity.getTransactionPoid())
                 .groupPoid(entity.getGroupPoid())
                 .companyPoid(entity.getCompanyPoid())
+                .companyDtl(lovService.getDetailsByPoidAndLovNameFast(entity.getCompanyPoid(), "COMPANY"))
                 .docRef(entity.getDocRef())
                 .transactionDate(entity.getTransactionDate())
                 .voyageTransactionPoid(entity.getVoyageTransactionPoid())
+                .voyageTransactionPoidDet(lovService.getDetailsByPoidAndLovNameFast(entity.getVoyageTransactionPoid(), "VESSAL_VOYAGE"))
                 .remarks(entity.getRemarks())
                 .deleted(entity.getDeleted())
                 .currencyExchange(entity.getCurrencyExchange())
                 .currencyCode(entity.getCurrencyCode())
                 .fdaTransactionPoid(entity.getFdaTransactionPoid())
+                .fdaTransactionPoidDet(lovService.getDetailsByPoidAndLovNameFast(entity.getVoyageTransactionPoid(), "FDA_JOBNO"))
                 .createdBy(entity.getCreatedBy())
                 .createdDate(entity.getCreatedDate())
                 .lastModifiedBy(entity.getLastModifiedBy())
@@ -94,6 +104,7 @@ public class ShipCommissionTransferMapper {
                 .detRowId(entity.getDetRowId())
                 .description(entity.getDescription())
                 .blTransactionPoid(entity.getBlTransactionPoid())
+                .blTransactionPoidDet(lovService.getDetailsByPoidAndLovNameFast(entity.getBlTransactionPoid(), "ALLBLNUMBER"))
                 .currencyCode(entity.getCurrencyCode())
                 .currencyExchange(entity.getCurrencyExchange())
                 .quantity20(entity.getQuantity20())
