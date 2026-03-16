@@ -1,7 +1,9 @@
 package com.asg.shipping.ffChargeMaster.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.shippingFFChargeMaster.controller.ShippingFFChargeMasterController;
 import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
 import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
@@ -19,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -129,7 +132,7 @@ public class ShippingFFChargeMasterControllerTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC001");
 
-            FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", null);
+            FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", List.of());
             Pageable pageable = PageRequest.of(0, 10);
             Map<String, Object> searchResult = Map.of("content", "test", "totalElements", 1);
 
@@ -177,5 +180,65 @@ public class ShippingFFChargeMasterControllerTest {
             assertNotNull(response);
             assertEquals(500, response.getStatusCode().value());
         }
+    }
+
+    @Test
+    void getCharge_NotFound() {
+        when(chargeMasterService.getCharge(999L))
+                .thenThrow(new ResourceNotFoundException("Charge", "chargePoid", "999"));
+
+        assertThrows(ResourceNotFoundException.class, () -> controller.getCharge(999L));
+        verify(chargeMasterService).getCharge(999L);
+    }
+
+    @Test
+    void createCharge_ValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(123L);
+
+            when(chargeMasterService.createCharge(createDto, 100L, 123L))
+                    .thenThrow(new ValidationException("Charge Code already exists"));
+
+            assertThrows(ValidationException.class, () -> controller.createCharge(createDto));
+            verify(chargeMasterService).createCharge(createDto, 100L, 123L);
+        }
+    }
+
+    @Test
+    void updateCharge_NotFound() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(123L);
+
+            when(chargeMasterService.updateCharge(999L, updateDto, 100L, 123L))
+                    .thenThrow(new ResourceNotFoundException("Charge", "chargePoid", "999"));
+
+            assertThrows(ResourceNotFoundException.class, () -> controller.updateCharge(999L, updateDto));
+            verify(chargeMasterService).updateCharge(999L, updateDto, 100L, 123L);
+        }
+    }
+
+    @Test
+    void updateCharge_ValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(123L);
+
+            when(chargeMasterService.updateCharge(1L, updateDto, 100L, 123L))
+                    .thenThrow(new ValidationException("Charge Name already exists"));
+
+            assertThrows(ValidationException.class, () -> controller.updateCharge(1L, updateDto));
+            verify(chargeMasterService).updateCharge(1L, updateDto, 100L, 123L);
+        }
+    }
+
+    @Test
+    void deleteCharge_NotFound() {
+        doThrow(new ResourceNotFoundException("Charge", "chargePoid", "999"))
+                .when(chargeMasterService).deleteCharge(999L);
+
+        assertThrows(ResourceNotFoundException.class, () -> controller.deleteCharge(999L));
+        verify(chargeMasterService).deleteCharge(999L);
     }
 }

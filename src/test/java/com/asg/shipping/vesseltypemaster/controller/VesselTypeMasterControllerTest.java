@@ -222,5 +222,99 @@ class VesselTypeMasterControllerTest {
             assertThrows(ResourceNotFoundException.class, () -> controller.deleteVesselType(1L, null));
         }
     }
+
+    @Test
+    void deleteVesselType_WithDeleteReason() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            com.asg.common.lib.dto.DeleteReasonDto deleteReason = new com.asg.common.lib.dto.DeleteReasonDto();
+            deleteReason.setDeleteReason("Test reason");
+            
+            doNothing().when(vesselTypeService).deleteVesselType(1L, 1L, 1L, deleteReason);
+
+            ResponseEntity<?> response = controller.deleteVesselType(1L, deleteReason);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(vesselTypeService).deleteVesselType(1L, 1L, 1L, deleteReason);
+        }
+    }
+
+    @Test
+    void searchVesselTypes_WithDescSort() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.searchVesselTypes(null, 0, 10, "vesselTypeName,desc");
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void searchVesselTypes_WithDifferentSortFields() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenReturn(result);
+
+            controller.searchVesselTypes(null, 0, 10, "vesselTypeCode,asc");
+            verify(vesselTypeService, times(1)).searchVesselTypes(anyString(), any(), any(Pageable.class));
+
+            controller.searchVesselTypes(null, 0, 10, "vesselTypeName2,asc");
+            verify(vesselTypeService, times(2)).searchVesselTypes(anyString(), any(), any(Pageable.class));
+
+            controller.searchVesselTypes(null, 0, 10, "createdDate,asc");
+            verify(vesselTypeService, times(3)).searchVesselTypes(anyString(), any(), any(Pageable.class));
+
+            controller.searchVesselTypes(null, 0, 10, "lastmodifiedDate,asc");
+            verify(vesselTypeService, times(4)).searchVesselTypes(anyString(), any(), any(Pageable.class));
+        }
+    }
+
+    @Test
+    void searchVesselTypes_WithInvalidSortFormat() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.searchVesselTypes(null, 0, 10, "invalidFormat");
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void searchVesselTypes_WithUnknownSortField() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.searchVesselTypes(null, 0, 10, "unknownField,asc");
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+        }
+    }
 }
 

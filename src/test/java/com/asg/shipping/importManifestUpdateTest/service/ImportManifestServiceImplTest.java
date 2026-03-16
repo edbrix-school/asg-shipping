@@ -6,6 +6,8 @@ import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestHdr;
@@ -21,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -60,6 +63,16 @@ public class ImportManifestServiceImplTest {
     private StoredProcedureQuery storedProcedureQuery;
 
     @Mock
+    private BlManifestValidationRepository validationRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private ImportManifestBlProcRepository procRepository;
+    @Mock
+    private AddressDetailsRepository addressDetailsRepository;
+    @Mock
+    private LoggingService loggingService;
+    @Mock
     private DocumentDeleteService documentDeleteService;
 
     @InjectMocks
@@ -83,6 +96,8 @@ public class ImportManifestServiceImplTest {
                 .blNumber("TEST123")
                 .agentReference("AGENT001")
                 .voyageTransactionPoid(100L)
+                .cargoType("FCL")
+                .blType("IMPORT")
                 .build();
 
         mockRequestDto = ImportManifestBlRequestDto.builder()
@@ -199,7 +214,127 @@ public class ImportManifestServiceImplTest {
         verify(repository, never()).save(any());
     }
 
+    @Test
+    void deleteImportManifestBl_NotFound() {
+        Long id = 999L;
+        when(repository.findByTransactionPoid(id)).thenReturn(Optional.empty());
 
+        assertThrows(ResourceNotFoundException.class, () -> {
+            service.deleteImportManifestBl(id, new DeleteReasonDto());
+        });
+    }
 
+    @Test
+    void listOfImportManifest_Success() {
+        when(documentService.resolveOperator(any())).thenReturn("OR");
+        when(documentService.resolveIsDeleted(any())).thenReturn("N");
+        when(documentService.resolveFilters(any())).thenReturn(List.of());
+        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                .thenReturn(new com.asg.common.lib.dto.RawSearchResult(List.of(), Map.of(), 0L));
 
+        var filterRequest = new com.asg.common.lib.dto.FilterRequestDto("OR", "N", List.of());
+        var result = service.listOfImportManifest("DOC123", filterRequest, org.springframework.data.domain.PageRequest.of(0, 10));
+
+        assertNotNull(result);
+        verify(documentService).search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void updateEmailVerification_Success() {
+        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
+        when(procRepository.updateEmailVerification(eq(1L), any()))
+                .thenReturn(com.asg.shipping.importManifestUpdate.dto.EmailVerificationResponseDto.builder().status("SUCCESS").build());
+
+        var request = com.asg.shipping.importManifestUpdate.dto.EmailVerificationRequestDto.builder()
+                .transactionPoId(1L)
+                .verified(true)
+                .build();
+
+        var response = service.updateEmailVerification(1L, request);
+
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+    }
+
+    @Test
+    void resendCan_Success() {
+        mockEntity.setVoyageTransactionPoid(100L);
+        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
+        when(procRepository.resendCan(100L, 1L))
+                .thenReturn(com.asg.shipping.importManifestUpdate.dto.ResendCanResponseDto.builder().status("SUCCESS").build());
+
+        var response = service.resendCan(1L);
+
+        assertNotNull(response);
+        assertEquals("SUCCESS", response.getStatus());
+    }
+
+    @Test
+    void sendEdiEmails_Success() {
+        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
+        when(procRepository.getEdiEmails(1L))
+                .thenReturn(com.asg.shipping.importManifestUpdate.dto.SendEdiEmailsResponseDto.builder().emailsSent(2).build());
+
+        var response = service.sendEdiEmails(1L);
+
+        assertNotNull(response);
+        assertEquals(2, response.getEmailsSent());
+    }
+
+    @Test
+    void loadEmailFax_Success() {
+        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
+        when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(anyLong(), anyString()))
+                .thenReturn(List.of());
+
+        var request = com.asg.shipping.importManifestUpdate.dto.LoadEmailFaxRequestDto.builder()
+                .addressMasterPoid(100L)
+                .addressType("CAN")
+                .build();
+
+        var response = service.loadEmailFax(1L, request);
+
+        assertNotNull(response);
+        verify(addressDetailsRepository).findByAddressMasterPoidAndAddressType(anyLong(), anyString());
+    }
+
+    @Test
+    void getBlStatus_Success() {
+        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
+        when(procRepository.getBlStatus(1L))
+                .thenReturn(com.asg.shipping.importManifestUpdate.dto.BlStatusResponseDto.builder().status("NEW").build());
+
+        var response = service.getBlStatus(1L);
+
+        assertNotNull(response);
+        assertEquals("NEW", response.getStatus());
+    }
+
+    @Test
+    void updateImportManifestBl_WithDetailTables() {
+        Long id = 1L;
+
+        mockUpdateDto.setGeneralCargoDetails(List.of(
+                com.asg.shipping.importManifestUpdate.dto.GeneralCargoRequestDto.builder()
+                        .detRowId(1L)
+                        .actionType("ISCREATED")
+                        .cargoDescription("Test")
+                        .build()
+        ));
+
+        when(repository.findByTransactionPoid(id)).thenReturn(Optional.of(mockEntity));
+        when(entityManager.createStoredProcedureQuery("PROC_SHIP_VALD_BEFORE_SAVE"))
+                .thenReturn(storedProcedureQuery);
+        when(storedProcedureQuery.getOutputParameterValue("P_RESULT"))
+                .thenReturn("Validation Error");
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+
+            assertThrows(ValidationException.class, () ->
+                    service.updateImportManifestBl(id, mockUpdateDto, 100L, 200L)
+            );
+        }
+    }
 }

@@ -245,4 +245,71 @@ public class ChargeGroupMasterServiceTest {
             assertEquals("SYSTEM", result);
         }
     }
+
+    @Test
+    void create_DuplicateName() {
+        when(repository.findByChargeGroupCode("TEST001")).thenReturn(Optional.empty());
+        when(repository.findByChargeGroupName("Test Charge Group")).thenReturn(Optional.of(entity));
+
+        assertThrows(IllegalArgumentException.class, () -> service.create(requestDto));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void create_LoggingVerification() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC001");
+
+            when(repository.findByChargeGroupCode("TEST001")).thenReturn(Optional.empty());
+            when(repository.findByChargeGroupName("Test Charge Group")).thenReturn(Optional.empty());
+            when(repository.save(any(ShipChargeGroupMaster.class))).thenReturn(entity);
+
+            service.create(requestDto);
+
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("DOC001"), eq("1"));
+            verify(loggingService).logChanges(any(), any(), eq(ShipChargeGroupMaster.class), eq("DOC001"), eq("1"), eq(LogDetailsEnum.CREATED), eq("CHARGE_GROUP_POID"));
+        }
+    }
+
+    @Test
+    void update_LoggingVerification() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC001");
+
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+            when(repository.save(any(ShipChargeGroupMaster.class))).thenReturn(entity);
+
+            service.update(1L, requestDto);
+
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.MODIFIED), eq("DOC001"), eq("1"));
+            verify(loggingService).logChanges(any(), any(), eq(ShipChargeGroupMaster.class), eq("DOC001"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("CHARGE_GROUP_POID"));
+        }
+    }
+
+    @Test
+    void listChargeGroupMaster_WithNullFilters() {
+        Pageable pageable = PageRequest.of(0, 10);
+        RawSearchResult rawResult = new RawSearchResult(
+                List.of(Map.of("CHARGE_GROUP_CODE", "TEST001")),
+                Map.of("CHARGE_GROUP_CODE", "Charge Group Code"),
+                1L
+        );
+
+        when(documentService.resolveOperator(null)).thenReturn("OR");
+        when(documentService.resolveIsDeleted(null)).thenReturn("N");
+        when(documentService.resolveFilters(null)).thenReturn(List.of());
+        when(documentService.search(anyString(), anyList(), anyString(),
+                any(Pageable.class), anyString(), anyString(), anyString()))
+                .thenReturn(rawResult);
+
+        Map<String, Object> result = service.listChargeGroupMaster("DOC001", null, pageable);
+
+        assertNotNull(result);
+        verify(documentService).search(eq("DOC001"), anyList(), eq("OR"),
+                eq(pageable), eq("N"), eq("CHARGE_GROUP_CODE"), eq("CHARGE_GROUP_POID"));
+    }
 }
