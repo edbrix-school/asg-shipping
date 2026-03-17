@@ -4,7 +4,6 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.common.dto.LovItem;
  import com.asg.shipping.common.service.LovService;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
@@ -110,23 +109,30 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         mapper.mapCreateDTOToEntity(dto, line, groupPoid, userPoid, companyPoid);
 
         // Save main entity
-        ShipLineMaster saved = lineRepository.save(line);
+        // Force parent insert before inserting child rows (Oracle FK checks are immediate)
+        ShipLineMaster saved = lineRepository.saveAndFlush(line);
+
+        // Some environments assign/override LINE_POID in DB (e.g., trigger). Re-resolve to the DB value
+        // and use the reloaded entity for all downstream operations + response.
+        ShipLineMaster resolvedLine = lineRepository.findByLineCodeAndGroupPoid(saved.getLineCode(), groupPoid)
+                .orElseThrow(() -> new ValidationException("Failed to resolve LINE_POID for newly created line."));
+        Long resolvedLinePoid = resolvedLine.getLinePoid();
 
         // Create charge details
         if (dto.getCharges() != null && !dto.getCharges().isEmpty()) {
-            createChargeDetails(saved.getLinePoid(), dto.getCharges(), userPoid);
+            createChargeDetails(resolvedLinePoid, dto.getCharges(), userPoid);
         }
 
         // Call stored procedure
-        callAfterSaveProcedure(groupPoid, companyPoid, userPoid, saved.getLinePoid());
+        callAfterSaveProcedure(groupPoid, companyPoid, userPoid, resolvedLinePoid);
 
         // Fetch and return with LOV data
-        LinePrincipalMasterDto result = mapper.mapToDto(saved);
+        LinePrincipalMasterDto result = mapper.mapToDto(resolvedLine);
         List<ShipLineMasterChargeDtl> charges = chargeDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setCharges(mapper.mapChargeDetailsToDto(charges));
         enrichDtoWithLovData(result, saved, groupPoid);
 
-        log.info("Successfully created line with id: {}", saved.getLinePoid());
+        log.info("Successfully created line with id: {}", resolvedLinePoid);
         return result;
     }
 
@@ -213,14 +219,13 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         log.info("Copying charges from line {} to line {}", request.getSourceLinePoid(), id);
 
         Long groupPoid = getGroupPoid();
-        Long userPoid = getUserPoid();
 
         // Validate target line
-        ShipLineMaster targetLine = lineRepository.findByLinePoidAndGroupPoid(id, groupPoid)
+        lineRepository.findByLinePoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Target Line", "linePoid", id.toString()));
 
         // Validate source line
-        ShipLineMaster sourceLine = lineRepository.findByLinePoidAndGroupPoid(request.getSourceLinePoid(), groupPoid)
+        lineRepository.findByLinePoidAndGroupPoid(request.getSourceLinePoid(), groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Source Line", "linePoid", request.getSourceLinePoid().toString()));
 
         // Get source charges
@@ -238,6 +243,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 .collect(Collectors.toSet());
 
         int copiedCount = 0;
+        Long maxDetRowId = chargeDtlRepository.findMaxDetRowIdByLinePoid(id);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
         for (ShipLineMasterChargeDtl sourceCharge : sourceCharges) {
             // Skip if charge already exists in target
             if (sourceCharge.getChargePoid() != null && existingChargePoids.contains(sourceCharge.getChargePoid())) {
@@ -247,6 +254,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             // Create new charge detail for target line
             ShipLineMasterChargeDtl newCharge = ShipLineMasterChargeDtl.builder()
                     .linePoid(id)
+                    .detRowId(nextDetRowId++)
                     .chargePoid(sourceCharge.getChargePoid())
                     .lineChargeCode(sourceCharge.getLineChargeCode())
                     .lineChargeDescription(sourceCharge.getLineChargeDescription())
@@ -312,6 +320,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
     private void createChargeDetails(Long linePoid, List<ChargeDetailDto> chargeDtos, Long userPoid) {
         String currentUser = getCurrentUser();
         Set<Long> chargePoids = new java.util.HashSet<>();
+        Long maxDetRowId = chargeDtlRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
 
         for (ChargeDetailDto chargeDto : chargeDtos) {
             if (chargeDto.getChargePoid() != null) {
@@ -327,6 +337,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             }
 
             ShipLineMasterChargeDtl charge = mapper.mapChargeDetailDtoToEntity(chargeDto, linePoid, currentUser);
+            charge.setDetRowId(nextDetRowId++);
             chargeDtlRepository.save(charge);
         }
     }
@@ -360,6 +371,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
         // Update or create charges
         Set<Long> chargePoids = new java.util.HashSet<>();
+        Long maxDetRowId = chargeDtlRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
         for (ChargeDetailDto chargeDto : chargeDtos) {
             if (chargeDto.getChargePoid() != null) {
                 if (!chargePoids.add(chargeDto.getChargePoid())) {
@@ -389,6 +402,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             } else {
                 // Create new
                 ShipLineMasterChargeDtl newCharge = mapper.mapChargeDetailDtoToEntity(chargeDto, linePoid, currentUser);
+                newCharge.setDetRowId(nextDetRowId++);
                 chargeDtlRepository.save(newCharge);
             }
         }

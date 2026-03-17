@@ -257,7 +257,7 @@ public class LinePrincipalMasterController {
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
-    @PatchMapping("/{id}/activate")
+    @PutMapping("/{id}/activate")
     @Operation(
             summary = "Toggle active status",
             description = "Toggle the active flag of a line between Y and N",
