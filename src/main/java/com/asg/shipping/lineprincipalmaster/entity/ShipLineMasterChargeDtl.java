@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for SHIP_LINE_MASTER_CHARGE_DTL table
@@ -27,8 +26,6 @@ public class ShipLineMasterChargeDtl {
 
     @Id
     @Column(name = "DET_ROW_ID", nullable = false)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "charge_dtl_seq")
-    @SequenceGenerator(name = "charge_dtl_seq", sequenceName = "SHIP_LINE_MASTER_CHARGE_DTL_SEQ", allocationSize = 1)
     private Long detRowId;
 
     @Column(name = "CHARGE_POID")

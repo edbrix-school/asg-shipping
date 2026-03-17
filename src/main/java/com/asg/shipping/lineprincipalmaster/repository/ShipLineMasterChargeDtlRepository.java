@@ -21,6 +21,9 @@ public interface ShipLineMasterChargeDtlRepository extends JpaRepository<ShipLin
      */
     List<ShipLineMasterChargeDtl> findByLinePoidOrderByDetRowId(Long linePoid);
 
+    @Query("SELECT MAX(c.detRowId) FROM ShipLineMasterChargeDtl c WHERE c.linePoid = :linePoid")
+    Long findMaxDetRowIdByLinePoid(@Param("linePoid") Long linePoid);
+
     /**
      * Find charge by line POID and charge POID
      */

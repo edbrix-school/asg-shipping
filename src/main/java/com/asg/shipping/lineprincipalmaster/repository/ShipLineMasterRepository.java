@@ -20,6 +20,11 @@ public interface ShipLineMasterRepository extends JpaRepository<ShipLineMaster, 
     Optional<ShipLineMaster> findByLinePoidAndGroupPoid(Long linePoid, Long groupPoid);
 
     /**
+     * Find line by code and group (used to resolve DB-assigned POID).
+     */
+    Optional<ShipLineMaster> findByLineCodeAndGroupPoid(String lineCode, Long groupPoid);
+
+    /**
      * Check if line code exists for the given group (excluding deleted records)
      */
     @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterPrincipal l WHERE l.lineCode = :lineCode AND l.groupPoid = :groupPoid AND l.deleted = 'N'")
