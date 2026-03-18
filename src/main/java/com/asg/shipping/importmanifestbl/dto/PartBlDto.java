@@ -18,10 +18,10 @@ public class PartBlDto {
     private String cargoDescription;
 
     private Long commodityPoid;
-    private String packageDetails;
+    private Long packageDetails;
     private String packUnit;
 
-    private Double netWeight;
-    private Double netVolume;
+    private Long netWeight;
+    private Long netVolume;
     private String actionType;
 }

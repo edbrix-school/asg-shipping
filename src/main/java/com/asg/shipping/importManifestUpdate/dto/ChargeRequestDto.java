@@ -1,5 +1,6 @@
 package com.asg.shipping.importManifestUpdate.dto;
 
+import com.asg.shipping.importManifestUpdate.service.BlManifestValidationService;
 import lombok.*;
 
 
@@ -8,7 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChargeRequestDto {
+public class ChargeRequestDto implements BlManifestValidationService.ChargeValidatable {
     private Long detRowId;
     private Long chargePoid;
 
@@ -42,4 +43,11 @@ public class ChargeRequestDto {
     private String cnIssueInvoice;
     private String selectRow;
     private String actionType;
+
+    // ---- ChargeValidatable interface ----
+    @Override public Long getChargePoidValue() { return chargePoid; }
+    @Override public String getFreightTypeValue() { return freightType; }
+    @Override public Long getQuantityValue() { return quantity; }
+    @Override public Long getSellValue() { return perQuantityAmount; }
+    @Override public Long getBuyValue() { return buyPercharge; }
 }

@@ -10,8 +10,12 @@ import lombok.*;
 public class AddressDetailsDto {
 
     private Long detRowId;
-    private Long preferredCommunicationPoid;
+    private Long addressPoid;
     private String email1;
     private String email2;
+    private String addressType;
+    private String sendYesNo;
+    private String sendEmailFax;
+    private String actionType;
 
 }

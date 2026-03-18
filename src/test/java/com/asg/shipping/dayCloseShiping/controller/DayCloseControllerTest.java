@@ -200,9 +200,9 @@ class DayCloseControllerTest {
 
         mockMvc.perform(
                         post("/v1/day-close-shipping/search")
-                                .param("startDate", "2025-01-01")
-                                .param("endDate", "2025-12-31")
                                 .contentType(MediaType.APPLICATION_JSON)
+                                .param("startDate", LocalDate.now().toString())
+                                .param("endDate", LocalDate.now().toString())
                                 .content(objectMapper.writeValueAsString(filters)))
                 .andExpect(status().isOk());
 

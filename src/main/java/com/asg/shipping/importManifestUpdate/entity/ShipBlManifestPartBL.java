@@ -1,13 +1,10 @@
 package com.asg.shipping.importManifestUpdate.entity;
 
-
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -17,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipBlManifestPartBL {
+public class ShipBlManifestPartBL  {
 
     @EmbeddedId
     private ShipBlManifestDtlId id;
@@ -52,15 +49,4 @@ public class ShipBlManifestPartBL {
     @Column(name = "PART_BL_NUMBER", length = 25)
     private String partBlNumber;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }

@@ -12,6 +12,7 @@ import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
 import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
 import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestHdr;
 import com.asg.shipping.importManifestUpdate.respository.*;
+import com.asg.shipping.importManifestUpdate.service.BlManifestValidationService;
 import com.asg.shipping.importManifestUpdate.service.ImportManifestBlServiceImpl;
 import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
 import jakarta.persistence.EntityManager;
@@ -25,7 +26,8 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -74,6 +76,8 @@ public class ImportManifestServiceImplTest {
     private LoggingService loggingService;
     @Mock
     private DocumentDeleteService documentDeleteService;
+    @Mock
+    private BlManifestValidationService blManifestValidationService;
 
     @InjectMocks
     private ImportManifestBlServiceImpl service;
@@ -90,7 +94,7 @@ public class ImportManifestServiceImplTest {
         mockEntity.setFreightStatus("PAID");
         mockEntity.setDoNo("DO001");
         mockEntity.setDeleted("N");
-        mockEntity.setTransactionDate(LocalDateTime.now());
+        mockEntity.setTransactionDate(LocalDate.now());
 
         mockUpdateDto = ImportManifestBlUpdateDTO.builder()
                 .blNumber("TEST123")

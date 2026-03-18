@@ -352,8 +352,6 @@ public class ImportManifestBlMapper {
         entity.setForwarderPin(dto.getForwarderPin());
         entity.setManifestEmailVerified(dto.getManifestEmailVerified());
         entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         return entity;
     }
 

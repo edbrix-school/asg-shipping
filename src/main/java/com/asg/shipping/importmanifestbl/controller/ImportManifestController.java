@@ -61,11 +61,11 @@ public class ImportManifestController {
     })
     @PostMapping
     public ResponseEntity<?> create(
-            @Valid @RequestBody ImportManifestBlCreateDto request
+            @Valid @RequestBody ImportManifestBlDto request
     ) {
             Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
             Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
-            ImportManifestBlRequestDto response = importManifestService.createImportManifestBl(request, companyPoid, groupPoid);
+        ImportManifestBlResponseDto response = importManifestService.createImportManifestBl(request, companyPoid, groupPoid);
             return success("Import Manifest BL created successfully", response);
 
     }
@@ -82,7 +82,7 @@ public class ImportManifestController {
             @Parameter(description = "Transaction POID", required = true)
             @PathVariable Long id
     ) {
-            ImportManifestBlRequestDto response = importManifestService.getImportManifest(id);
+        ImportManifestBlDto response = importManifestService.getImportManifest(id);
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         return success("Import Manifest BL retrieved successfully", response);
     }
@@ -150,12 +150,9 @@ public class ImportManifestController {
     public ResponseEntity<?> updateImportManifestBl(
             @Parameter(description = "Transaction POID", required = true, example = "12345")
             @PathVariable Long id,
-            @Valid @RequestBody ImportManifestBlUpdateDTO dto) {
+            @Valid @RequestBody ImportManifestBlDto dto) {
 
-        Long companyPoid = getCompanyPoid();
-        Long groupPoid = getGroupPoid();
-
-        ImportManifestBlRequestDto updated = importManifestService.updateImportManifestBl(id, dto, companyPoid, groupPoid);
+        ImportManifestBlResponseDto updated = importManifestService.updateImportManifestBl(id,dto);
 
         return success("Import Manifest BL updated successfully", updated);
     }

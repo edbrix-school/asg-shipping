@@ -11,15 +11,16 @@ public class ChargeOtherDto {
 
     private Long detRowId;
     private Long chargePoid;
+    private String chargeType;
     private String basis;
     private Long chargeTypePoid;
 
-    private Integer quantity;
+    private Long quantity;
     private String currencyCode;
-    private Double exchangeRate;
+    private Long exchangeRate;
 
-    private Double buy;
-    private Double sell;
+    private Long buy;
+    private Long sell;
 
     private Long freightTypePoid;
     private Long paidAtPortPoid;

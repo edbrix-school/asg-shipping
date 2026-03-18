@@ -1,19 +1,25 @@
 package com.asg.shipping.importmanifestbl.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
 @Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ImportManifestBlDto {
 
     private Long transactionPoid;
     private String docId;
+    private LocalDate transactionDate;
 
     private Long vesselVoyagePoid;
     private String blNumber;
@@ -52,25 +58,24 @@ public class ImportManifestBlDto {
     private BigDecimal grossWeight;
     private BigDecimal cbm;
     private String weight;
-    private String  packTypes;
+    private String packTypes;
     private BigDecimal numberOfPacks;
 
     private String notifyName;
     private Long notify1Poid;
 
     private String notifyEdiAddress;
-    private List<AddressDetailsDto> addressDetailsConsignee;
-    private List<AddressDetailsDto> addressDetailsNotify1;
+    private List<AddressDetailsDto> addressDetails;
 
-    private String  holdCanAuto;
+    private String holdCanAuto;
     private String manualCanSend;
 
-    private String holdTypePoid;
+    private String holdReason;
     private String holdRemarks;
 
-    private  DescriptionAndMarksDto descriptionsAndMarks;
+    private List<DescriptionAndMarksDto> descriptionsAndMarks;
     private List<MafiDetailsDto> mafiDetails;
-    private List<OtherNotifyDto> otherNotifies;
+    private OtherNotifyDto otherNotifies;
     private List<GeneralCargoDto> generalCargoDetails;
     private List<ContainerDto> containers;
     private List<ChargeDto> charges;

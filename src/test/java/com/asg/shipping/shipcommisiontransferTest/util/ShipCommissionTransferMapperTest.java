@@ -6,10 +6,12 @@ import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferUpdateDT
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionDtl;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import com.asg.shipping.shipcommisiontransfer.util.ShipCommissionTransferMapper;
+import com.asg.common.lib.service.LovDataService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -21,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class ShipCommissionTransferMapperTest {
+
+    @Mock
+    private LovDataService lovService;
 
     @InjectMocks
     private ShipCommissionTransferMapper mapper;

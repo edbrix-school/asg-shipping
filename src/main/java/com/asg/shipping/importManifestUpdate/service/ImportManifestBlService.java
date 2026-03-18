@@ -9,8 +9,6 @@ import java.util.Map;
 
 public interface ImportManifestBlService {
 
-    ImportManifestBlRequestDto createImportManifestBl(ImportManifestBlCreateDto dto);
-
     ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid);
 
     Map<String, Object> listOfImportManifest(String docId, FilterRequestDto request, Pageable pageable);
