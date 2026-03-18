@@ -1,10 +1,11 @@
-package com.asg.shipping.terminal.containerType;
+package com.asg.shipping.terminal.containertype;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
@@ -15,15 +16,16 @@ import com.asg.shipping.terminal.containertype.reposiory.ContainerTerminalTypeRe
 import com.asg.shipping.terminal.containertype.service.impl.ContainerTerminalTypeServiceImpl;
 import com.asg.shipping.terminal.containertype.util.ContainerTerminalTypeMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import java.math.BigInteger;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -61,6 +63,7 @@ class ContainerTerminalTypeServiceImplTest {
     private ContainerTerminalTypeEntity entity;
     private ContainerTerminalTypeRequest request;
     private ContainerTerminalTypeResponse response;
+    private MockedStatic<UserContext> userContextMock;
 
     @BeforeEach
     void setup() {
@@ -87,6 +90,24 @@ class ContainerTerminalTypeServiceImplTest {
         response.setContainerTerminalTypeName("Twenty Feet");
         response.setContainerTerminalTypeSize(20L);
         response.setActive("Y");
+    }
+
+    @AfterEach
+    void tearDown() {
+        closeUserContext();
+    }
+
+    private void mockUserContext() {
+        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
+        userContextMock.when(UserContext::getDocumentId).thenReturn("DOC-1");
+        userContextMock.when(UserContext::getUserId).thenReturn("user1");
+    }
+
+    private void closeUserContext() {
+        if (userContextMock != null) {
+            userContextMock.close();
+            userContextMock = null;
+        }
     }
 
     // ---------- LIST ----------
@@ -256,6 +277,14 @@ class ContainerTerminalTypeServiceImplTest {
         assertTrue(ex.getMessage().contains("already exists"));
     }
 
+    @Test
+    void testUpdate_NotFound() {
+        when(repository.findByContainerTerminalTypePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(1L, request, 10L, "user1", "000-001"));
+    }
 
 
     // ---------- DELETE ----------
@@ -271,6 +300,49 @@ class ContainerTerminalTypeServiceImplTest {
                 "Y".equals(e.getDeleted()) && "N".equals(e.getActive())));
     }
 
+    @Test
+    void testDelete_NotFound() {
+        when(repository.findByContainerTerminalTypePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.delete(1L, 10L, "user1"));
+    }
+
+    @Test
+    void testToggleActiveStatus_FromNToY() {
+        entity.setActive("N");
+        when(repository.findByContainerTerminalTypePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(entity));
+        when(repository.save(any())).thenReturn(entity);
+        mockUserContext();
+
+        service.toggleActiveStatus(1L, 10L, "user1");
+
+        verify(repository).save(argThat(e -> "Y".equals(e.getActive())));
+    }
+
+    @Test
+    void testToggleActiveStatus_FromYToN() {
+        entity.setActive("Y");
+        when(repository.findByContainerTerminalTypePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(entity));
+        when(repository.save(any())).thenReturn(entity);
+        mockUserContext();
+
+        service.toggleActiveStatus(1L, 10L, "user1");
+
+        verify(repository).save(argThat(e -> "N".equals(e.getActive())));
+    }
+
+    @Test
+    void testToggleActiveStatus_NotFound() {
+        when(repository.findByContainerTerminalTypePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.toggleActiveStatus(1L, 10L, "user1"));
+    }
 
 }
 

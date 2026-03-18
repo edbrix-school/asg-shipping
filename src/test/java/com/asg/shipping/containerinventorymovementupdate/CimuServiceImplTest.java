@@ -97,6 +97,23 @@ class CimuServiceImplTest {
                 () -> service.queryScreenData(new QueryCimuRequest()));
     }
 
+    @Test
+    void queryScreenData_rightsLookupFailureFallsBackToFalse() {
+        QueryCimuRequest request = new QueryCimuRequest();
+        request.setContainerNo("CONT001");
+        when(rightsRepository.hasDocRight(any(), any()))
+                .thenThrow(new RuntimeException("rights down"));
+        when(queryRepository.fetchContainerInfo(any(), any()))
+                .thenReturn(List.of());
+        when(queryRepository.fetchHistoryByContainerNo(any()))
+                .thenReturn(List.of());
+
+        QueryCimuResponse response = service.queryScreenData(request);
+
+        assertNotNull(response);
+        assertFalse(response.getPermissions().isCanEditActualDischargeDate());
+    }
+
     // ---------- updateContainerData ----------
 
     @Test
@@ -115,6 +132,66 @@ class CimuServiceImplTest {
         assertEquals("TRUE", response.getStatus());
     }
 
+    @Test
+    void updateContainerData_missingRequest() {
+        assertThrows(ValidationException.class, () -> service.updateContainerData(null));
+    }
+
+    @Test
+    void updateContainerData_requiresContainerWhenNotApplyAll() {
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setApplyToAllContainers(false);
+
+        assertThrows(ValidationException.class, () -> service.updateContainerData(request));
+    }
+
+    @Test
+    void updateContainerData_blNumberMismatch() {
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+        request.setBlNumber("BLX");
+
+        when(queryRepository.blNumberMatchesTransaction(100L, "BLX")).thenReturn(false);
+
+        assertThrows(ValidationException.class, () -> service.updateContainerData(request));
+    }
+
+    @Test
+    void updateContainerData_containerNotInBl() {
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+
+        when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(false);
+
+        assertThrows(ValidationException.class, () -> service.updateContainerData(request));
+    }
+
+    @Test
+    void updateContainerData_missingUserContext() {
+        userContextMock.when(UserContext::getUserPoid).thenReturn(null);
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+        when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
+
+        assertThrows(ValidationException.class, () -> service.updateContainerData(request));
+    }
+
+    @Test
+    void updateContainerData_holdReturnWithoutRights() {
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+        request.setHoldReturnForm(true);
+        when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
+        when(rightsRepository.hasDocRight("000-248", 1L)).thenReturn(false);
+
+        assertThrows(ValidationException.class, () -> service.updateContainerData(request));
+    }
+
     // ---------- socUpdate ----------
 
     @Test
@@ -128,6 +205,21 @@ class CimuServiceImplTest {
         SocUpdateResponse response = service.socUpdate(request);
 
         assertEquals("TRUE", response.getStatus());
+    }
+
+    @Test
+    void socUpdate_missingBlNumber() {
+        SocUpdateRequest request = new SocUpdateRequest();
+        assertThrows(ValidationException.class, () -> service.socUpdate(request));
+    }
+
+    @Test
+    void socUpdate_missingUserContext() {
+        userContextMock.when(UserContext::getUserPoid).thenReturn(null);
+        SocUpdateRequest request = new SocUpdateRequest();
+        request.setBlNumber("BL001");
+
+        assertThrows(ValidationException.class, () -> service.socUpdate(request));
     }
 
     // ---------- calculateDemurrage ----------
@@ -150,6 +242,26 @@ class CimuServiceImplTest {
 
         assertEquals(BigDecimal.TEN, response.getDemurrageAmount());
         assertEquals(BigDecimal.ONE, response.getTotalCollectedAmount());
+    }
+
+    @Test
+    void calculateDemurrage_invalidDateFormat() {
+        DemurrageCalculateRequest request = new DemurrageCalculateRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+        request.setDemDt("invalid");
+
+        assertThrows(ValidationException.class, () -> service.calculateDemurrage(request));
+    }
+
+    @Test
+    void calculateDemurrage_previousDate() {
+        DemurrageCalculateRequest request = new DemurrageCalculateRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+        request.setDemDt(LocalDate.now().minusDays(1).toString());
+
+        assertThrows(ValidationException.class, () -> service.calculateDemurrage(request));
     }
 
     // ---------- importFile ----------
@@ -187,6 +299,13 @@ class CimuServiceImplTest {
 
         assertTrue(response.getSuccess());
         assertEquals("123", response.getTransactionPoid());
+    }
+
+    @Test
+    void loadContainerDetails_missingUserContext() {
+        userContextMock.when(UserContext::getUserPoid).thenReturn(null);
+
+        assertThrows(ValidationException.class, () -> service.loadContainerDetails());
     }
 }
 

@@ -9,7 +9,6 @@ import com.asg.shipping.regionmaster.service.RegionMasterService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -97,6 +96,20 @@ class RegionMasterControllerTest {
                         .value("Region masters retrieved successfully"));
     }
 
+    @Test
+    void testSearchRegionMasters_WhenServiceThrows_ReturnsInternalServerError() throws Exception {
+        when(service.listRegionMasters(any(), any(), any()))
+                .thenThrow(new RuntimeException("boom"));
+
+        mockMvc.perform(post("/v1/region-master/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFilterRequest())))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("Unable to fetch region masters: boom"));
+    }
+
     // ---------- GET BY ID ----------
     @Test
     void testGetById() throws Exception {
@@ -141,12 +154,11 @@ class RegionMasterControllerTest {
 
     // ---------- TOGGLE ACTIVE ----------
     @Test
-    @Disabled
     void testToggleActiveStatus() throws Exception {
         doNothing().when(service)
                 .toggleActiveStatus(1L, 1L, "admin");
 
-        mockMvc.perform(patch("/v1/region-master/1/activate"))
+        mockMvc.perform(put("/v1/region-master/1/activate"))
                 .andExpect(status().isOk())
                 .andDo(print())
                 .andExpect(jsonPath("$.success").value(true));

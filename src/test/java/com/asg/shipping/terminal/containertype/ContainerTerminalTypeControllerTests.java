@@ -1,16 +1,19 @@
-package com.asg.shipping.terminal.containerType;
+package com.asg.shipping.terminal.containertype;
 
 import com.asg.shipping.terminal.containertype.controller.ContainerTerminalTypeController;
 import com.asg.shipping.terminal.containertype.dto.ContainerTerminalTypeRequest;
 import com.asg.shipping.terminal.containertype.dto.ContainerTerminalTypeResponse;
 import com.asg.shipping.terminal.containertype.service.ContainerTerminalTypeService;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.security.util.UserContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -42,6 +45,7 @@ class ContainerTerminalTypeControllerTests {
 
     @InjectMocks
     private ContainerTerminalTypeController controller;
+    private MockedStatic<UserContext> userContextMock;
 
     private ContainerTerminalTypeRequest requestDTO;
     private ContainerTerminalTypeResponse responseDTO;
@@ -66,6 +70,13 @@ class ContainerTerminalTypeControllerTests {
         responseDTO.setContainerTerminalTypeSize(20L);
         responseDTO.setSeqNo(BigInteger.valueOf(10));
         responseDTO.setActive("Y");
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (userContextMock != null) {
+            userContextMock.close();
+        }
     }
 
 
@@ -95,6 +106,21 @@ class ContainerTerminalTypeControllerTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
                         .value("Container Terminal Type list fetched successfully"));
+    }
+
+    @Test
+    void testListContainerTerminalTypes_WhenServiceThrows_ReturnsInternalServerError() throws Exception {
+        when(service.listContainerTerminalTypes(any(), any(), any()))
+                .thenThrow(new RuntimeException("list-fail"));
+
+        mockMvc.perform(post("/v1/container-terminal-types/list")
+                        .header("X-Document-Id", "000-000")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFilterRequest())))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("Unable to fetch container terminal types: list-fail"));
     }
 
     // ---------------- GET BY ID ----------------
@@ -171,6 +197,21 @@ class ContainerTerminalTypeControllerTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
                         .value("Container terminal type deleted successfully"));
+    }
+
+    @Test
+    void testToggleActiveStatus() throws Exception {
+        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
+        userContextMock.when(UserContext::getGroupPoid).thenReturn(100L);
+        userContextMock.when(UserContext::getUserId).thenReturn("admin");
+
+        doNothing().when(service).toggleActiveStatus(1L, 100L, "admin");
+
+        mockMvc.perform(put("/v1/container-terminal-types/1/activate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message")
+                        .value("Container terminal type status toggled successfully"));
     }
 }
 
