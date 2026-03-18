@@ -40,11 +40,13 @@ import java.util.Optional;
 import static com.asg.shipping.lineprofile.util.Constants.ACTION_IS_CREATED;
 import static com.asg.shipping.lineprofile.util.Constants.ACTION_IS_DELETED;
 import static com.asg.shipping.lineprofile.util.Constants.ACTION_IS_UPDATED;
+import static com.asg.shipping.lineprofile.util.Constants.ACTION_NO_CHANGE;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -154,6 +156,18 @@ class LineProfileServiceImplTest {
     }
 
     @Test
+    void testGetById_LineProfilePoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class, () -> service.getById(null, 10L));
+        assertTrue(ex.getMessage().contains("lineProfilePoid"));
+    }
+
+    @Test
+    void testGetById_GroupPoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class, () -> service.getById(1L, null));
+        assertTrue(ex.getMessage().contains("groupPoid"));
+    }
+
+    @Test
     void testCreate_Success() {
         stubEmptyRegionQuery();
         when(mapper.toCreateEntity(request, 10L, "user1"))
@@ -172,6 +186,20 @@ class LineProfileServiceImplTest {
     }
 
     @Test
+    void testCreate_GroupPoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.create(request, null, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("groupPoid"));
+    }
+
+    @Test
+    void testCreate_UserIdMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.create(request, 10L, null, "DOC-1"));
+        assertTrue(ex.getMessage().contains("userId"));
+    }
+
+    @Test
     void testUpdate_Success() {
         stubEmptyRegionQuery();
         when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
@@ -187,6 +215,27 @@ class LineProfileServiceImplTest {
         LineProfileResponse result = service.update(1L, request, 10L, "user1", "DOC-1");
         assertNotNull(result);
         verify(masterRepository).save(masterEntity);
+    }
+
+    @Test
+    void testUpdate_LineProfilePoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(null, request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("lineProfilePoid"));
+    }
+
+    @Test
+    void testUpdate_GroupPoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, request, null, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("groupPoid"));
+    }
+
+    @Test
+    void testUpdate_UserMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, request, 10L, null, "DOC-1"));
+        assertTrue(ex.getMessage().contains("userId"));
     }
 
     @Test
@@ -235,6 +284,101 @@ class LineProfileServiceImplTest {
     }
 
     @Test
+    void testUpdate_WithNoChangeContactAction() {
+        stubEmptyRegionQuery();
+        LineProfileContactDto noChangeDto = new LineProfileContactDto(1L, ACTION_NO_CHANGE,
+                "Contact1", "Mgr", "123", "111", "a@b.com");
+        LineProfileRequest updateRequest = new LineProfileRequest();
+        updateRequest.setLinePoid(10L);
+        updateRequest.setContactDetails(List.of(noChangeDto));
+
+        ShipLineProfileContactDtlEntity existing = new ShipLineProfileContactDtlEntity();
+        existing.setLineProfilePoid(1L);
+        existing.setDetRowId(1L);
+
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(masterEntity));
+        doNothing().when(mapper).applyUpdate(masterEntity, updateRequest, "user1");
+        when(masterRepository.save(masterEntity)).thenReturn(masterEntity);
+        when(contactRepository.findByLineProfilePoidOrderByDetRowId(1L))
+                .thenReturn(List.of(existing));
+        when(mapper.toResponse(masterEntity, List.of(existing))).thenReturn(response);
+
+        LineProfileResponse result = service.update(1L, updateRequest, 10L, "user1", "DOC-1");
+        assertNotNull(result);
+    }
+
+    @Test
+    void testUpdate_ContactUpdateMissingDetRow() {
+        LineProfileContactDto updateDto = new LineProfileContactDto(null, ACTION_IS_UPDATED,
+                "Contact2", "Lead", "234", "222", "c@d.com");
+        LineProfileRequest updateRequest = new LineProfileRequest();
+        updateRequest.setLinePoid(10L);
+        updateRequest.setContactDetails(List.of(updateDto));
+
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(masterEntity));
+        when(masterRepository.save(masterEntity)).thenReturn(masterEntity);
+        when(contactRepository.findByLineProfilePoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, updateRequest, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("detRowId is required"));
+    }
+
+    @Test
+    void testUpdate_ContactDeleteMissingDetRow() {
+        LineProfileContactDto deleteDto = new LineProfileContactDto(null, ACTION_IS_DELETED,
+                "Contact3", "Dir", "345", "333", "e@f.com");
+        LineProfileRequest updateRequest = new LineProfileRequest();
+        updateRequest.setLinePoid(10L);
+        updateRequest.setContactDetails(List.of(deleteDto));
+
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(masterEntity));
+        when(masterRepository.save(masterEntity)).thenReturn(masterEntity);
+        when(contactRepository.findByLineProfilePoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, updateRequest, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("detRowId is required"));
+    }
+
+    @Test
+    void testUpdate_ContactUpdateNotFound() {
+        LineProfileContactDto updateDto = new LineProfileContactDto(99L, ACTION_IS_UPDATED,
+                "Contact2", "Lead", "234", "222", "c@d.com");
+        LineProfileRequest updateRequest = new LineProfileRequest();
+        updateRequest.setLinePoid(10L);
+        updateRequest.setContactDetails(List.of(updateDto));
+
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(masterEntity));
+        when(masterRepository.save(masterEntity)).thenReturn(masterEntity);
+        when(contactRepository.findByLineProfilePoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(1L, updateRequest, 10L, "user1", "DOC-1"));
+    }
+
+    @Test
+    void testUpdate_ContactDeleteNotFound() {
+        LineProfileContactDto deleteDto = new LineProfileContactDto(99L, ACTION_IS_DELETED,
+                "Contact3", "Dir", "345", "333", "e@f.com");
+        LineProfileRequest updateRequest = new LineProfileRequest();
+        updateRequest.setLinePoid(10L);
+        updateRequest.setContactDetails(List.of(deleteDto));
+
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(masterEntity));
+        when(masterRepository.save(masterEntity)).thenReturn(masterEntity);
+        when(contactRepository.findByLineProfilePoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(1L, updateRequest, 10L, "user1", "DOC-1"));
+    }
+
+    @Test
     void testDelete_Success() {
         DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
         deleteReasonDto.setDeleteReason("Test deletion");
@@ -259,6 +403,15 @@ class LineProfileServiceImplTest {
                 eq(deleteReasonDto),
                 isNull()
         );
+    }
+
+    @Test
+    void testDelete_NotFound() {
+        DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(eq(1L), any()))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(1L, deleteReasonDto));
     }
 
     @Test
@@ -291,6 +444,122 @@ class LineProfileServiceImplTest {
         assertNotNull(result.getCountryDet());
         assertEquals(1L, result.getAgencyPoid());
         assertNotNull(result.getAgencyTypeDet());
+    }
+
+    @Test
+    void testFetchLineDetails_NvocAgencyType() throws Exception {
+        StoredProcedureQuery spQuery = mock(StoredProcedureQuery.class);
+        ResultSet rs = mock(ResultSet.class);
+        when(entityManager.createStoredProcedureQuery("PROC_SH_LINE_PROFILE"))
+                .thenReturn(spQuery);
+        when(spQuery.registerStoredProcedureParameter(anyString(), any(), any()))
+                .thenReturn(spQuery);
+        when(spQuery.setParameter(anyString(), any()))
+                .thenReturn(spQuery);
+        when(spQuery.execute()).thenReturn(true);
+        when(spQuery.getOutputParameterValue("OUTDATA")).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getObject("LINE_POID")).thenReturn(10L);
+        when(rs.getString("LINE_CODE")).thenReturn("LINE01");
+        when(rs.getString("LINE_NAME")).thenReturn("MAERSK");
+        when(rs.getObject("COUNTRY_POID")).thenReturn(100L);
+        when(rs.getString("COUNTRY_CODE")).thenReturn("US");
+        when(rs.getString("COUNTRY_NAME")).thenReturn("United States");
+        when(rs.getString("MIS_LINE_CATEGORY")).thenReturn("NVOC");
+
+        LineProfileLineDetailsResponse result = service.fetchLineDetails(10L, 1L, 2L, 3L);
+
+        assertNotNull(result);
+        assertEquals(2L, result.getAgencyPoid());
+    }
+
+    @Test
+    void testFetchLineDetails_BlankAgencyType_NoAgencySet() throws Exception {
+        StoredProcedureQuery spQuery = mock(StoredProcedureQuery.class);
+        ResultSet rs = mock(ResultSet.class);
+        when(entityManager.createStoredProcedureQuery("PROC_SH_LINE_PROFILE"))
+                .thenReturn(spQuery);
+        when(spQuery.registerStoredProcedureParameter(anyString(), any(), any()))
+                .thenReturn(spQuery);
+        when(spQuery.setParameter(anyString(), any()))
+                .thenReturn(spQuery);
+        when(spQuery.execute()).thenReturn(true);
+        when(spQuery.getOutputParameterValue("OUTDATA")).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getObject("LINE_POID")).thenReturn(10L);
+        when(rs.getString("LINE_CODE")).thenReturn("LINE01");
+        when(rs.getString("LINE_NAME")).thenReturn("MAERSK");
+        when(rs.getObject("COUNTRY_POID")).thenReturn(null);
+        when(rs.getString("MIS_LINE_CATEGORY")).thenReturn(" ");
+
+        LineProfileLineDetailsResponse result = service.fetchLineDetails(10L, 1L, 2L, 3L);
+
+        assertNotNull(result);
+        assertNull(result.getAgencyPoid());
+    }
+
+    @Test
+    void testGetById_EnrichesRegionLineAndAgreementDetails() throws Exception {
+        ShipLineProfileMasterEntity master = new ShipLineProfileMasterEntity();
+        master.setLineProfilePoid(1L);
+        master.setGroupPoid(10L);
+
+        LineProfileResponse mapped = new LineProfileResponse();
+        mapped.setLineProfilePoid(1L);
+        mapped.setRegionPoids(List.of(1L));
+        mapped.setLinePoid(10L);
+        mapped.setAgreementPoid(200L);
+
+        when(masterRepository.findByLineProfilePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(master));
+        when(contactRepository.findByLineProfilePoidOrderByDetRowId(1L))
+                .thenReturn(List.of());
+        when(mapper.toResponse(master, List.of())).thenReturn(mapped);
+
+        Query q = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(q);
+        when(q.setParameter(eq("poids"), any())).thenReturn(q);
+        when(q.getResultList()).thenReturn(java.util.Collections.singletonList(new Object[]{1L, "RG", "Region One"}));
+
+        StoredProcedureQuery spLine = mock(StoredProcedureQuery.class);
+        ResultSet rsLine = mock(ResultSet.class);
+        when(entityManager.createStoredProcedureQuery("PROC_SH_LINE_PROFILE")).thenReturn(spLine);
+        when(spLine.registerStoredProcedureParameter(anyString(), any(), any())).thenReturn(spLine);
+        when(spLine.setParameter(anyString(), any())).thenReturn(spLine);
+        when(spLine.execute()).thenReturn(true);
+        when(spLine.getOutputParameterValue("OUTDATA")).thenReturn(rsLine);
+        when(rsLine.next()).thenReturn(true);
+        when(rsLine.getObject("LINE_POID")).thenReturn(10L);
+        when(rsLine.getString("LINE_CODE")).thenReturn("L-1");
+        when(rsLine.getString("LINE_NAME")).thenReturn("Line One");
+        when(rsLine.getObject("COUNTRY_POID")).thenReturn(5L);
+        when(rsLine.getString("COUNTRY_CODE")).thenReturn("AE");
+        when(rsLine.getString("COUNTRY_NAME")).thenReturn("UAE");
+        when(rsLine.getString("MIS_LINE_CATEGORY")).thenReturn("MLO");
+
+        StoredProcedureQuery spAgr = mock(StoredProcedureQuery.class);
+        ResultSet rsAgr = mock(ResultSet.class);
+        when(entityManager.createStoredProcedureQuery("PROC_SH_CONTRACTS_AGREEMENT")).thenReturn(spAgr);
+        when(spAgr.registerStoredProcedureParameter(anyString(), any(), any())).thenReturn(spAgr);
+        when(spAgr.setParameter(anyString(), any())).thenReturn(spAgr);
+        when(spAgr.execute()).thenReturn(true);
+        when(spAgr.getOutputParameterValue("OUTDATA")).thenReturn(rsAgr);
+        when(rsAgr.next()).thenReturn(true);
+        when(rsAgr.getObject("TRANSACTION_POID")).thenReturn(200L);
+        when(rsAgr.getString("AGREEMENT_ID")).thenReturn("AGR-200");
+        when(rsAgr.getString("AGREEMENT_TYPE")).thenReturn("MASTER");
+        when(rsAgr.getString("AGREEMENT_STATUS")).thenReturn("ACTIVE");
+        when(rsAgr.getObject("EFFECTIVE_DATE")).thenReturn(Date.valueOf(LocalDate.now()));
+        when(rsAgr.getObject("EXPIRY_DATE")).thenReturn(Date.valueOf(LocalDate.now().plusDays(1)));
+        when(rsAgr.getString("RENEWAL_CYCLE")).thenReturn("YEARLY");
+
+        LineProfileResponse out = service.getById(1L, 10L);
+
+        assertNotNull(out);
+        assertNotNull(out.getRegionDet());
+        assertEquals(1, out.getRegionDet().size());
+        assertNotNull(out.getLineDetails());
+        assertNotNull(out.getAgreementDetails());
     }
 
     @Test

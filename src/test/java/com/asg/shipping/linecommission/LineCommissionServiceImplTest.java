@@ -2,6 +2,7 @@ package com.asg.shipping.linecommission;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
@@ -25,6 +26,7 @@ import com.asg.shipping.linecommission.repository.ShipLineCommLocalDtlRepository
 import com.asg.shipping.linecommission.service.LineCommissionServiceImpl;
 import com.asg.shipping.linecommission.util.LineCommissionMapper;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -192,6 +195,20 @@ class LineCommissionServiceImplTest {
                 () -> service.getById(1L, 10L));
     }
 
+    @Test
+    void testGetById_TransactionPoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.getById(null, 10L));
+        assertTrue(ex.getMessage().contains("transactionPoid"));
+    }
+
+    @Test
+    void testGetById_GroupPoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.getById(1L, null));
+        assertTrue(ex.getMessage().contains("groupPoid"));
+    }
+
     // ---------------- CREATE ----------------
 
     @Test
@@ -232,6 +249,73 @@ class LineCommissionServiceImplTest {
         assertTrue(ex.getMessage().contains("overlaps"));
     }
 
+    @Test
+    void testCreate_InvalidPeriod() {
+        request.setPeriodFrom(LocalDate.now().plusDays(3));
+        request.setPeriodTo(LocalDate.now());
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.create(request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("periodFrom"));
+    }
+
+    @Test
+    void testCreate_DuplicateContainerTypeValidation() {
+        ContainerRateDto a = new ContainerRateDto();
+        a.setContainerTypePoid(10L);
+        ContainerRateDto b = new ContainerRateDto();
+        b.setContainerTypePoid(10L);
+        request.setContainerRates(List.of(a, b));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.create(request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("Duplicate container type"));
+    }
+
+    @Test
+    void testCreate_ContainerTypeMissingValidation() {
+        ContainerRateDto a = new ContainerRateDto();
+        a.setContainerTypePoid(null);
+        request.setContainerRates(List.of(a));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.create(request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("Container Type is required"));
+    }
+
+    @Test
+    void testCreate_SavesAllDetailCollections() {
+        LineCommissionServiceImpl spy = spy(service);
+        doNothing().when(spy).enrich(any(), any());
+
+        ContainerRateDto c = new ContainerRateDto();
+        c.setContainerTypePoid(10L);
+        request.setContainerRates(List.of(c));
+        request.setOtherRemunerations(List.of(new OtherRemunerationDto()));
+        LocalShareDto localShare = new LocalShareDto();
+        localShare.setChargePoid(99L);
+        request.setLocalShares(List.of(localShare));
+
+        ShipLineCommCntnrDtlEntity cnt = new ShipLineCommCntnrDtlEntity();
+        cnt.setDetRowId(1L);
+        ShipLineCommDtlEntity dtl = new ShipLineCommDtlEntity();
+        dtl.setDetRowId(1L);
+        ShipLineCommLocalDtlEntity local = new ShipLineCommLocalDtlEntity();
+        local.setDetRowId(1L);
+
+        when(hdrRepository.countOverlapping(any(), any(), any(), any(), any(), any())).thenReturn(0L);
+        when(mapper.toCreateHeaderEntity(request, 10L, 20L, "user1")).thenReturn(hdrEntity);
+        when(hdrRepository.saveAndFlush(hdrEntity)).thenReturn(hdrEntity);
+        doNothing().when(entityManager).refresh(hdrEntity);
+        when(mapper.toContainerEntities(anyLong(), any(), any())).thenReturn(List.of(cnt));
+        when(mapper.toOtherRemunerationEntities(anyLong(), any(), any())).thenReturn(List.of(dtl));
+        when(mapper.toLocalShareEntities(anyLong(), any(), any())).thenReturn(List.of(local));
+        when(cntnrRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(dtlRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(localRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(mapper.toResponse(any(), any(), any(), any())).thenReturn(response);
+
+        LineCommissionResponse created = spy.create(request, 10L, "user1", "DOC-1");
+        assertNotNull(created);
+    }
+
     // ---------------- UPDATE ----------------
 
     @Test
@@ -255,6 +339,163 @@ class LineCommissionServiceImplTest {
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> service.update(1L, request, 10L, "user1", "DOC-1"));
         assertTrue(ex.getMessage().contains("Duplicate container type"));
+    }
+
+    @Test
+    void testUpdate_TransactionPoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(null, request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("transactionPoid"));
+    }
+
+    @Test
+    void testUpdate_GroupPoidMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, request, null, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("groupPoid"));
+    }
+
+    @Test
+    void testUpdate_PeriodOverlap() {
+        when(hdrRepository.countOverlapping(any(), any(), any(), any(), any(), any())).thenReturn(1L);
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("overlaps"));
+    }
+
+    @Test
+    void testUpdate_ContainerRateUpdateMissingDetRow() {
+        ContainerRateDto dto = new ContainerRateDto();
+        dto.setActionType("isUpdated");
+        dto.setContainerTypePoid(10L);
+        request.setContainerRates(List.of(dto));
+        when(hdrRepository.countOverlapping(any(), any(), any(), any(), any(), any())).thenReturn(0L);
+        when(hdrRepository.findByTransactionPoidAndGroupPoid(1L, 10L)).thenReturn(Optional.of(hdrEntity));
+        when(hdrRepository.save(any())).thenReturn(hdrEntity);
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("detRowId is required"));
+    }
+
+    @Test
+    void testUpdate_ContainerRateDeleteNotFound() {
+        ContainerRateDto dto = new ContainerRateDto();
+        dto.setActionType("isDeleted");
+        dto.setDetRowId(99L);
+        dto.setContainerTypePoid(10L);
+        request.setContainerRates(List.of(dto));
+        when(hdrRepository.countOverlapping(any(), any(), any(), any(), any(), any())).thenReturn(0L);
+        when(hdrRepository.findByTransactionPoidAndGroupPoid(1L, 10L)).thenReturn(Optional.of(hdrEntity));
+        when(hdrRepository.save(any())).thenReturn(hdrEntity);
+        when(cntnrRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
+    }
+
+    @Test
+    void testUpdate_OtherRemunerationDeleteMissingDetRow() {
+        OtherRemunerationDto dto = new OtherRemunerationDto();
+        dto.setActionType("isDeleted");
+        request.setOtherRemunerations(List.of(dto));
+        when(hdrRepository.countOverlapping(any(), any(), any(), any(), any(), any())).thenReturn(0L);
+        when(hdrRepository.findByTransactionPoidAndGroupPoid(1L, 10L)).thenReturn(Optional.of(hdrEntity));
+        when(hdrRepository.save(any())).thenReturn(hdrEntity);
+        when(cntnrRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
+        assertTrue(ex.getMessage().contains("detRowId is required"));
+    }
+
+    @Test
+    void testUpdate_LocalShareUpdateNotFound() {
+        LocalShareDto dto = new LocalShareDto();
+        dto.setActionType("isUpdated");
+        dto.setDetRowId(88L);
+        dto.setChargePoid(11L);
+        request.setLocalShares(List.of(dto));
+        when(hdrRepository.countOverlapping(any(), any(), any(), any(), any(), any())).thenReturn(0L);
+        when(hdrRepository.findByTransactionPoidAndGroupPoid(1L, 10L)).thenReturn(Optional.of(hdrEntity));
+        when(hdrRepository.save(any())).thenReturn(hdrEntity);
+        when(cntnrRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+        when(dtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+        when(localRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
+    }
+
+    @Test
+    void testUpdate_DetailUpdateAndDeleteSuccess() {
+        LineCommissionServiceImpl spy = spy(service);
+        doNothing().when(spy).enrich(any(), any());
+
+        ContainerRateDto cUpd = new ContainerRateDto();
+        cUpd.setActionType("isUpdated");
+        cUpd.setDetRowId(1L);
+        cUpd.setContainerTypePoid(10L);
+        ContainerRateDto cDel = new ContainerRateDto();
+        cDel.setActionType("isDeleted");
+        cDel.setDetRowId(2L);
+        cDel.setContainerTypePoid(20L);
+        request.setContainerRates(List.of(cUpd, cDel));
+
+        OtherRemunerationDto oUpd = new OtherRemunerationDto();
+        oUpd.setActionType("isUpdated");
+        oUpd.setDetRowId(1L);
+        OtherRemunerationDto oDel = new OtherRemunerationDto();
+        oDel.setActionType("isDeleted");
+        oDel.setDetRowId(2L);
+        request.setOtherRemunerations(List.of(oUpd, oDel));
+
+        LocalShareDto lUpd = new LocalShareDto();
+        lUpd.setActionType("isUpdated");
+        lUpd.setDetRowId(1L);
+        lUpd.setChargePoid(30L);
+        LocalShareDto lDel = new LocalShareDto();
+        lDel.setActionType("isDeleted");
+        lDel.setDetRowId(2L);
+        lDel.setChargePoid(31L);
+        request.setLocalShares(List.of(lUpd, lDel));
+
+        ShipLineCommCntnrDtlEntity cnt1 = new ShipLineCommCntnrDtlEntity();
+        cnt1.setDetRowId(1L);
+        ShipLineCommCntnrDtlEntity cnt2 = new ShipLineCommCntnrDtlEntity();
+        cnt2.setDetRowId(2L);
+        ShipLineCommDtlEntity dt1 = new ShipLineCommDtlEntity();
+        dt1.setDetRowId(1L);
+        ShipLineCommDtlEntity dt2 = new ShipLineCommDtlEntity();
+        dt2.setDetRowId(2L);
+        ShipLineCommLocalDtlEntity lc1 = new ShipLineCommLocalDtlEntity();
+        lc1.setDetRowId(1L);
+        ShipLineCommLocalDtlEntity lc2 = new ShipLineCommLocalDtlEntity();
+        lc2.setDetRowId(2L);
+
+        when(hdrRepository.countOverlapping(any(), any(), any(), any(), any(), any())).thenReturn(0L);
+        when(hdrRepository.findByTransactionPoidAndGroupPoid(1L, 10L)).thenReturn(Optional.of(hdrEntity));
+        when(hdrRepository.save(any())).thenReturn(hdrEntity);
+        when(cntnrRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(cnt1, cnt2));
+        when(dtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(dt1, dt2));
+        when(localRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(lc1, lc2));
+        when(cntnrRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(dtlRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(localRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+        doNothing().when(cntnrRepository).deleteAll(any());
+        doNothing().when(dtlRepository).deleteAll(any());
+        doNothing().when(localRepository).deleteAll(any());
+        doNothing().when(mapper).applyUpdateHeader(any(), any(), any(), any());
+        doNothing().when(mapper).applyUpdateContainerEntity(any(), any(), any());
+        doNothing().when(mapper).applyUpdateOtherRemunerationEntity(any(), any(), any());
+        doNothing().when(mapper).applyUpdateLocalShareEntity(any(), any(), any());
+        when(mapper.toResponse(any(), any(), any(), any())).thenReturn(response);
+
+        LineCommissionResponse out = spy.update(1L, request, 10L, "user1", "DOC-1");
+        assertNotNull(out);
+        verify(cntnrRepository).deleteAll(any());
+        verify(dtlRepository).deleteAll(any());
+        verify(localRepository).deleteAll(any());
     }
 
     @Test
@@ -312,6 +553,27 @@ class LineCommissionServiceImplTest {
         ));
     }
 
+    @Test
+    void testDelete_TransactionMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.delete(null, 10L, "user1"));
+        assertTrue(ex.getMessage().contains("transactionPoid"));
+    }
+
+    @Test
+    void testDelete_GroupMissing() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.delete(1L, null, "user1"));
+        assertTrue(ex.getMessage().contains("groupPoid"));
+    }
+
+    @Test
+    void testDelete_NotFound() {
+        when(hdrRepository.findByTransactionPoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(1L, 10L, "user1"));
+    }
+
     // ---------------- LOAD CONTAINER TYPES ----------------
 
     @Test
@@ -341,6 +603,68 @@ class LineCommissionServiceImplTest {
                 () -> service.loadContainerTypes(1L, null, "user1")
         );
         assertTrue(ex.getMessage().contains("groupPoid"));
+    }
+
+    @Test
+    void testLoadContainerTypes_Success() {
+        var master = new com.asg.shipping.containertypes.entity.ShipContainerTypeMaster();
+        var dto = new com.asg.shipping.containertypes.dto.ContainerTypeDto();
+        when(lineTypeRepository.findContainerTypeMastersByLine(1L)).thenReturn(List.of(master));
+        when(mapper.toContainerTypeDtos(List.of(master))).thenReturn(List.of(dto));
+
+        var result = service.loadContainerTypes(1L, 10L, "user1");
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void testEnrich_FillsLovDetails() {
+        LineCommissionResponse r = new LineCommissionResponse();
+        r.setLinePoid(10L);
+        r.setCurrencyPoid(20L);
+        ContainerRateDto cr = new ContainerRateDto();
+        cr.setContainerTypePoid(30L);
+        r.setContainerRates(List.of(cr));
+        OtherRemunerationDto or = new OtherRemunerationDto();
+        or.setRemunerationPoid(40L);
+        or.setCurrencyPoid(20L);
+        r.setOtherRemunerations(List.of(or));
+        LocalShareDto ls = new LocalShareDto();
+        ls.setChargePoid(50L);
+        r.setLocalShares(List.of(ls));
+
+        Query q1 = org.mockito.Mockito.mock(Query.class);
+        Query q2 = org.mockito.Mockito.mock(Query.class);
+        Query q3 = org.mockito.Mockito.mock(Query.class);
+        Query q4 = org.mockito.Mockito.mock(Query.class);
+        Query q5 = org.mockito.Mockito.mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(q1, q2, q3, q4, q5);
+        when(q1.setParameter(anyString(), any())).thenReturn(q1);
+        when(q2.setParameter(anyString(), any())).thenReturn(q2);
+        when(q3.setParameter(anyString(), any())).thenReturn(q3);
+        when(q4.setParameter(anyString(), any())).thenReturn(q4);
+        when(q5.setParameter(anyString(), any())).thenReturn(q5);
+
+        when(q1.getResultList()).thenReturn(java.util.Collections.singletonList(new Object[]{10L, "L1", "Line One"}));
+        when(q2.getResultList()).thenReturn(java.util.Collections.singletonList(new Object[]{20L, "USD", "US Dollar"}));
+        when(q3.getResultList()).thenReturn(java.util.Collections.singletonList(new Object[]{30L, "20GP", "20GP-General"}));
+        when(q4.getResultList()).thenReturn(java.util.Collections.singletonList(new Object[]{50L, "CHG", "Charge"}));
+        when(q5.getResultList()).thenReturn(java.util.Collections.singletonList(new Object[]{40L, "REM", "Rem-IMP"}));
+
+        service.enrich(r, 10L);
+
+        assertNotNull(r.getLineDet());
+        assertNotNull(r.getCurrencyDet());
+        assertNotNull(r.getContainerRates().getFirst().getContainerTypeDet());
+        assertNotNull(r.getOtherRemunerations().getFirst().getRemunerationDet());
+        assertNotNull(r.getOtherRemunerations().getFirst().getCurrencyDet());
+        assertNotNull(r.getLocalShares().getFirst().getChargeDet());
+    }
+
+    @Test
+    void testEnrich_NullResponse_NoOp() {
+        assertDoesNotThrow(() -> service.enrich(null, 10L));
     }
 }
 

@@ -5,6 +5,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.containerinventorymovementupdate.dto.*;
 import com.asg.shipping.containerinventorymovementupdate.repository.jdbc.*;
 import com.asg.shipping.containerinventorymovementupdate.service.impl.CimuServiceImpl;
+import com.asg.shipping.containerinventorymovementupdate.util.ExcelInspectionParser;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -123,6 +124,42 @@ class CimuServiceImplTest {
         request.setContainerNo("CONT001");
 
         when(queryRepository.containerExistsInBl(any(), any())).thenReturn(true);
+        when(updateRepository.callProcShipCntInvtUpdate(
+                any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn("TRUE");
+
+        UpdateCimuResponse response = service.updateContainerData(request);
+
+        assertEquals("TRUE", response.getStatus());
+    }
+
+    @Test
+    void updateContainerData_applyAll_blankStatusDefaultsTrue() {
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setApplyToAllContainers(true);
+
+        when(updateRepository.callProcShipCntInvtUpdate(
+                any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(" ");
+
+        UpdateCimuResponse response = service.updateContainerData(request);
+
+        assertEquals("TRUE", response.getStatus());
+    }
+
+    @Test
+    void updateContainerData_holdReturnWithRights_success() {
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+        request.setHoldReturnForm(true);
+        request.setWithConsigneeFull("2025-01-01 10:00:00");
+        request.setEmptyIn("2025-01-02 10:00:00");
+        request.setActualDischargeDate("2025-01-03 10:00:00");
+
+        when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
+        when(rightsRepository.hasDocRight("000-248", 1L)).thenReturn(true);
         when(updateRepository.callProcShipCntInvtUpdate(
                 any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("TRUE");
@@ -286,6 +323,52 @@ class CimuServiceImplTest {
                 () -> service.importFile(file));
     }
 
+    @Test
+    void importFile_success() {
+        MockMultipartFile file =
+                new MockMultipartFile("file", "inspection.xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "dummy".getBytes());
+
+        ExcelInspectionRow row1 = ExcelInspectionRow.builder()
+                .containerNo("CONT001")
+                .otherColumns(Map.of(
+                        "MOVES DATE", "2025-01-01",
+                        "LINE NAME", "MAERSK",
+                        "SIZE/TYPE", "20GP",
+                        "LOCATION_STATUS", "YARD",
+                        "CONTAINER_STATUS", "SOUND",
+                        "REMARKS", "OK"))
+                .build();
+        ExcelInspectionRow row2 = ExcelInspectionRow.builder()
+                .containerNo("")
+                .otherColumns(Map.of("REMARKS", "skip"))
+                .build();
+
+        try (MockedStatic<ExcelInspectionParser> parserMock = Mockito.mockStatic(ExcelInspectionParser.class)) {
+            parserMock.when(() -> ExcelInspectionParser.parseFullExcelRows(any()))
+                    .thenReturn(List.of(row1, row2));
+
+            InspectionUploadResponse response = service.importFile(file);
+
+            assertNotNull(response.getUploadId());
+            assertEquals(2L, response.getRowCount());
+            verify(queryRepository).clearInspectionTempTable();
+            verify(queryRepository).insertInspectionTempTable(any(), eq("CONT001"), any(), any(), any(), any(), any(), any());
+        }
+    }
+
+    @Test
+    void importFile_noRowsInParsedFile() {
+        MockMultipartFile file =
+                new MockMultipartFile("file", "inspection.xlsx",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "dummy".getBytes());
+        try (MockedStatic<ExcelInspectionParser> parserMock = Mockito.mockStatic(ExcelInspectionParser.class)) {
+            parserMock.when(() -> ExcelInspectionParser.parseFullExcelRows(any()))
+                    .thenReturn(List.of());
+            assertThrows(ValidationException.class, () -> service.importFile(file));
+        }
+    }
+
     // ---------- loadContainerDetails ----------
 
     @Test
@@ -306,6 +389,19 @@ class CimuServiceImplTest {
         userContextMock.when(UserContext::getUserPoid).thenReturn(null);
 
         assertThrows(ValidationException.class, () -> service.loadContainerDetails());
+    }
+
+    @Test
+    void loadContainerDetails_usesDefaultsAndLoadedStatus() {
+        userContextMock.when(UserContext::getGroupPoid).thenReturn(null);
+        userContextMock.when(UserContext::getCompanyPoid).thenReturn(null);
+        when(updateRepository.callProcShCntInspectXlUpload(1L, 1L, 1L))
+                .thenReturn(Map.of("transactionPoid", "456", "status", "rows loaded"));
+
+        InspectionLoadResponse response = service.loadContainerDetails();
+
+        assertTrue(response.getSuccess());
+        assertEquals("456", response.getTransactionPoid());
     }
 }
 
