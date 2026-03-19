@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -18,6 +19,9 @@ import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionHdrRepository;
 import com.asg.shipping.shipcommisiontransfer.util.ShipCommissionTransferMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import oracle.jdbc.internal.OracleTypes;
@@ -54,6 +58,9 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     private final ShipCommissionTransferMapper mapper;
     private final JdbcTemplate jdbcTemplate;
     private final PdaFdaDtlRepository pdaFdaDtlRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -387,6 +394,74 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 .fdaAmount(entity.getFdaAmount())
                 .build()
         ).toList();
+    }
+
+    public List<Object[]> getCommissionByVoyage(Long voyageTransactionPoid, Long transactionPoid) {
+
+        return fetchShipCommissionRecords(
+                UserContext.getGroupPoid(),        // loginGroupPoid (set default या session से लो)
+                UserContext.getCompanyPoid(),        // loginCompanyPoid
+                UserContext.getUserPoid(),        // loginUserPoid
+                UserContext.getDocumentId(),      // docId
+                transactionPoid,      // transactionPoid
+                voyageTransactionPoid,
+                1.0,       // exchange
+                "ALL",     // recordType
+                0.0,       // frtBuyActual
+                "N"        // shortLegSelected
+        );
+    }
+
+
+    @Transactional
+    @SuppressWarnings("unchecked")
+    private  List<Object[]> fetchShipCommissionRecords(
+            Long loginGroupPoid,
+            Long loginCompanyPoid,
+            Long loginUserPoid,
+            String docId,
+            Long transactionPoid,
+            Long voyageTransactionPoid,
+            Double exchange,
+            String recordType,
+            Double frtBuyActual,
+            String shortLegSelected
+    ) {
+
+        StoredProcedureQuery query = entityManager
+                .createStoredProcedureQuery("QA_DB_USER.PROC_SHIP_COMMISSION_RECORD_FETCH");
+
+        // Register IN params
+        query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_DOC_ID", String.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_TRANSACTION_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_EXCHANGE", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_RECORD_TYPE", String.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_FRT_BUY_ACTUAL", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_SHORT_LEG_SELECTED", String.class, jakarta.persistence.ParameterMode.IN);
+
+        // Register OUT cursor
+        query.registerStoredProcedureParameter("OUTDATA", void.class, jakarta.persistence.ParameterMode.REF_CURSOR);
+
+        // Set values
+        query.setParameter("P_LOGIN_GROUP_POID", loginGroupPoid);
+        query.setParameter("P_LOGIN_COMPANY_POID", loginCompanyPoid);
+        query.setParameter("P_LOGIN_USER_POID", loginUserPoid);
+        query.setParameter("P_DOC_ID", docId);
+        query.setParameter("P_TRANSACTION_POID", transactionPoid);
+        query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoid);
+        query.setParameter("P_EXCHANGE", exchange);
+        query.setParameter("P_RECORD_TYPE", recordType);
+        query.setParameter("P_FRT_BUY_ACTUAL", frtBuyActual);
+        query.setParameter("P_SHORT_LEG_SELECTED", shortLegSelected);
+
+        // Execute
+        query.execute();
+
+        return query.getResultList();
     }
 
     /**

@@ -23,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.asg.shipping.common.ApiResponse.internalServerError;
@@ -170,6 +171,19 @@ public class ShipCommissionTransferController {
 
         try {
             var result = commissionTransferService.getPdaFdaDetails(transactionPoid);
+            return success("Data fetched successfully", result);
+        } catch (Exception e) {
+            return internalServerError("Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{voyageId}")
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    public ResponseEntity<?>  getCommission(
+            @PathVariable Long voyageId, @RequestParam(required = false) Long transactionId) {
+
+        try {
+            List<Object[]>  result = commissionTransferService.getCommissionByVoyage(voyageId, transactionId);
             return success("Data fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Error: " + e.getMessage());
