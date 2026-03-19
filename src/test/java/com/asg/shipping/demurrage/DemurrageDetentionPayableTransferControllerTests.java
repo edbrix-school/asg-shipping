@@ -86,7 +86,7 @@ class DemurrageDetentionPayableTransferControllerTests {
         result.put("records", new Object[]{});
         result.put("totalElements", 0);
 
-        when(service.searchDemurrageDetentionPayableTransfer(any(), any(), any()))
+        when(service.searchDemurrageDetentionPayableTransfer(any(), any(), any(), any(), any()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/v1/demurrage-detention-payable-transfer/search")

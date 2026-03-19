@@ -12,9 +12,9 @@ import java.util.Map;
 public interface DemurrageDetentionPayableTransferService {
 
     /**
-     * Search/list Demurrage/Detention Payable Transfer records
+     * Search/list Demurrage/Detention Payable Transfer records with date range
      */
-    Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, FilterRequestDto request, java.time.LocalDate startDate, java.time.LocalDate endDate, org.springframework.data.domain.Pageable pageable);
 
     /**
      * Get a single Demurrage/Detention Payable Transfer record by ID

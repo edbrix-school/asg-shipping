@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
@@ -41,10 +42,12 @@ public class DemurrageDetentionPayableTransferController {
     @PostMapping("/search")
     public ResponseEntity<?> searchDemurrageDetentionPayableTransfer(
             @RequestBody FilterRequestDto request,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate,
             @PageableDefault(size = 20) Pageable pageable) {
         log.info("Search request for demurrage detention payable transfer");
         String docId = "100-151";
-        Map<String, Object> result = service.searchDemurrageDetentionPayableTransfer(docId, request, pageable);
+        Map<String, Object> result = service.searchDemurrageDetentionPayableTransfer(docId, request, startDate, endDate, pageable);
         return ApiResponse.success("Demurrage/Detention Payable Transfer records retrieved successfully", result);
     }
 
