@@ -18,8 +18,6 @@ import com.asg.shipping.demurragedetentionpayabletransfer.repository.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.util.DemurrageDetentionPayableTransferMapper;
 import com.asg.shipping.exceptions.ValidationException;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.ParameterMode;
-import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -62,13 +60,13 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info("Searching demurrage/detention payable transfer records with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
-
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
+        
         // Filter out any filters with null searchField to prevent NullPointerException
         if (filters != null) {
             filters = filters.stream()
@@ -82,8 +80,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 operator,
                 pageable,
                 isDeleted,
-                "DOC_REF",
-                "TRANSACTION_POID"
+                "TRANSACTION_POID",
+                "DOC_REF"
         );
 
         Page<Map<String, Object>> page = new PageImpl<>(
@@ -91,7 +89,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 pageable,
                 raw.totalRecords()
         );
-
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
@@ -119,6 +116,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         dto.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
 
         enrichLovData(dto);
+
 
 
         log.info("Successfully retrieved demurrage/detention payable transfer with id: {}", id);
@@ -451,7 +449,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             );
         }
     }
-
     public Map<String, Object> loadBillwiseDataBeforeCreate(LoadBillwiseRequestDTO request) {
         log.info("Loading bill-wise data before create for {} containers", request.getSelectedContainers().size());
 
@@ -610,7 +607,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         log.info("Successfully loaded bill-wise settlement data for id: {}", id);
         return result;
     }
-
     private void validateCreateDTO(DemurrageDetentionPayableTransferCreateDTO dto, Long companyPoid, Long groupPoid) {
         if (dto.getLinePoid() == null) {
             throw new ValidationException("Line POID is required");
@@ -665,7 +661,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                                      List<DemurrageDetentionTransferDetailDto> transferDetails,
                                      List<DemurrageDetentionTransferBillDetailDto> billDetails) {
         String docId = "100-151";
-
+        
         // Create transfer details
         if (transferDetails != null && !transferDetails.isEmpty()) {
             Long maxDetRowId = transferDtlRepository.getMaxDetRowId(transactionPoid);
@@ -677,7 +673,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 detail.setDetRowId(currentDetRowId);
                 detail.setTransactionPoid(transactionPoid);
                 ShipDemDetnTransferDtl saved = transferDtlRepository.save(detail);
-
+                
                 // Log child table create
                 String logDetail = String.format("Row Created on Demurrage Detention Transfer Detail with detRowId: %s", saved.getDetRowId());
                 loggingService.createLogSummaryEntry(docId, transactionPoid.toString(), logDetail);
@@ -695,7 +691,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 detail.setDetRowId(currentDetRowId);
                 detail.setTransactionPoid(transactionPoid);
                 ShipDemDtnTransferBillDtl saved = billDtlRepository.save(detail);
-
+                
                 // Log child table create
                 String logDetail = String.format("Row Created on Demurrage Detention Bill Detail with detRowId: %s", saved.getDetRowId());
                 loggingService.createLogSummaryEntry(docId, transactionPoid.toString(), logDetail);
@@ -715,7 +711,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         // Log deletions
         existingTransferDetails.forEach(deleted -> loggingService.logDelete(deleted, docId, transactionPoid.toString()));
         existingBillDetails.forEach(deleted -> loggingService.logDelete(deleted, docId, transactionPoid.toString()));
-
+        
         // Delete existing details
         transferDtlRepository.deleteByTransactionPoid(transactionPoid);
         billDtlRepository.deleteByTransactionPoid(transactionPoid);
