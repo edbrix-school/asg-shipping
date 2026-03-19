@@ -3,6 +3,7 @@ package com.asg.shipping.shipcommisiontransfer.controller;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
@@ -145,5 +146,33 @@ public class ShipCommissionTransferController {
         log.info("Insert PDA commission request | transactionPoid={}, actionRequested={}", transactionPoid, actionRequested);
         Map<String, Object> result = commissionTransferService.insertPdaCommission(transactionPoid);
         return success("Commission data inserted into PDA successfully", result);
+    }
+
+    @GetMapping("/voyage/{voyageId}")
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    public ResponseEntity<?> getVoyageCurrency(@PathVariable Long voyageId) {
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        try {
+            var result = commissionTransferService.getCurrencyExchangeForVoyage(groupPoid,companyPoid,userPoid,voyageId);
+            return success("Currency exchange fetched successfully", result);
+        } catch (Exception e) {
+            return internalServerError("Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/pda-fda-details/{transactionPoid}")
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    public ResponseEntity<?> getPdaFdaDetails(@PathVariable Long transactionPoid) {
+
+        try {
+            var result = commissionTransferService.getPdaFdaDetails(transactionPoid);
+            return success("Data fetched successfully", result);
+        } catch (Exception e) {
+            return internalServerError("Error: " + e.getMessage());
+        }
     }
 }

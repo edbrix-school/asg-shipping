@@ -9,6 +9,9 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.shipcommisiontransfer.dto.PdaFdaDtlResponseDTO;
+import com.asg.shipping.shipcommisiontransfer.entity.PdaFdaDtl;
+import com.asg.shipping.shipcommisiontransfer.repository.PdaFdaDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.dto.*;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionDtl;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
@@ -17,6 +20,7 @@ import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionHdrRepo
 import com.asg.shipping.shipcommisiontransfer.util.ShipCommissionTransferMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import oracle.jdbc.internal.OracleTypes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
+import java.sql.ResultSet;
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -48,6 +53,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     private final LoggingService loggingService;
     private final ShipCommissionTransferMapper mapper;
     private final JdbcTemplate jdbcTemplate;
+    private final PdaFdaDtlRepository pdaFdaDtlRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -324,6 +330,63 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         response.put("message", result);
 
         return response;
+    }
+
+
+    public Map<String, String> getCurrencyExchangeForVoyage(
+            Long groupPoid,
+            Long companyPoid,
+            Long userPoid,
+            Long voyageId
+    ) {
+
+        String sql = "{call PROC_LOV_AFTER_BRWS_300_103(?, ?, ?, ?, ?, ?, ?, ?)}";
+        Map<String, String> result = new HashMap<>();
+
+        jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+
+            try {
+                cs.setLong(1, groupPoid);
+                cs.setLong(2, companyPoid);
+                cs.setLong(3, userPoid);
+                cs.setString(4, "100-152");              // DOC_ID
+                cs.setLong(5, 0);                        // not used
+                cs.setString(6, "VESSAL_VOYAGE");        // LOV_NAME
+                cs.setString(7, String.valueOf(voyageId));
+                cs.registerOutParameter(8, OracleTypes.CURSOR);
+
+                cs.execute();
+
+                ResultSet rs = (ResultSet) cs.getObject(8);
+
+                if (rs != null && rs.next()) { // 👈 only first row
+                    result.put("currencyCode", rs.getString("CURRENCY_CODE"));
+                    result.put("exchangeRate", rs.getString("CURRENCY_EXCHANGE"));
+                }
+
+            } catch (Exception e) {
+                log.error("Error fetching currency exchange: ", e);
+            }
+
+            return result;
+        });
+
+        return result;
+    }
+
+    public List<PdaFdaDtlResponseDTO> getPdaFdaDetails(Long transactionPoid) {
+
+        List<PdaFdaDtl> list = pdaFdaDtlRepository.findByIdTransactionPoid(transactionPoid);
+
+        return list.stream().map(entity -> PdaFdaDtlResponseDTO.builder()
+                .detRowId(entity.getId().getDetRowId())
+                .charge(entity.getChargePoid())
+                .currencyCode(entity.getCurrencyCode())
+                .currencyRate(entity.getCurrencyRate())
+                .remarks(entity.getRemarks())
+                .fdaAmount(entity.getFdaAmount())
+                .build()
+        ).toList();
     }
 
     /**
