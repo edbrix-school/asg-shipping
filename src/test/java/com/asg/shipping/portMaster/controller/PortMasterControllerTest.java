@@ -29,7 +29,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.portMaster.dto.PortMasterRequest;
 import com.asg.shipping.portMaster.dto.PortMasterResponse;
 import com.asg.shipping.portMaster.service.PortMasterService;
@@ -46,7 +48,7 @@ class PortMasterControllerTest {
 	private PortMasterService service;
 
 	@Mock
-	private com.asg.common.lib.service.LoggingService loggingService;
+	private LoggingService loggingService;
 
 	@InjectMocks
 	private PortMasterController controller;
@@ -65,7 +67,9 @@ class PortMasterControllerTest {
 
 	@AfterEach
 	void tearDown() {
-		mockedUserContext.close();
+		if (mockedUserContext != null) {
+			mockedUserContext.close();
+		}
 	}
 
 	@Test
@@ -107,6 +111,7 @@ class PortMasterControllerTest {
 		mockMvc.perform(get("/v1/port-master/1").param("groupPoid", "1001")).andExpect(status().isOk());
 
 		verify(service).getPortById(eq(1001L), eq(1L));
+		verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.VIEWED), eq("DOC123"), eq("1"));
 	}
 
 	@Test
@@ -117,12 +122,25 @@ class PortMasterControllerTest {
 		Map<String, Object> responseMap = Map.of("content", List.of(createMockResponse()), "totalElements", 1,
 				"totalPages", 1);
 
-		when(service.getAllPorts(eq("DOC123"), eq(filters), any(Pageable.class))).thenReturn(responseMap);
+		when(service.getAllPorts(eq("DOC123"), any(), any(Pageable.class))).thenReturn(responseMap);
 
 		mockMvc.perform(post("/v1/port-master/list").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(filters))).andExpect(status().isOk());
 
-		verify(service).getAllPorts(eq("DOC123"), eq(filters), any(Pageable.class));
+		verify(service).getAllPorts(eq("DOC123"), any(), any(Pageable.class));
+	}
+	
+	@Test
+	void getAllPorts_NullFilters_Success() throws Exception {
+
+		Map<String, Object> responseMap = Map.of("content", List.of(), "totalElements", 0, "totalPages", 0);
+
+		when(service.getAllPorts(eq("DOC123"), eq(null), any(Pageable.class))).thenReturn(responseMap);
+
+		mockMvc.perform(post("/v1/port-master/list").contentType(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk());
+
+		verify(service).getAllPorts(eq("DOC123"), eq(null), any(Pageable.class));
 	}
 
 	@Test
@@ -132,6 +150,7 @@ class PortMasterControllerTest {
 				.andExpect(status().isOk());
 
 		verify(service).deletePort(eq(1001L), eq(1L), eq("admin"));
+		verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.DELETED), eq("DOC123"), eq("1"));
 	}
 
 	private PortMasterRequest createMockRequest() {
