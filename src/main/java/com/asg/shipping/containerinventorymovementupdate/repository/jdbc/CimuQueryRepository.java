@@ -4,8 +4,8 @@ package com.asg.shipping.containerinventorymovementupdate.repository.jdbc;
 
 import com.asg.shipping.containerinventorymovementupdate.dto.ContainerHistoryRowDto;
 import com.asg.shipping.containerinventorymovementupdate.dto.ContainerInfoDto;
-import com.asg.shipping.importManifestUpdate.respository.ShipBlManifestContainerDtlRepository;
-import com.asg.shipping.importManifestUpdate.respository.ShipBlManifestHdrRepository;
+import com.asg.shipping.importmanifestupdate.respository.ShipBlManifestContainerDtlRepository;
+import com.asg.shipping.importmanifestupdate.respository.ShipBlManifestHdrRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
