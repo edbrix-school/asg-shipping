@@ -7,8 +7,6 @@ import com.asg.shipping.exportManifestBl.dto.ExportManifestBlUpdateDto;
 import com.asg.shipping.exportManifestBl.entity.ExportManifestBlHdr;
 import org.springframework.stereotype.Component;
 
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
-
 @Component
 public class ExportManifestBlMapper {
 
@@ -198,7 +196,23 @@ public class ExportManifestBlMapper {
                 .blType("EXPORT") // Always set to EXPORT for Export Manifest
                 .cargoType(dto.getCargoType())
                 .doNo(dto.getDoNo())
+                .demFreeDays(dto.getDemFreeDays())
                 .blIssueType(dto.getBlIssueType())
+                .blOrginalPrint(dto.getBlOrginalPrint())
+                .blOrginalDate(dto.getBlOrginalDate())
+                .blPrintedBy(dto.getBlPrintedBy())
+                .releasedStatus(dto.getReleasedStatus())
+                .releasedDate(dto.getReleasedDate())
+                .relasedToPerson(dto.getRelasedToPerson())
+                .relasedIdPerson(dto.getRelasedIdPerson())
+                .relasedAddrsPerson(dto.getRelasedAddrsPerson())
+                .relasedBy(dto.getRelasedBy())
+                .openDaysAfter(dto.getOpenDaysAfter())
+                .releasedType(dto.getReleasedType())
+                .relasedSeqno(dto.getRelasedSeqno())
+                .releasedGrantBy(dto.getReleasedGrantBy())
+                .releasedGrantDate(dto.getReleasedGrantDate())
+                .releasedGrantReason(dto.getReleasedGrantReason())
                 .shipperEdiName(dto.getShipperEdiName())
                 .shipperEdiAddress(dto.getShipperEdiAddress())
                 .consigneeEdiName(dto.getConsigneeEdiName())
@@ -231,6 +245,8 @@ public class ExportManifestBlMapper {
                 .agentPoid(dto.getAgentPoid())
                 .ffJobNoHold(dto.getFfJobNoHold())
                 .issueManualInvoice(dto.getIssueManualInvoice())
+                .manifestEmailVerified(dto.getManifestEmailVerified())
+                .emailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC())
                 .doPriority(dto.getDoPriority())
                 .doIssueAuth(dto.getDoIssueAuth())
                 .doIssueAuthPoid(dto.getDoIssueAuthPoid())
@@ -382,6 +398,62 @@ public class ExportManifestBlMapper {
         }
         if (dto.getBlIssueType() != null) {
             entity.setBlIssueType(dto.getBlIssueType());
+        }
+
+        // Header fields that were missing in UPDATE mapping
+        if (dto.getDemFreeDays() != null) {
+            entity.setDemFreeDays(dto.getDemFreeDays());
+        }
+        if (dto.getBlOrginalPrint() != null) {
+            entity.setBlOrginalPrint(dto.getBlOrginalPrint());
+        }
+        if (dto.getBlOrginalDate() != null) {
+            entity.setBlOrginalDate(dto.getBlOrginalDate());
+        }
+        if (dto.getBlPrintedBy() != null) {
+            entity.setBlPrintedBy(dto.getBlPrintedBy());
+        }
+        if (dto.getReleasedStatus() != null) {
+            entity.setReleasedStatus(dto.getReleasedStatus());
+        }
+        if (dto.getReleasedDate() != null) {
+            entity.setReleasedDate(dto.getReleasedDate());
+        }
+        if (dto.getRelasedToPerson() != null) {
+            entity.setRelasedToPerson(dto.getRelasedToPerson());
+        }
+        if (dto.getRelasedIdPerson() != null) {
+            entity.setRelasedIdPerson(dto.getRelasedIdPerson());
+        }
+        if (dto.getRelasedAddrsPerson() != null) {
+            entity.setRelasedAddrsPerson(dto.getRelasedAddrsPerson());
+        }
+        if (dto.getRelasedBy() != null) {
+            entity.setRelasedBy(dto.getRelasedBy());
+        }
+        if (dto.getOpenDaysAfter() != null) {
+            entity.setOpenDaysAfter(dto.getOpenDaysAfter());
+        }
+        if (dto.getReleasedType() != null) {
+            entity.setReleasedType(dto.getReleasedType());
+        }
+        if (dto.getRelasedSeqno() != null) {
+            entity.setRelasedSeqno(dto.getRelasedSeqno());
+        }
+        if (dto.getReleasedGrantBy() != null) {
+            entity.setReleasedGrantBy(dto.getReleasedGrantBy());
+        }
+        if (dto.getReleasedGrantDate() != null) {
+            entity.setReleasedGrantDate(dto.getReleasedGrantDate());
+        }
+        if (dto.getReleasedGrantReason() != null) {
+            entity.setReleasedGrantReason(dto.getReleasedGrantReason());
+        }
+        if (dto.getManifestEmailVerified() != null) {
+            entity.setManifestEmailVerified(dto.getManifestEmailVerified());
+        }
+        if (dto.getEmailVerifiedWithSpecialC() != null) {
+            entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
         }
         // EDI fields
         if (dto.getShipperEdiName() != null) {
