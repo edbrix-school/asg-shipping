@@ -141,9 +141,9 @@ public class CollectionHandoverController {
                             "attachment; filename=collection-handover-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
-        } catch (Exception e) {
+        } catch (com.asg.shipping.exceptions.CustomException e) {
             log.error("Failed to generate PDF for Collection Handover: {}", transactionPoid, e);
-            return error("Failed to generate PDF: " + e.getMessage(), 500);
+            return error("Failed to generate PDF: " + e.getMessage(), e.getCode());
         }
     }
 

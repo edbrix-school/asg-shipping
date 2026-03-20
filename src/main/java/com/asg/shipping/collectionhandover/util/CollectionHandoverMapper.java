@@ -7,7 +7,6 @@ import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Mapper utility for converting between Entity and DTO
@@ -49,7 +48,7 @@ public class CollectionHandoverMapper {
         if (detailList != null) {
             dto.setDetails(detailList.stream()
                     .map(this::mapDetailToDto)
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         return dto;
@@ -74,7 +73,7 @@ public class CollectionHandoverMapper {
     /**
      * Map CreateDTO to Header Entity
      */
-    public void mapCreateDTOToEntity(CollectionHandoverCreateDTO dto, ArShDayEndCloseHdr entity, Long groupPoid, Long userPoid) {
+    public void mapCreateDTOToEntity(CollectionHandoverCreateDTO dto, ArShDayEndCloseHdr entity, Long groupPoid) {
         entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : DateUtil.getCurrentDateInUserTimeZone());
         entity.setCompanyPoid(dto.getCompanyPoid());
         entity.setGroupPoid(groupPoid);
@@ -96,7 +95,7 @@ public class CollectionHandoverMapper {
     /**
      * Map UpdateDTO to Header Entity
      */
-    public void mapUpdateDTOToEntity(CollectionHandoverUpdateDTO dto, ArShDayEndCloseHdr entity, Long groupPoid, Long userPoid) {
+    public void mapUpdateDTOToEntity(CollectionHandoverUpdateDTO dto, ArShDayEndCloseHdr entity) {
         if (dto.getDocRef() != null) {
             entity.setDocRef(dto.getDocRef());
         }

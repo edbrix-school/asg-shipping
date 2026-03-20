@@ -31,13 +31,14 @@ public class VoyageBillsRepository {
 
         StringBuilder where = new StringBuilder(" WHERE TRANSACTION_POID = :voyagePoid ");
 
-        if (filter != null && filter != VoyageBlFilter.ALL) {
+        if (filter != null) {
             switch (filter) {
                 case EXPORT -> where.append(" AND BL_TYPE LIKE '%EXPORT%' ");
                 case IMPORT -> where.append(" AND BL_TYPE NOT LIKE '%EXPORT%' ");
                 case REFFER -> where.append(" AND NVL(IS_REFFER,'N') = 'Y' ");
                 case IMCO -> where.append(" AND NVL(IS_IMCO,'N') = 'Y' ");
-                default -> {
+                case ALL -> {
+                    // no-op
                 }
             }
         }
