@@ -2,10 +2,10 @@ package com.asg.shipping.agentMasterTest.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.shipping.agentMaster.controller.ShipAgentMasterController;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterRequestDto;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterResponseDto;
-import com.asg.shipping.agentMaster.service.ShipAgentMasterService;
+import com.asg.shipping.agentmaster.controller.ShipAgentMasterController;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterRequestDto;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterResponseDto;
+import com.asg.shipping.agentmaster.service.ShipAgentMasterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

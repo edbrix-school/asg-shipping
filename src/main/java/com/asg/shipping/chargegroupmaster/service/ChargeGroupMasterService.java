@@ -1,8 +1,8 @@
-package com.asg.shipping.chargeGroupMaster.service;
+package com.asg.shipping.chargegroupmaster.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterRequestDto;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterResponseDto;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterRequestDto;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterResponseDto;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Map;

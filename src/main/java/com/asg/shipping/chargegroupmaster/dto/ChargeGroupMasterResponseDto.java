@@ -1,4 +1,4 @@
-package com.asg.shipping.chargeGroupMaster.dto;
+package com.asg.shipping.chargegroupmaster.dto;
 
 import lombok.*;
 

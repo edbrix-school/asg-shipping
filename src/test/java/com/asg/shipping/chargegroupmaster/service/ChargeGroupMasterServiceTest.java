@@ -1,4 +1,4 @@
-package com.asg.shipping.chargeGroupMaster.service;
+package com.asg.shipping.chargegroupmaster.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -7,10 +7,10 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterRequestDto;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterResponseDto;
-import com.asg.shipping.chargeGroupMaster.entity.ShipChargeGroupMaster;
-import com.asg.shipping.chargeGroupMaster.repository.ShipChargeGroupMasterRepository;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterRequestDto;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterResponseDto;
+import com.asg.shipping.chargegroupmaster.entity.ShipChargeGroupMaster;
+import com.asg.shipping.chargegroupmaster.repository.ShipChargeGroupMasterRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

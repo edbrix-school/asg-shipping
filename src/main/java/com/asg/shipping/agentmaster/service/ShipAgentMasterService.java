@@ -1,7 +1,7 @@
-package com.asg.shipping.agentMaster.service;
+package com.asg.shipping.agentmaster.service;
 
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterRequestDto;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterResponseDto;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterRequestDto;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterResponseDto;
 
 import java.util.Map;
 

@@ -1,4 +1,4 @@
-package com.asg.shipping.chargeGroupMaster.entity;
+package com.asg.shipping.chargegroupmaster.entity;
 
 
 import com.asg.common.lib.entity.BaseEntity;
@@ -7,8 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor

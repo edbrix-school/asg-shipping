@@ -1,4 +1,4 @@
-package com.asg.shipping.chargeGroupMaster.dto;
+package com.asg.shipping.chargegroupmaster.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -17,7 +17,7 @@ public class ChargeGroupMasterRequestDto {
     private String chargeGroupName;
 
     private String chargeGroupName2;
-    //private String glPrefix;
+
     private Long chargeGlPayable;
     private Long chargeGlSale;
     private Long chargeGlCostSale;

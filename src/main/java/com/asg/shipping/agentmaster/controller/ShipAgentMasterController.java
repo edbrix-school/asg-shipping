@@ -1,4 +1,4 @@
-package com.asg.shipping.agentMaster.controller;
+package com.asg.shipping.agentmaster.controller;
 
 
 import com.asg.common.lib.annotation.AllowedAction;
@@ -6,10 +6,9 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.security.util.UserContext;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterRequestDto;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterResponseDto;
-import com.asg.shipping.agentMaster.service.ShipAgentMasterService;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterRequestDto;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterResponseDto;
+import com.asg.shipping.agentmaster.service.ShipAgentMasterService;
 import com.asg.shipping.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

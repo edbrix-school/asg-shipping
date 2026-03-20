@@ -1,13 +1,13 @@
-package com.asg.shipping.chargeGroupMaster.controller;
+package com.asg.shipping.chargegroupmaster.controller;
 
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterRequestDto;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterResponseDto;
-import com.asg.shipping.chargeGroupMaster.service.ChargeGroupMasterService;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterRequestDto;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterResponseDto;
+import com.asg.shipping.chargegroupmaster.service.ChargeGroupMasterService;
 import com.asg.shipping.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

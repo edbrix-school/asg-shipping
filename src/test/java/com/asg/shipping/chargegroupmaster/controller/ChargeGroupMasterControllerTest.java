@@ -1,11 +1,10 @@
-package com.asg.shipping.chargeGroupMaster.controller;
+package com.asg.shipping.chargegroupmaster.controller;
 
 
-import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterRequestDto;
-import com.asg.shipping.chargeGroupMaster.dto.ChargeGroupMasterResponseDto;
-import com.asg.shipping.chargeGroupMaster.service.ChargeGroupMasterService;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterRequestDto;
+import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterResponseDto;
+import com.asg.shipping.chargegroupmaster.service.ChargeGroupMasterService;
 import com.asg.shipping.exceptions.GlobalExceptionHandler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,8 +19,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
