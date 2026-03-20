@@ -1,4 +1,4 @@
-package com.asg.shipping.agentMaster.service;
+package com.asg.shipping.agentmaster.service;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -8,10 +8,10 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterRequestDto;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterResponseDto;
-import com.asg.shipping.agentMaster.entity.ShipAgentMasterEntity;
-import com.asg.shipping.agentMaster.repository.ShipAgentMasterRepository;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterRequestDto;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterResponseDto;
+import com.asg.shipping.agentmaster.entity.ShipAgentMasterEntity;
+import com.asg.shipping.agentmaster.repository.ShipAgentMasterRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +35,8 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
     private final DocumentSearchService documentService;
     private final LoggingService loggingService;
 
+    private static final String AGENT_NOT_FOUND_MSG = "Agent not found with";
+    private static final String AGENT_POID_FIELD = "agentPoid";
 
     @Override
     public ShipAgentMasterResponseDto createAgentMaster(ShipAgentMasterRequestDto request) {
@@ -74,7 +76,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         log.info("Updating agent master with id: {}", agentPoid);
 
         ShipAgentMasterEntity entity = repository.findById(agentPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Agent not found with","AgentPoid",agentPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(AGENT_NOT_FOUND_MSG,AGENT_POID_FIELD,agentPoid));
 
         ShipAgentMasterEntity oldEntity = new ShipAgentMasterEntity();
         BeanUtils.copyProperties(entity, oldEntity);
@@ -109,7 +111,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         log.info("Getting agent master with id: {}", agentPoid);
         ShipAgentMasterResponseDto response = repository.findById(agentPoid)
                 .map(this::mapToResponse)
-                .orElseThrow(() -> new ResourceNotFoundException("Agent not found with","AgentPoid",agentPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(AGENT_NOT_FOUND_MSG,AGENT_POID_FIELD,agentPoid));
 
         log.debug("View action logged for agent master id: {}", agentPoid);
 
@@ -123,7 +125,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         log.info("Deleting agent master with id: {}", agentPoid);
 
         ShipAgentMasterEntity entity = repository.findById(agentPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Agent not found with","AgentPoid",agentPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(AGENT_NOT_FOUND_MSG,AGENT_POID_FIELD,agentPoid));
 
         if ("Y".equals(entity.getDeleted())) {
             log.info("Agent master with id: {} is already deleted", agentPoid);

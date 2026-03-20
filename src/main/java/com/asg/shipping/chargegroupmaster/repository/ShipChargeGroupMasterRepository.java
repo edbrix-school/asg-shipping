@@ -1,6 +1,6 @@
-package com.asg.shipping.chargeGroupMaster.repository;
+package com.asg.shipping.chargegroupmaster.repository;
 
-import com.asg.shipping.chargeGroupMaster.entity.ShipChargeGroupMaster;
+import com.asg.shipping.chargegroupmaster.entity.ShipChargeGroupMaster;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

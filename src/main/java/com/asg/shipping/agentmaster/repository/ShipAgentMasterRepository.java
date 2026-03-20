@@ -1,6 +1,6 @@
-package com.asg.shipping.agentMaster.repository;
+package com.asg.shipping.agentmaster.repository;
 
-import com.asg.shipping.agentMaster.entity.ShipAgentMasterEntity;
+import com.asg.shipping.agentmaster.entity.ShipAgentMasterEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

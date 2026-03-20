@@ -1,4 +1,4 @@
-package com.asg.shipping.agentMaster.entity;
+package com.asg.shipping.agentmaster.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -6,8 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Data
 @Builder
