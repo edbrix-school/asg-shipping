@@ -1,9 +1,9 @@
 package com.asg.shipping.exportManifestBl.dto;
 
-import com.asg.shipping.importManifestUpdate.dto.CargoDescriptionRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ChargeRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ContainerRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.GeneralCargoRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

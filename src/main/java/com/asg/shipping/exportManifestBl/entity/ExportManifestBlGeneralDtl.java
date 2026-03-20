@@ -1,14 +1,12 @@
 package com.asg.shipping.exportManifestBl.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
-import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_BL_MANIFEST_GENERAL_DTL")

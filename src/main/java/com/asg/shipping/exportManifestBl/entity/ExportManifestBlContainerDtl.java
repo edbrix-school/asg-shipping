@@ -1,7 +1,7 @@
 package com.asg.shipping.exportManifestBl.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
-import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;

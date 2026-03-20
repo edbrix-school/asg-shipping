@@ -1,9 +1,9 @@
 package com.asg.shipping.importManifestUpdateTest.util;
 
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.shipping.importManifestUpdate.dto.*;
-import com.asg.shipping.importManifestUpdate.entity.*;
-import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
+import com.asg.shipping.importmanifestupdate.dto.*;
+import com.asg.shipping.importmanifestupdate.entity.*;
+import com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

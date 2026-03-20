@@ -1,7 +1,7 @@
 package com.asg.shipping.exportManifestBl.repository;
 
 import com.asg.shipping.exportManifestBl.entity.ExportManifestBlChargesDtl;
-import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
