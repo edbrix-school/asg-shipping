@@ -1,4 +1,4 @@
-package com.asg.shipping.MafiTrailerDateUpdateForm.repository;
+package com.asg.shipping.mafitrailerdateupdateform.repository;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -10,8 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtlId;
+import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
+import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtlId;
 
 @Repository
 public interface ShipBlMafiDtlRepository

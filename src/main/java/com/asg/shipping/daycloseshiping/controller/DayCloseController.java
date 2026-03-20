@@ -1,4 +1,4 @@
-package com.asg.shipping.dayCloseShiping.controller;
+package com.asg.shipping.daycloseshiping.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
@@ -7,10 +7,10 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjection;
-import com.asg.shipping.dayCloseShiping.service.DayCloseService;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseHdrDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseSummaryProjection;
+import com.asg.shipping.daycloseshiping.service.DayCloseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -61,9 +61,6 @@ public class DayCloseController {
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @GetMapping("/new")
     @Operation(summary = "Get new Day Close data", description = "Fetch pending day close date and consolidated cash/cheque summary", security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "New day Close data fetched successfully", content = @Content(schema = @Schema(implementation = DayCloseHdrDto.class))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")})
     public ResponseEntity<?> getNewDayClose(
             @Parameter(description = "Transaction Date", example = "2025-07-06") @RequestParam(name = "transactionDate") String transactionDate) {
 
@@ -87,10 +84,6 @@ public class DayCloseController {
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @PostMapping
     @Operation(summary = "Create Day Close", description = "Create Day Close header and denomination details", security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Day Close created successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")})
     public ResponseEntity<?> createdayClose(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Day close details to be created", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = DayCloseDto.class))) @Valid @RequestBody DayCloseDto request) {
         Long groupPoid = request.getHeader().getGroupPoid();
@@ -102,10 +95,6 @@ public class DayCloseController {
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @PutMapping("/update/{transactionPoid}")
     @Operation(summary = "Save Day Close", description = "Save Day Close header and denomination details", security = @SecurityRequirement(name = "bearerAuth"))
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Day Close updated successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")})
     public ResponseEntity<?> updateDayClose(
             @Parameter(description = "Day Close Transaction POID", example = "100023") @PathVariable(name = "transactionPoid") Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Day close details to be updated", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = DayCloseDto.class))) @Valid @RequestBody DayCloseDto request) {

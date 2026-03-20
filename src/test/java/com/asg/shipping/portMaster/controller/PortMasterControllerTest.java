@@ -1,4 +1,4 @@
-package com.asg.shipping.portMaster.controller;
+package com.asg.shipping.portmaster.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -32,9 +32,9 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.portMaster.dto.PortMasterRequest;
-import com.asg.shipping.portMaster.dto.PortMasterResponse;
-import com.asg.shipping.portMaster.service.PortMasterService;
+import com.asg.shipping.portmaster.dto.PortMasterRequest;
+import com.asg.shipping.portmaster.dto.PortMasterResponse;
+import com.asg.shipping.portmaster.service.PortMasterService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)

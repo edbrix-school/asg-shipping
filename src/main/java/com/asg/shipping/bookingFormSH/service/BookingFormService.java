@@ -1,13 +1,13 @@
-package com.asg.shipping.bookingFormSH.service;
+package com.asg.shipping.bookingformsh.service;
 
 import java.util.Map;
 
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
-import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
-import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingformsh.dto.BookingFormCreateDTO;
+import com.asg.shipping.bookingformsh.dto.BookingFormDto;
+import com.asg.shipping.bookingformsh.dto.BookingFormUpdateDTO;
 
 /**
  * Service interface for Booking Form operations

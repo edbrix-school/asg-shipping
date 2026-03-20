@@ -1,12 +1,12 @@
-package com.asg.shipping.portMaster.service;
+package com.asg.shipping.portmaster.service;
 
 import java.util.Map;
 
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.portMaster.dto.PortMasterRequest;
-import com.asg.shipping.portMaster.dto.PortMasterResponse;
+import com.asg.shipping.portmaster.dto.PortMasterRequest;
+import com.asg.shipping.portmaster.dto.PortMasterResponse;
 
 public interface PortMasterService {
 

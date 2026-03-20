@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingFormSH.repository;
+package com.asg.shipping.bookingformsh.repository;
 
 import java.util.Optional;
 
@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
+import com.asg.shipping.bookingformsh.entity.ShipMateHdr;
 
 /**
  * Repository for ShipMateHdr entity

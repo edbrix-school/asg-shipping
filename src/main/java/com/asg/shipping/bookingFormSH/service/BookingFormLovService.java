@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingFormSH.service;
+package com.asg.shipping.bookingformsh.service;
 
 import java.util.List;
 

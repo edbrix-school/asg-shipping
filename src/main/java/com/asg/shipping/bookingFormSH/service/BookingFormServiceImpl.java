@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingFormSH.service;
+package com.asg.shipping.bookingformsh.service;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -10,16 +10,17 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.bookingFormSH.dto.*;
-import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
-import com.asg.shipping.bookingFormSH.repository.ShipMateCargoDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateChargesDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
-import com.asg.shipping.bookingFormSH.util.BookingFormMapper;
+import com.asg.shipping.bookingformsh.dto.*;
+import com.asg.shipping.bookingformsh.entity.ShipMateCargoDtl;
+import com.asg.shipping.bookingformsh.entity.ShipMateChargesDtl;
+import com.asg.shipping.bookingformsh.entity.ShipMateContainerDtl;
+import com.asg.shipping.bookingformsh.entity.ShipMateHdr;
+import com.asg.shipping.bookingformsh.repository.ShipMateCargoDtlRepository;
+import com.asg.shipping.bookingformsh.repository.ShipMateChargesDtlRepository;
+import com.asg.shipping.bookingformsh.repository.ShipMateContainerDtlRepository;
+import com.asg.shipping.bookingformsh.repository.ShipMateHdrRepository;
+import com.asg.shipping.bookingformsh.util.BookingFormMapper;
+import com.asg.shipping.bookingformsh.util.TriConsumer;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -44,10 +45,11 @@ import java.sql.CallableStatement;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -66,6 +68,13 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
+
+    private static final String ISCREATED = "ISCREATED";
+    private static final String ISUPDATED = "ISUPDATED";
+    private static final String ISDELETED = "ISDELETED";
+    private static final String ALLOCATESPLITBOOKING = "ALLOCATESPLITBOOKING";
+    private static final String TRANSACTIONPOID = "transactionPoid";
+    private static final String BOOKINGFORM = "Booking Form";
 
     @Override
     @Transactional(readOnly = true)
@@ -95,10 +104,10 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         ShipMateHdr entity = headerRepository
                 .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking Form", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Booking Form", "transactionPoid", id.toString());
+            throw new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString());
         }
 
         // Load detail tables
@@ -146,7 +155,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         // Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save (for split booking allocation)
         Long userPoid = UserContext.getUserPoid();
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, entity.getTransactionPoid(), null, "ALLOCATESPLITBOOKING",
+        callProcShipBlPageSaveAfter(groupPoid, companyPoid, entity.getTransactionPoid(), null, ALLOCATESPLITBOOKING,
                 userPoid);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), entity.toString());
 
@@ -164,10 +173,10 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         ShipMateHdr existingData = headerRepository
                 .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking Form", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
         if ("Y".equals(existingData.getDeleted())) {
-            throw new ResourceNotFoundException("Booking Form", "transactionPoid", id.toString());
+            throw new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString());
         }
 
         // Validate LINE_POID and MATE relationship before save
@@ -210,7 +219,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         // Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save
         Long userPoid = UserContext.getUserPoid();
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, id, null, "ALLOCATESPLITBOOKING", userPoid);
+        callProcShipBlPageSaveAfter(groupPoid, companyPoid, id, null, ALLOCATESPLITBOOKING, userPoid);
         String key = id.toString();
         String docId = UserContext.getDocumentId();
         loggingService.logChanges(oldSnapshot, entity, ShipMateHdr.class, docId, key, LogDetailsEnum.MODIFIED,
@@ -227,7 +236,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         ShipMateHdr entity = headerRepository
                 .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking Form", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
         entity.setDeleted("Y");
         entity.setLastModifiedBy(getCurrentUser());
@@ -432,7 +441,6 @@ public class BookingFormServiceImpl implements BookingFormService {
     /**
      * Call PROC_SHIP_BL_PAGE_SAVE_AFTER stored procedure
      */
-    @Transactional
     private void callProcShipBlPageSaveAfter(Long groupPoid, Long companyPoid, Long transactionPoid,
                                              Long splitBookingNo, String actionType, Long userPoid) {
         try {
@@ -443,7 +451,7 @@ public class BookingFormServiceImpl implements BookingFormService {
                 cs.setLong(2, companyPoid);
                 cs.setObject(3, splitBookingNo != null ? splitBookingNo : transactionPoid);
                 cs.setObject(4, splitBookingNo != null ? transactionPoid : null);
-                cs.setString(5, actionType != null ? actionType : "ALLOCATESPLITBOOKING");
+                cs.setString(5, actionType != null ? actionType : ALLOCATESPLITBOOKING);
                 cs.setLong(6, userPoid);
                 cs.execute();
                 cs.close();
@@ -458,209 +466,162 @@ public class BookingFormServiceImpl implements BookingFormService {
     /**
      * Save detail tables
      */
-    private void saveDetailTables(Long transactionPoid, List<BookingFormCargoDetailDto> cargoDetails,
-                                  List<BookingFormChargesDetailDto> chargesDetails, List<BookingFormContainerDetailDto> containerDetails) {
+
+    private <D, E> void processDetails(
+            Long transactionPoid,
+            List<D> dtos,
+            Long maxDetRowId,
+            Function<D, String> actionExtractor,
+            Function<D, Long> rowIdExtractor,
+            BiFunction<D, Long, E> createMapper,
+            TriConsumer<D, E, Long> updateMapper,
+            BiFunction<Long, Long, Optional<E>> fetchExisting,
+            Function<List<E>, List<E>> saveAll,
+            BiConsumer<Long, List<Long>> deleteAll,
+            Function<E, Long> entityRowId,
+            String logPrefix
+    ) {
+
+        if (dtos == null || dtos.isEmpty()) return;
 
         String docId = UserContext.getDocumentId();
-        String docKeyPoid = transactionPoid.toString();
+        String docKey = transactionPoid.toString();
 
-        /* -------------------- CARGO DETAILS -------------------- */
+        List<E> toSave = new ArrayList<>();
+        List<E> toUpdate = new ArrayList<>();
+        List<Long> toDelete = new ArrayList<>();
+        List<LogRequestDto<E>> logRequests = new ArrayList<>();
 
-        if (cargoDetails != null && !cargoDetails.isEmpty()) {
+        for (D dto : dtos) {
 
-            Long maxDetRowId = cargoDtlRepository.getMaxDetRowId(transactionPoid);
+            String action = actionExtractor.apply(dto).toUpperCase();
+            Long rowId = rowIdExtractor.apply(dto);
 
-            List<ShipMateCargoDtl> toSave = new ArrayList<>();
-            List<ShipMateCargoDtl> toUpdate = new ArrayList<>();
-            List<Long> toDelete = new ArrayList<>();
-            List<LogRequestDto<ShipMateCargoDtl>> logRequests = new ArrayList<>();
+            switch (action) {
 
-            for (BookingFormCargoDetailDto dto : cargoDetails) {
-
-                String action = dto.getAction().toUpperCase();
-
-                switch (action) {
-
-                    case "ISCREATED":
-                        ShipMateCargoDtl newEntity = BookingFormMapper.mapCargoDtlFromDto(dto, transactionPoid);
-                        newEntity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
-                        toSave.add(newEntity);
-                        break;
-
-
-                    case "ISUPDATED":
-                        ShipMateCargoDtl existingData = cargoDtlRepository
-                                .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
-                                .orElseThrow(() -> new ValidationException(
-                                        "Cargo detail not found for detRowId: " + dto.getDetRowId()));
-
-                        ShipMateCargoDtl oldEntity = new ShipMateCargoDtl();
-                        BeanUtils.copyProperties(existingData, oldEntity);
-
-                        ShipMateCargoDtl existing = new ShipMateCargoDtl();
-                        BeanUtils.copyProperties(existingData, existing);
-
-                        mapCargoDtlFromDto(dto, existing, transactionPoid);
-
-                        toUpdate.add(existing);
-
-                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateCargoDtl.class, docId, docKeyPoid,
-                                "CARGO DET_ROW_ID: " + dto.getDetRowId()));
-                        break;
-
-                    case "ISDELETED":
-                        toDelete.add(dto.getDetRowId());
-                        loggingService.logDelete(dto, docId, docKeyPoid);
-                        break;
+                case ISCREATED -> {
+                    E entity = createMapper.apply(dto, transactionPoid);
+                    setRowId(entity, rowId != null ? rowId : ++maxDetRowId);
+                    toSave.add(entity);
                 }
-            }
 
-            if (!toSave.isEmpty()) {
-                List<ShipMateCargoDtl> saved = cargoDtlRepository.saveAll(toSave);
-                saved.forEach(e -> loggingService.createLogSummaryEntry(docId, docKeyPoid,
-                        "Cargo detail created with detRowId: " + e.getDetRowId()));
-            }
+                case ISUPDATED -> {
+                    E existingData = fetchExisting.apply(transactionPoid, rowId)
+                            .orElseThrow(() -> new ValidationException(
+                                    logPrefix + " detail not found for detRowId: " + rowId));
 
-            if (!toUpdate.isEmpty()) {
-                cargoDtlRepository.saveAll(toUpdate);
-                if (!logRequests.isEmpty()) {
-                    loggingService.createLogBatch(logRequests);
+                    E oldEntity = cloneEntity(existingData);
+                    E updated = cloneEntity(existingData);
+
+                    updateMapper.accept(dto, updated, transactionPoid);
+                    toUpdate.add(updated);
+
+                    logRequests.add(new LogRequestDto<>(
+                            oldEntity, updated, (Class<E>) updated.getClass(),
+                            docId, docKey,
+                            logPrefix + " DET_ROW_ID: " + rowId
+                    ));
                 }
-            }
 
-            if (!toDelete.isEmpty()) {
-                cargoDtlRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
-            }
-
-        }
-
-        /* -------------------- CHARGES DETAILS -------------------- */
-
-        if (chargesDetails != null && !chargesDetails.isEmpty()) {
-
-            Long maxDetRowId = chargesDtlRepository.getMaxDetRowId(transactionPoid);
-
-            List<ShipMateChargesDtl> toSave = new ArrayList<>();
-            List<ShipMateChargesDtl> toUpdate = new ArrayList<>();
-            List<Long> toDelete = new ArrayList<>();
-            List<LogRequestDto<ShipMateChargesDtl>> logRequests = new ArrayList<>();
-
-            for (BookingFormChargesDetailDto dto : chargesDetails) {
-
-                String action = dto.getAction().toUpperCase();
-
-                switch (action) {
-
-                    case "ISCREATED":
-                        ShipMateChargesDtl entity = BookingFormMapper.mapChargesDtlFromDto(dto, transactionPoid);
-                        entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
-                        toSave.add(entity);
-                        break;
-
-                    case "ISUPDATED":
-                        ShipMateChargesDtl existingData = chargesDtlRepository
-                                .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
-                                .orElseThrow(() -> new ValidationException(
-                                        "Charges detail not found for detRowId: " + dto.getDetRowId()));
-                        ShipMateChargesDtl oldEntity = new ShipMateChargesDtl();
-                        BeanUtils.copyProperties(existingData, oldEntity);
-
-                        ShipMateChargesDtl existing = new ShipMateChargesDtl();
-                        BeanUtils.copyProperties(existingData, existing);
-
-                        mapChargesDtlFromDto(dto, existing, transactionPoid);
-                        toUpdate.add(existing);
-                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateChargesDtl.class, docId,
-                                docKeyPoid, "CHARGES DET_ROW_ID: " + dto.getDetRowId()));
-                        break;
-
-                    case "ISDELETED":
-                        toDelete.add(dto.getDetRowId());
-                        loggingService.logDelete(dto, docId, docKeyPoid);
-                        break;
+                case ISDELETED -> {
+                    toDelete.add(rowId);
+                    loggingService.logDelete(dto, docId, docKey);
                 }
-            }
 
-            if (!toSave.isEmpty()) {
-                List<ShipMateChargesDtl> saved = chargesDtlRepository.saveAll(toSave);
-                saved.forEach(e -> loggingService.createLogSummaryEntry(docId, docKeyPoid,
-                        "charges detail created with detRowId: " + e.getDetRowId()));
-            }
-
-            if (!toUpdate.isEmpty()) {
-                chargesDtlRepository.saveAll(toUpdate);
-                if (!logRequests.isEmpty()) {
-                    loggingService.createLogBatch(logRequests);
-                }
-            }
-
-            if (!toDelete.isEmpty()) {
-                chargesDtlRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
+                default -> throw new ValidationException("Invalid action: " + action);
             }
         }
 
-        /* -------------------- CONTAINER DETAILS -------------------- */
+        if (!toSave.isEmpty()) {
+            List<E> saved = saveAll.apply(toSave);
+            saved.forEach(e -> loggingService.createLogSummaryEntry(
+                    docId, docKey,
+                    logPrefix + " detail created with detRowId: " + entityRowId.apply(e)
+            ));
+        }
 
-        if (containerDetails != null && !containerDetails.isEmpty()) {
-
-            Long maxDetRowId = containerDtlRepository.getMaxDetRowId(transactionPoid);
-
-            List<ShipMateContainerDtl> toSave = new ArrayList<>();
-            List<ShipMateContainerDtl> toUpdate = new ArrayList<>();
-            List<Long> toDelete = new ArrayList<>();
-            List<LogRequestDto<ShipMateContainerDtl>> logRequests = new ArrayList<>();
-
-            for (BookingFormContainerDetailDto dto : containerDetails) {
-
-                String action = dto.getAction().toUpperCase();
-
-                switch (action) {
-
-                    case "ISCREATED":
-                        ShipMateContainerDtl entity = BookingFormMapper.mapContainerDtlFromDto(dto, transactionPoid);
-                        entity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : ++maxDetRowId);
-                        toSave.add(entity);
-                        break;
-
-                    case "ISUPDATED":
-                        ShipMateContainerDtl existingData = containerDtlRepository
-                                .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
-                                .orElseThrow(() -> new ValidationException(
-                                        "Container detail not found for detRowId: " + dto.getDetRowId()));
-                        ShipMateContainerDtl oldEntity = new ShipMateContainerDtl();
-                        BeanUtils.copyProperties(existingData, oldEntity);
-
-                        ShipMateContainerDtl existing = new ShipMateContainerDtl();
-                        BeanUtils.copyProperties(existingData, existing);
-
-                        mapContainerDtlFromDto(dto, existing, transactionPoid);
-                        toUpdate.add(existing);
-                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipMateContainerDtl.class, docId,
-                                docKeyPoid, "CONTAINER DET_ROW_ID: " + dto.getDetRowId()));
-                        break;
-
-                    case "ISDELETED":
-                        toDelete.add(dto.getDetRowId());
-                        loggingService.logDelete(dto, docId, docKeyPoid);
-                        break;
-                }
+        if (!toUpdate.isEmpty()) {
+            saveAll.apply(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
             }
+        }
 
-            if (!toSave.isEmpty()) {
-                List<ShipMateContainerDtl> saved = containerDtlRepository.saveAll(toSave);
-                saved.forEach(e -> loggingService.createLogSummaryEntry(docId, docKeyPoid,
-                        "container detail created with detRowId: " + e.getDetRowId()));
-            }
-            if (!toUpdate.isEmpty()) {
-                containerDtlRepository.saveAll(toUpdate);
-                if (!logRequests.isEmpty()) {
-                    loggingService.createLogBatch(logRequests);
-                }
-            }
+        if (!toDelete.isEmpty()) {
+            deleteAll.accept(transactionPoid, toDelete);
+        }
+    }
 
-            if (!toDelete.isEmpty()) {
-                containerDtlRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
-            }
+    private void saveDetailTables(
+            Long transactionPoid,
+            List<BookingFormCargoDetailDto> cargoDetails,
+            List<BookingFormChargesDetailDto> chargesDetails,
+            List<BookingFormContainerDetailDto> containerDetails) {
+
+        /* -------------------- CARGO -------------------- */
+        processDetails(
+                transactionPoid,
+                cargoDetails,
+                cargoDtlRepository.getMaxDetRowId(transactionPoid),
+                BookingFormCargoDetailDto::getAction,
+                BookingFormCargoDetailDto::getDetRowId,
+                BookingFormMapper::mapCargoDtlFromDto,
+                this::mapCargoDtlFromDto,
+                cargoDtlRepository::findByTransactionPoidAndDetRowId,
+                cargoDtlRepository::saveAll,
+                cargoDtlRepository::deleteByTransactionPoidAndDetRowIdIn,
+                ShipMateCargoDtl::getDetRowId,
+                "Cargo"
+        );
+
+        /* -------------------- CHARGES -------------------- */
+        processDetails(
+                transactionPoid,
+                chargesDetails,
+                chargesDtlRepository.getMaxDetRowId(transactionPoid),
+                BookingFormChargesDetailDto::getAction,
+                BookingFormChargesDetailDto::getDetRowId,
+                BookingFormMapper::mapChargesDtlFromDto,
+                this::mapChargesDtlFromDto,
+                chargesDtlRepository::findByTransactionPoidAndDetRowId,
+                chargesDtlRepository::saveAll,
+                chargesDtlRepository::deleteByTransactionPoidAndDetRowIdIn,
+                ShipMateChargesDtl::getDetRowId,
+                "charges"
+        );
+
+        /* -------------------- CONTAINER -------------------- */
+        processDetails(
+                transactionPoid,
+                containerDetails,
+                containerDtlRepository.getMaxDetRowId(transactionPoid),
+                BookingFormContainerDetailDto::getAction,
+                BookingFormContainerDetailDto::getDetRowId,
+                BookingFormMapper::mapContainerDtlFromDto,
+                this::mapContainerDtlFromDto,
+                containerDtlRepository::findByTransactionPoidAndDetRowId,
+                containerDtlRepository::saveAll,
+                containerDtlRepository::deleteByTransactionPoidAndDetRowIdIn,
+                ShipMateContainerDtl::getDetRowId,
+                "container"
+        );
+    }
+
+    private <E> E cloneEntity(E source) {
+        try {
+            E target = (E) source.getClass().getDeclaredConstructor().newInstance();
+            BeanUtils.copyProperties(source, target);
+            return target;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Clone failed", e);
+        }
+    }
+
+    private <E> void setRowId(E entity, Long rowId) {
+        try {
+            entity.getClass().getMethod("setDetRowId", Long.class).invoke(entity, rowId);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to set detRowId", e);
         }
     }
 
@@ -792,71 +753,54 @@ public class BookingFormServiceImpl implements BookingFormService {
         return entity;
     }
 
-
     private void enrichLovDetails(BookingFormDto dto) {
-        if (dto.getQuotationTransactionPoid() != null) {
-            lovService.getQuotaionLov(dto.getQuotationTransactionPoid()).stream().findFirst()
-                    .ifPresent(dto::setQuotationTransactionPoidDet);
-        }
-        if (dto.getVesselPoid() != null) {
-            lovService.getVesselMasterLov(dto.getVesselPoid()).stream().findFirst().ifPresent(dto::setVesselPoidDet);
-        }
-        if (dto.getLinePoid() != null) {
-            lovService.getLineMasterLov(dto.getLinePoid()).stream().findFirst().ifPresent(dto::setLinePoidDet);
-        }
-        if (dto.getSalesmanPoid() != null) {
-            lovService.getSalesmanLov(dto.getSalesmanPoid()).stream().findFirst().ifPresent(dto::setSalesmanPoidDet);
-        }
-        if (dto.getComodityPoid() != null) {
-            lovService.getCommodityMasterLov(dto.getComodityPoid()).stream().findFirst()
-                    .ifPresent(dto::setComodityPoidDet);
-        }
-        if (dto.getPlaceOfRecieptPoid() != null) {
-            lovService.getPortMasterLov(dto.getPlaceOfRecieptPoid()).stream().findFirst()
-                    .ifPresent(dto::setPlaceOfRecieptPoidDet);
-        }
-        if (dto.getPlaceOfDelieveryPoid() != null) {
-            lovService.getPortMasterLov(dto.getPlaceOfDelieveryPoid()).stream().findFirst()
-                    .ifPresent(dto::setPlaceOfDelieveryPoidDet);
-        }
-        if (dto.getPortOfLoadingPoid() != null) {
-            lovService.getPortMasterLov(dto.getPortOfLoadingPoid()).stream().findFirst()
-                    .ifPresent(dto::setPortOfLoadingPoidDet);
-        }
-        if (dto.getPortOfDischargePoid() != null) {
-            lovService.getPortMasterLov(dto.getPortOfDischargePoid()).stream().findFirst()
-                    .ifPresent(dto::setPortOfDischargePoidDet);
-        }
-        if (dto.getMateLoadVoyagePoid() != null) {
-            lovService.getVoyageMasterLov(dto.getMateLoadVoyagePoid()).stream().findFirst()
-                    .ifPresent(dto::setMateLoadVoyagePoidDet);
-        }
 
-        if (dto.getChargesDetails() != null) {
-            dto.getChargesDetails().forEach(charge -> {
-                if (charge.getChargePoid() != null) {
-                    lovService.getChargeMasterLov(charge.getChargePoid()).stream().findFirst()
-                            .ifPresent(charge::setChargePoidDet);
-                }
-                if (charge.getPaidAtPortPoid() != null) {
-                    lovService.getPortMasterLov(charge.getPaidAtPortPoid()).stream().findFirst()
-                            .ifPresent(charge::setPaidAtPortPoidDet);
-                }
-            });
-        }
-        if (dto.getContainerDetails() != null) {
-            dto.getContainerDetails().forEach(container -> {
-                if (container.getComodityPoid() != null) {
-                    lovService.getCommodityMasterLov(container.getComodityPoid()).stream().findFirst()
-                            .ifPresent(container::setComodityPoidDet);
-                }
-                if (container.getDestinationPortPoid() != null) {
-                    lovService.getPortMasterLov(container.getDestinationPortPoid()).stream().findFirst()
-                            .ifPresent(container::setDestinationPortPoidDet);
+        setLov(dto.getQuotationTransactionPoid(), lovService::getQuotaionLov, dto::setQuotationTransactionPoidDet);
+        setLov(dto.getVesselPoid(), lovService::getVesselMasterLov, dto::setVesselPoidDet);
+        setLov(dto.getLinePoid(), lovService::getLineMasterLov, dto::setLinePoidDet);
+        setLov(dto.getSalesmanPoid(), lovService::getSalesmanLov, dto::setSalesmanPoidDet);
+        setLov(dto.getComodityPoid(), lovService::getCommodityMasterLov, dto::setComodityPoidDet);
 
-                }
-            });
+        setLov(dto.getPlaceOfRecieptPoid(), lovService::getPortMasterLov, dto::setPlaceOfRecieptPoidDet);
+        setLov(dto.getPlaceOfDelieveryPoid(), lovService::getPortMasterLov, dto::setPlaceOfDelieveryPoidDet);
+        setLov(dto.getPortOfLoadingPoid(), lovService::getPortMasterLov, dto::setPortOfLoadingPoidDet);
+        setLov(dto.getPortOfDischargePoid(), lovService::getPortMasterLov, dto::setPortOfDischargePoidDet);
+
+        setLov(dto.getMateLoadVoyagePoid(), lovService::getVoyageMasterLov, dto::setMateLoadVoyagePoidDet);
+
+        enrichChargeDetails(dto);
+        enrichContainerDetails(dto);
+    }
+
+    private <T> void setLov(
+            Long poid,
+            Function<Long, List<T>> lovFetcher,
+            Consumer<T> setter) {
+
+        if (poid != null) {
+            lovFetcher.apply(poid)
+                    .stream()
+                    .findFirst()
+                    .ifPresent(setter);
         }
+    }
+
+    private void enrichChargeDetails(BookingFormDto dto) {
+        if (dto.getChargesDetails() == null) return;
+
+        dto.getChargesDetails().forEach(charge -> {
+            setLov(charge.getChargePoid(), lovService::getChargeMasterLov, charge::setChargePoidDet);
+            setLov(charge.getPaidAtPortPoid(), lovService::getPortMasterLov, charge::setPaidAtPortPoidDet);
+        });
+    }
+
+    private void enrichContainerDetails(BookingFormDto dto) {
+        if (dto.getContainerDetails() == null) return;
+
+        dto.getContainerDetails().forEach(container -> {
+            setLov(container.getComodityPoid(), lovService::getCommodityMasterLov, container::setComodityPoidDet);
+            setLov(container.getDestinationPortPoid(), lovService::getPortMasterLov, container::setDestinationPortPoidDet);
+        });
     }
 
     @Override

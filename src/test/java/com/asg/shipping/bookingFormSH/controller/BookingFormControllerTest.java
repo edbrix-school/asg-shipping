@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingFormSH.controller;
+package com.asg.shipping.bookingformsh.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
@@ -6,10 +6,10 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
-import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
-import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
-import com.asg.shipping.bookingFormSH.service.BookingFormService;
+import com.asg.shipping.bookingformsh.dto.BookingFormCreateDTO;
+import com.asg.shipping.bookingformsh.dto.BookingFormDto;
+import com.asg.shipping.bookingformsh.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingformsh.service.BookingFormService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

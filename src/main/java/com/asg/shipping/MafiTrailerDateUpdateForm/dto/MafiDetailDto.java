@@ -1,4 +1,4 @@
-package com.asg.shipping.MafiTrailerDateUpdateForm.dto;
+package com.asg.shipping.mafitrailerdateupdateform.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,7 +15,6 @@ public class MafiDetailDto {
 	private Long transactionPoid;
 	private Long detRowId;
 	private Long blPoid;
-//	private Map<String, Object> blDetail;
 	private String mafiRef;
 	private BigDecimal mafiSize;
 	private BigDecimal mafiFreeDays;

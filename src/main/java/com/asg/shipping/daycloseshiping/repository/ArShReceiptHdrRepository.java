@@ -1,7 +1,7 @@
-package com.asg.shipping.dayCloseShiping.repository;
+package com.asg.shipping.daycloseshiping.repository;
 
-import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjection;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjectionImpl;
+import com.asg.shipping.daycloseshiping.dto.DayCloseSummaryProjection;
+import com.asg.shipping.daycloseshiping.dto.DayCloseSummaryProjectionImpl;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -96,8 +96,6 @@ public class ArShReceiptHdrRepository {
 
         Object[] row = result.get(0);
         LocalDate transactionDate = null;
-        System.err.println("Result Row:" + row.length);
-        for (Object o : row) System.err.println(o);
         if (row[4] != null) {
             if (row[4] instanceof java.time.LocalDateTime ldt) {
                 transactionDate = ldt.toLocalDate();

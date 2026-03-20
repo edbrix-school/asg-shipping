@@ -1,17 +1,4 @@
-package com.asg.shipping.portMaster.service;
-
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import org.springframework.beans.BeanUtils;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+package com.asg.shipping.portmaster.service;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -21,19 +8,28 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
 import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.portMaster.dto.PortMasterRequest;
-import com.asg.shipping.portMaster.dto.PortMasterResponse;
-import com.asg.shipping.portMaster.entity.PortMaster;
-import com.asg.shipping.portMaster.entity.PortMasterId;
-import com.asg.shipping.portMaster.repository.PortMasterRepository;
+import com.asg.shipping.portmaster.dto.PortMasterRequest;
+import com.asg.shipping.portmaster.dto.PortMasterResponse;
+import com.asg.shipping.portmaster.entity.PortMaster;
+import com.asg.shipping.portmaster.entity.PortMasterId;
+import com.asg.shipping.portmaster.repository.PortMasterRepository;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -45,16 +41,18 @@ public class PortMasterServiceImpl implements PortMasterService {
 	private final DocumentSearchService documentService;
 	private final ShipTradeLaneService tradeLaneService;
 	private final LoggingService loggingService;
+    
+    private static final String PORT_NOT_FOUND="Port not found";
 
 	@Override
 	public Map<String, Object> createPort(Long groupPoid, PortMasterRequest request, String userId) {
 
 		repository.findByGroupPoidAndPortCode(groupPoid, request.getPortCode()).ifPresent(p -> {
-			throw new RuntimeException("Port Code already exists");
+			throw new IllegalArgumentException("Port Code already exists");
 		});
 
 		repository.findByGroupPoidAndPortName(groupPoid, request.getPortName()).ifPresent(p -> {
-			throw new RuntimeException("Port Name already exists");
+			throw new IllegalStateException("Port Name already exists");
 		});
 
 		PortMaster entity = new PortMaster();
@@ -81,7 +79,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	public PortMasterResponse updatePort(Long groupPoid, Long portPoid, PortMasterRequest request, String userId) {
 
 		PortMaster existingData = repository.findById(new PortMasterId(groupPoid, portPoid))
-				.orElseThrow(() -> new RuntimeException("Port not found"));
+				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
 		
 		PortMaster entity =new PortMaster();
 		BeanUtils.copyProperties(existingData, entity);
@@ -90,7 +88,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 			repository.findByPortCode(request.getPortCode())
 					.filter(pm -> !Objects.equals(pm.getPortPoid(), entity.getPortPoid())).ifPresent(pm -> {
-						throw new RuntimeException("PortCode already exists");
+						throw new IllegalArgumentException("Port Code already exists");
 					});
 
 			entity.setPortCode(request.getPortCode());
@@ -100,7 +98,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 			repository.findByPortName(request.getPortName())
 					.filter(pm -> !Objects.equals(pm.getPortPoid(), entity.getPortPoid())).ifPresent(pm -> {
-						throw new RuntimeException("PortName already exists");
+						throw new IllegalArgumentException("Port Name already exists");
 					});
 
 			entity.setPortName(request.getPortName());
@@ -128,7 +126,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	@Override
 	public PortMasterResponse getPortById(Long groupPoid, Long portPoid) {
 
-		PortMaster entity=repository.findById(new PortMasterId(groupPoid, portPoid)).orElseThrow(() -> new RuntimeException("Port not found"));
+		PortMaster entity=repository.findById(new PortMasterId(groupPoid, portPoid)).orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
 		
 		ShipTradelaneResponse tradeLaneResponse=tradeLaneService.getById(entity.getTradelanePoid());
 		
@@ -141,10 +139,10 @@ public class PortMasterServiceImpl implements PortMasterService {
 	@Override
 	public void deletePort(Long groupPoid, Long portPoid, String userId) {
 		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
-				.orElseThrow(() -> new RuntimeException("Port not found"));
+				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
 
 		if (entity.getDeleted().equalsIgnoreCase("Y"))
-			throw new RuntimeException("Port has already been deleted.");
+			throw new IllegalArgumentException("Port has already been deleted.");
 
 		entity.setDeleted("Y");
 	}
@@ -179,23 +177,22 @@ public class PortMasterServiceImpl implements PortMasterService {
 		dto.setTradelaneDetail(mapReadOnlyresponse(countryMaster));
 		return dto;
 	}
-	
-	private Map<String,Object> mapReadOnlyresponse(Object data){
-		Map<String,Object> dto=new HashMap<>();
-		if(data instanceof ShipTradelaneResponse) {
-			ShipTradelaneResponse entity=(ShipTradelaneResponse) data;
-			dto.put("poid", entity.getTradeLanePoid());
-			dto.put("code", entity.getTradeLaneCode());
-			dto.put("description", entity.getTradeLaneName());
-		}
-		else if(data instanceof GlobalCountryMaster) {
-			GlobalCountryMaster entity=(GlobalCountryMaster) data;
-			dto.put("poid", entity.getCountryPoid());
-			dto.put("code", entity.getCountryCode());
-			dto.put("description", entity.getCountryName());
-		}
-		
-		return dto;
-	}
+
+    private Map<String, Object> mapReadOnlyresponse(Object data) {
+        Map<String, Object> dto = new HashMap<>();
+
+        if (data instanceof ShipTradelaneResponse entity) {
+            dto.put("poid", entity.getTradeLanePoid());
+            dto.put("code", entity.getTradeLaneCode());
+            dto.put("description", entity.getTradeLaneName());
+        }
+        else if (data instanceof GlobalCountryMaster entity) {
+            dto.put("poid", entity.getCountryPoid());
+            dto.put("code", entity.getCountryCode());
+            dto.put("description", entity.getCountryName());
+        }
+
+        return dto;
+    }
 
 }

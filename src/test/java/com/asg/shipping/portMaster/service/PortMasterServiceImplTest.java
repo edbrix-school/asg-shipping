@@ -1,4 +1,4 @@
-package com.asg.shipping.portMaster.service;
+package com.asg.shipping.portmaster.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -29,11 +29,11 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
 import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.portMaster.dto.PortMasterRequest;
-import com.asg.shipping.portMaster.dto.PortMasterResponse;
-import com.asg.shipping.portMaster.entity.PortMaster;
-import com.asg.shipping.portMaster.entity.PortMasterId;
-import com.asg.shipping.portMaster.repository.PortMasterRepository;
+import com.asg.shipping.portmaster.dto.PortMasterRequest;
+import com.asg.shipping.portmaster.dto.PortMasterResponse;
+import com.asg.shipping.portmaster.entity.PortMaster;
+import com.asg.shipping.portmaster.entity.PortMasterId;
+import com.asg.shipping.portmaster.repository.PortMasterRepository;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
 
@@ -268,10 +268,14 @@ class PortMasterServiceImplTest {
 
 	@Test
 	void updatePort_PortNotFound_Throws() {
-		when(repository.findById(any())).thenReturn(Optional.empty());
+        PortMasterRequest request = new PortMasterRequest();
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort(100L, 1L, new PortMasterRequest(), "admin"));
-		assertEquals("Port not found", exception.getMessage());
+        when(repository.findById(any())).thenReturn(Optional.empty());
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> service.updatePort(100L, 1L, request, "admin"));
+
+        assertEquals("Port not found", exception.getMessage());
 	}
 
 	@Test

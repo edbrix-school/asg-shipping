@@ -52,6 +52,9 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final DataSource dataSource;
     private final LoggingService loggingService;
 
+    private static final String ARSHRCPTPRINTUPDATE="ARSHRCPTPRINTUPDATE";
+    private static final String TRANSACTIONPOID="transactionPoid";
+    private static final String DELIVERYORDER="Delivery Order";
 
     @Override
     @Transactional(readOnly = true)
@@ -59,7 +62,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         log.info("Getting delivery order with transactionPoid: {}, company poid: {}", transactionPoid,getCompanyPoid());
 
         DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, getCompanyPoid())
-                .orElseThrow(() -> new ResourceNotFoundException("Delivery Order", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
         enrichWithLovData(dto);
         return dto;
@@ -76,13 +79,11 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
         // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired for validation
         DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Delivery Order", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
         // Validate Principal DO Number
-        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired())) {
-            if (StringUtils.isBlank(request.getPrincipalDoNumber()) || request.getPrincipalDoNumber().trim().length() <= 3) {
-                throw new ValidationException("Principal Do number can not be blank");
-            }
+        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired()) && StringUtils.isBlank(request.getPrincipalDoNumber()) || request.getPrincipalDoNumber().trim().length() <= 3) {
+            throw new ValidationException("Principal Do number can not be blank");
         }
 
         // Validate Address
@@ -127,10 +128,10 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         validateEmailConfiguration(request);
 
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", TRANSACTIONPOID, transactionPoid.toString()));
 
         if ("Y".equals(blManifest.getDeleted())) {
-            throw new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString());
+            throw new ResourceNotFoundException("BL Manifest", TRANSACTIONPOID, transactionPoid.toString());
         }
 
         blManifestRepository.save(blManifest);
@@ -141,7 +142,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         // In new architecture, printing is handled separately via print endpoints, so NOT_UPDATE
         // will be called in the print endpoint after each document is printed.
         callProcShipDoCntPrintAfter(groupPoid, companyPoid, transactionPoid, null,
-                "ARSHRCPTPRINTUPDATE", username, request.getDoReleasedIdPerson(),
+                ARSHRCPTPRINTUPDATE, username, request.getDoReleasedIdPerson(),
                 request.getDoReleasedToPerson(), request.getDoReleasedAddressPerson(),
                 request.getOriginalBlReleaseCr(), request.getDoPriority(), request.getDoCntToConsignee(),
                 request.getDoCntToNotify(), request.getDoCntToOthers(), request.getDoCntToOthersMails(),
@@ -155,7 +156,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         log.info("Updating delivery order for BL transaction: {}", transactionPoid);
 
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", TRANSACTIONPOID, transactionPoid.toString()));
 
         ShipBlManifestHDR oldBlManifest = new ShipBlManifestHDR();
         BeanUtils.copyProperties(blManifest, oldBlManifest);
@@ -183,7 +184,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         loggingService.logChanges(oldBlManifest,blManifest,ShipBlManifestHDR.class,UserContext.getDocumentId(),blManifest.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
 
         DoShPrintingDtl doShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Delivery order ship printing detail", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException("Delivery order ship printing detail", TRANSACTIONPOID, transactionPoid.toString()));
 
         DoShPrintingDtl oldDoShPrintingDtl = new DoShPrintingDtl();
         BeanUtils.copyProperties(doShPrintingDtl, oldDoShPrintingDtl);
@@ -226,7 +227,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             // In legacy, this is called once after all 3 documents are printed in sequence.
             // In new architecture, we call it after each successful print since printing is done separately.
             // The stored procedure should handle being called multiple times gracefully.
-            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, "ARSHRCPTPRINTUPDATE",
+            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, ARSHRCPTPRINTUPDATE,
                     username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
                     requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
             );
@@ -247,13 +248,11 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
         // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired
         DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(id, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Delivery Order", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, id.toString()));
 
         // Validate Principal DO Number
-        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired())) {
-            if (StringUtils.isBlank(requestDto.getPrincipalDoNumber()) || requestDto.getPrincipalDoNumber().trim().length() <= 3) {
-                throw new ValidationException("Principal Do number can not be blank");
-            }
+        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired()) && StringUtils.isBlank(requestDto.getPrincipalDoNumber()) || requestDto.getPrincipalDoNumber().trim().length() <= 3) {
+            throw new ValidationException("Principal Do number can not be blank");
         }
 
         // Validate Address
@@ -299,7 +298,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
         callProcShipDoCntPrintAfter(
                 groupPoid, companyPoid, id, null,
-                "ARSHRCPTPRINTUPDATE", username,
+                ARSHRCPTPRINTUPDATE, username,
                 requestDto.getDoReleasedIdPerson(),
                 requestDto.getDoReleasedToPerson(),
                 requestDto.getDoReleasedAddressPerson(),
@@ -324,9 +323,9 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     private byte[] generatePrintByButtonType(Long transactionPoid, ButtonType buttonType, Map<String, Object> params) throws Exception {
         return switch (buttonType) {
-            case DeliveryOrderPrint -> generateDeliveryOrderPrint(transactionPoid, params);
-            case ContainerFormPrint -> generateContainerFormPrint(transactionPoid, params);
-            case ReturnFormPrint -> generateReturnFormPrint(transactionPoid, params);
+            case DELIVERYORDERPRINT -> generateDeliveryOrderPrint(transactionPoid, params);
+            case CONTAINERFORMPRINT -> generateContainerFormPrint(transactionPoid, params);
+            case RETURNFORMPRINT -> generateReturnFormPrint(transactionPoid, params);
         };
     }
 
@@ -348,20 +347,22 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                 "Shipping/SH/Container_Delivery_Validity.jrxml";
         JasperReport mainReport = printService.load(templatePath);
 
+        String fslStamp="FSL_STAMP";
+
         try {
             InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/FSL_STAMP.jpg");
             if (stampStream == null) {
                 log.warn("FSL_STAMP.jpg not found in classpath");
-                params.put("FSL_STAMP", null);
+                params.put(fslStamp, null);
             } else {
                 log.info("FSL_STAMP.jpg loaded successfully");
                 byte[] stampBytes = stampStream.readAllBytes();
                 stampStream.close();
-                params.put("FSL_STAMP", new java.io.ByteArrayInputStream(stampBytes));
+                params.put(fslStamp, new java.io.ByteArrayInputStream(stampBytes));
             }
         } catch (Exception e) {
             log.error("Error loading FSL_STAMP.jpg", e);
-            params.put("FSL_STAMP", null);
+            params.put(fslStamp, null);
         }
 
         if ("HANJN".equalsIgnoreCase(pLineCode)) {
@@ -410,10 +411,8 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             throw new ValidationException("Delivery emails not added for customer");
         }
 
-        if ("Y".equals(request.getDoCntToOthers()) && StringUtils.isNotBlank(request.getEmailsDo())) {
-            if (StringUtils.isBlank(request.getEmailsAdditional())) {
-                throw new ValidationException("Additional emails need to be added when others is selected");
-            }
+        if ("Y".equals(request.getDoCntToOthers()) && StringUtils.isNotBlank(request.getEmailsDo()) && StringUtils.isBlank(request.getEmailsAdditional())) {
+            throw new ValidationException("Additional emails need to be added when others is selected");
         }
     }
 
@@ -434,7 +433,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                     cs.setLong(3, blPoid);
                     cs.setObject(4, splitBookingNo);
 
-                    cs.setString(5, StringUtils.defaultIfBlank(actionType, "ARSHRCPTPRINTUPDATE"));
+                    cs.setString(5, StringUtils.defaultIfBlank(actionType, ARSHRCPTPRINTUPDATE));
                     cs.setString(6, user);
 
                     cs.setString(7, StringUtils.defaultIfBlank(doReleasedIdPerson, null));
@@ -482,7 +481,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                     cs.setLong(3, blPoid);
                     cs.setObject(4, splitBookingNo);
 
-                    cs.setString(5, StringUtils.defaultIfBlank(actionType, "ARSHRCPTPRINTUPDATE"));
+                    cs.setString(5, StringUtils.defaultIfBlank(actionType, ARSHRCPTPRINTUPDATE));
                     cs.setString(6, user);
 
                     cs.setString(7, StringUtils.defaultIfBlank(doReleasedIdPerson, null));
@@ -544,11 +543,11 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         if (value == null) {
             return null;
         }
-        if (value instanceof String) {
-            return (String) value;
+        if (value instanceof String str) {
+            return str;
         }
-        if (value instanceof Character) {
-            return String.valueOf(value);
+        if (value instanceof Character ch) {
+            return String.valueOf(ch);
         }
         return value.toString();
     }

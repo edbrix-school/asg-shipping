@@ -1,4 +1,4 @@
-package com.asg.shipping.dayCloseShiping.service;
+package com.asg.shipping.daycloseshiping.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.Spy;
@@ -26,7 +25,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -40,11 +38,11 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
-import com.asg.shipping.dayCloseShiping.dto.*;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtl;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseHdr;
-import com.asg.shipping.dayCloseShiping.repository.*;
-import com.asg.shipping.dayCloseShiping.util.DayCloseMapper;
+import com.asg.shipping.daycloseshiping.dto.*;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseDtl;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseHdr;
+import com.asg.shipping.daycloseshiping.repository.*;
+import com.asg.shipping.daycloseshiping.util.DayCloseMapper;
 
 @ExtendWith(MockitoExtension.class)
 class DayCloseServiceImplTest {

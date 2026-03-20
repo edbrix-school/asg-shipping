@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingFormSH.entity;
+package com.asg.shipping.bookingformsh.entity;
 
 import java.io.Serializable;
 import java.util.Objects;

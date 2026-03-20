@@ -1,26 +1,20 @@
-package com.asg.shipping.MafiTrailerDateUpdateForm.util;
+package com.asg.shipping.mafitrailerdateupdateform.util;
 
-import java.time.LocalDateTime;
+import com.asg.shipping.mafitrailerdateupdateform.dto.*;
+import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
+import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import org.springframework.stereotype.Component;
-
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiDetailDto;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormResponse;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafitrailerHeaderDTO;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.VoyageProjection;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiHdr;
 
 @Component
 public class MafiTrailerDateUpdateFormMapper {
 
 	public MafiTrailerDateUpdateFormResponse toMafiTrailerResponse(ShipBlMafiHdr header, VoyageProjection voyage,
 			List<ShipBlMafiDtl> details) {
-		if (header == null || details == null) {
+		if (header == null || voyage == null || details == null) {
 			return null;
 		}
 
@@ -58,7 +52,7 @@ public class MafiTrailerDateUpdateFormMapper {
 	}
 
 	public void updateShipBlMafiHdr(ShipBlMafiHdr entity, MafiTrailerDateUpdateFormRequest request, String userId) {
-		if (entity == null || request == null) {
+		if (entity == null || request == null || request.getMafiHeader() == null) {
 			return;
 		}
 		entity.setAgentReference(request.getMafiHeader().getAgentReference());

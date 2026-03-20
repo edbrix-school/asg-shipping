@@ -1,4 +1,4 @@
-package com.asg.shipping.dayCloseShiping.service;
+package com.asg.shipping.daycloseshiping.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
@@ -15,16 +15,16 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDenominationDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjection;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtl;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseHdr;
-import com.asg.shipping.dayCloseShiping.repository.ArShDayEndCloseDtlRepository;
-import com.asg.shipping.dayCloseShiping.repository.ArShDayEndCloseHdrRepository;
-import com.asg.shipping.dayCloseShiping.repository.ArShReceiptHdrRepository;
-import com.asg.shipping.dayCloseShiping.util.DayCloseMapper;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDenominationDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseHdrDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseSummaryProjection;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseDtl;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseHdr;
+import com.asg.shipping.daycloseshiping.repository.ArShDayEndCloseDtlRepository;
+import com.asg.shipping.daycloseshiping.repository.ArShDayEndCloseHdrRepository;
+import com.asg.shipping.daycloseshiping.repository.ArShReceiptHdrRepository;
+import com.asg.shipping.daycloseshiping.util.DayCloseMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
@@ -65,11 +65,14 @@ public class DayCloseServiceImpl implements DayCloseService {
     private final DataSource dataSource;
     private final LoggingService loggingService;
 
+    private static final String TRANSACTION_POID="TRANSACTION_POID";
+    private static final String TRANSACTIONPOID="transactionPoid";
+
     @Override
     public DayCloseDto getDayClose(Long transactionPoid, Long groupPoid, Long companyPoid) {
 
         ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid).filter(h -> !"Y".equals(h.getDeleted())).orElseThrow(
-                () -> new ResourceNotFoundException("Day Close", "transactionPoid", transactionPoid.toString()));
+                () -> new ResourceNotFoundException("Day Close", TRANSACTIONPOID, transactionPoid.toString()));
 
         List<ArShDayEndCloseDtl> details = dtlRepo.findByTransactionPoid(transactionPoid);
 
@@ -102,7 +105,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
         String status = callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
                 hdr.getDocRef(), groupPoid, companyPoid, userPoid);
-        if (status != null && !status.startsWith("SUCCESS")) throw new RuntimeException(status);
+        if (status != null && !status.startsWith("SUCCESS")) throw new IllegalStateException(status);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
 
         return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
@@ -132,7 +135,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
         validateAmounts(request);
 
-        ArShDayEndCloseHdr existingData = hdrRepo.findById(transactionPoid).orElseThrow(() -> new ResourceNotFoundException("Day close Shipping", "transactionPoid", transactionPoid));
+        ArShDayEndCloseHdr existingData = hdrRepo.findById(transactionPoid).orElseThrow(() -> new ResourceNotFoundException("Day close Shipping", TRANSACTIONPOID, transactionPoid));
         ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
         hdr.setTransactionPoid(transactionPoid);
 
@@ -141,7 +144,7 @@ public class DayCloseServiceImpl implements DayCloseService {
 
         saveDenominations(transactionPoid, request.getDenominations());
         String docId = UserContext.getDocumentId();
-        loggingService.logChanges(existingData, hdr, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+        loggingService.logChanges(existingData, hdr, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID);
 
         return getDayClose(transactionPoid, groupPoid, companyPoid);
     }
@@ -152,13 +155,13 @@ public class DayCloseServiceImpl implements DayCloseService {
 
 
         hdrRepo.findByTransactionPoidDeleted(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Dayclose Shipping", "transactionPoid", id));
+                .orElseThrow(() -> new ResourceNotFoundException("Dayclose Shipping", TRANSACTIONPOID, id));
 
         // Use DocumentDeleteService for deletion (handles logging internally)
         documentDeleteService.deleteDocument(
                 id,
                 "AR_SH_DAY_END_CLOSE_HDR",
-                "TRANSACTION_POID",
+                TRANSACTION_POID,
                 deleteReasonDto,
                 null
         );
@@ -185,7 +188,7 @@ public class DayCloseServiceImpl implements DayCloseService {
                 pageable,
                 isDeleted,
                 "LOCATION_CODE",
-                "TRANSACTION_POID"
+                TRANSACTION_POID
         );
 
         Page<Map<String, Object>> page = new PageImpl<>(
@@ -245,6 +248,9 @@ public class DayCloseServiceImpl implements DayCloseService {
                     toDelete.add(dto.getDetRowId());
                     loggingService.logDelete(dto, docId, docKeyPoid);
                     break;
+
+                default:
+                    break;
             }
         }
 
@@ -286,7 +292,7 @@ public class DayCloseServiceImpl implements DayCloseService {
                 return cs.getString(8);
 
             } catch (SQLException ex) {
-                throw new RuntimeException(
+                throw new IllegalStateException(
                         "Error calling PROC_GL_CHO_INTO_CHQ_MAIN_SHIP: " + ex.getMessage(), ex);
             }
         });
