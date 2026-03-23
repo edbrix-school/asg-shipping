@@ -1,5 +1,6 @@
 package com.asg.shipping.dayCloseShiping.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -17,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
@@ -33,7 +35,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class DayCloseControllerTest {
@@ -76,8 +78,6 @@ class DayCloseControllerTest {
         mockedUserContext.close();
     }
 
-    /* -------------------- GET BY ID -------------------- */
-
     @Test
     void getDayClose_Success() throws Exception {
         DayCloseDto response = new DayCloseDto();
@@ -85,14 +85,13 @@ class DayCloseControllerTest {
         when(dayCloseService.getDayClose(100L, 1001L, 2001L)).thenReturn(response);
 
         mockMvc.perform(get("/v1/day-close-shipping/100"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Day close fetched successfully"));
 
         verify(dayCloseService).getDayClose(100L, 1001L, 2001L);
         verify(loggingService).createLogSummaryEntry(
                 LogDetailsEnum.VIEWED, "DOC123", "100");
     }
-
-    /* -------------------- NEW DAY CLOSE -------------------- */
 
     @Test
     void getNewDayClose_Success() throws Exception {
@@ -111,13 +110,12 @@ class DayCloseControllerTest {
         mockMvc.perform(
                         get("/v1/day-close-shipping/new")
                                 .param("transactionDate", "2025-07-06"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("New day Close data fetched successfully"));
 
         verify(dayCloseService)
                 .getNewDayCloseData(1001L, 2001L, "2025-07-06");
     }
-
-    /* -------------------- DENOMINATIONS -------------------- */
 
     @Test
     void getDenominations_Success() throws Exception {
@@ -130,12 +128,11 @@ class DayCloseControllerTest {
         mockMvc.perform(
                         get("/v1/day-close-shipping/denominations")
                                 .param("currencyCode", "BHD"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Denominations fetched successfully"));
 
         verify(dayCloseService).getDenominations("BHD");
     }
-
-    /* -------------------- CREATE -------------------- */
 
     @Test
     void createDayClose_Success() throws Exception {
@@ -158,13 +155,12 @@ class DayCloseControllerTest {
                         post("/v1/day-close-shipping")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Day Close created successfully"));
 
         verify(dayCloseService)
                 .createDayClose(any(), eq(1001L), eq(2001L), eq(9001L));
     }
-
-    /* -------------------- UPDATE -------------------- */
 
     @Test
     void updateDayClose_Success() throws Exception {
@@ -179,24 +175,54 @@ class DayCloseControllerTest {
                         put("/v1/day-close-shipping/update/100")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Day Close updated successfully"));
 
         verify(dayCloseService)
                 .updateDayClose(any(), eq(100L), eq(1001L), eq(2001L), eq(9001L));
     }
 
-    /* -------------------- SEARCH -------------------- */
+    @Test
+    void deleteDayClose_Success() throws Exception {
+        DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test reason");
+
+        doNothing().when(dayCloseService).deleteDayClose(eq(100L), any());
+
+        mockMvc.perform(
+                        delete("/v1/day-close-shipping/100")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(deleteReasonDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("DayClose Shipping deleted successfully"));
+
+        verify(dayCloseService).deleteDayClose(eq(100L), any());
+    }
 
     @Test
-    void searchDayClose_Success() throws Exception {
-        FilterRequestDto filters =
-                new FilterRequestDto("OR", "false", List.of());
+    void deleteDayClose_WithoutDeleteReason_Success() throws Exception {
+        doNothing().when(dayCloseService).deleteDayClose(eq(100L), eq(null));
 
-        Map<String, Object> responseMap = new HashMap<>();
-        responseMap.put("data", Map.of("content", List.of()));
+        mockMvc.perform(
+                        delete("/v1/day-close-shipping/100")
+                                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("DayClose Shipping deleted successfully"));
 
-        when(dayCloseService.searchDayClose(anyString(), any(FilterRequestDto.class), any(Pageable.class), any(), any()))
-                .thenReturn(responseMap);
+        verify(dayCloseService).deleteDayClose(eq(100L), eq(null));
+    }
+
+    @Test
+    void searchDayClose_WithBothDates_Success() throws Exception {
+        FilterRequestDto filters = new FilterRequestDto("AND", "false", List.of());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", List.of());
+        response.put("totalElements", 0);
+
+        when(dayCloseService.searchDayClose(
+                eq("DOC123"), any(), any(Pageable.class),
+                eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2025, 12, 31))))
+                .thenReturn(response);
 
         mockMvc.perform(
                         post("/v1/day-close-shipping/search")
@@ -204,14 +230,81 @@ class DayCloseControllerTest {
                                 .param("startDate", LocalDate.now().toString())
                                 .param("endDate", LocalDate.now().toString())
                                 .content(objectMapper.writeValueAsString(filters)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Day Close list fetched successfully"));
 
-        verify(dayCloseService)
-                .searchDayClose(anyString(), any(FilterRequestDto.class), any(Pageable.class), any(), any());
-
+        verify(dayCloseService).searchDayClose(
+                eq("DOC123"), any(), any(Pageable.class),
+                eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2025, 12, 31)));
     }
 
-    /* -------------------- PRINT (SUCCESS ONLY) -------------------- */
+    @Test
+    void searchDayClose_WithoutDates_Success() throws Exception {
+        FilterRequestDto filters = new FilterRequestDto("OR", "false", List.of());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", List.of());
+
+        when(dayCloseService.searchDayClose(
+                eq("DOC123"), any(), any(Pageable.class), any(), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                        post("/v1/day-close-shipping/search")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(filters)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Day Close list fetched successfully"));
+
+        verify(dayCloseService).searchDayClose(
+                eq("DOC123"), any(), any(Pageable.class), any(), any());
+    }
+
+    @Test
+    void searchDayClose_WithOnlyStartDate_ReturnsBadRequest() throws Exception {
+        FilterRequestDto filters = new FilterRequestDto("AND", "false", List.of());
+
+        mockMvc.perform(
+                        post("/v1/day-close-shipping/search")
+                                .param("startDate", "2025-01-01")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(filters)))
+                .andExpect(status().isBadRequest());
+
+        verify(dayCloseService, never()).searchDayClose(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void searchDayClose_WithOnlyEndDate_ReturnsBadRequest() throws Exception {
+        FilterRequestDto filters = new FilterRequestDto("AND", "false", List.of());
+
+        mockMvc.perform(
+                        post("/v1/day-close-shipping/search")
+                                .param("endDate", "2025-12-31")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(filters)))
+                .andExpect(status().isBadRequest());
+
+        verify(dayCloseService, never()).searchDayClose(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void searchDayClose_WithoutFilters_Success() throws Exception {
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", List.of());
+
+        when(dayCloseService.searchDayClose(
+                eq("DOC123"), eq(null), any(Pageable.class), any(), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(
+                        post("/v1/day-close-shipping/search")
+                                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Day Close list fetched successfully"));
+
+        verify(dayCloseService).searchDayClose(
+                eq("DOC123"), eq(null), any(Pageable.class), any(), any());
+    }
 
     @Test
     void print_Success() throws Exception {
@@ -220,7 +313,22 @@ class DayCloseControllerTest {
         when(dayCloseService.print(100L)).thenReturn(pdfBytes);
 
         mockMvc.perform(get("/v1/day-close-shipping/print/100"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        "attachment; filename=day-close-shipping-100.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+
+        verify(dayCloseService).print(100L);
+    }
+
+    @Test
+    void print_ThrowsException_ReturnsError() throws Exception {
+        when(dayCloseService.print(100L))
+                .thenThrow(new RuntimeException("PDF generation failed"));
+
+        mockMvc.perform(get("/v1/day-close-shipping/print/100"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.message").value("Failed to generate PDF: PDF generation failed"));
 
         verify(dayCloseService).print(100L);
     }

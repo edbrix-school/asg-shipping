@@ -13,7 +13,7 @@ public interface ExportManifestBlHdrRepository extends JpaRepository<ExportManif
 
     
     @Query("SELECT h FROM ExportManifestBlHdr h WHERE h.transactionPoid = :transactionPoid " +
-            "AND h.blType = 'EXPORT' AND h.deleted = 'N'")
+            "AND h.blType = 'EXPORT' AND (h.deleted IS NULL OR h.deleted = 'N')")
     Optional<ExportManifestBlHdr> findByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
    
@@ -22,7 +22,7 @@ public interface ExportManifestBlHdrRepository extends JpaRepository<ExportManif
             "AND h.blNumber = :blNumber " +
             "AND h.transactionPoid != :excludeTransactionPoid " +
             "AND h.blType = 'EXPORT' " +
-            "AND h.deleted = 'N'")
+            "AND (h.deleted IS NULL OR h.deleted = 'N')")
     boolean existsByVoyageTransactionPoidAndBlNumberExcludingPoid(
             @Param("voyageTransactionPoid") Long voyageTransactionPoid,
             @Param("blNumber") String blNumber,
@@ -33,7 +33,7 @@ public interface ExportManifestBlHdrRepository extends JpaRepository<ExportManif
             "WHERE h.blNumber = :blNumber " +
             "AND h.transactionPoid != :excludeTransactionPoid " +
             "AND h.blType = 'EXPORT' " +
-            "AND h.deleted = 'N'")
+            "AND (h.deleted IS NULL OR h.deleted = 'N')")
     boolean existsByBlNumberExcludingPoid(
             @Param("blNumber") String blNumber,
             @Param("excludeTransactionPoid") Long excludeTransactionPoid);
@@ -43,7 +43,7 @@ public interface ExportManifestBlHdrRepository extends JpaRepository<ExportManif
             "WHERE h.voyageTransactionPoid = :voyageTransactionPoid " +
             "AND h.blNumber = :blNumber " +
             "AND h.blType = 'EXPORT' " +
-            "AND h.deleted = 'N'")
+            "AND (h.deleted IS NULL OR h.deleted = 'N')")
     boolean existsByVoyageTransactionPoidAndBlNumber(
             @Param("voyageTransactionPoid") Long voyageTransactionPoid,
             @Param("blNumber") String blNumber);
@@ -52,7 +52,7 @@ public interface ExportManifestBlHdrRepository extends JpaRepository<ExportManif
     @Query("SELECT COUNT(h) > 0 FROM ExportManifestBlHdr h " +
             "WHERE h.blNumber = :blNumber " +
             "AND h.blType = 'EXPORT' " +
-            "AND h.deleted = 'N'")
+            "AND (h.deleted IS NULL OR h.deleted = 'N')")
     boolean existsByBlNumber(@Param("blNumber") String blNumber);
 }
 

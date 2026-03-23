@@ -2,7 +2,7 @@ package com.asg.shipping.receipts.service.impl;
 
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.shipping.importManifestUpdate.respository.ShipBlManifestHdrRepository;
+import com.asg.shipping.importmanifestupdate.respository.ShipBlManifestHdrRepository;
 import com.asg.shipping.receipts.dto.ReceiptCharges;
 import com.asg.shipping.receipts.dto.ReceiptContainerDto;
 import com.asg.shipping.receipts.dto.ReceiptPaymentDetailDto;

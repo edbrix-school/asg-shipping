@@ -2,7 +2,7 @@ package com.asg.shipping.importmanifestbl.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importmanifestupdate.dto.*;
 
 import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
 import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;

@@ -103,12 +103,12 @@ class DemurrageDetentionPayableTransferServiceImplTest {
 
         when(documentService.resolveOperator(filterRequest)).thenReturn("OR");
         when(documentService.resolveIsDeleted(filterRequest)).thenReturn("N");
-        when(documentService.resolveFilters(filterRequest)).thenReturn(List.of(filter));
+        when(documentService.resolveDateFilters(eq(filterRequest), eq("TRANSACTION_DATE"), isNull(), isNull())).thenReturn(List.of(filter));
         when(documentService.search(
                 anyString(), any(), eq("OR"), eq(pageable), eq("N"), any(), any()
         )).thenReturn(raw);
 
-        Map<String, Object> result = service.searchDemurrageDetentionPayableTransfer("DOC-1", filterRequest, pageable);
+        Map<String, Object> result = service.searchDemurrageDetentionPayableTransfer("DOC-1", filterRequest, null, null, pageable);
 
         assertNotNull(result);
         verify(documentService).search(any(), any(), any(), any(), any(), any(), any());

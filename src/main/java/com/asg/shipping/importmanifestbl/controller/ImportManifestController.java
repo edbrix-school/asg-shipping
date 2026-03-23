@@ -7,7 +7,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;

@@ -5,18 +5,26 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.shipcommisiontransfer.dto.PdaFdaDtlResponseDTO;
+import com.asg.shipping.shipcommisiontransfer.entity.PdaFdaDtl;
+import com.asg.shipping.shipcommisiontransfer.repository.PdaFdaDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.dto.*;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionDtl;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionHdrRepository;
 import com.asg.shipping.shipcommisiontransfer.util.ShipCommissionTransferMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import oracle.jdbc.OracleTypes;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
+import java.sql.ResultSet;
 import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -48,6 +57,13 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     private final LoggingService loggingService;
     private final ShipCommissionTransferMapper mapper;
     private final JdbcTemplate jdbcTemplate;
+    private final PdaFdaDtlRepository pdaFdaDtlRepository;
+
+    private static final String TRANSACTION_POID = "transactionPoid";
+    private static final String SHIP_COMMISSION_TRANSFER = "Ship Commission Transfer";
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -78,7 +94,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     }
 
     @Override
-    @Transactional(readOnly = true)
+    //@Transactional(readOnly = true)
     public ShipCommissionTransferDto getShipCommissionTransfer(Long id) {
         log.info("Getting ship commission transfer with id: {}", id);
 
@@ -86,10 +102,10 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER,TRANSACTION_POID , id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", id.toString());
+            throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, id.toString());
         }
 
         // Load detail records
@@ -153,15 +169,15 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER,TRANSACTION_POID, id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", id.toString());
+            throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, id.toString());
         }
 
         // Update header
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
-        entity = headerRepository.save(entity);
+         headerRepository.save(entity);
 
         // Delete existing detail records
         detailRepository.deleteByTransactionPoid(id);
@@ -191,7 +207,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, id.toString()));
 
         entity.setDeleted("Y");
         entity.setLastModifiedBy(getCurrentUser());
@@ -213,10 +229,10 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", transactionPoid.toString());
+            throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString());
         }
 
         // Call PROC_SHIP_COMMISSION_CALCULATE to calculate commission amounts
@@ -250,7 +266,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("transactionPoid", transactionPoid);
+        result.put(TRANSACTION_POID, transactionPoid);
         result.put("calculatedDetails", detailRecords.size());
         result.put("totalCommission", totalCommission);
 
@@ -266,10 +282,10 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", transactionPoid.toString());
+            throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString());
         }
 
         // Validate document is saved first
@@ -288,7 +304,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         List<ShipBlCommissionDtl> detailRecords = detailRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("transactionPoid", transactionPoid);
+        response.put(TRANSACTION_POID, transactionPoid);
         response.put("loadedDetails", detailRecords.size());
         response.put("message", result);
 
@@ -304,10 +320,10 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", transactionPoid.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Ship Commission Transfer", "transactionPoid", transactionPoid.toString());
+            throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString());
         }
 
         // Validate required data exists
@@ -319,11 +335,133 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         String result = callProcInsertPdaCommission(transactionPoid, entity.getFdaTransactionPoid(), getCurrentUser());
 
         Map<String, Object> response = new HashMap<>();
-        response.put("transactionPoid", transactionPoid);
+        response.put(TRANSACTION_POID, transactionPoid);
         response.put("pdaStatus", result != null && !result.contains("ERROR") ? "SUCCESS" : "FAILED");
         response.put("message", result);
 
         return response;
+    }
+
+
+    public Map<String, String> getCurrencyExchangeForVoyage(
+            Long groupPoid,
+            Long companyPoid,
+            Long userPoid,
+            Long voyageId
+    ) {
+
+        String sql = "{call PROC_LOV_AFTER_BRWS_300_103(?, ?, ?, ?, ?, ?, ?, ?)}";
+        Map<String, String> result = new HashMap<>();
+
+        jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+
+            try {
+                cs.setLong(1, groupPoid);
+                cs.setLong(2, companyPoid);
+                cs.setLong(3, userPoid);
+                cs.setString(4, "100-152");              // DOC_ID
+                cs.setLong(5, 0);                        // not used
+                cs.setString(6, "VESSAL_VOYAGE");        // LOV_NAME
+                cs.setString(7, String.valueOf(voyageId));
+                cs.registerOutParameter(8, OracleTypes.CURSOR);
+
+                cs.execute();
+
+                ResultSet rs = (ResultSet) cs.getObject(8);
+
+                if (rs != null && rs.next()) { // 👈 only first row
+                    result.put("currencyCode", rs.getString("CURRENCY_CODE"));
+                    result.put("exchangeRate", rs.getString("CURRENCY_EXCHANGE"));
+                }
+
+            } catch (Exception e) {
+                log.error("Error fetching currency exchange: ", e);
+            }
+
+            return result;
+        });
+
+        return result;
+    }
+
+    public List<PdaFdaDtlResponseDTO> getPdaFdaDetails(Long transactionPoid) {
+
+        List<PdaFdaDtl> list = pdaFdaDtlRepository.findByIdTransactionPoid(transactionPoid);
+
+        return list.stream().map(entity -> PdaFdaDtlResponseDTO.builder()
+                .detRowId(entity.getId().getDetRowId())
+                .charge(entity.getChargePoid())
+                .currencyCode(entity.getCurrencyCode())
+                .currencyRate(entity.getCurrencyRate())
+                .remarks(entity.getRemarks())
+                .fdaAmount(entity.getFdaAmount())
+                .build()
+        ).toList();
+    }
+
+    @Transactional
+    public List<Object[]> getCommissionByVoyage(Long voyageTransactionPoid, Long transactionPoid) {
+
+        return fetchShipCommissionRecords(
+                UserContext.getGroupPoid(),        // loginGroupPoid (set default या session से लो)
+                UserContext.getCompanyPoid(),        // loginCompanyPoid
+                UserContext.getUserPoid(),        // loginUserPoid
+                UserContext.getDocumentId(),      // docId
+                transactionPoid,      // transactionPoid
+                voyageTransactionPoid
+                // exchange
+                // recordType
+                // frtBuyActual
+                // shortLegSelected
+        );
+    }
+
+
+
+    @SuppressWarnings("unchecked")
+    private  List<Object[]> fetchShipCommissionRecords(
+            Long loginGroupPoid,
+            Long loginCompanyPoid,
+            Long loginUserPoid,
+            String docId,
+            Long transactionPoid,
+            Long voyageTransactionPoid
+    ) {
+
+        StoredProcedureQuery query = entityManager
+                .createStoredProcedureQuery("QA_DB_USER.PROC_SHIP_COMMISSION_RECORD_FETCH");
+
+        // Register IN params
+        query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_DOC_ID", String.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_TRANSACTION_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_EXCHANGE", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_RECORD_TYPE", String.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_FRT_BUY_ACTUAL", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_SHORT_LEG_SELECTED", String.class, jakarta.persistence.ParameterMode.IN);
+
+        // Register OUT cursor
+        query.registerStoredProcedureParameter("OUTDATA", void.class, jakarta.persistence.ParameterMode.REF_CURSOR);
+
+        // Set values
+        query.setParameter("P_LOGIN_GROUP_POID", loginGroupPoid);
+        query.setParameter("P_LOGIN_COMPANY_POID", loginCompanyPoid);
+        query.setParameter("P_LOGIN_USER_POID", loginUserPoid);
+        query.setParameter("P_DOC_ID", docId);
+        query.setParameter("P_TRANSACTION_POID", transactionPoid);
+        query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoid);
+        query.setParameter("P_EXCHANGE", 1.0);
+        query.setParameter("P_RECORD_TYPE", "ALL");
+        query.setParameter("P_FRT_BUY_ACTUAL", 0.0);
+        query.setParameter("P_SHORT_LEG_SELECTED", "N");
+
+        // Execute
+        query.execute();
+
+        return query.getResultList();
     }
 
     /**
@@ -405,8 +543,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 cs.setString(2, user);
                 cs.registerOutParameter(3, Types.VARCHAR);
                 cs.execute();
-                String result = cs.getString(3);
-                return result;
+                return cs.getString(3);
             });
         } catch (Exception e) {
             log.error("Error calling PROC_MATE_RCPT_EMPTY_MANIFEST for transaction: {}", transactionPoid, e);

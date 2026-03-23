@@ -1,5 +1,6 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.service;
 
+
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -61,14 +62,12 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId,
-            com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
-        log.info("Searching demurrage/detention payable transfer records with docId: {}, page: {}, size: {}", docId,
-                pageable.getPageNumber(), pageable.getPageSize());
+    public Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        log.info("Searching demurrage/detention payable transfer records with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
 
         // Filter out any filters with null searchField to prevent NullPointerException
         if (filters != null) {
@@ -83,14 +82,15 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 operator,
                 pageable,
                 isDeleted,
-                "DOC_REF",
-                "TRANSACTION_POID");
+                "TRANSACTION_POID",
+                "DOC_REF"
+        );
 
         Page<Map<String, Object>> page = new PageImpl<>(
                 raw.records(),
                 pageable,
-                raw.totalRecords());
-
+                raw.totalRecords()
+        );
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
@@ -102,14 +102,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
-        ShipDemDetnTransferHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer",
-                        "transactionPoid", id.toString()));
+        ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid",
-                    id.toString());
+            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString());
         }
 
         // Load detail tables
@@ -121,6 +118,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         dto.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
 
         enrichLovData(dto);
+
+
 
         log.info("Successfully retrieved demurrage/detention payable transfer with id: {}", id);
         return dto;
@@ -181,18 +180,15 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         createDetailRecords(saved.getTransactionPoid(), dto.getTransferDetails(), dto.getBillDetails());
 
         // Fetch all detail records for response
-        List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository
-                .findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
-        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository
-                .findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
+        List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
+        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
 
         DemurrageDetentionPayableTransferDto result = mapper.mapToDto(saved);
         result.setTransferDetails(mapper.mapTransferDtlListToDto(transferDetails));
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED,
-                com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
 
         log.info("Successfully created demurrage/detention payable transfer with id: {}", saved.getTransactionPoid());
         return result;
@@ -205,14 +201,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         log.info("Updating demurrage/detention payable transfer with id: {}", id);
 
         // Find existing entity
-        ShipDemDetnTransferHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer",
-                        "transactionPoid", id.toString()));
+        ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid",
-                    id.toString());
+            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString());
         }
 
         // Validate
@@ -250,18 +243,15 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         updateDetailRecords(id, dto.getTransferDetails(), dto.getBillDetails());
 
         // Fetch all detail records for response
-        List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository
-                .findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
-        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository
-                .findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
+        List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
+        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
 
         DemurrageDetentionPayableTransferDto result = mapper.mapToDto(saved);
         result.setTransferDetails(mapper.mapTransferDtlListToDto(transferDetails));
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED,
-                com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully updated demurrage/detention payable transfer with id: {}", id);
         return result;
@@ -269,14 +259,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     @Override
     @Transactional
-    public void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid,
-            DeleteReasonDto deleteReasonDto) {
+    public void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting demurrage/detention payable transfer with id: {}", id);
 
-        ShipDemDetnTransferHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer",
-                        "transactionPoid", id.toString()));
+        ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
             log.info("Demurrage/Detention Payable Transfer with id: {} is already deleted", id);
@@ -288,7 +275,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 "SHIP_DEM_DETN_TRANSFER_HDR",
                 "TRANSACTION_POID",
                 deleteReasonDto,
-                LocalDate.now());
+                LocalDate.now()
+        );
 
         entity.setDeleted("Y");
         entity.setLastModifiedBy(getCurrentUser());
@@ -296,12 +284,10 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
         headerRepository.save(entity);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED,
-                com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
         String logDetail = String.format("KeyId = TRANSACTION_POID:%s", id);
         String tableName = ShipDemDetnTransferHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(),
-                id.toString(), "Deleted", "N", "Y", logDetail, tableName);
+        loggingService.createLogDetailsEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
 
         log.info("Successfully deleted demurrage/detention payable transfer with id: {}", id);
     }
@@ -314,16 +300,13 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
-        ShipDemDetnTransferHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer",
-                        "transactionPoid", id.toString()));
+        ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
         // Use request criteria or header criteria
         Long linePoid = request.getLinePoid() != null ? request.getLinePoid() : entity.getLinePoid();
         String blType = request.getBlType() != null ? request.getBlType() : entity.getBlType();
-        LocalDate emptyFromDate = request.getEmptyFromDate() != null ? request.getEmptyFromDate()
-                : entity.getEmptyFromDate();
+        LocalDate emptyFromDate = request.getEmptyFromDate() != null ? request.getEmptyFromDate() : entity.getEmptyFromDate();
         LocalDate emptyToDate = request.getEmptyToDate() != null ? request.getEmptyToDate() : entity.getEmptyToDate();
 
         if (linePoid == null || blType == null) {
@@ -373,25 +356,20 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
-        ShipDemDetnTransferHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer",
-                        "transactionPoid", id.toString()));
+        ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
         // Check if there are any bill details for this transaction
-        List<ShipDemDtnTransferBillDtl> existingBillDetails = billDtlRepository
-                .findByTransactionPoidOrderByDetRowId(id);
+        List<ShipDemDtnTransferBillDtl> existingBillDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         if (existingBillDetails.isEmpty()) {
-            throw new ValidationException(
-                    "No bill details found for transaction: " + id + ". Please create bill details first.");
+            throw new ValidationException("No bill details found for transaction: " + id + ". Please create bill details first.");
         }
 
         // Update each container's free days and call stored procedure
         for (UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate update : request.getContainerUpdates()) {
             ShipDemDtnTransferBillDtl billDetail = billDtlRepository
                     .findByTransactionPoidAndDetRowId(id, update.getDetRowId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Bill Detail", "detRowId",
-                            update.getDetRowId().toString()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Bill Detail", "detRowId", update.getDetRowId().toString()));
 
             // Validate container matches
             if (!billDetail.getContainerNo().equals(update.getContainerNo())) {
@@ -402,7 +380,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             callProcShipCntPpfredaysUpdate(
                     update.getMainfestTransactionPoid(),
                     update.getExtraFreeDaysPrnpls(),
-                    update.getContainerNo());
+                    update.getContainerNo()
+            );
         }
 
         log.info("Successfully updated free days for demurrage/detention payable transfer with id: {}", id);
@@ -422,8 +401,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             throw new ValidationException("Line POID and BL Type are required");
         }
 
-        // Query available containers from view - using NOT EXISTS instead of NOT IN for
-        // better compatibility
+        // Query available containers from view - using NOT EXISTS instead of NOT IN for better compatibility
         StringBuilder sql = new StringBuilder();
         sql.append("SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER V ");
         sql.append("WHERE NOT EXISTS (");
@@ -460,7 +438,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             log.info("Found {} available containers", containers.size());
             return Map.of(
                     "containers", containers,
-                    "totalCount", containers.size());
+                    "totalCount", containers.size()
+            );
         } catch (Exception e) {
             log.error("Error querying available containers", e);
             // If view doesn't exist, return empty result instead of throwing error
@@ -468,7 +447,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             return Map.of(
                     "containers", java.util.Collections.emptyList(),
                     "totalCount", 0,
-                    "warning", "View VW_SHIP_DEM_DTN_TRANSFER not found or query failed");
+                    "warning", "View VW_SHIP_DEM_DTN_TRANSFER not found or query failed"
+            );
         }
     }
 
@@ -491,7 +471,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                         sql,
                         container.getMainfestTransactionPoid(),
                         container.getContainerNo(),
-                        companyPoid);
+                        companyPoid
+                );
                 allBillDetails.addAll(billRecords);
             } catch (Exception e) {
                 log.warn("Failed to load bill-wise data for container: {}. Error: {}",
@@ -510,7 +491,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         log.info("Loaded {} bill-wise records", allBillDetails.size());
         return Map.of(
                 "billDetails", allBillDetails,
-                "totalCount", allBillDetails.size());
+                "totalCount", allBillDetails.size()
+        );
     }
 
     @Override
@@ -523,7 +505,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             callProcShipCntPpfredaysUpdate(
                     update.getMainfestTransactionPoid(),
                     update.getExtraFreeDaysPrnpls(),
-                    update.getContainerNo());
+                    update.getContainerNo()
+            );
         }
 
         log.info("Successfully updated principal extra days");
@@ -537,14 +520,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
 
-        ShipDemDetnTransferHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer",
-                        "transactionPoid", id.toString()));
+        ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid",
-                    id.toString());
+            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString());
         }
 
         // Validate that selected containers exist in transfer details
@@ -579,7 +559,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                         sql,
                         container.getMainfestTransactionPoid(),
                         container.getContainerNo(),
-                        companyPoid);
+                        companyPoid
+                );
 
                 for (Map<String, Object> record : billRecords) {
                     currentDetRowId++;
@@ -599,8 +580,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     billDtlRepository.save(billDetail);
                 }
             } catch (Exception e) {
-                log.warn("Failed to load bill-wise data for container: {}. Creating placeholder.",
-                        container.getContainerNo());
+                log.warn("Failed to load bill-wise data for container: {}. Creating placeholder.", container.getContainerNo());
                 currentDetRowId++;
                 ShipDemDtnTransferBillDtl billDetail = ShipDemDtnTransferBillDtl.builder()
                         .transactionPoid(id)
@@ -646,16 +626,14 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     if (transferDtlRepository.existsByManifestAndContainerAndSelected(
                             detail.getMainfestTransactionPoid(), detail.getContainerNo())) {
                         throw new ValidationException(
-                                "Container " + detail.getContainerNo()
-                                        + " is already selected in another transfer record");
+                                "Container " + detail.getContainerNo() + " is already selected in another transfer record");
                     }
                 }
             }
         }
     }
 
-    private void validateUpdateDTO(DemurrageDetentionPayableTransferUpdateDTO dto, Long id, Long companyPoid,
-            Long groupPoid) {
+    private void validateUpdateDTO(DemurrageDetentionPayableTransferUpdateDTO dto, Long id, Long companyPoid, Long groupPoid) {
         if (dto.getBlType() != null && !dto.getBlType().equals("IMPORT") && !dto.getBlType().equals("EXPORT")) {
             throw new ValidationException("BL Type must be IMPORT or EXPORT");
         }
@@ -664,12 +642,10 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         if (dto.getTransferDetails() != null) {
             for (DemurrageDetentionTransferDetailDto detail : dto.getTransferDetails()) {
                 if (detail.getMainfestTransactionPoid() != null && detail.getContainerNo() != null) {
-                    // Check if this container is already selected in another record (excluding
-                    // current record)
+                    // Check if this container is already selected in another record (excluding current record)
                     // This would require a custom query to check across all records except current
                     // For now, we'll do a simple check
-                    List<ShipDemDetnTransferDtl> existing = transferDtlRepository
-                            .findByTransactionPoidOrderByDetRowId(id);
+                    List<ShipDemDetnTransferDtl> existing = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
                     boolean isCurrentRecord = existing.stream()
                             .anyMatch(e -> e.getDetRowId().equals(detail.getDetRowId()) &&
                                     e.getMainfestTransactionPoid().equals(detail.getMainfestTransactionPoid()) &&
@@ -678,8 +654,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     if (!isCurrentRecord && transferDtlRepository.existsByManifestAndContainerAndSelected(
                             detail.getMainfestTransactionPoid(), detail.getContainerNo())) {
                         throw new ValidationException(
-                                "Container " + detail.getContainerNo()
-                                        + " is already selected in another transfer record");
+                                "Container " + detail.getContainerNo() + " is already selected in another transfer record");
                     }
                 }
             }
@@ -687,8 +662,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     }
 
     private void createDetailRecords(Long transactionPoid,
-            List<DemurrageDetentionTransferDetailDto> transferDetails,
-            List<DemurrageDetentionTransferBillDetailDto> billDetails) {
+                                     List<DemurrageDetentionTransferDetailDto> transferDetails,
+                                     List<DemurrageDetentionTransferBillDetailDto> billDetails) {
         String docId = "100-151";
 
         // Create transfer details
@@ -704,8 +679,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 ShipDemDetnTransferDtl saved = transferDtlRepository.save(detail);
 
                 // Log child table create
-                String logDetail = String.format("Row Created on Demurrage Detention Transfer Detail with detRowId: %s",
-                        saved.getDetRowId());
+                String logDetail = String.format("Row Created on Demurrage Detention Transfer Detail with detRowId: %s", saved.getDetRowId());
                 loggingService.createLogSummaryEntry(docId, transactionPoid.toString(), logDetail);
             }
         }
@@ -723,27 +697,23 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 ShipDemDtnTransferBillDtl saved = billDtlRepository.save(detail);
 
                 // Log child table create
-                String logDetail = String.format("Row Created on Demurrage Detention Bill Detail with detRowId: %s",
-                        saved.getDetRowId());
+                String logDetail = String.format("Row Created on Demurrage Detention Bill Detail with detRowId: %s", saved.getDetRowId());
                 loggingService.createLogSummaryEntry(docId, transactionPoid.toString(), logDetail);
             }
         }
     }
 
     private void updateDetailRecords(Long transactionPoid,
-            List<DemurrageDetentionTransferDetailDto> transferDetails,
-            List<DemurrageDetentionTransferBillDetailDto> billDetails) {
+                                     List<DemurrageDetentionTransferDetailDto> transferDetails,
+                                     List<DemurrageDetentionTransferBillDetailDto> billDetails) {
         String docId = "100-151";
 
         // Get existing details for logging deletions
-        List<ShipDemDetnTransferDtl> existingTransferDetails = transferDtlRepository
-                .findByTransactionPoidOrderByDetRowId(transactionPoid);
-        List<ShipDemDtnTransferBillDtl> existingBillDetails = billDtlRepository
-                .findByTransactionPoidOrderByDetRowId(transactionPoid);
+        List<ShipDemDetnTransferDtl> existingTransferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        List<ShipDemDtnTransferBillDtl> existingBillDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
 
         // Log deletions
-        existingTransferDetails
-                .forEach(deleted -> loggingService.logDelete(deleted, docId, transactionPoid.toString()));
+        existingTransferDetails.forEach(deleted -> loggingService.logDelete(deleted, docId, transactionPoid.toString()));
         existingBillDetails.forEach(deleted -> loggingService.logDelete(deleted, docId, transactionPoid.toString()));
 
         // Delete existing details
@@ -756,24 +726,19 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     /**
      * Call PROC_SHIP_CNT_PPFREDAYS_UPDATE stored procedure
-     * Parameters: p_transaction_poid (varchar2), p_EXTRA_FREE_DAYS_PRNPLS
-     * (varchar2), p_container_no (varchar2)
+     * Parameters: p_transaction_poid (varchar2), p_EXTRA_FREE_DAYS_PRNPLS (varchar2), p_container_no (varchar2)
      */
-    private void callProcShipCntPpfredaysUpdate(Long mainfestTransactionPoid, java.math.BigDecimal extraFreeDaysPrnpls,
-            String containerNo) {
+    private void callProcShipCntPpfredaysUpdate(Long mainfestTransactionPoid, java.math.BigDecimal extraFreeDaysPrnpls, String containerNo) {
         try {
             String sql = "{call PROC_SHIP_CNT_PPFREDAYS_UPDATE(?, ?, ?)}";
             jdbcTemplate.execute(sql, (CallableStatement cs) -> {
-                cs.setString(1, String.valueOf(mainfestTransactionPoid)); // Convert Long to String as SP expects
-                                                                          // varchar2
-                cs.setString(2, String.valueOf(extraFreeDaysPrnpls)); // Convert BigDecimal to String as SP expects
-                                                                      // varchar2
+                cs.setString(1, String.valueOf(mainfestTransactionPoid)); // Convert Long to String as SP expects varchar2
+                cs.setString(2, String.valueOf(extraFreeDaysPrnpls)); // Convert BigDecimal to String as SP expects varchar2
                 cs.setString(3, containerNo);
                 cs.execute();
                 return null;
             });
-            log.debug("Successfully called PROC_SHIP_CNT_PPFREDAYS_UPDATE for manifest: {}, container: {}",
-                    mainfestTransactionPoid, containerNo);
+            log.debug("Successfully called PROC_SHIP_CNT_PPFREDAYS_UPDATE for manifest: {}, container: {}", mainfestTransactionPoid, containerNo);
         } catch (Exception e) {
             log.error("Error calling PROC_SHIP_CNT_PPFREDAYS_UPDATE", e);
             throw new ValidationException("Failed to update container free days: " + e.getMessage());
@@ -782,8 +747,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     /**
      * Call PROC_DEM_DEN_SET_DEFAULT stored procedure
-     * Parameters: P_LINE_POID (NUMBER), P_BL_TYPE (VARCHAR2), P_AC_PAYABLE (OUT
-     * NUMBER)
+     * Parameters: P_LINE_POID (NUMBER), P_BL_TYPE (VARCHAR2), P_AC_PAYABLE (OUT NUMBER)
      * Returns: Payable GL POID as String or "NO_DATA"
      */
     private String callProcDemDenSetDefault(Long linePoid, String blType) {
@@ -795,7 +759,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                         cs.setString(2, blType);
                         cs.registerOutParameter(3, Types.NUMERIC);
                         cs.execute();
-
+                        
                         try {
                             Object result = cs.getObject(3);
                             if (result != null) {
@@ -810,7 +774,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                             log.warn("SP returned invalid value for NUMBER parameter: {}", e.getMessage());
                             return "NO_DATA";
                         }
-                    });
+                    }
+            );
         } catch (Exception e) {
             log.error("Error calling PROC_DEM_DEN_SET_DEFAULT for linePoid: {}, blType: {}", linePoid, blType, e);
             return "NO_DATA";
@@ -837,8 +802,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     }
 
     private String generateDocRef(Long companyPoid) {
-        // TODO: Implement DOC_REF generation similar to legacy
-        // RTN_GLOBAL_SEQ_NO('DEM_DET_TRANSFER', P_PREFIX, 5)
+        // TODO: Implement DOC_REF generation similar to legacy RTN_GLOBAL_SEQ_NO('DEM_DET_TRANSFER', P_PREFIX, 5)
         // For now, use a simple pattern
         return "DEM-DET-" + String.format("%08d", System.currentTimeMillis() % 100000000);
     }
@@ -850,21 +814,16 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
         // Enrich header LOVs
         enrichLov(dto.getLinePoid(), dto::setLinePoidDet, "LINE_MASTER", groupPoid, companyPoid, userPoid);
-        enrichLov(dto.getPayableGlPoid(), dto::setPayableGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid,
-                userPoid);
-        enrichLov(dto.getIncomeGlPoid(), dto::setIncomeGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid,
-                userPoid);
+        enrichLov(dto.getPayableGlPoid(), dto::setPayableGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid, userPoid);
+        enrichLov(dto.getIncomeGlPoid(), dto::setIncomeGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid, userPoid);
 
         // Enrich transfer detail LOVs
         if (dto.getTransferDetails() != null) {
             for (DemurrageDetentionTransferDetailDto detail : dto.getTransferDetails()) {
-                enrichLov(detail.getMainfestTransactionPoid(), detail::setMainfestTransactionPoidDet, "MANIFEST",
-                        groupPoid, companyPoid, userPoid);
-                enrichLov(detail.getLinePoid(), detail::setLinePoidDet, "LINE_MASTER", groupPoid, companyPoid,
-                        userPoid);
+                enrichLov(detail.getMainfestTransactionPoid(), detail::setMainfestTransactionPoidDet, "MANIFEST", groupPoid, companyPoid, userPoid);
+                enrichLov(detail.getLinePoid(), detail::setLinePoidDet, "LINE_MASTER", groupPoid, companyPoid, userPoid);
                 if (detail.getEquipmentIsoType() != null && !detail.getEquipmentIsoType().isEmpty()) {
-                    enrichLov(detail.getEquipmentIsoType(), detail::setEquipmentIsoTypeDet, "CONTAINER_TYPE_MASTER",
-                            groupPoid, companyPoid, userPoid);
+                    enrichLov(detail.getEquipmentIsoType(), detail::setEquipmentIsoTypeDet, "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid);
                 }
             }
         }
@@ -872,14 +831,13 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         // Enrich bill detail LOVs
         if (dto.getBillDetails() != null) {
             for (DemurrageDetentionTransferBillDetailDto detail : dto.getBillDetails()) {
-                enrichLov(detail.getGlPoid(), detail::setGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid,
-                        userPoid);
+                enrichLov(detail.getGlPoid(), detail::setGlPoidDet, "GL_MASTER_LEDGERS", groupPoid, companyPoid, userPoid);
             }
         }
     }
 
     private void enrichLov(Long poid, java.util.function.Consumer<LovGetListDto> setter, String lovType,
-            Long groupPoid, Long companyPoid, Long userPoid) {
+                           Long groupPoid, Long companyPoid, Long userPoid) {
         if (poid != null) {
             try {
                 LovGetListDto lovItem = lovService.getDetailsByPoidAndLovName(poid, lovType);
@@ -906,8 +864,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 Long payableGlPoid = Long.parseLong(defaultPayableGl);
                 result.put("payableGlPoid", payableGlPoid);
                 try {
-                    LovGetListDto payableGlDet = lovService.getDetailsByPoidAndLovName(payableGlPoid,
-                            "GL_MASTER_LEDGERS");
+                    LovGetListDto payableGlDet = lovService.getDetailsByPoidAndLovName(payableGlPoid, "GL_MASTER_LEDGERS");
                     result.put("payableGlDet", payableGlDet);
                 } catch (Exception e) {
                     log.warn("Failed to fetch GL_MASTER_LEDGERS LOV for payable GL: {}", payableGlPoid, e);
@@ -917,8 +874,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             if (incomeGlPoid != null) {
                 result.put("incomeGlPoid", incomeGlPoid);
                 try {
-                    LovGetListDto incomeGlDet = lovService.getDetailsByPoidAndLovName(incomeGlPoid,
-                            "GL_MASTER_LEDGERS");
+                    LovGetListDto incomeGlDet = lovService.getDetailsByPoidAndLovName(incomeGlPoid, "GL_MASTER_LEDGERS");
                     result.put("incomeGlDet", incomeGlDet);
                 } catch (Exception e) {
                     log.warn("Failed to fetch GL_MASTER_LEDGERS LOV for income GL: {}", incomeGlPoid, e);
@@ -930,7 +886,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     }
 
     private void enrichLov(String code, java.util.function.Consumer<LovGetListDto> setter, String lovType,
-            Long groupPoid, Long companyPoid, Long userPoid) {
+                           Long groupPoid, Long companyPoid, Long userPoid) {
         if (code != null && !code.isEmpty()) {
             try {
                 LovGetListDto lovItem = lovService.getDetailsByCodeAndLovName(code, lovType);
@@ -944,7 +900,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     public Map<String, Object> getGlAccountsDirectFromSp(Long linePoid, String blType) {
         log.info("Getting GL accounts directly from SP for line: {}, blType: {}", linePoid, blType);
         Map<String, Object> result = new java.util.HashMap<>();
-
+        
         if (linePoid != null && blType != null) {
             String payableGl = callProcDemDenSetDefault(linePoid, blType);
             result.put("payableGlPoid", payableGl != null && !payableGl.equals("NO_DATA") ? payableGl : null);

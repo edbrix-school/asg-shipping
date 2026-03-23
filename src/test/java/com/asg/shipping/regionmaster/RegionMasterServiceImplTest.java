@@ -3,8 +3,11 @@ package com.asg.shipping.regionmaster;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.regionmaster.dto.RegionMasterRequest;
@@ -14,10 +17,12 @@ import com.asg.shipping.regionmaster.repository.ShipRegionMasterRepository;
 import com.asg.shipping.regionmaster.service.impl.RegionMasterServiceImpl;
 import com.asg.shipping.regionmaster.util.RegionMasterMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +46,8 @@ class RegionMasterServiceImplTest {
     private DocumentSearchService documentService;
     @Mock
     private LoggingService loggingService;
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     @InjectMocks
     private RegionMasterServiceImpl service;
@@ -48,6 +55,7 @@ class RegionMasterServiceImplTest {
     private ShipRegionMasterEntity entity;
     private RegionMasterRequest request;
     private RegionMasterResponse response;
+    private MockedStatic<UserContext> userContextMock;
 
     @BeforeEach
     void setup() {
@@ -68,6 +76,14 @@ class RegionMasterServiceImplTest {
         response.setRegionPoid(1L);
         response.setRegionCode("ME");
         response.setRegionName("Middle East");
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (userContextMock != null) {
+            userContextMock.close();
+            userContextMock = null;
+        }
     }
 
     // ---------- LIST ----------
@@ -147,6 +163,17 @@ class RegionMasterServiceImplTest {
                 () -> service.create(request, 10L, "user1", "DOC-1"));
     }
 
+    @Test
+    void testCreate_DuplicateName() {
+        when(repository.existsByRegionCodeAndGroupPoidAndDeletedNot(any(), any(), any()))
+                .thenReturn(false);
+        when(repository.existsByRegionNameAndGroupPoidAndDeletedNot(any(), any(), any()))
+                .thenReturn(true);
+
+        assertThrows(ValidationException.class,
+                () -> service.create(request, 10L, "user1", "DOC-1"));
+    }
+
     // ---------- UPDATE ----------
     @Test
     void testUpdate_Success() {
@@ -163,6 +190,39 @@ class RegionMasterServiceImplTest {
                 service.update(1L, request, 10L, "user1", "DOC-1");
 
         assertNotNull(result);
+    }
+
+    @Test
+    void testUpdate_NotFound() {
+        when(repository.findByRegionPoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
+    }
+
+    @Test
+    void testUpdate_DuplicateCode() {
+        request.setRegionCode("NEW");
+        when(repository.findByRegionPoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(entity));
+        when(repository.existsByRegionCodeAndGroupPoidAndDeletedNotAndRegionPoidNot("NEW", 10L, "Y", 1L))
+                .thenReturn(true);
+
+        assertThrows(ValidationException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
+    }
+
+    @Test
+    void testUpdate_DuplicateName() {
+        request.setRegionName("NEWNAME");
+        when(repository.findByRegionPoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(entity));
+        when(repository.existsByRegionNameAndGroupPoidAndDeletedNotAndRegionPoidNot("NEWNAME", 10L, "Y", 1L))
+                .thenReturn(true);
+
+        assertThrows(ValidationException.class,
+                () -> service.update(1L, request, 10L, "user1", "DOC-1"));
     }
 
     // ---------- TOGGLE ACTIVE STATUS ----------
@@ -213,6 +273,32 @@ class RegionMasterServiceImplTest {
                 () -> service.toggleActiveStatus(1L, 10L, "user1"));
     }
 
+    @Test
+    void testDelete_Success() {
+        DeleteReasonDto reason = new DeleteReasonDto();
+        reason.setDeleteReason("cleanup");
+        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
+        userContextMock.when(UserContext::getGroupPoid).thenReturn(10L);
+
+        when(repository.findByRegionPoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(entity));
+        when(documentDeleteService.deleteDocument(1L, "SHIP_REGION_MASTER", "REGION_POID", reason, null))
+                .thenReturn("SUCCESS");
+
+        assertDoesNotThrow(() -> service.delete(1L, reason));
+        verify(documentDeleteService).deleteDocument(1L, "SHIP_REGION_MASTER", "REGION_POID", reason, null);
+    }
+
+    @Test
+    void testDelete_NotFound() {
+        DeleteReasonDto reason = new DeleteReasonDto();
+        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
+        userContextMock.when(UserContext::getGroupPoid).thenReturn(10L);
+        when(repository.findByRegionPoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(1L, reason));
+    }
 
 }
 

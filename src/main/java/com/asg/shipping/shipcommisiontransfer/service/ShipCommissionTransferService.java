@@ -1,11 +1,9 @@
 package com.asg.shipping.shipcommisiontransfer.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
-import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
-import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
-import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferUpdateDTO;
+import com.asg.shipping.shipcommisiontransfer.dto.*;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,4 +50,15 @@ public interface ShipCommissionTransferService {
      * Insert commission data into PDA system
      */
     Map<String, Object> insertPdaCommission(Long transactionPoid);
+
+    Map<String, String> getCurrencyExchangeForVoyage(
+            Long groupPoid,
+            Long companyPoid,
+            Long userPoid,
+            Long voyageId
+    );
+
+    List<PdaFdaDtlResponseDTO> getPdaFdaDetails(Long transactionPoid);
+
+    List<Object[]> getCommissionByVoyage(Long voyageTransactionPoid, Long transactionPoid);
 }

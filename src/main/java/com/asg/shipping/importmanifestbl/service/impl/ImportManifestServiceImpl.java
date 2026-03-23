@@ -239,14 +239,14 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
         ShipBlManifestHdr saved = headerRepository.saveAndFlush(entity);
         Long transactionPoid = saved.getTransactionPoid();
-        
+
         procRepository.validateBeforeSave(dto.getVesselVoyagePoid(), transactionPoid, dto.getQuotationPoid(),
                 dto.getFreight(), dto.getBookedByPrincipal());
 
         log.info("BL Manifest header saved with transactionPoid: {}", transactionPoid);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
-        
+
         List<String> logEntries = new ArrayList<>();
         saveGeneralCargoDetails(dto.getGeneralCargoDetails(), transactionPoid, logEntries);
         saveCargoDescriptions(dto.getDescriptionsAndMarks(), transactionPoid, logEntries);
@@ -278,21 +278,21 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         BeanUtils.copyProperties(existingEntity, oldEntity);
 
         performBlManifestValidations(dto, id);
-        
+
         procRepository.validateBeforeSave(dto.getVesselVoyagePoid(), id, dto.getQuotationPoid(),
                 dto.getFreight(), dto.getBookedByPrincipal());
 
         String oldFreightStatus = existingEntity.getFreightStatus();
         String oldDoNo = existingEntity.getDoNo();
-        
+
         ShipBlManifestHdr entity = ImportManifestMapper.mapToEntity(dto, existingEntity);
         if (hasAnyEdiChange(dto)) {
             updateService.formatEdiFields(entity);
         }
-        
+
         ShipBlManifestHdr saved = headerRepository.saveAndFlush(entity);
         updateDetailTables(dto, saved.getTransactionPoid());
-        
+
         loggingService.logChanges(oldEntity, existingEntity, ShipBlManifestHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         updateService.registerAfterCommitActions(saved, UserContext.getGroupPoid(), UserContext.getCompanyPoid(),
@@ -468,7 +468,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     private void performBlManifestValidations(ImportManifestBlDto dto, Long transactionPoid) {
         blManifestValidationService.validateMandatoryFields(
                 dto.getVesselVoyagePoid(), dto.getCargo(), dto.getBlNumber(), dto.getBlType());
-        
+
         validateBlManifestDTO(dto, transactionPoid);
 
         blManifestValidationService.validateHoldReasons(
@@ -494,10 +494,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         validateVoyageCompany(dto.getVesselVoyagePoid());
 
         if (dto.getBlNumber() != null && !dto.getBlNumber().trim().isEmpty()) {
-            boolean exists = (excludePoid == null) 
+            boolean exists = (excludePoid == null)
                     ? headerRepository.existsByVoyageTransactionPoidAndBlNumber(dto.getVesselVoyagePoid(), dto.getBlNumber().trim())
                     : headerRepository.existsByVoyageTransactionPoidAndBlNumberExcludingPoid(dto.getVesselVoyagePoid(), dto.getBlNumber().trim(), excludePoid);
-            
+
             if (exists) {
                 throw new ValidationException(
                         String.format(BlManifestValidationMessages.BL_NUMBER_EXISTS_FOR_VOYAGE, dto.getBlNumber().trim()));

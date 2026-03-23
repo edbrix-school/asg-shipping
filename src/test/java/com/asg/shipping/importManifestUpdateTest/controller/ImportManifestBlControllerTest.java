@@ -5,10 +5,10 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.importManifestUpdate.controller.ImportManifestBlController;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
-import com.asg.shipping.importManifestUpdate.service.ImportManifestBlService;
+import com.asg.shipping.importmanifestupdate.controller.ImportManifestBlController;
+import com.asg.shipping.importmanifestupdate.dto.ImportManifestBlRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ImportManifestBlUpdateDTO;
+import com.asg.shipping.importmanifestupdate.service.ImportManifestBlService;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -227,11 +227,11 @@ public class ImportManifestBlControllerTest {
 
     @Test
     void updateEmailVerification_Success() {
-        var request = com.asg.shipping.importManifestUpdate.dto.EmailVerificationRequestDto.builder()
+        var request = com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto.builder()
                 .transactionPoId(1L)
                 .verified(true)
                 .build();
-        var response = com.asg.shipping.importManifestUpdate.dto.EmailVerificationResponseDto.builder()
+        var response = com.asg.shipping.importmanifestupdate.dto.EmailVerificationResponseDto.builder()
                 .status("SUCCESS")
                 .build();
 
@@ -246,7 +246,7 @@ public class ImportManifestBlControllerTest {
     @Test
     void resendCan_Success() {
         var request = new com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto(1L);
-        var response = com.asg.shipping.importManifestUpdate.dto.ResendCanResponseDto.builder()
+        var response = com.asg.shipping.importmanifestupdate.dto.ResendCanResponseDto.builder()
                 .status("SUCCESS")
                 .build();
 
@@ -261,7 +261,7 @@ public class ImportManifestBlControllerTest {
     @Test
     void sendEdiEmails_Success() {
         var request = new com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto(1L);
-        var response = com.asg.shipping.importManifestUpdate.dto.SendEdiEmailsResponseDto.builder()
+        var response = com.asg.shipping.importmanifestupdate.dto.SendEdiEmailsResponseDto.builder()
                 .emailsSent(2)
                 .build();
 
@@ -275,7 +275,7 @@ public class ImportManifestBlControllerTest {
 
     @Test
     void getBlStatus_Success() {
-        var response = com.asg.shipping.importManifestUpdate.dto.BlStatusResponseDto.builder()
+        var response = com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto.builder()
                 .status("NEW")
                 .build();
 
@@ -290,7 +290,7 @@ public class ImportManifestBlControllerTest {
     @Test
     void loadEmailFax_Success() {
         var request = new com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto(1L);
-        var response = com.asg.shipping.importManifestUpdate.dto.LoadEmailFaxResponseDto.builder()
+        var response = com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxResponseDto.builder()
                 .emailFaxDetails(java.util.List.of())
                 .build();
 
@@ -317,7 +317,7 @@ public class ImportManifestBlControllerTest {
 
     @Test
     void updateEmailVerification_NotFound() {
-        var request = com.asg.shipping.importManifestUpdate.dto.EmailVerificationRequestDto.builder()
+        var request = com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto.builder()
                 .transactionPoId(999L)
                 .verified(true)
                 .build();

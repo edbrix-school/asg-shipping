@@ -1,9 +1,9 @@
 package com.asg.shipping.exportManifestBl.dto;
 
-import com.asg.shipping.importManifestUpdate.dto.CargoDescriptionRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ChargeRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ContainerRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.GeneralCargoRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -96,6 +96,47 @@ public class ExportManifestBlUpdateDto {
 
     @Size(max = 25, message = "BL issue type must not exceed 25 characters")
     private String blIssueType;
+
+    @Size(max = 25, message = "BL original print must not exceed 25 characters")
+    private String blOrginalPrint;
+
+    private LocalDate blOrginalDate;
+
+    @Size(max = 20, message = "BL printed by must not exceed 20 characters")
+    private String blPrintedBy;
+
+    private Long demFreeDays;
+
+    @Size(max = 25, message = "Released status must not exceed 25 characters")
+    private String releasedStatus;
+
+    private LocalDate releasedDate;
+
+    private String relasedToPerson;
+
+    private String relasedIdPerson;
+
+    private String relasedAddrsPerson;
+
+    private String relasedBy;
+
+    private Long openDaysAfter;
+
+    private String releasedType;
+
+    private Long relasedSeqno;
+
+    private String releasedGrantBy;
+
+    private LocalDate releasedGrantDate;
+
+    private String releasedGrantReason;
+
+    @Size(max = 1, message = "Manifest email verified must be 1 char")
+    private String manifestEmailVerified;
+
+    @Size(max = 1, message = "Email verified with special C must be 1 char")
+    private String emailVerifiedWithSpecialC;
 
     @Size(max = 350, message = "Shipper EDI name must not exceed 350 characters")
     private String shipperEdiName;

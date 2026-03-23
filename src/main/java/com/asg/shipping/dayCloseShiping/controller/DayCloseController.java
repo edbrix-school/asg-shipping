@@ -49,7 +49,7 @@ public class DayCloseController {
     @GetMapping("/{transactionPoid}")
     @Operation(summary = "Get Day close details", description = "Fetch day close details for the poid", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> getDayClose(
-            @Parameter(description = "Day Close Transaction POID", example = "100023") @PathVariable Long transactionPoid) {
+            @Parameter(description = "Day Close Transaction POID", example = "100023") @PathVariable(name = "transactionPoid") Long transactionPoid) {
 
         DayCloseDto response = dayCloseService.getDayClose(transactionPoid, UserContext.getGroupPoid(),
                 UserContext.getCompanyPoid());
@@ -65,7 +65,7 @@ public class DayCloseController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "New day Close data fetched successfully", content = @Content(schema = @Schema(implementation = DayCloseHdrDto.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")})
     public ResponseEntity<?> getNewDayClose(
-            @Parameter(description = "Transaction Date", example = "2025-07-06") @RequestParam String transactionDate) {
+            @Parameter(description = "Transaction Date", example = "2025-07-06") @RequestParam(name = "transactionDate") String transactionDate) {
 
         DayCloseSummaryProjection response = dayCloseService.getNewDayCloseData(UserContext.getGroupPoid(),
                 UserContext.getCompanyPoid(), transactionDate);
@@ -77,7 +77,7 @@ public class DayCloseController {
     @GetMapping("/denominations")
     @Operation(summary = "Get cash denominations", description = "Fetch denomination details for selected currency", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> getDenominations(
-            @Parameter(description = "Currency Code", example = "BHD", name = "currencyCode") @RequestParam String currencyCode) {
+            @Parameter(description = "Currency Code", example = "BHD", name = "currencyCode") @RequestParam(name = "currencyCode") String currencyCode) {
 
         List<Map<String, Object>> denominations = dayCloseService.getDenominations(currencyCode);
 
@@ -107,7 +107,7 @@ public class DayCloseController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")})
     public ResponseEntity<?> updateDayClose(
-            @Parameter(description = "Day Close Transaction POID", example = "100023") @PathVariable Long transactionPoid,
+            @Parameter(description = "Day Close Transaction POID", example = "100023") @PathVariable(name = "transactionPoid") Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Day close details to be updated", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = DayCloseDto.class))) @Valid @RequestBody DayCloseDto request) {
 
         DayCloseDto response = dayCloseService.updateDayClose(request, transactionPoid, UserContext.getGroupPoid(),
@@ -121,7 +121,7 @@ public class DayCloseController {
     @Operation(summary = "Delete DayClose Shipping")
     public ResponseEntity<?> deleteCollectionHandover(
             @Parameter(description = "Dayclose ID to delete", required = true)
-            @PathVariable Long id,
+            @PathVariable(name = "id") Long id,
             @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting DayClose Shipping with id: {}", id);
         dayCloseService.deleteDayClose(id,deleteReasonDto);
@@ -136,8 +136,8 @@ public class DayCloseController {
     public ResponseEntity<?> searchDayClose(
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters,
-            @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate
+            @RequestParam(name = "startDate", required = false) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false) LocalDate endDate
     ) {
         if ((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
             return badRequest("Both startDate and endDate should be specified or both dates should be empty.");
@@ -160,7 +160,7 @@ public class DayCloseController {
     @GetMapping("/print/{transactionPoid}")
     public ResponseEntity<?> print(
             @Parameter(description = "Transaction POID", example = "69789")
-            @PathVariable Long transactionPoid) {
+            @PathVariable(name = "transactionPoid") Long transactionPoid) {
         try {
             byte[] pdf = dayCloseService.print(transactionPoid);
             return ResponseEntity.ok()

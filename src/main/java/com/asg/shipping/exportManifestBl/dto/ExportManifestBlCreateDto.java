@@ -1,9 +1,9 @@
 package com.asg.shipping.exportManifestBl.dto;
 
-import com.asg.shipping.importManifestUpdate.dto.CargoDescriptionRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ChargeRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ContainerRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.GeneralCargoRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -98,6 +98,48 @@ public class ExportManifestBlCreateDto {
 
     @Size(max = 25, message = "Cargo type must not exceed 25 characters")
     private String cargoType;
+
+    @Size(max = 25, message = "BL original print value must not exceed 25 characters")
+    private String blOrginalPrint;
+
+    private LocalDate blOrginalDate;
+
+    @Size(max = 20, message = "BL printed by must not exceed 20 characters")
+    private String blPrintedBy;
+
+    private Long demFreeDays;
+
+    @Size(max = 25, message = "Released status must not exceed 25 characters")
+    private String releasedStatus;
+
+    private LocalDate releasedDate;
+
+    @Size(max = 50, message = "Released to person must not exceed 50 characters")
+    private String relasedToPerson;
+
+    @Size(max = 50, message = "Released ID person must not exceed 50 characters")
+    private String relasedIdPerson;
+
+    @Size(max = 100, message = "Released address person must not exceed 100 characters")
+    private String relasedAddrsPerson;
+
+    @Size(max = 20, message = "Relased by must not exceed 20 characters")
+    private String relasedBy;
+
+    private Long openDaysAfter;
+
+    @Size(max = 25, message = "Released type must not exceed 25 characters")
+    private String releasedType;
+
+    private Long relasedSeqno;
+
+    @Size(max = 20, message = "Released grant by must not exceed 20 characters")
+    private String releasedGrantBy;
+
+    private LocalDate releasedGrantDate;
+
+    @Size(max = 200, message = "Released grant reason must not exceed 200 characters")
+    private String releasedGrantReason;
 
     @Size(max = 20, message = "DO number must not exceed 20 characters")
     private String doNo;
@@ -240,6 +282,12 @@ public class ExportManifestBlCreateDto {
 
     @Size(max = 100, message = "Forwarder PIN must not exceed 100 characters")
     private String forwarderPin;
+
+    @Size(max = 1, message = "Manifest email verified must be 1 char")
+    private String manifestEmailVerified;
+
+    @Size(max = 1, message = "Email verified with special C must be 1 char")
+    private String emailVerifiedWithSpecialC;
 
     /* ================= GENERAL CARGO DETAILS ================= */
     private List<GeneralCargoRequestDto> generalCargoDetails;
