@@ -69,7 +69,8 @@ public interface VesselVoyageService {
 
     void deleteVoyage(Long voyagePoid);
     
-    byte[] print(Long transactionPoid, String freightCargo, String importExport) throws Exception;
+    byte[] print(Long transactionPoid, String freightCargo, String importExport)
+            throws net.sf.jasperreports.engine.JRException, java.sql.SQLException;
     
 }
 
