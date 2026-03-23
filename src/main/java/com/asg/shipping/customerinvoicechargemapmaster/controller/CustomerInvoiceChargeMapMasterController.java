@@ -123,7 +123,7 @@ public class CustomerInvoiceChargeMapMasterController {
             @Valid @RequestBody CustomerInvoiceChargeMapMasterRequest request
     ) {
         log.info("Saving/updating customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
-        service.saveOrUpdate(request, UserContext.getGroupPoid(), getCurrentUser());
+        service.saveOrUpdate(request, UserContext.getGroupPoid());
         log.info("Successfully saved/updated customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
         return ApiResponse.success(
                 "Customer invoice charge mapping saved successfully"
@@ -164,7 +164,7 @@ public class CustomerInvoiceChargeMapMasterController {
             @PathVariable @NotNull @Positive Long detRowId
     ) {
         log.info("Deleting customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
-        service.deleteDetail(customerPoid, detRowId, UserContext.getGroupPoid(), getCurrentUser());
+        service.deleteDetail(customerPoid, detRowId, UserContext.getGroupPoid());
         log.info("Successfully deleted customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
         return ApiResponse.success(
                 "Customer invoice charge detail deleted successfully"

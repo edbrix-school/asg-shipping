@@ -10,8 +10,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import com.asg.shipping.vesselvoyagecreation.entity.VwShipVoyageCurrencyId;
-
 @Entity
 @Table(name = "VW_SHIP_VOYAGE_CURRENCY")
 @Data

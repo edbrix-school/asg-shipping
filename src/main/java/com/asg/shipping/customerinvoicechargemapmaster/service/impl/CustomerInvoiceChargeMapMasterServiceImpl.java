@@ -17,10 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 @Service
 @RequiredArgsConstructor
@@ -43,20 +40,19 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
 
         log.info("Getting customer invoice charge mapping with customerPoid: {}", customerPoid);
 
-        CustomerInvoicePrtMasterEntity master =
-                masterRepo.findById(customerPoid)
-                        .filter(m -> !"Y".equals(m.getDeleted()))
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer invoice charge mapping not found"
-                                ));
+        masterRepo.findById(customerPoid)
+                .filter(m -> !"Y".equals(m.getDeleted()))
+                .orElseThrow(() ->
+                        new com.asg.common.lib.exception.ResourceNotFoundException(
+                                "Customer invoice charge mapping", "customerPoid", customerPoid.toString()
+                        ));
 
         List<CustomerInvoicePrtDtlEntity> details =
                 detailRepo.findByIdCustomerPoid(customerPoid);
 
         if (details.isEmpty()) {
-            throw new RuntimeException(
-                    "Customer invoice charge mapping not found"
+            throw new com.asg.common.lib.exception.ResourceNotFoundException(
+                    "Customer invoice charge mapping", "customerPoid", customerPoid.toString()
             );
         }
 
@@ -78,8 +74,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     @Override
     public void saveOrUpdate(
             CustomerInvoiceChargeMapMasterRequest request,
-            Long groupPoid,
-            String userId) {
+            Long groupPoid) {
 
         log.info("Saving/updating customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
 
@@ -89,16 +84,13 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         }
 
         boolean isNewRecord = !masterRepo.existsById(request.getCustomerPoid());
-        
-        CustomerInvoicePrtMasterEntity master =
-                masterRepo.findById(request.getCustomerPoid())
-                        .orElseGet(() -> createMaster(
-                                request.getCustomerPoid(),
-                                groupPoid,
-                                userId
-                        ));
 
-        masterRepo.save(master);
+        CustomerInvoicePrtMasterEntity master =
+                masterRepo
+                        .findById(request.getCustomerPoid())
+                        .orElseGet(() -> createMaster(request.getCustomerPoid(), groupPoid));
+        log.debug("Master record ensured for customerPoid: {}", master.getCustomerPoid());
+
 
         if (isNewRecord) {
             loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), request.getCustomerPoid().toString());
@@ -119,8 +111,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     public void deleteDetail(
             Long customerPoid,
             Long detRowId,
-            Long groupPoid,
-            String userId) {
+            Long groupPoid) {
 
         log.info("Deleting customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
 
@@ -131,7 +122,8 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         CustomerInvoicePrtDtlEntity entity =
                 detailRepo.findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException("Charge detail not found"));
+                                new com.asg.common.lib.exception.ResourceNotFoundException(
+                                        "Charge detail", "detRowId", detRowId.toString()));
 
         // HARD DELETE (as per SRS)
         detailRepo.delete(entity);
@@ -148,8 +140,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
 
     private CustomerInvoicePrtMasterEntity createMaster(
             Long customerPoid,
-            Long groupPoid,
-            String userId) {
+            Long groupPoid) {
 
         CustomerInvoicePrtMasterEntity master =
                 new CustomerInvoicePrtMasterEntity();

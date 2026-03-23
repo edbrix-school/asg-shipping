@@ -105,7 +105,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         request.setCustomerPoid(1L);
         request.setDetails(List.of());
 
-        assertThrows(IllegalArgumentException.class, () -> service.saveOrUpdate(request, 2L, "user1"));
+        assertThrows(IllegalArgumentException.class, () -> service.saveOrUpdate(request, 2L));
         verifyNoInteractions(masterRepo);
     }
 
@@ -138,7 +138,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
-            service.saveOrUpdate(request, 2L, "userABC");
+            service.saveOrUpdate(request, 2L);
         }
 
         verify(loggingService).createLogSummaryEntry(LogDetailsEnum.CREATED, "DOC123", "1");
@@ -173,7 +173,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
-            service.saveOrUpdate(request, 2L, "userABC");
+            service.saveOrUpdate(request, 2L);
         }
 
         verify(loggingService).createLogSummaryEntry(LogDetailsEnum.MODIFIED, "DOC123", "1");
@@ -197,7 +197,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
-            service.deleteDetail(customerPoid, detRowId, groupPoid, "userXYZ");
+            service.deleteDetail(customerPoid, detRowId, groupPoid);
         }
 
         verify(detailRepo).delete(entity);

@@ -70,6 +70,6 @@ public interface CollectionHandoverService {
      */
     void toggleVerifyStatus(Long id, String verifiedRcvd, String mainOfcRemarks);
     
-    byte[] print(Long transactionPoid) throws Exception;
+    byte[] print(Long transactionPoid) throws net.sf.jasperreports.engine.JRException, java.sql.SQLException;
 }
 

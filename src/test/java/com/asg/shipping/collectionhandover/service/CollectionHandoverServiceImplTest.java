@@ -192,7 +192,7 @@ class CollectionHandoverServiceImplTest {
 
             CollectionHandoverDto mapped = new CollectionHandoverDto();
             when(mapper.mapToDto(eq(saved), anyList())).thenReturn(mapped);
-            doNothing().when(mapper).mapCreateDTOToEntity(eq(dto), any(ArShDayEndCloseHdr.class), eq(1L), eq(2L));
+            doNothing().when(mapper).mapCreateDTOToEntity(eq(dto), any(ArShDayEndCloseHdr.class), eq(1L));
             doNothing().when(mapper).mapDetailCreateDTOToEntity(any(CollectionHandoverDetailCreateDTO.class), any(ArShDayEndCloseDtl.class));
 
             when(detailRepository.findByTransactionPoidOrderByDetRowId(10L)).thenReturn(Collections.emptyList());
@@ -236,7 +236,7 @@ class CollectionHandoverServiceImplTest {
             CollectionHandoverDto mapped = new CollectionHandoverDto();
             when(mapper.mapToDto(any(ArShDayEndCloseHdr.class), anyList())).thenReturn(mapped);
 
-            doNothing().when(mapper).mapUpdateDTOToEntity(eq(dto), any(ArShDayEndCloseHdr.class), eq(1L), eq(2L));
+            doNothing().when(mapper).mapUpdateDTOToEntity(eq(dto), any(ArShDayEndCloseHdr.class));
 
             CollectionHandoverDto result = service.updateCollectionHandover(1L, dto, 1L, 2L);
             assertSame(mapped, result);
