@@ -45,8 +45,9 @@ public class PortMasterServiceImpl implements PortMasterService {
     private static final String PORT_NOT_FOUND="Port not found";
 
 	@Override
-	public Map<String, Object> createPort(Long groupPoid, PortMasterRequest request, String userId) {
+	public Map<String, Object> createPort(PortMasterRequest request) {
 
+        Long groupPoid = UserContext.getGroupPoid();
 		repository.findByGroupPoidAndPortCode(groupPoid, request.getPortCode()).ifPresent(p -> {
 			throw new IllegalArgumentException("Port Code already exists");
 		});
@@ -76,8 +77,9 @@ public class PortMasterServiceImpl implements PortMasterService {
 	}
 
 	@Transactional
-	public PortMasterResponse updatePort(Long groupPoid, Long portPoid, PortMasterRequest request, String userId) {
+	public PortMasterResponse updatePort( Long portPoid, PortMasterRequest request) {
 
+        Long groupPoid = UserContext.getGroupPoid();
 		PortMaster existingData = repository.findById(new PortMasterId(groupPoid, portPoid))
 				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
 		
@@ -115,7 +117,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 		String key = entity.getPortPoid().toString();
 		String docId = UserContext.getDocumentId();
 		loggingService.logChanges(existingData, entity, PortMaster.class, docId, key, LogDetailsEnum.MODIFIED, "PORT_POID");
-		return getPortById(groupPoid, portPoid);
+		return getPortById(portPoid);
 	}
 
 	@Override
@@ -124,8 +126,8 @@ public class PortMasterServiceImpl implements PortMasterService {
 	}
 
 	@Override
-	public PortMasterResponse getPortById(Long groupPoid, Long portPoid) {
-
+	public PortMasterResponse getPortById( Long portPoid) {
+        Long groupPoid = UserContext.getGroupPoid();
 		PortMaster entity=repository.findById(new PortMasterId(groupPoid, portPoid)).orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
 		
 		ShipTradelaneResponse tradeLaneResponse=tradeLaneService.getById(entity.getTradelanePoid());
@@ -137,7 +139,8 @@ public class PortMasterServiceImpl implements PortMasterService {
 	}
 
 	@Override
-	public void deletePort(Long groupPoid, Long portPoid, String userId) {
+	public void deletePort( Long portPoid) {
+        Long groupPoid = UserContext.getGroupPoid();
 		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
 				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
 
@@ -173,8 +176,8 @@ public class PortMasterServiceImpl implements PortMasterService {
 		dto.setBerths(entity.getBerths());
 		dto.setSeqno(entity.getSeqno());
 		dto.setActive(entity.getActive());
-		dto.setCountryDetail(mapReadOnlyresponse(tradeLaneResponse));
-		dto.setTradelaneDetail(mapReadOnlyresponse(countryMaster));
+		dto.setCountryDetail(mapReadOnlyresponse(countryMaster));
+		dto.setTradelaneDetail(mapReadOnlyresponse(tradeLaneResponse));
 		return dto;
 	}
 

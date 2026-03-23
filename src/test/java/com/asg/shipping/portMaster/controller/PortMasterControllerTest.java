@@ -79,13 +79,13 @@ class PortMasterControllerTest {
 
 		Map<String, Object> responseMap = Map.of("portPoid", 1L, "portCode", "PORT01");
 
-		when(service.createPort(eq(1001L), any(), eq("admin"))).thenReturn(responseMap);
+		when(service.createPort( any())).thenReturn(responseMap);
 
 		mockMvc.perform(post("/v1/port-master").param("groupPoid", "1001").param("userPoid", "admin")
 				.contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isOk());
 
-		verify(service).createPort(eq(1001L), any(), eq("admin"));
+		verify(service).createPort(any());
 	}
 
 	@Test
@@ -94,23 +94,23 @@ class PortMasterControllerTest {
 		PortMasterRequest request = createMockRequest();
 		PortMasterResponse response = createMockResponse();
 
-		when(service.updatePort(eq(1001L), eq(1L), any(), eq("admin"))).thenReturn(response);
+		when(service.updatePort( eq(1L), any())).thenReturn(response);
 
 		mockMvc.perform(put("/v1/port-master/1").param("groupPoid", "1001").param("userPoid", "admin")
 				.contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isOk());
 
-		verify(service).updatePort(eq(1001L), eq(1L), any(), eq("admin"));
+		verify(service).updatePort( eq(1L), any());
 	}
 
 	@Test
 	void getPortById_Success() throws Exception {
 
-		when(service.getPortById(eq(1001L), eq(1L))).thenReturn(createMockResponse());
+		when(service.getPortById(eq(1L))).thenReturn(createMockResponse());
 
 		mockMvc.perform(get("/v1/port-master/1").param("groupPoid", "1001")).andExpect(status().isOk());
 
-		verify(service).getPortById(eq(1001L), eq(1L));
+		verify(service).getPortById( eq(1L));
 		verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.VIEWED), eq("DOC123"), eq("1"));
 	}
 
@@ -149,7 +149,7 @@ class PortMasterControllerTest {
 		mockMvc.perform(delete("/v1/port-master/1").param("groupPoid", "1001").param("userPoid", "admin"))
 				.andExpect(status().isOk());
 
-		verify(service).deletePort(eq(1001L), eq(1L), eq("admin"));
+		verify(service).deletePort(eq(1L));
 		verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.DELETED), eq("DOC123"), eq("1"));
 	}
 

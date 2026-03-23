@@ -10,13 +10,13 @@ import com.asg.shipping.portmaster.dto.PortMasterResponse;
 
 public interface PortMasterService {
 
-	Map<String, Object> createPort(Long groupPoid, PortMasterRequest request, String userId);
+	Map<String, Object> createPort(PortMasterRequest request);
 
-	PortMasterResponse updatePort(Long groupPoid, Long portPoid, PortMasterRequest request, String userId);
+	PortMasterResponse updatePort( Long portPoid, PortMasterRequest request);
 
 	Map<String, Object> getAllPorts(String docId, FilterRequestDto request, Pageable pageable);
 
-	PortMasterResponse getPortById(Long groupPoid, Long portPoid);
+	PortMasterResponse getPortById( Long portPoid);
 
-	void deletePort(Long groupPoid, Long portPoid, String userId);
+	void deletePort(Long portPoid);
 }

@@ -1,9 +1,9 @@
 package com.asg.shipping.importManifestUpdateTest.event;
 
-import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestHdr;
-import com.asg.shipping.importManifestUpdate.event.BlManifestEventListener;
-import com.asg.shipping.importManifestUpdate.event.BlManifestSaveEvent;
-import com.asg.shipping.importManifestUpdate.respository.ImportManifestBlProcRepository;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestHdr;
+import com.asg.shipping.importmanifestupdate.event.BlManifestEventListener;
+import com.asg.shipping.importmanifestupdate.event.BlManifestSaveEvent;
+import com.asg.shipping.importmanifestupdate.respository.ImportManifestBlProcRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

@@ -18,14 +18,14 @@ import com.asg.shipping.exportManifestBl.entity.*;
 import com.asg.shipping.exportManifestBl.repository.*;
 import com.asg.shipping.exportManifestBl.repository.ShipBlToFfRepository;
 import com.asg.shipping.exportManifestBl.util.ExportManifestBlMapper;
-import com.asg.shipping.importManifestUpdate.dto.CargoDescriptionRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ChargeRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ContainerRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.GeneralCargoRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
-import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestDtlId;
-import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestCargoDtlId;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestCargoDtlId;
 import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -36,15 +36,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import net.sf.jasperreports.engine.JasperReport;
 import javax.sql.DataSource;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 @Service
 @RequiredArgsConstructor

@@ -65,6 +65,7 @@ class PortMasterServiceImplTest {
 	void setup() {
 		mockedUserContext = mockStatic(UserContext.class);
 		mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+		mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
 
 		entity = new PortMaster();
 		entity.setGroupPoid(100L);
@@ -102,7 +103,7 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
 
-		Map<String, Object> result = service.createPort(100L, request, "admin");
+		Map<String, Object> result = service.createPort(request);
 
 		assertEquals(99L, result.get("portPoid"));
 		verify(repository).save(any(PortMaster.class));
@@ -125,7 +126,7 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
 
-		Map<String, Object> result = service.createPort(100L, request, "admin");
+		Map<String, Object> result = service.createPort( request);
 
 		assertEquals(99L, result.get("portPoid"));
 		verify(repository).save(any(PortMaster.class));
@@ -138,7 +139,7 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByGroupPoidAndPortCode(100L, "P001")).thenReturn(Optional.of(new PortMaster()));
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort(100L, request, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
 		assertEquals("Port Code already exists", exception.getMessage());
 	}
 
@@ -152,7 +153,7 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByGroupPoidAndPortName(100L, "Port A")).thenReturn(Optional.of(new PortMaster()));
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort(100L, request, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
 		assertEquals("Port Name already exists", exception.getMessage());
 	}
 
@@ -168,7 +169,7 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort(100L, request, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
 		assertEquals("Port not found after save", exception.getMessage());
 	}
 
@@ -187,7 +188,7 @@ class PortMasterServiceImplTest {
 		GlobalCountryMaster country = new GlobalCountryMaster();
 		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
 
-		PortMasterResponse response = service.updatePort(100L, 1L, request, "admin");
+		PortMasterResponse response = service.updatePort(1L, request);
 
 		assertNotNull(response);
 		verify(repository).save(any(PortMaster.class));
@@ -211,7 +212,7 @@ class PortMasterServiceImplTest {
 		GlobalCountryMaster country = new GlobalCountryMaster();
 		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
 
-		PortMasterResponse response = service.updatePort(100L, 1L, request, "admin");
+		PortMasterResponse response = service.updatePort( 1L, request);
 
 		assertNotNull(response);
 		verify(repository).save(any(PortMaster.class));
@@ -235,7 +236,7 @@ class PortMasterServiceImplTest {
 		GlobalCountryMaster country = new GlobalCountryMaster();
 		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
 
-		PortMasterResponse response = service.updatePort(100L, 1L, request, "admin");
+		PortMasterResponse response = service.updatePort( 1L, request);
 
 		assertNotNull(response);
 		verify(repository).save(any(PortMaster.class));
@@ -259,7 +260,7 @@ class PortMasterServiceImplTest {
 		GlobalCountryMaster country = new GlobalCountryMaster();
 		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
 
-		PortMasterResponse response = service.updatePort(100L, 1L, request, "admin");
+		PortMasterResponse response = service.updatePort( 1L, request);
 
 		assertNotNull(response);
 		verify(repository).save(any(PortMaster.class));
@@ -272,8 +273,8 @@ class PortMasterServiceImplTest {
 
         when(repository.findById(any())).thenReturn(Optional.empty());
 
-        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                () -> service.updatePort(100L, 1L, request, "admin"));
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> service.updatePort( 1L, request));
 
         assertEquals("Port not found", exception.getMessage());
 	}
@@ -292,8 +293,8 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByPortCode("NEW_CODE")).thenReturn(Optional.of(existing));
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort(100L, 1L, request, "admin"));
-		assertEquals("PortCode already exists", exception.getMessage());
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort( 1L, request));
+		assertEquals("Port Code already exists", exception.getMessage());
 	}
 
 	@Test
@@ -310,8 +311,8 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByPortName("NEW_NAME")).thenReturn(Optional.of(existing));
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort(100L, 1L, request, "admin"));
-		assertEquals("PortName already exists", exception.getMessage());
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort( 1L, request));
+		assertEquals("Port Name already exists", exception.getMessage());
 	}
 
 	@Test
@@ -331,25 +332,25 @@ class PortMasterServiceImplTest {
 		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
 		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
 
-		PortMasterResponse response = service.getPortById(100L, 1L);
+		PortMasterResponse response = service.getPortById( 1L);
 
 		assertNotNull(response);
 		assertNotNull(response.getCountryDetail());
-		assertEquals(20L, response.getCountryDetail().get("poid"));
-		assertEquals("TL01", response.getCountryDetail().get("code"));
-		assertEquals("Asia", response.getCountryDetail().get("description"));
+		assertEquals(10L, response.getCountryDetail().get("poid"));
+		assertEquals("IN", response.getCountryDetail().get("code"));
+		assertEquals("India", response.getCountryDetail().get("description"));
 
 		assertNotNull(response.getTradelaneDetail());
-		assertEquals(10L, response.getTradelaneDetail().get("poid"));
-		assertEquals("IN", response.getTradelaneDetail().get("code"));
-		assertEquals("India", response.getTradelaneDetail().get("description"));
+		assertEquals(20L, response.getTradelaneDetail().get("poid"));
+		assertEquals("TL01", response.getTradelaneDetail().get("code"));
+		assertEquals("Asia", response.getTradelaneDetail().get("description"));
 	}
 
 	@Test
 	void getPortById_NotFound_Throws() {
 		when(repository.findById(any())).thenReturn(Optional.empty());
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.getPortById(100L, 1L));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.getPortById( 1L));
 		assertEquals("Port not found", exception.getMessage());
 	}
 
@@ -361,7 +362,7 @@ class PortMasterServiceImplTest {
 
 		when(countryRepository.findById(any())).thenReturn(Optional.empty());
 
-		assertThrows(ResourceNotFoundException.class, () -> service.getPortById(100L, 1L));
+		assertThrows(ResourceNotFoundException.class, () -> service.getPortById(1L));
 	}
 
 	@Test
@@ -388,7 +389,7 @@ class PortMasterServiceImplTest {
 	void deletePort_Success() {
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
 
-		service.deletePort(100L, 1L, "admin");
+		service.deletePort(1L);
 
 		assertEquals("Y", entity.getDeleted());
 	}
@@ -399,7 +400,7 @@ class PortMasterServiceImplTest {
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort(100L, 1L, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort( 1L));
 		assertEquals("Port has already been deleted.", exception.getMessage());
 	}
 
@@ -407,7 +408,7 @@ class PortMasterServiceImplTest {
 	void deletePort_NotFound_Throws() {
 		when(repository.findById(any())).thenReturn(Optional.empty());
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort(100L, 1L, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort( 1L));
 		assertEquals("Port not found", exception.getMessage());
 	}
 }
