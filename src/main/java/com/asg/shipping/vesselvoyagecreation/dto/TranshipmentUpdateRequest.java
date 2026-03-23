@@ -9,8 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-import com.asg.shipping.vesselvoyagecreation.dto.TranshipmentUpdateItem;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

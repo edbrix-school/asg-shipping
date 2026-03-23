@@ -10,10 +10,12 @@ import com.asg.shipping.linetariffs.service.LineTariffsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
@@ -26,6 +28,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class LineTariffsControllerTest {
+
+    private static final String DOC_ID = "100-050";
 
     @Mock
     private LineTariffsService lineTariffsService;
@@ -83,6 +87,21 @@ class LineTariffsControllerTest {
     }
 
     @Test
+    void searchLineTariffs_WithOnlyEndDate_ReturnsBadRequest() {
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                null,
+                0,
+                20,
+                null,
+                null,
+                LocalDate.of(2026, 12, 31));
+
+        assertNotNull(response);
+        assertEquals(400, response.getStatusCode().value());
+        verifyNoInteractions(lineTariffsService);
+    }
+
+    @Test
     void searchLineTariffs_WhenServiceThrows_ReturnsInternalServerError() {
         when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("boom"));
@@ -98,6 +117,130 @@ class LineTariffsControllerTest {
 
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
+    }
+
+    @Test
+    void searchLineTariffs_sortsDesc_whenDirectionIsDesc() {
+        Map<String, Object> result = new HashMap<>();
+        ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
+                ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+                .thenReturn(result);
+
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                new FilterRequestDto(null, null, null),
+                0,
+                20,
+                " description , desc ",
+                null,
+                null);
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+
+        var pageable = pageableCaptor.getValue();
+        assertTrue(pageable.getSort().isSorted());
+        Sort.Order order = pageable.getSort().getOrderFor("description");
+        assertNotNull(order);
+        assertEquals(Sort.Direction.DESC, order.getDirection());
+    }
+
+    @Test
+    void searchLineTariffs_sortFieldOnly_defaultsToAsc() {
+        Map<String, Object> result = new HashMap<>();
+        ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
+                ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+                .thenReturn(result);
+
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                new FilterRequestDto(null, null, null),
+                0,
+                20,
+                "description",
+                null,
+                null);
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+
+        var pageable = pageableCaptor.getValue();
+        Sort.Order order = pageable.getSort().getOrderFor("description");
+        assertNotNull(order);
+        assertEquals(Sort.Direction.ASC, order.getDirection());
+    }
+
+    @Test
+    void searchLineTariffs_sortEmptyString_resultsInUnsorted() {
+        Map<String, Object> result = new HashMap<>();
+        ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
+                ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+                .thenReturn(result);
+
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                new FilterRequestDto(null, null, null),
+                0,
+                20,
+                "",
+                null,
+                null);
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+
+        var pageable = pageableCaptor.getValue();
+        assertTrue(pageable.getSort().isUnsorted());
+    }
+
+    @Test
+    void searchLineTariffs_sortWithExtraParts_keepsUnsorted() {
+        Map<String, Object> result = new HashMap<>();
+        ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
+                ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+                .thenReturn(result);
+
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                new FilterRequestDto(null, null, null),
+                0,
+                20,
+                "description,desc,extra",
+                null,
+                null);
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+
+        var pageable = pageableCaptor.getValue();
+        assertTrue(pageable.getSort().isUnsorted());
+    }
+
+    @Test
+    void searchLineTariffs_withBothDates_passesDatesToService() {
+        Map<String, Object> result = new HashMap<>();
+        LocalDate startDate = LocalDate.of(2026, 1, 1);
+        LocalDate endDate = LocalDate.of(2026, 12, 31);
+
+        when(lineTariffsService.searchLineTariffs(
+                eq(DOC_ID), any(), any(), eq(startDate), eq(endDate)))
+                .thenReturn(result);
+
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                new FilterRequestDto(null, null, null),
+                0,
+                20,
+                null,
+                startDate,
+                endDate);
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        verify(lineTariffsService).searchLineTariffs(eq(DOC_ID), any(), any(), eq(startDate), eq(endDate));
     }
 
     @Test
