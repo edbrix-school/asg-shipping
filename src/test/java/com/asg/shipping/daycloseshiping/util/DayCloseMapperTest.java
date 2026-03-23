@@ -1,4 +1,4 @@
-package com.asg.shipping.dayCloseShiping.util;
+package com.asg.shipping.daycloseshiping.util;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -13,11 +13,11 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.asg.common.lib.utility.DateUtil;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDenominationDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtl;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseHdr;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDenominationDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseHdrDto;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseDtl;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseHdr;
 
 class DayCloseMapperTest {
 

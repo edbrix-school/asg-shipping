@@ -1,4 +1,4 @@
-package com.asg.shipping.dayCloseShiping.entity;
+package com.asg.shipping.daycloseshiping.entity;
 
 import java.io.Serializable;
 

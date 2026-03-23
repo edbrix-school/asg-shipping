@@ -1,16 +1,15 @@
-package com.asg.shipping.dayCloseShiping.repository;
+package com.asg.shipping.daycloseshiping.repository;
 
 import java.util.List;
 import java.util.Optional;
 
-import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtl;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtlId;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseDtl;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseDtlId;
 
 @Repository
 public interface ArShDayEndCloseDtlRepository extends JpaRepository<ArShDayEndCloseDtl, ArShDayEndCloseDtlId> {

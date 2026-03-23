@@ -1,6 +1,6 @@
-package com.asg.shipping.dayCloseShiping.repository;
+package com.asg.shipping.daycloseshiping.repository;
 
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseHdr;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseHdr;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

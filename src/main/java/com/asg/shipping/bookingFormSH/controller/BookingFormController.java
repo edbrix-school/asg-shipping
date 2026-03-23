@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingFormSH.controller;
+package com.asg.shipping.bookingformsh.controller;
 
 import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
@@ -28,11 +28,11 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
-import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
-import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
-import com.asg.shipping.bookingFormSH.service.BookingFormService;
-import com.asg.shipping.portMaster.dto.PortMasterResponse;
+import com.asg.shipping.bookingformsh.dto.BookingFormCreateDTO;
+import com.asg.shipping.bookingformsh.dto.BookingFormDto;
+import com.asg.shipping.bookingformsh.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingformsh.service.BookingFormService;
+import com.asg.shipping.portmaster.dto.PortMasterResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -54,6 +54,8 @@ public class BookingFormController {
 	private final ExcelExportService excelExportService;
 	private final LoggingService loggingService;
 
+    private static final String FAILEDTOGENERATEPDF="Failed to generate PDF: ";
+    private static final String FAILEDTOGENERATEPDFFORBOOKINGFORM="Failed to generate PDF for Banking Form SH: {}";
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@Operation(summary = "Get all Booking Form SH", description = "Fetches all Booking Form SH records for the given group", responses = {
 			@ApiResponse(responseCode = "200", description = "Booking Form records fetched successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = PortMasterResponse.class))),
@@ -193,8 +195,8 @@ public class BookingFormController {
 							"attachment; filename=container-mate-receipts-" + transactionPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
-			log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
+			log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
+			return error(FAILEDTOGENERATEPDF + e.getMessage(), 500);
 		}
 	}
 
@@ -209,8 +211,8 @@ public class BookingFormController {
 							"attachment; filename=container-empty-release-" + transactionPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
-			log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
+			log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
+			return error(FAILEDTOGENERATEPDF + e.getMessage(), 500);
 		}
 	}
 
@@ -226,8 +228,8 @@ public class BookingFormController {
 							"attachment; filename=all-container-" + transactionPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
-			log.error("Failed to generate PDF for Banking Form SH: {}", transactionPoid, e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
+			log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
+			return error(FAILEDTOGENERATEPDF + e.getMessage(), 500);
 		}
 	}
 

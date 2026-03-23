@@ -1,9 +1,9 @@
-package com.asg.shipping.dayCloseShiping.service;
+package com.asg.shipping.daycloseshiping.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseSummaryProjection;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseSummaryProjection;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;

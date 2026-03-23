@@ -2,10 +2,12 @@ package com.asg.shipping.portstoragetariffsmaster.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for SHIP_PORT_TARIFF_DTL table
@@ -82,15 +84,4 @@ public class ShipPortTariffDtl extends BaseEntity {
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ShipPortTariffHdr tariffHdr;
 
-  /*  @PrePersist
-    protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-    }*/
-
-  /*  @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-    }*/
 }

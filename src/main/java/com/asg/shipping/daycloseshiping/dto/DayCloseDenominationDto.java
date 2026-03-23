@@ -1,4 +1,4 @@
-package com.asg.shipping.dayCloseShiping.dto;
+package com.asg.shipping.daycloseshiping.dto;
 
 import java.math.BigDecimal;
 

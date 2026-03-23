@@ -1,4 +1,4 @@
-package com.asg.shipping.MafiTrailerDateUpdateForm.repository;
+package com.asg.shipping.mafitrailerdateupdateform.repository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -7,10 +7,10 @@ import java.util.Optional;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.BlDetailsProjection;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.BlDetailsProjectionImpl;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.VoyageProjection;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.VoyageProjectionImpl;
+import com.asg.shipping.mafitrailerdateupdateform.dto.BlDetailsProjection;
+import com.asg.shipping.mafitrailerdateupdateform.dto.BlDetailsProjectionImpl;
+import com.asg.shipping.mafitrailerdateupdateform.dto.VoyageProjection;
+import com.asg.shipping.mafitrailerdateupdateform.dto.VoyageProjectionImpl;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;

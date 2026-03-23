@@ -1,7 +1,6 @@
-package com.asg.shipping.dayCloseShiping.entity;
+package com.asg.shipping.daycloseshiping.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;

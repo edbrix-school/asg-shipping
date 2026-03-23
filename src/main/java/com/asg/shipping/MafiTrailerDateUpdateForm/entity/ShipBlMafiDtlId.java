@@ -1,4 +1,4 @@
-package com.asg.shipping.MafiTrailerDateUpdateForm.entity;
+package com.asg.shipping.mafitrailerdateupdateform.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

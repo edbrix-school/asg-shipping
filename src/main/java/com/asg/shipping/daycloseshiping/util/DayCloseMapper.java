@@ -1,11 +1,11 @@
-package com.asg.shipping.dayCloseShiping.util;
+package com.asg.shipping.daycloseshiping.util;
 
 import com.asg.common.lib.utility.DateUtil;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDenominationDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseDto;
-import com.asg.shipping.dayCloseShiping.dto.DayCloseHdrDto;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseDtl;
-import com.asg.shipping.dayCloseShiping.entity.ArShDayEndCloseHdr;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDenominationDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseDto;
+import com.asg.shipping.daycloseshiping.dto.DayCloseHdrDto;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseDtl;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseHdr;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -13,6 +13,9 @@ import java.util.stream.Collectors;
 
 public class DayCloseMapper {
 
+    private DayCloseMapper() {
+        throw new IllegalStateException("Utility class");
+    }
     public static void mapCreateDTOToEntity(DayCloseHdrDto dto, ArShDayEndCloseHdr entity, Long groupPoid, Long companyPoid) {
 
         entity.setGroupPoid(groupPoid);

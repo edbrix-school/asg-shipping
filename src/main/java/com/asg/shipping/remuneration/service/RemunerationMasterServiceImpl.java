@@ -47,6 +47,9 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
 
+    private static final String REMUNERATION="Remuneration";
+    private static final String REMUNERATION_POID="REMUNERATION_POID";
+
     @Override
     public Map<String, Object> listRemunerations(String docId, FilterRequestDto request, Pageable pageable) {
 
@@ -56,7 +59,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
 
         RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
                 "REMUN_DESCRIPTION",   // label
-                "REMUNERATION_POID");    // value);
+                REMUNERATION_POID);    // value
 
         Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
 
@@ -94,7 +97,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         log.info("Updating remuneration with id: {}", remunerationPoid);
 
         ShipRemunerationMaster entity = repository.findById(remunerationPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Remuneration", "Remuneration Poid", remunerationPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(REMUNERATION, REMUNERATION_POID, remunerationPoid));
 
         ShipRemunerationMaster oldEntity = new ShipRemunerationMaster();
         BeanUtils.copyProperties(entity, oldEntity);
@@ -112,7 +115,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         String docId = UserContext.getDocumentId();
         String key = updated.getRemunerationPoid().toString();
 
-        loggingService.logChanges(oldEntity, updated, ShipRemunerationMaster.class, docId, key, LogDetailsEnum.MODIFIED, "REMUNERATION_POID");
+        loggingService.logChanges(oldEntity, updated, ShipRemunerationMaster.class, docId, key, LogDetailsEnum.MODIFIED, REMUNERATION_POID);
 
         log.info("Successfully updated remuneration with id: {}", remunerationPoid);
         return ShipRemunerationMasterMapper.toResponseDto(updated);
@@ -123,7 +126,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         log.info("Getting remuneration with id: {}", remunerationPoid);
 
         ShipRemunerationMaster entity = repository.findById(remunerationPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Remuneration", "Remuneration Poid", remunerationPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(REMUNERATION, "Remuneration Poid", remunerationPoid));
 
         log.info("Successfully retrieved remuneration with id: {}", remunerationPoid);
         return ShipRemunerationMasterMapper.toResponseDto(entity);
@@ -134,12 +137,12 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         log.info("Deleting remuneration with id: {}", remunerationPoid);
 
         ShipRemunerationMaster entity = repository.findById(remunerationPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Remuneration", "Remuneration Poid", remunerationPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(REMUNERATION, "Remuneration Poid", remunerationPoid));
 
         documentDeleteService.deleteDocument(
                 remunerationPoid,
                 "SHIP_REMUNERATION_MASTER",
-                "REMUNERATION_POID",
+                REMUNERATION_POID,
                 deleteReasonDto,
                 LocalDate.from(entity.getCreatedDate())
         );
