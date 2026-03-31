@@ -4,9 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum ButtonType {
-    DeliveryOrderPrint,
-    ContainerFormPrint,
-    ReturnFormPrint;
+    DELIVERYORDERPRINT,
+    CONTAINERFORMPRINT,
+    RETURNFORMPRINT;
 
     public static ButtonType fromString(String value) {
         if (value == null) {

@@ -4,11 +4,11 @@ import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.vesselvoyagecreation.dto.VoyageResponse;
 import com.asg.shipping.vesselvoyagecreation.dto.VoyageUpsertRequest;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
-import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-
 public class VoyageMapper {
+
+    private VoyageMapper() {
+        // Utility class
+    }
 
     public static VoyageResponse toResponse(ShipVoyageHdrEntity e, String lineCode) {
         if (e == null) return null;
@@ -43,8 +43,10 @@ public class VoyageMapper {
                 .build();
     }
 
-    public static ShipVoyageHdrEntity toEntityForCreate(VoyageUpsertRequest req, Long groupPoid, Long companyPoid, String userId) {
-        LocalDateTime now = LocalDateTime.now();
+    public static ShipVoyageHdrEntity toEntityForCreate(
+            VoyageUpsertRequest req,
+            Long groupPoid,
+            Long companyPoid) {
         return ShipVoyageHdrEntity.builder()
                 .groupPoid(groupPoid)
                 .companyPoid(companyPoid)
@@ -75,7 +77,7 @@ public class VoyageMapper {
                 .build();
     }
 
-    public static void updateEntity(ShipVoyageHdrEntity e, VoyageUpsertRequest req, String userId) {
+    public static void updateEntity(ShipVoyageHdrEntity e, VoyageUpsertRequest req) {
         e.setVoyageNo(req.getVoyageNo());
         e.setLinePoid(req.getLinePoid());
         e.setVesselPoid(req.getVesselPoid());

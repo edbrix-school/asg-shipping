@@ -99,8 +99,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
 
         verify(service).saveOrUpdate(
                 any(CustomerInvoiceChargeMapMasterRequest.class),
-                isNull(),
-                eq("SYSTEM")
+                isNull()
         );
     }
 
@@ -115,7 +114,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .content(objectMapper.writeValueAsString(mockRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
+        verify(service, never()).saveOrUpdate(any(), anyLong());
     }
 
     @Test
@@ -129,7 +128,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .content(objectMapper.writeValueAsString(mockRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
+        verify(service, never()).saveOrUpdate(any(), anyLong());
     }
 
     @Test
@@ -143,7 +142,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .content(objectMapper.writeValueAsString(mockRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
+        verify(service, never()).saveOrUpdate(any(), anyLong());
     }
 
     @Test
@@ -157,7 +156,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .content(objectMapper.writeValueAsString(mockRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
+        verify(service, never()).saveOrUpdate(any(), anyLong());
     }
 
     @Test
@@ -171,7 +170,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .content(objectMapper.writeValueAsString(mockRequest)))
                 .andExpect(status().isBadRequest());
 
-        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
+        verify(service, never()).saveOrUpdate(any(), anyLong());
     }
 
     @Test
@@ -183,7 +182,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .content("{invalid json}"))
                 .andExpect(status().isBadRequest());
 
-        verify(service, never()).saveOrUpdate(any(), anyLong(), anyString());
+        verify(service, never()).saveOrUpdate(any(), anyLong());
     }
 
     @Test
@@ -197,7 +196,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
                 .andExpect(jsonPath("$.message")
                         .value("Customer invoice charge detail deleted successfully"));
 
-        verify(service).deleteDetail(eq(1L), eq(10L), any(), any());
+        verify(service).deleteDetail(eq(1L), eq(10L), isNull());
     }
 
     @Test
@@ -210,7 +209,7 @@ class CustomerInvoiceChargeMapMasterControllerTest {
             mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/-1/details/10"))
                     .andExpect(status().isOk());
 
-            verify(service).deleteDetail(-1L, 10L, 100L, "user123");
+            verify(service).deleteDetail(-1L, 10L, 100L);
         }
     }
 

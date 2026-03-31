@@ -37,8 +37,7 @@ public class VoyageBillsRepository {
                 case IMPORT -> where.append(" AND BL_TYPE NOT LIKE '%EXPORT%' ");
                 case REFFER -> where.append(" AND NVL(IS_REFFER,'N') = 'Y' ");
                 case IMCO -> where.append(" AND NVL(IS_IMCO,'N') = 'Y' ");
-                default -> {
-                }
+                default -> { /* no-op: keep default VoyageBlFilter behavior */ }
             }
         }
 

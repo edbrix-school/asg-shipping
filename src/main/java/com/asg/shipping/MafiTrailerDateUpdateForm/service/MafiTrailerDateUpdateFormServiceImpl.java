@@ -1,4 +1,4 @@
-package com.asg.shipping.MafiTrailerDateUpdateForm.service;
+package com.asg.shipping.mafitrailerdateupdateform.service;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -9,14 +9,14 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.MafiTrailerDateUpdateForm.dto.*;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtlId;
-import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiHdr;
-import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiDtlRepository;
-import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipBlMafiHdrRepository;
-import com.asg.shipping.MafiTrailerDateUpdateForm.repository.ShipReadOnlyRepository;
-import com.asg.shipping.MafiTrailerDateUpdateForm.util.MafiTrailerDateUpdateFormMapper;
+import com.asg.shipping.mafitrailerdateupdateform.dto.*;
+import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
+import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtlId;
+import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
+import com.asg.shipping.mafitrailerdateupdateform.repository.ShipBlMafiDtlRepository;
+import com.asg.shipping.mafitrailerdateupdateform.repository.ShipBlMafiHdrRepository;
+import com.asg.shipping.mafitrailerdateupdateform.repository.ShipReadOnlyRepository;
+import com.asg.shipping.mafitrailerdateupdateform.util.MafiTrailerDateUpdateFormMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,7 @@
 package com.asg.shipping.containertypeportchargestariff.controller;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
@@ -16,8 +17,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -48,7 +52,9 @@ class PortChargesTariffControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .build();
         objectMapper = new ObjectMapper();
         objectMapper.findAndRegisterModules();
 
@@ -169,5 +175,24 @@ class PortChargesTariffControllerTest {
                 .andExpect(status().isOk());
 
         verify(portChargesTariffService).validateOverlap(any(ValidateOverlapRequestDto.class));
+    }
+
+    @Test
+    void testListPortChargesTariff() throws Exception {
+        FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
+        
+        try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
+            userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            
+            when(portChargesTariffService.listPortChargesTariff(anyString(), any(FilterRequestDto.class), any(Pageable.class)))
+                    .thenReturn(Collections.emptyMap());
+
+            mockMvc.perform(post("/v1/container-type-port-charges-tariff/list")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(filterRequest)))
+                    .andExpect(status().isOk());
+
+            verify(portChargesTariffService).listPortChargesTariff(eq("DOC123"), any(FilterRequestDto.class), any(Pageable.class));
+        }
     }
 }

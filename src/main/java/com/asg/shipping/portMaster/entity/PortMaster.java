@@ -1,17 +1,9 @@
-package com.asg.shipping.portMaster.entity;
-
-import java.time.LocalDateTime;
+package com.asg.shipping.portmaster.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
-import org.hibernate.annotations.DynamicUpdate;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.IdClass;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @Table(name = "SHIP_PORT_MASTER", uniqueConstraints = {

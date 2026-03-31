@@ -1,11 +1,9 @@
-package com.asg.shipping.bookingFormSH.entity;
+package com.asg.shipping.bookingformsh.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import com.asg.common.lib.entity.BaseEntity;
-import com.asg.common.lib.security.util.UserContext;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

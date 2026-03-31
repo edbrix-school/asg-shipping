@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingFormSH.dto;
+package com.asg.shipping.bookingformsh.dto;
 
 import java.math.BigDecimal;
 

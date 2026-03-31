@@ -50,6 +50,11 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 public class VesselVoyageServiceImpl implements VesselVoyageService {
 
+    private static final String TRANSACTION_POID_COL = "TRANSACTION_POID";
+    private static final String VESSEL_VOYAGE_NOT_FOUND_PREFIX = "Vessel voyage not found: ";
+    private static final String MISSING_GROUP_POID = "Missing groupPoid";
+    private static final String MISSING_COMPANY_POID = "Missing companyPoid";
+
     private final ShipVoyageHdrRepository voyageHdrRepository;
     private final VoyageLineMasterRepository voyageLineMasterRepository;
     private final ShipVoyageTranshipDtlRepository transhipDtlRepository;
@@ -100,7 +105,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
                 pageable,
                 isDeleted,
                 "VOYAGE_NO",
-                "TRANSACTION_POID"
+                TRANSACTION_POID_COL
         );
 
         // Apply line access restriction post-fetch (best-effort). If LINE_POID is not in row, we validate using SHIP_VOYAGE_HDR lookup.
@@ -117,29 +122,40 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         if (allowedLines.isEmpty()) return rows;
 
         // Fast path: if LINE_POID is present in returned rows
-        boolean hasLinePoid = !rows.isEmpty() && rows.get(0).containsKey("LINE_POID");
-        if (hasLinePoid) {
-            List<Map<String, Object>> out = new ArrayList<>();
-            for (Map<String, Object> row : rows) {
-                Object v = row.get("LINE_POID");
-                Long linePoid = toLong(v);
-                if (linePoid == null || allowedLines.contains(linePoid)) {
-                    out.add(row);
-                }
-            }
-            return out;
+        if (!rows.isEmpty() && rows.get(0).containsKey("LINE_POID")) {
+            return filterRowsByLinePoid(rows, allowedLines);
         }
 
         // Fallback: filter by querying line poid for returned transaction ids
-        List<Long> poids = rows.stream()
-                .map(m -> toLong(m.get("TRANSACTION_POID")))
+        return filterRowsByTransactionPoid(rows, allowedLines);
+    }
+
+    private List<Map<String, Object>> filterRowsByLinePoid(
+            List<Map<String, Object>> rows,
+            Set<Long> allowedLines) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Object v = row.get("LINE_POID");
+            Long linePoid = toLong(v);
+            if (linePoid == null || allowedLines.contains(linePoid)) {
+                out.add(row);
+            }
+        }
+        return out;
+    }
+
+    private List<Map<String, Object>> filterRowsByTransactionPoid(
+            List<Map<String, Object>> rows,
+            Set<Long> allowedLines) {
+        List<Long> transactionPoids = rows.stream()
+                .map(m -> toLong(m.get(TRANSACTION_POID_COL)))
                 .filter(Objects::nonNull)
                 .toList();
 
-        if (poids.isEmpty()) return rows;
+        if (transactionPoids.isEmpty()) return rows;
 
         Set<Long> allowedVoyages = new HashSet<>();
-        List<ShipVoyageHdrEntity> hdrs = voyageHdrRepository.findAllById(poids);
+        List<ShipVoyageHdrEntity> hdrs = voyageHdrRepository.findAllById(transactionPoids);
         for (ShipVoyageHdrEntity h : hdrs) {
             Long linePoid = h.getLinePoid();
             if (linePoid == null || allowedLines.contains(linePoid)) {
@@ -149,7 +165,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> row : rows) {
-            Long t = toLong(row.get("TRANSACTION_POID"));
+            Long t = toLong(row.get(TRANSACTION_POID_COL));
             if (t == null || allowedVoyages.contains(t)) out.add(row);
         }
         return out;
@@ -166,6 +182,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             try {
                 out.add(Long.parseLong(p));
             } catch (NumberFormatException ignore) {
+                // Ignore non-numeric entries; they should not break listing.
             }
         }
         return out;
@@ -186,7 +203,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     public VoyageResponse getVoyage(Long voyagePoid) {
         Long groupPoid = UserContext.getGroupPoid();
         ShipVoyageHdrEntity e = voyageHdrRepository.findByTransactionPoidAndGroupPoid(voyagePoid, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Vessel voyage not found: " + voyagePoid));
+                .orElseThrow(() -> new ResourceNotFoundException(VESSEL_VOYAGE_NOT_FOUND_PREFIX + voyagePoid));
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(e.getLinePoid()).orElse(null);
 
@@ -202,7 +219,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         Long groupPoid = require(UserContext.getGroupPoid(), "Missing groupPoid in UserContext");
         Long companyPoid = require(UserContext.getCompanyPoid(), "Missing companyPoid in UserContext");
-        String userId = require(UserContext.getUserId(), "Missing userId in UserContext");
 
         validateLineCompany(request.getLinePoid(), companyPoid);
 
@@ -211,7 +227,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         );
         if (dup) throw new ResourceAlreadyExistsException("Duplicate Job, Check Line, Vessel, Voyage...");
 
-        ShipVoyageHdrEntity entity = VoyageMapper.toEntityForCreate(request, groupPoid, companyPoid, userId);
+        ShipVoyageHdrEntity entity = VoyageMapper.toEntityForCreate(request, groupPoid, companyPoid);
         entity.setTransactionDate(DateUtil.getCurrentDateInUserTimeZone());
 
         ShipVoyageHdrEntity saved = voyageHdrRepository.save(entity);
@@ -234,10 +250,9 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         Long groupPoid = require(UserContext.getGroupPoid(), "Missing groupPoid in UserContext");
         Long companyPoid = require(UserContext.getCompanyPoid(), "Missing companyPoid in UserContext");
-        String userId = require(UserContext.getUserId(), "Missing userId in UserContext");
 
         ShipVoyageHdrEntity entity = voyageHdrRepository.findByTransactionPoidAndGroupPoid(voyagePoid, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Vessel voyage not found: " + voyagePoid));
+                .orElseThrow(() -> new ResourceNotFoundException(VESSEL_VOYAGE_NOT_FOUND_PREFIX + voyagePoid));
 
         validateLineCompany(request.getLinePoid(), companyPoid);
 
@@ -250,13 +265,13 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         ShipVoyageHdrEntity oldEntity = new ShipVoyageHdrEntity();
         BeanUtils.copyProperties(entity, oldEntity);
 
-        VoyageMapper.updateEntity(entity, request, userId);
+        VoyageMapper.updateEntity(entity, request);
         voyageHdrRepository.save(entity);
 
         // Add logging
         String docId = UserContext.getDocumentId();
         String key = entity.getTransactionPoid().toString();
-        loggingService.logChanges(oldEntity, entity, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+        loggingService.logChanges(oldEntity, entity, ShipVoyageHdrEntity.class, docId, key, LogDetailsEnum.MODIFIED, TRANSACTION_POID_COL);
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(entity.getLinePoid()).orElse(null);
         return VoyageMapper.toResponse(entity, lineCode);
@@ -297,8 +312,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     @Override
     public String reprocessEdi(Long voyagePoid) {
         require(voyagePoid, "Missing voyagePoid");
-        Long groupPoid = require(UserContext.getGroupPoid(), "Missing groupPoid");
-        Long companyPoid = require(UserContext.getCompanyPoid(), "Missing companyPoid");
+        Long groupPoid = require(UserContext.getGroupPoid(), MISSING_GROUP_POID);
+        Long companyPoid = require(UserContext.getCompanyPoid(), MISSING_COMPANY_POID);
         String docId = Optional.ofNullable(UserContext.getDocumentId()).orElse("100-101");
         Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
 
@@ -328,8 +343,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             throw new IllegalArgumentException("Unable to store EDI file: " + e.getMessage());
         }
 
-        String status = reprocessEdi(voyagePoid);
-        return status;
+        return reprocessEdi(voyagePoid);
     }
 
     @Override
@@ -340,7 +354,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     @Override
     @Transactional
     public List<ShipVoyageTranshipDtlEntity> updateTranshipments(Long voyagePoid, TranshipmentUpdateRequest request) {
-        String userId = Optional.ofNullable(UserContext.getUserId()).orElse("0");
         List<ShipVoyageTranshipDtlEntity> existing = transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
         Map<Long, ShipVoyageTranshipDtlEntity> map = new HashMap<>();
         for (ShipVoyageTranshipDtlEntity e : existing) map.put(e.getDetRowId(), e);
@@ -385,7 +398,6 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     @Override
     @Transactional
     public String transferTranshipments(Long voyagePoid, TranshipmentTransferRequest request) {
-        String userId = Optional.ofNullable(UserContext.getUserId()).orElse("0");
         List<ShipVoyageTranshipDtlEntity> rows = transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
         Set<Long> ids = new HashSet<>(request.getDetRowIds());
         int updated = 0;
@@ -412,8 +424,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     public String updateCurrencyRates(Long voyagePoid, CurrencyUpdateRequest request) {
-        Long groupPoid = require(UserContext.getGroupPoid(), "Missing groupPoid");
-        Long companyPoid = require(UserContext.getCompanyPoid(), "Missing companyPoid");
+        Long groupPoid = require(UserContext.getGroupPoid(), MISSING_GROUP_POID);
+        Long companyPoid = require(UserContext.getCompanyPoid(), MISSING_COMPANY_POID);
         String userCode = Optional.ofNullable(UserContext.getUserId()).orElse("0");
 
         StringBuilder sb = new StringBuilder();
@@ -462,8 +474,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     public String importGeneralCargo(Long voyagePoid) {
-        Long groupPoid = require(UserContext.getGroupPoid(), "Missing groupPoid");
-        Long companyPoid = require(UserContext.getCompanyPoid(), "Missing companyPoid");
+        Long groupPoid = require(UserContext.getGroupPoid(), MISSING_GROUP_POID);
+        Long companyPoid = require(UserContext.getCompanyPoid(), MISSING_COMPANY_POID);
         String userCode = Optional.ofNullable(UserContext.getUserId()).orElse("0");
         log.info("General cargo import | voyagePoid={} groupPoid={} companyPoid={} user={}", voyagePoid, groupPoid, companyPoid, userCode);
         return storedProcedureRepository.procGeneralImportCargo(groupPoid, companyPoid, userCode, voyagePoid);
@@ -558,10 +570,9 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         log.info("Deleting vessel voyage with id: {}", voyagePoid);
 
         Long groupPoid = UserContext.getGroupPoid();
-        String userId = UserContext.getUserId();
 
         ShipVoyageHdrEntity entity = voyageHdrRepository.findByTransactionPoidAndGroupPoid(voyagePoid, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Vessel voyage not found: " + voyagePoid));
+                .orElseThrow(() -> new ResourceNotFoundException(VESSEL_VOYAGE_NOT_FOUND_PREFIX + voyagePoid));
 
         // Check if already deleted
         if ("Y".equals(entity.getDeleted())) {
@@ -583,7 +594,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
 
     @Override
-    public byte[] print(Long transactionPoid, String freightCargo, String importExport) throws Exception {
+    public byte[] print(Long transactionPoid, String freightCargo, String importExport)
+            throws net.sf.jasperreports.engine.JRException, java.sql.SQLException {
 
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-101");
         params.put("P_FREIGHTCARGO", freightCargo);
@@ -593,7 +605,13 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
         params.put("SUBREPORT_FREIGHT_DETAIL", printService.load("Shipping/SH/Cargo/Freight_Detail_Subreport1.jrxml"));
         JasperReport mainReport = printService.load("Shipping/SH/Cargo/Manifest_Cargo_WithCharges.jrxml");
-        return printService.fillReportToPdf(mainReport, params, dataSource);
+        try {
+            return printService.fillReportToPdf(mainReport, params, dataSource);
+        } catch (net.sf.jasperreports.engine.JRException | java.sql.SQLException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new net.sf.jasperreports.engine.JRException("Failed to generate PDF report", e);
+        }
     }
 
 }

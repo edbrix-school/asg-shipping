@@ -9,14 +9,12 @@ public interface CustomerInvoiceChargeMapMasterService {
 
     void saveOrUpdate(
             CustomerInvoiceChargeMapMasterRequest request,
-            Long groupPoid,
-            String userId
+            Long groupPoid
     );
 
     void deleteDetail(
             Long customerPoid,
             Long detRowId,
-            Long groupPoid,
-            String userId
+            Long groupPoid
     );
 }

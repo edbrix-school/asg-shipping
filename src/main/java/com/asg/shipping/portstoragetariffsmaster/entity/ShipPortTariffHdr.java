@@ -2,10 +2,12 @@ package com.asg.shipping.portstoragetariffsmaster.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for SHIP_PORT_TARIFF_HDR table
@@ -66,8 +68,4 @@ public class ShipPortTariffHdr extends BaseEntity {
         }
     }
 
-  /*  @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-    }*/
 }

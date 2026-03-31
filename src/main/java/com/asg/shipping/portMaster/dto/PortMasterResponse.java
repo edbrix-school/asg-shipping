@@ -1,4 +1,4 @@
-package com.asg.shipping.portMaster.dto;
+package com.asg.shipping.portmaster.dto;
 
 import java.util.Map;
 
