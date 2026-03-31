@@ -1,8 +1,8 @@
 package com.asg.shipping.importmanifestbl.util;
 
-import com.asg.shipping.importManifestUpdate.dto.*;
+import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
-import com.asg.shipping.importManifestUpdate.entity.*;
+import com.asg.shipping.importmanifestupdate.entity.*;
 
 import java.util.List;
 

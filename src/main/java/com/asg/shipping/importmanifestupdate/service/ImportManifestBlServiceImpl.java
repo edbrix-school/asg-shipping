@@ -1,4 +1,4 @@
-package com.asg.shipping.importManifestUpdate.service;
+package com.asg.shipping.importmanifestupdate.service;
 
 
 import com.asg.common.lib.dto.DeleteReasonDto;
@@ -15,11 +15,12 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
-import com.asg.shipping.importManifestUpdate.constants.BlManifestValidationMessages;
-import com.asg.shipping.importManifestUpdate.dto.*;
-import com.asg.shipping.importManifestUpdate.entity.*;
-import com.asg.shipping.importManifestUpdate.respository.*;
-import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
+import com.asg.shipping.importmanifestupdate.constants.BlManifestValidationMessages;
+import com.asg.shipping.importmanifestupdate.dto.*;
+import com.asg.shipping.importmanifestupdate.entity.*;
+import com.asg.shipping.importmanifestupdate.respository.*;
+import com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
@@ -511,11 +512,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                generalDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on General Cargo Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestGeneralDtl> entitiesToDelete = generalDtlRepository.findAllById(toDelete);
+                generalDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
 
         }
@@ -577,11 +576,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                cargoDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Cargo Description Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestCargoDtl> entitiesToDelete = cargoDtlRepository.findAllById(toDelete);
+                cargoDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -683,11 +680,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                containerDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Container Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestContainerDtl> entitiesToDelete = containerDtlRepository.findAllById(toDelete);
+                containerDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -747,11 +742,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                chargesDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Charge Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestChargesDtl> entitiesToDelete = chargesDtlRepository.findAllById(toDelete);
+                chargesDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -811,11 +804,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                containerPrtRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Part BL Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestPartBL> entitiesToDelete = containerPrtRepository.findAllById(toDelete);
+                containerPrtRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -875,11 +866,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                emailFaxDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Notify Party Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestEmailFaxDtl> entitiesToDelete = emailFaxDtlRepository.findAllById(toDelete);
+                emailFaxDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -939,11 +928,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                mafiDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on MAFI Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestMafiDtl> entitiesToDelete = mafiDtlRepository.findAllById(toDelete);
+                mafiDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -989,19 +976,19 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             String processType = param2 != null ? param2 : "AUTOSUMWEIGHTPACKATE";
 
             StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_BL_PAGE_SAVE_AFTER");
-            query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_TRANSACTION_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_PARAM1", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_PARAM2", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DET_ROW_ID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_UPDATE_TYPE", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_LOGIN_USER", String.class, ParameterMode.IN);
 
-            query.setParameter("P_LOGIN_GROUP_POID", groupPoid);
-            query.setParameter("P_LOGIN_COMPANY_POID", companyPoid);
-            query.setParameter("P_TRANSACTION_POID", transactionPoid);
-            query.setParameter("P_PARAM1", null);
-            query.setParameter("P_PARAM2", processType);
-            query.setParameter("P_LOGIN_USER_POID", userPoid);
+            query.setParameter("P_GROUP_POID", groupPoid);
+            query.setParameter("P_COMPANY_POID", companyPoid);
+            query.setParameter("P_DOC_KEY_POID", transactionPoid);
+            query.setParameter("P_DET_ROW_ID", null);
+            query.setParameter("P_UPDATE_TYPE", processType);
+            query.setParameter("P_LOGIN_USER", String.valueOf(userPoid));
 
             query.execute();
             log.debug("Successfully called PROC_SHIP_BL_PAGE_SAVE_AFTER for transaction: {}", transactionPoid);

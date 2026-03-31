@@ -1,6 +1,7 @@
 package com.asg.shipping.importmanifestupdate.entity;
 
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,7 +22,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipBlManifestContainerDtl {
+public class ShipBlManifestContainerDtl extends BaseEntity {
 
     @EmbeddedId
     private ShipBlManifestDtlId id;

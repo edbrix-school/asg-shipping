@@ -1,6 +1,6 @@
 package com.asg.shipping.importmanifestbl.dto;
 
-import com.asg.shipping.importManifestUpdate.service.BlManifestValidationService;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -43,7 +43,6 @@ public class ChargeDto implements BlManifestValidationService.ChargeValidatable 
     private LocalDateTime demurrageChargesTillDate;
     private String actionType;
 
-    // ---- ChargeValidatable interface ----
     @Override public Long getChargePoidValue() { return chargePoid; }
     @Override public String getFreightTypeValue() { return freightType; }
     @Override public Long getQuantityValue() { return quantity; }

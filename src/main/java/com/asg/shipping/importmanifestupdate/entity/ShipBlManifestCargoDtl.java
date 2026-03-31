@@ -1,6 +1,6 @@
 package com.asg.shipping.importmanifestupdate.entity;
 
-
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -16,7 +16,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipBlManifestCargoDtl  {
+public class ShipBlManifestCargoDtl extends BaseEntity {
 
     @EmbeddedId
     private ShipBlManifestCargoDtlId id;

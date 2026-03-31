@@ -8,13 +8,13 @@ import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.ImportManifestBlUpdateDTO;
-import com.asg.shipping.importManifestUpdate.entity.ShipBlManifestHdr;
-import com.asg.shipping.importManifestUpdate.respository.*;
-import com.asg.shipping.importManifestUpdate.service.BlManifestValidationService;
-import com.asg.shipping.importManifestUpdate.service.ImportManifestBlServiceImpl;
-import com.asg.shipping.importManifestUpdate.util.ImportManifestBlMapper;
+import com.asg.shipping.importmanifestupdate.dto.ImportManifestBlRequestDto;
+import com.asg.shipping.importmanifestupdate.dto.ImportManifestBlUpdateDTO;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestHdr;
+import com.asg.shipping.importmanifestupdate.respository.*;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
+import com.asg.shipping.importmanifestupdate.service.ImportManifestBlServiceImpl;
+import com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.StoredProcedureQuery;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +26,6 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
-
 import java.time.LocalDate;
 import java.util.*;
 
@@ -35,7 +34,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ImportManifestServiceImplTest {
+class ImportManifestServiceImplTest {
 
     @Mock
     private ShipBlManifestHdrRepository repository;
@@ -247,9 +246,9 @@ public class ImportManifestServiceImplTest {
     void updateEmailVerification_Success() {
         when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
         when(procRepository.updateEmailVerification(eq(1L), any()))
-                .thenReturn(com.asg.shipping.importManifestUpdate.dto.EmailVerificationResponseDto.builder().status("SUCCESS").build());
+                .thenReturn(com.asg.shipping.importmanifestupdate.dto.EmailVerificationResponseDto.builder().status("SUCCESS").build());
 
-        var request = com.asg.shipping.importManifestUpdate.dto.EmailVerificationRequestDto.builder()
+        var request = com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto.builder()
                 .transactionPoId(1L)
                 .verified(true)
                 .build();
@@ -265,7 +264,7 @@ public class ImportManifestServiceImplTest {
         mockEntity.setVoyageTransactionPoid(100L);
         when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
         when(procRepository.resendCan(100L, 1L))
-                .thenReturn(com.asg.shipping.importManifestUpdate.dto.ResendCanResponseDto.builder().status("SUCCESS").build());
+                .thenReturn(com.asg.shipping.importmanifestupdate.dto.ResendCanResponseDto.builder().status("SUCCESS").build());
 
         var response = service.resendCan(1L);
 
@@ -277,7 +276,7 @@ public class ImportManifestServiceImplTest {
     void sendEdiEmails_Success() {
         when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
         when(procRepository.getEdiEmails(1L))
-                .thenReturn(com.asg.shipping.importManifestUpdate.dto.SendEdiEmailsResponseDto.builder().emailsSent(2).build());
+                .thenReturn(com.asg.shipping.importmanifestupdate.dto.SendEdiEmailsResponseDto.builder().emailsSent(2).build());
 
         var response = service.sendEdiEmails(1L);
 
@@ -291,7 +290,7 @@ public class ImportManifestServiceImplTest {
         when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(anyLong(), anyString()))
                 .thenReturn(List.of());
 
-        var request = com.asg.shipping.importManifestUpdate.dto.LoadEmailFaxRequestDto.builder()
+        var request = com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxRequestDto.builder()
                 .addressMasterPoid(100L)
                 .addressType("CAN")
                 .build();
@@ -306,7 +305,7 @@ public class ImportManifestServiceImplTest {
     void getBlStatus_Success() {
         when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
         when(procRepository.getBlStatus(1L))
-                .thenReturn(com.asg.shipping.importManifestUpdate.dto.BlStatusResponseDto.builder().status("NEW").build());
+                .thenReturn(com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto.builder().status("NEW").build());
 
         var response = service.getBlStatus(1L);
 
@@ -319,7 +318,7 @@ public class ImportManifestServiceImplTest {
         Long id = 1L;
 
         mockUpdateDto.setGeneralCargoDetails(List.of(
-                com.asg.shipping.importManifestUpdate.dto.GeneralCargoRequestDto.builder()
+                com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto.builder()
                         .detRowId(1L)
                         .actionType("ISCREATED")
                         .cargoDescription("Test")

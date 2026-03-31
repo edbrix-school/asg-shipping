@@ -1,11 +1,8 @@
-package com.asg.shipping.importManifestUpdate.respository;
+package com.asg.shipping.importmanifestupdate.respository;
 
-import com.asg.shipping.importManifestUpdate.dto.EmailVerificationRequestDto;
-import com.asg.shipping.importManifestUpdate.dto.EmailVerificationResponseDto;
-import com.asg.shipping.importManifestUpdate.dto.ResendCanResponseDto;
-import com.asg.shipping.importManifestUpdate.dto.SendEdiEmailsResponseDto;
-import com.asg.shipping.importManifestUpdate.dto.BlStatusResponseDto;
+
 import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
+import com.asg.shipping.importmanifestupdate.dto.*;
 
 public interface ImportManifestBlProcRepository {
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);

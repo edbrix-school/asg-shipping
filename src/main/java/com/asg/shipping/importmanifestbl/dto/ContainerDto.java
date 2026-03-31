@@ -1,10 +1,9 @@
 package com.asg.shipping.importmanifestbl.dto;
 
-import com.asg.shipping.importManifestUpdate.service.BlManifestValidationService;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -71,7 +70,6 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private String oogFront;
     private String actionType;
 
-    // ---- ContainerValidatable interface ----
     @Override public String getContainerNoValue() { return containerNumber; }
     @Override public String getEquipmentIsoTypeValue() { return equipmentIsoType; }
 }

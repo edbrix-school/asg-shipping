@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestupdate.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -14,7 +15,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipBlManifestEmailFaxDtl {
+public class ShipBlManifestEmailFaxDtl extends BaseEntity {
 
     @EmbeddedId
     private ShipBlManifestEmailFaxId id;

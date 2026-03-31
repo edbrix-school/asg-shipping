@@ -32,10 +32,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.Map;
-
 import static com.asg.common.lib.dto.response.ApiResponse.*;
-import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
-import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
+
 
 @Slf4j
 @RestController

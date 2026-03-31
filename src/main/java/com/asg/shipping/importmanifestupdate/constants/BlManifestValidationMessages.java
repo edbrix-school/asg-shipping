@@ -1,4 +1,4 @@
-package com.asg.shipping.importManifestUpdate.constants;
+package com.asg.shipping.importmanifestupdate.constants;
 
 
 public final class BlManifestValidationMessages {

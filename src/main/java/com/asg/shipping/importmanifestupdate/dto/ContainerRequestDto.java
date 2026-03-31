@@ -1,6 +1,6 @@
 package com.asg.shipping.importmanifestupdate.dto;
 
-import com.asg.shipping.importManifestUpdate.service.BlManifestValidationService;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

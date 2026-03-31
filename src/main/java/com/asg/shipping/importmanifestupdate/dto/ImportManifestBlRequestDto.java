@@ -1,4 +1,4 @@
-package com.asg.shipping.importManifestUpdate.dto;
+package com.asg.shipping.importmanifestupdate.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

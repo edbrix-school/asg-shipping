@@ -219,23 +219,26 @@ class DayCloseControllerTest {
         response.put("content", List.of());
         response.put("totalElements", 0);
 
+        LocalDate startDate = LocalDate.of(2025, 1, 1);
+        LocalDate endDate = LocalDate.of(2025, 12, 31);
+
         when(dayCloseService.searchDayClose(
                 eq("DOC123"), any(), any(Pageable.class),
-                eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2025, 12, 31))))
+                eq(startDate), eq(endDate)))
                 .thenReturn(response);
 
         mockMvc.perform(
                         post("/v1/day-close-shipping/search")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .param("startDate", LocalDate.now().toString())
-                                .param("endDate", LocalDate.now().toString())
+                                .param("startDate", startDate.toString())
+                                .param("endDate", endDate.toString())
                                 .content(objectMapper.writeValueAsString(filters)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Day Close list fetched successfully"));
 
         verify(dayCloseService).searchDayClose(
                 eq("DOC123"), any(), any(Pageable.class),
-                eq(LocalDate.of(2025, 1, 1)), eq(LocalDate.of(2025, 12, 31)));
+                eq(startDate), eq(endDate));
     }
 
     @Test

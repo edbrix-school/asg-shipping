@@ -1,8 +1,9 @@
-package com.asg.shipping.importManifestUpdate.service;
+package com.asg.shipping.importmanifestupdate.service;
 
 import com.asg.common.lib.exception.ValidationException;
-import com.asg.shipping.importManifestUpdate.constants.BlManifestValidationMessages;
+import com.asg.shipping.importmanifestupdate.constants.BlManifestValidationMessages;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -113,7 +114,7 @@ public class BlManifestValidationService {
 
     public void validateFreightType(String freightStatus, String holdReason,
                                      List<? extends ChargeValidatable> charges) {
-        if (freightStatus == null) {
+        if (StringUtils.isBlank(freightStatus)) {
             return;
         }
 
@@ -178,7 +179,7 @@ public class BlManifestValidationService {
     }
 
     private boolean isBlank(String value) {
-        return value == null || value.trim().isEmpty();
+        return StringUtils.isBlank(value);
     }
 
 
