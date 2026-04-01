@@ -13,6 +13,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ChargeUpdateDTO {
+
+    @Size(max = 20, message = "Charge code must not exceed 20 characters")
+    private String chargeCode;
+
     @Size(max = 100, message = "Charge name must not exceed 100 characters")
     private String chargeName;
 

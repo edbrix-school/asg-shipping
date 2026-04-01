@@ -2,6 +2,7 @@ package com.asg.shipping.agentmaster.controller;
 
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -90,10 +91,11 @@ public class ShipAgentMasterController {
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @DeleteMapping("/{agentPoid}")
     public ResponseEntity<?> deleteAgent(
-            @PathVariable @NotNull @Positive Long agentPoid
+            @PathVariable @NotNull @Positive Long agentPoid,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto
     ) {
 
-        shipAgentMasterService.deleteAgentMaster(agentPoid);
+        shipAgentMasterService.deleteAgentMaster(agentPoid, deleteReasonDto);
 
         return ApiResponse.success("Agent Master deleted successfully");
     }
