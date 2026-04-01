@@ -1,10 +1,13 @@
 package com.asg.shipping.shippingFFChargeMaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
 import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
@@ -40,6 +43,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.success;
 @Tag(name = "Shipping/FF Charge Master Management", description = "APIs for managing Shipping/FF charges")
 public class ShippingFFChargeMasterController {
 
+    private final LoggingService loggingService;
     private final ShippingFFChargeMasterService chargeMasterService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -74,6 +78,7 @@ public class ShippingFFChargeMasterController {
             @PathVariable Long id) {
         log.info("Getting charge with id: {}", id);
         ChargeDto charge = chargeMasterService.getCharge(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved charge with id: {}", id);
         return ApiResponse.success("Charge retrieved successfully", charge);
     }
@@ -194,9 +199,10 @@ public class ShippingFFChargeMasterController {
     })
     public ResponseEntity<?> deleteCharge(
             @Parameter(description = "Charge POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting charge with id: {}", id);
-        chargeMasterService.deleteCharge(id);
+        chargeMasterService.deleteCharge(id,deleteReasonDto);
         log.info("Successfully deleted charge with id: {}", id);
         return ApiResponse.success("Charge deleted successfully");
     }

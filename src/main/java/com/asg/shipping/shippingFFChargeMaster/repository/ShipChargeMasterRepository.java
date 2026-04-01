@@ -13,31 +13,15 @@ public interface ShipChargeMasterRepository extends JpaRepository<ShipChargeMast
 
     Optional<ShipChargeMaster> findByChargePoid(Long chargePoid);
 
-    boolean existsByChargeCodeAndDivisionCodeAndDeletedNot(
-            String chargeCode,
-            String divisionCode,
-            String deleted
-    );
+    boolean existsByChargeCodeAndDivisionCode(String chargeCode, String divisionCode);
 
-    boolean existsByChargeNameAndDivisionCodeAndDeletedNot(
-            String chargeName,
-            String divisionCode,
-            String deleted
-    );
+    boolean existsByChargeNameIgnoreCaseAndDivisionCode(String chargeName, String divisionCode);
 
-/*    boolean existsByChargeCodeAndDivisionCodeAndChargePoidNotAndDeletedNot(
-            String chargeCode,
-            String divisionCode,
-            Long chargePoid,
-            String deleted
-    );*/
+    boolean existsByChargeNameIgnoreCaseAndDivisionCodeAndChargePoidNot(
+            String chargeName, String divisionCode, Long chargePoid);
 
-    boolean existsByChargeNameAndDivisionCodeAndChargePoidNotAndDeletedNot(
-            String chargeName,
-            String divisionCode,
-            Long chargePoid,
-            String deleted
-    );
+    boolean existsByChargeCodeAndDivisionCodeAndChargePoidNot(
+            String chargeCode, String divisionCode, Long chargePoid);
 
     boolean existsByChargePoid(long chargePoid);
 }

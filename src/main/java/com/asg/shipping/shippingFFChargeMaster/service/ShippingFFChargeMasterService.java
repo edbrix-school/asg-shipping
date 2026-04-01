@@ -1,5 +1,6 @@
 package com.asg.shipping.shippingFFChargeMaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
 import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
@@ -16,7 +17,7 @@ public interface ShippingFFChargeMasterService {
 
     ChargeDto getCharge(Long id);
 
-    void deleteCharge(Long id);
+    void deleteCharge(Long id, DeleteReasonDto deleteReasonDto);
 
     Map<String, Object> searchCharges(String docId, FilterRequestDto request, Pageable pageable);
 }
