@@ -196,6 +196,9 @@ public class LinePrincipalMasterDto {
     @Schema(description = "Charge Details")
     private List<ChargeDetailDto> charges;
 
+    @Schema(description = "Container Type Details")
+    private List<ContainerTypeDetailDto> containerTypes;
+
     @Schema(description = "Created By")
     private String createdBy;
 

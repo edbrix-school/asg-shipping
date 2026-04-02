@@ -3,6 +3,7 @@ package com.asg.shipping.lineprincipalmaster.util;
 import com.asg.shipping.lineprincipalmaster.dto.*;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMaster;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtl;
+import com.asg.shipping.common.entity.ShipLineMasterType;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -286,6 +287,58 @@ public class LinePrincipalMasterMapper {
         charge.setExcludedFromEdi(dto.getExcludedFromEdi());
         charge.setDefaultPrintGroupEdi(dto.getDefaultPrintGroupEdi());
         charge.setWkyrptIncludeAs(dto.getWkyrptIncludeAs());
+    }
+
+    /**
+     * Map container type detail entities to DTOs
+     */
+    public List<ContainerTypeDetailDto> mapContainerTypeDetailsToDto(List<ShipLineMasterType> containerTypes) {
+        if (containerTypes == null || containerTypes.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+
+        return containerTypes.stream()
+                .map(this::mapContainerTypeDetailToDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Map container type detail entity to DTO
+     */
+    public ContainerTypeDetailDto mapContainerTypeDetailToDto(ShipLineMasterType containerType) {
+        if (containerType == null) {
+            return null;
+        }
+
+        return ContainerTypeDetailDto.builder()
+                .detRowId(containerType.getDetRowId())
+                .containerTypePoid(containerType.getContainerTypePoid())
+                .validUntil(containerType.getValidUntil())
+                .build();
+    }
+
+    /**
+     * Map container type detail DTO to entity
+     */
+    public ShipLineMasterType mapContainerTypeDetailDtoToEntity(ContainerTypeDetailDto dto, Long linePoid, String currentUser) {
+        ShipLineMasterType containerType = new ShipLineMasterType();
+        containerType.setLinePoid(linePoid);
+        containerType.setContainerTypePoid(dto.getContainerTypePoid());
+        containerType.setValidUntil(dto.getValidUntil());
+        containerType.setCreatedBy(currentUser);
+        containerType.setCreatedDate(LocalDateTime.now());
+
+        return containerType;
+    }
+
+    /**
+     * Update container type detail entity from DTO
+     */
+    public void updateContainerTypeDetailFromDto(ContainerTypeDetailDto dto, ShipLineMasterType containerType, String currentUser) {
+        containerType.setContainerTypePoid(dto.getContainerTypePoid());
+        containerType.setValidUntil(dto.getValidUntil());
+        containerType.setLastModifiedBy(currentUser);
+        containerType.setLastModifiedDate(LocalDateTime.now());
     }
 }
 

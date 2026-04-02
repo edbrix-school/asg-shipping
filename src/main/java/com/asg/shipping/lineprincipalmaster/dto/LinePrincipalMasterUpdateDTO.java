@@ -209,5 +209,9 @@ public class LinePrincipalMasterUpdateDTO {
     @Valid
     @Schema(description = "Charge Details")
     private List<ChargeDetailDto> charges;
+
+    @Valid
+    @Schema(description = "Container Type Details")
+    private List<ContainerTypeDetailDto> containerTypes;
 }
 

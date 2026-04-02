@@ -13,6 +13,9 @@ import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtl;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterChargeDtlRepository;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterRepository;
 import com.asg.shipping.lineprincipalmaster.util.LinePrincipalMasterMapper;
+import com.asg.shipping.common.entity.ShipLineMasterType;
+import com.asg.shipping.common.entity.ShipLineMasterTypeId;
+import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -48,6 +51,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
     private final ShipLineMasterRepository lineRepository;
     private final ShipLineMasterChargeDtlRepository chargeDtlRepository;
+    private final ShipLineMasterTypeRepository containerTypeRepository;
     private final DocumentSearchService documentSearchService;
     private final LovService lovService;
     private final LinePrincipalMasterMapper mapper;
@@ -84,6 +88,10 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Fetch charge details
         List<ShipLineMasterChargeDtl> charges = chargeDtlRepository.findByLinePoidOrderByDetRowId(id);
         dto.setCharges(mapper.mapChargeDetailsToDto(charges));
+
+        // Fetch container type details
+        List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(id);
+        dto.setContainerTypes(mapper.mapContainerTypeDetailsToDto(containerTypes));
 
         // Enrich with LOV data
         enrichDtoWithLovData(dto, line, groupPoid);
@@ -123,6 +131,11 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             createChargeDetails(resolvedLinePoid, dto.getCharges(), userPoid);
         }
 
+        // Create container type details
+        if (dto.getContainerTypes() != null && !dto.getContainerTypes().isEmpty()) {
+            createContainerTypeDetails(resolvedLinePoid, dto.getContainerTypes(), userPoid);
+        }
+
         // Call stored procedure
         callAfterSaveProcedure(groupPoid, companyPoid, userPoid, resolvedLinePoid);
 
@@ -130,6 +143,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         LinePrincipalMasterDto result = mapper.mapToDto(resolvedLine);
         List<ShipLineMasterChargeDtl> charges = chargeDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setCharges(mapper.mapChargeDetailsToDto(charges));
+        List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        result.setContainerTypes(mapper.mapContainerTypeDetailsToDto(containerTypes));
         enrichDtoWithLovData(result, saved, groupPoid);
 
         log.info("Successfully created line with id: {}", resolvedLinePoid);
@@ -159,6 +174,9 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Handle charge details
         updateChargeDetails(id, dto.getCharges(), userPoid);
 
+        // Handle container type details
+        updateContainerTypeDetails(id, dto.getContainerTypes(), userPoid);
+
         // Call stored procedure
         callAfterSaveProcedure(groupPoid, companyPoid, userPoid, saved.getLinePoid());
 
@@ -166,6 +184,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         LinePrincipalMasterDto result = mapper.mapToDto(saved);
         List<ShipLineMasterChargeDtl> charges = chargeDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setCharges(mapper.mapChargeDetailsToDto(charges));
+        List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        result.setContainerTypes(mapper.mapContainerTypeDetailsToDto(containerTypes));
         enrichDtoWithLovData(result, saved, groupPoid);
 
         log.info("Successfully updated line with id: {}", id);
@@ -409,6 +429,100 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
     }
 
     /**
+     * Create container type details for a line
+     */
+    private void createContainerTypeDetails(Long linePoid, List<ContainerTypeDetailDto> containerTypeDtos, Long userPoid) {
+        String currentUser = getCurrentUser();
+        Set<Long> containerTypePoids = new java.util.HashSet<>();
+        Long maxDetRowId = containerTypeRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+
+        for (ContainerTypeDetailDto containerTypeDto : containerTypeDtos) {
+            if (containerTypeDto.getContainerTypePoid() != null) {
+                // Check for duplicate container type POID within the request
+                if (!containerTypePoids.add(containerTypeDto.getContainerTypePoid())) {
+                    throw new ValidationException("Duplicate container type POID: " + containerTypeDto.getContainerTypePoid());
+                }
+
+                // Check if container type POID already exists for this line
+                if (containerTypeRepository.existsByLinePoidAndContainerTypePoid(linePoid, containerTypeDto.getContainerTypePoid())) {
+                    throw new ValidationException("Container type POID " + containerTypeDto.getContainerTypePoid() + " already exists for this line");
+                }
+            }
+
+            ShipLineMasterType containerType = mapper.mapContainerTypeDetailDtoToEntity(containerTypeDto, linePoid, currentUser);
+            containerType.setDetRowId(nextDetRowId++);
+            containerTypeRepository.save(containerType);
+        }
+    }
+
+    /**
+     * Update container type details for a line
+     */
+    private void updateContainerTypeDetails(Long linePoid, List<ContainerTypeDetailDto> containerTypeDtos, Long userPoid) {
+        if (containerTypeDtos == null) {
+            return;
+        }
+
+        String currentUser = getCurrentUser();
+        List<ShipLineMasterType> existingContainerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(linePoid);
+        Set<Long> existingDetRowIds = existingContainerTypes.stream()
+                .map(ShipLineMasterType::getDetRowId)
+                .collect(Collectors.toSet());
+
+        Set<Long> requestDetRowIds = containerTypeDtos.stream()
+                .map(ContainerTypeDetailDto::getDetRowId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // Delete container types not in request
+        List<Long> toDelete = existingDetRowIds.stream()
+                .filter(id -> !requestDetRowIds.contains(id))
+                .collect(Collectors.toList());
+        for (Long detRowId : toDelete) {
+            containerTypeRepository.deleteById(new ShipLineMasterTypeId(linePoid, detRowId));
+        }
+
+        // Update or create container types
+        Set<Long> containerTypePoids = new java.util.HashSet<>();
+        Long maxDetRowId = containerTypeRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+        for (ContainerTypeDetailDto containerTypeDto : containerTypeDtos) {
+            if (containerTypeDto.getContainerTypePoid() != null) {
+                if (!containerTypePoids.add(containerTypeDto.getContainerTypePoid())) {
+                    throw new ValidationException("Duplicate container type POID: " + containerTypeDto.getContainerTypePoid());
+                }
+
+                // Check uniqueness excluding current detail row
+                if (containerTypeDto.getDetRowId() != null) {
+                    if (containerTypeRepository.existsByLinePoidAndContainerTypePoidExcluding(linePoid, containerTypeDto.getContainerTypePoid(), containerTypeDto.getDetRowId())) {
+                        throw new ValidationException("Container type POID " + containerTypeDto.getContainerTypePoid() + " already exists for this line");
+                    }
+                } else {
+                    if (containerTypeRepository.existsByLinePoidAndContainerTypePoid(linePoid, containerTypeDto.getContainerTypePoid())) {
+                        throw new ValidationException("Container type POID " + containerTypeDto.getContainerTypePoid() + " already exists for this line");
+                    }
+                }
+            }
+
+            if (containerTypeDto.getDetRowId() != null) {
+                // Update existing
+                ShipLineMasterType existing = containerTypeRepository.findById(
+                        new ShipLineMasterTypeId(linePoid, containerTypeDto.getDetRowId()))
+                        .orElseThrow(() -> new ResourceNotFoundException("Container Type Detail", "detRowId", containerTypeDto.getDetRowId().toString()));
+
+                mapper.updateContainerTypeDetailFromDto(containerTypeDto, existing, currentUser);
+                containerTypeRepository.save(existing);
+            } else {
+                // Create new
+                ShipLineMasterType newContainerType = mapper.mapContainerTypeDetailDtoToEntity(containerTypeDto, linePoid, currentUser);
+                newContainerType.setDetRowId(nextDetRowId++);
+                containerTypeRepository.save(newContainerType);
+            }
+        }
+    }
+
+    /**
      * Call PROC_LINE_MASTER_AFTER_SAVE stored procedure
      */
     private void callAfterSaveProcedure(Long groupPoid, Long companyPoid, Long userPoid, Long linePoid) {
@@ -485,6 +599,19 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                     }
                 } catch (Exception e) {
                     log.warn("Failed to fetch LOV data for charge", e);
+                }
+            }
+        }
+
+        // Enrich container type details with LOV data
+        if (dto.getContainerTypes() != null) {
+            for (ContainerTypeDetailDto containerType : dto.getContainerTypes()) {
+                try {
+                    if (containerType.getContainerTypePoid() != null) {
+                        containerType.setContainerTypeDet(lovService.getLovItemByPoid(containerType.getContainerTypePoid(), "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid));
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to fetch LOV data for container type", e);
                 }
             }
         }
