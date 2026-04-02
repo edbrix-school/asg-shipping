@@ -4,6 +4,8 @@ import com.asg.shipping.lineprincipalmaster.dto.*;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMaster;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtl;
 import com.asg.shipping.common.entity.ShipLineMasterType;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterUserRoleDtl;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtl;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -339,6 +341,81 @@ public class LinePrincipalMasterMapper {
         containerType.setValidUntil(dto.getValidUntil());
         containerType.setLastModifiedBy(currentUser);
         containerType.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    public List<UserRoleDetailDto> mapUserRoleDetailsToDto(List<ShipLineMasterUserRoleDtl> userRoles) {
+        if (userRoles == null || userRoles.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return userRoles.stream().map(this::mapUserRoleDetailToDto).collect(Collectors.toList());
+    }
+
+    public UserRoleDetailDto mapUserRoleDetailToDto(ShipLineMasterUserRoleDtl userRole) {
+        if (userRole == null) return null;
+        return UserRoleDetailDto.builder()
+                .detRowId(userRole.getDetRowId())
+                .userRolePoid(userRole.getUserRolePoid())
+                .validUntil(userRole.getValidUntil())
+                .build();
+    }
+
+    public ShipLineMasterUserRoleDtl mapUserRoleDetailDtoToEntity(UserRoleDetailDto dto, Long linePoid, String currentUser) {
+        ShipLineMasterUserRoleDtl userRole = new ShipLineMasterUserRoleDtl();
+        userRole.setLinePoid(linePoid);
+        userRole.setUserRolePoid(dto.getUserRolePoid());
+        userRole.setValidUntil(dto.getValidUntil());
+        userRole.setCreatedBy(currentUser);
+        userRole.setCreatedDate(LocalDateTime.now());
+        return userRole;
+    }
+
+    public void updateUserRoleDetailFromDto(UserRoleDetailDto dto, ShipLineMasterUserRoleDtl userRole, String currentUser) {
+        userRole.setUserRolePoid(dto.getUserRolePoid());
+        userRole.setValidUntil(dto.getValidUntil());
+        userRole.setLastModifiedBy(currentUser);
+        userRole.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    public List<PicDetailDto> mapPicDetailsToDto(List<ShipLineMasterPicDtl> picDetails) {
+        if (picDetails == null || picDetails.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return picDetails.stream().map(this::mapPicDetailToDto).collect(Collectors.toList());
+    }
+
+    public PicDetailDto mapPicDetailToDto(ShipLineMasterPicDtl picDtl) {
+        if (picDtl == null) return null;
+        return PicDetailDto.builder()
+                .detRowId(picDtl.getDetRowId())
+                .departmentPoid(picDtl.getDepartmentPoid())
+                .handledUserPoid(picDtl.getHandledUserPoid())
+                .periodFrom(picDtl.getPeriodFrom())
+                .periodTo(picDtl.getPeriodTo())
+                .remarks(picDtl.getRemarks())
+                .build();
+    }
+
+    public ShipLineMasterPicDtl mapPicDetailDtoToEntity(PicDetailDto dto, Long linePoid, String currentUser) {
+        ShipLineMasterPicDtl picDtl = new ShipLineMasterPicDtl();
+        picDtl.setLinePoid(linePoid);
+        picDtl.setDepartmentPoid(dto.getDepartmentPoid());
+        picDtl.setHandledUserPoid(dto.getHandledUserPoid());
+        picDtl.setPeriodFrom(dto.getPeriodFrom());
+        picDtl.setPeriodTo(dto.getPeriodTo());
+        picDtl.setRemarks(dto.getRemarks());
+        picDtl.setCreatedBy(currentUser);
+        picDtl.setCreatedDate(LocalDateTime.now());
+        return picDtl;
+    }
+
+    public void updatePicDetailFromDto(PicDetailDto dto, ShipLineMasterPicDtl picDtl, String currentUser) {
+        picDtl.setDepartmentPoid(dto.getDepartmentPoid());
+        picDtl.setHandledUserPoid(dto.getHandledUserPoid());
+        picDtl.setPeriodFrom(dto.getPeriodFrom());
+        picDtl.setPeriodTo(dto.getPeriodTo());
+        picDtl.setRemarks(dto.getRemarks());
+        picDtl.setLastModifiedBy(currentUser);
+        picDtl.setLastModifiedDate(LocalDateTime.now());
     }
 }
 

@@ -16,6 +16,12 @@ import com.asg.shipping.lineprincipalmaster.util.LinePrincipalMasterMapper;
 import com.asg.shipping.common.entity.ShipLineMasterType;
 import com.asg.shipping.common.entity.ShipLineMasterTypeId;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterUserRoleDtl;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterUserRoleDtlId;
+import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterUserRoleDtlRepository;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtl;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtlId;
+import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterPicDtlRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -52,6 +58,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
     private final ShipLineMasterRepository lineRepository;
     private final ShipLineMasterChargeDtlRepository chargeDtlRepository;
     private final ShipLineMasterTypeRepository containerTypeRepository;
+    private final ShipLineMasterUserRoleDtlRepository userRoleDtlRepository;
+    private final ShipLineMasterPicDtlRepository picDtlRepository;
     private final DocumentSearchService documentSearchService;
     private final LovService lovService;
     private final LinePrincipalMasterMapper mapper;
@@ -92,6 +100,14 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Fetch container type details
         List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(id);
         dto.setContainerTypes(mapper.mapContainerTypeDetailsToDto(containerTypes));
+
+        // Fetch user role details
+        List<ShipLineMasterUserRoleDtl> userRoles = userRoleDtlRepository.findByLinePoidOrderByDetRowId(id);
+        dto.setUserRoles(mapper.mapUserRoleDetailsToDto(userRoles));
+
+        // Fetch PIC details
+        List<ShipLineMasterPicDtl> picDetails = picDtlRepository.findByLinePoidOrderByDetRowId(id);
+        dto.setPicDetails(mapper.mapPicDetailsToDto(picDetails));
 
         // Enrich with LOV data
         enrichDtoWithLovData(dto, line, groupPoid);
@@ -136,6 +152,16 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             createContainerTypeDetails(resolvedLinePoid, dto.getContainerTypes(), userPoid);
         }
 
+        // Create user role details
+        if (dto.getUserRoles() != null && !dto.getUserRoles().isEmpty()) {
+            createUserRoleDetails(resolvedLinePoid, dto.getUserRoles(), userPoid);
+        }
+
+        // Create PIC details
+        if (dto.getPicDetails() != null && !dto.getPicDetails().isEmpty()) {
+            createPicDetails(resolvedLinePoid, dto.getPicDetails(), userPoid);
+        }
+
         // Call stored procedure
         callAfterSaveProcedure(groupPoid, companyPoid, userPoid, resolvedLinePoid);
 
@@ -145,6 +171,10 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setCharges(mapper.mapChargeDetailsToDto(charges));
         List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setContainerTypes(mapper.mapContainerTypeDetailsToDto(containerTypes));
+        List<ShipLineMasterUserRoleDtl> savedUserRoles = userRoleDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        result.setUserRoles(mapper.mapUserRoleDetailsToDto(savedUserRoles));
+        List<ShipLineMasterPicDtl> savedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        result.setPicDetails(mapper.mapPicDetailsToDto(savedPicDetails));
         enrichDtoWithLovData(result, saved, groupPoid);
 
         log.info("Successfully created line with id: {}", resolvedLinePoid);
@@ -177,6 +207,12 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Handle container type details
         updateContainerTypeDetails(id, dto.getContainerTypes(), userPoid);
 
+        // Handle user role details
+        updateUserRoleDetails(id, dto.getUserRoles(), userPoid);
+
+        // Handle PIC details
+        updatePicDetails(id, dto.getPicDetails(), userPoid);
+
         // Call stored procedure
         callAfterSaveProcedure(groupPoid, companyPoid, userPoid, saved.getLinePoid());
 
@@ -186,6 +222,10 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setCharges(mapper.mapChargeDetailsToDto(charges));
         List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setContainerTypes(mapper.mapContainerTypeDetailsToDto(containerTypes));
+        List<ShipLineMasterUserRoleDtl> updatedUserRoles = userRoleDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        result.setUserRoles(mapper.mapUserRoleDetailsToDto(updatedUserRoles));
+        List<ShipLineMasterPicDtl> updatedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        result.setPicDetails(mapper.mapPicDetailsToDto(updatedPicDetails));
         enrichDtoWithLovData(result, saved, groupPoid);
 
         log.info("Successfully updated line with id: {}", id);
@@ -613,6 +653,141 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 } catch (Exception e) {
                     log.warn("Failed to fetch LOV data for container type", e);
                 }
+            }
+        }
+
+        // Enrich user role details with LOV data
+        if (dto.getUserRoles() != null) {
+            for (UserRoleDetailDto userRole : dto.getUserRoles()) {
+                try {
+                    if (userRole.getUserRolePoid() != null) {
+                        userRole.setUserRoleDet(lovService.getLovItemByPoid(userRole.getUserRolePoid(), "USER_ROLES", groupPoid, companyPoid, userPoid));
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to fetch LOV data for user role", e);
+                }
+            }
+        }
+
+        // Enrich PIC details with LOV data
+        if (dto.getPicDetails() != null) {
+            for (PicDetailDto pic : dto.getPicDetails()) {
+                try {
+                    if (pic.getDepartmentPoid() != null) {
+                        pic.setDepartmentDet(lovService.getLovItemByPoid(pic.getDepartmentPoid(), "LINE_PIC_DEPARTMENT", groupPoid, companyPoid, userPoid));
+                    }
+                    if (pic.getHandledUserPoid() != null) {
+                        pic.setHandledUserDet(lovService.getLovItemByPoid(pic.getHandledUserPoid(), "LINE_PIC_USER", groupPoid, companyPoid, userPoid));
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to fetch LOV data for PIC detail", e);
+                }
+            }
+        }
+    }
+
+    private void createUserRoleDetails(Long linePoid, List<UserRoleDetailDto> userRoleDtos, Long userPoid) {
+        String currentUser = getCurrentUser();
+        Set<Long> userRolePoids = new java.util.HashSet<>();
+        Long maxDetRowId = userRoleDtlRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+
+        for (UserRoleDetailDto dto : userRoleDtos) {
+            if (dto.getUserRolePoid() != null) {
+                if (!userRolePoids.add(dto.getUserRolePoid())) {
+                    throw new ValidationException("Duplicate user role POID: " + dto.getUserRolePoid());
+                }
+                if (userRoleDtlRepository.existsByLinePoidAndUserRolePoid(linePoid, dto.getUserRolePoid())) {
+                    throw new ValidationException("User role POID " + dto.getUserRolePoid() + " already exists for this line");
+                }
+            }
+            ShipLineMasterUserRoleDtl entity = mapper.mapUserRoleDetailDtoToEntity(dto, linePoid, currentUser);
+            entity.setDetRowId(nextDetRowId++);
+            userRoleDtlRepository.save(entity);
+        }
+    }
+
+    private void updateUserRoleDetails(Long linePoid, List<UserRoleDetailDto> userRoleDtos, Long userPoid) {
+        if (userRoleDtos == null) return;
+        String currentUser = getCurrentUser();
+        List<ShipLineMasterUserRoleDtl> existing = userRoleDtlRepository.findByLinePoidOrderByDetRowId(linePoid);
+        Set<Long> existingIds = existing.stream().map(ShipLineMasterUserRoleDtl::getDetRowId).collect(Collectors.toSet());
+        Set<Long> requestIds = userRoleDtos.stream().map(UserRoleDetailDto::getDetRowId).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+
+        for (Long detRowId : existingIds) {
+            if (!requestIds.contains(detRowId)) {
+                userRoleDtlRepository.deleteById(new ShipLineMasterUserRoleDtlId(linePoid, detRowId));
+            }
+        }
+
+        Set<Long> userRolePoids = new java.util.HashSet<>();
+        Long maxDetRowId = userRoleDtlRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+        for (UserRoleDetailDto dto : userRoleDtos) {
+            if (dto.getUserRolePoid() != null) {
+                if (!userRolePoids.add(dto.getUserRolePoid())) {
+                    throw new ValidationException("Duplicate user role POID: " + dto.getUserRolePoid());
+                }
+                if (dto.getDetRowId() != null) {
+                    if (userRoleDtlRepository.existsByLinePoidAndUserRolePoidExcluding(linePoid, dto.getUserRolePoid(), dto.getDetRowId())) {
+                        throw new ValidationException("User role POID " + dto.getUserRolePoid() + " already exists for this line");
+                    }
+                } else {
+                    if (userRoleDtlRepository.existsByLinePoidAndUserRolePoid(linePoid, dto.getUserRolePoid())) {
+                        throw new ValidationException("User role POID " + dto.getUserRolePoid() + " already exists for this line");
+                    }
+                }
+            }
+            if (dto.getDetRowId() != null) {
+                ShipLineMasterUserRoleDtl entity = userRoleDtlRepository.findById(new ShipLineMasterUserRoleDtlId(linePoid, dto.getDetRowId()))
+                        .orElseThrow(() -> new ResourceNotFoundException("User Role Detail", "detRowId", dto.getDetRowId().toString()));
+                mapper.updateUserRoleDetailFromDto(dto, entity, currentUser);
+                userRoleDtlRepository.save(entity);
+            } else {
+                ShipLineMasterUserRoleDtl entity = mapper.mapUserRoleDetailDtoToEntity(dto, linePoid, currentUser);
+                entity.setDetRowId(nextDetRowId++);
+                userRoleDtlRepository.save(entity);
+            }
+        }
+    }
+
+    private void createPicDetails(Long linePoid, List<PicDetailDto> picDtos, Long userPoid) {
+        String currentUser = getCurrentUser();
+        Long maxDetRowId = picDtlRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+
+        for (PicDetailDto dto : picDtos) {
+            ShipLineMasterPicDtl entity = mapper.mapPicDetailDtoToEntity(dto, linePoid, currentUser);
+            entity.setDetRowId(nextDetRowId++);
+            picDtlRepository.save(entity);
+        }
+    }
+
+    private void updatePicDetails(Long linePoid, List<PicDetailDto> picDtos, Long userPoid) {
+        if (picDtos == null) return;
+        String currentUser = getCurrentUser();
+        List<ShipLineMasterPicDtl> existing = picDtlRepository.findByLinePoidOrderByDetRowId(linePoid);
+        Set<Long> existingIds = existing.stream().map(ShipLineMasterPicDtl::getDetRowId).collect(Collectors.toSet());
+        Set<Long> requestIds = picDtos.stream().map(PicDetailDto::getDetRowId).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+
+        for (Long detRowId : existingIds) {
+            if (!requestIds.contains(detRowId)) {
+                picDtlRepository.deleteById(new ShipLineMasterPicDtlId(linePoid, detRowId));
+            }
+        }
+
+        Long maxDetRowId = picDtlRepository.findMaxDetRowIdByLinePoid(linePoid);
+        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+        for (PicDetailDto dto : picDtos) {
+            if (dto.getDetRowId() != null) {
+                ShipLineMasterPicDtl entity = picDtlRepository.findById(new ShipLineMasterPicDtlId(linePoid, dto.getDetRowId()))
+                        .orElseThrow(() -> new ResourceNotFoundException("PIC Detail", "detRowId", dto.getDetRowId().toString()));
+                mapper.updatePicDetailFromDto(dto, entity, currentUser);
+                picDtlRepository.save(entity);
+            } else {
+                ShipLineMasterPicDtl entity = mapper.mapPicDetailDtoToEntity(dto, linePoid, currentUser);
+                entity.setDetRowId(nextDetRowId++);
+                picDtlRepository.save(entity);
             }
         }
     }

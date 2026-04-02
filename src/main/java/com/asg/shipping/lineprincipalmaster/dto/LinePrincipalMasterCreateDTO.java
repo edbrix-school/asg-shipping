@@ -213,5 +213,13 @@ public class LinePrincipalMasterCreateDTO {
     @Valid
     @Schema(description = "Container Type Details")
     private List<ContainerTypeDetailDto> containerTypes;
+
+    @Valid
+    @Schema(description = "User Role Details")
+    private List<UserRoleDetailDto> userRoles;
+
+    @Valid
+    @Schema(description = "PIC Details")
+    private List<PicDetailDto> picDetails;
 }
 

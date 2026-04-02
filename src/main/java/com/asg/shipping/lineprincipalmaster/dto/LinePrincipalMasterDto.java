@@ -199,6 +199,12 @@ public class LinePrincipalMasterDto {
     @Schema(description = "Container Type Details")
     private List<ContainerTypeDetailDto> containerTypes;
 
+    @Schema(description = "User Role Details")
+    private List<UserRoleDetailDto> userRoles;
+
+    @Schema(description = "PIC Details")
+    private List<PicDetailDto> picDetails;
+
     @Schema(description = "Created By")
     private String createdBy;
 
