@@ -615,9 +615,28 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             if (line.getBankGuaranteeBankPoid() != null) {
                 dto.setBankDet(lovService.getLovItemByPoid(line.getBankGuaranteeBankPoid(), "BANK_MASTER", groupPoid, companyPoid, userPoid));
             }
-            if (line.getLinePortRefno() != null) {
-                // For tradelane, we need to get by code, not POID
-                // This is a simplified version - actual implementation may need to query by code
+            if (line.getLinePortRefno() != null || (dto.getLinePortRefnos() != null && !dto.getLinePortRefnos().isEmpty())) {
+                if ((dto.getLinePortRefnos() == null || dto.getLinePortRefnos().isEmpty()) && line.getLinePortRefno() != null) {
+                    dto.setLinePortRefnos(splitCodesService(line.getLinePortRefno()));
+                }
+
+                List<com.asg.shipping.common.dto.LovItem> tradelaneDets = new java.util.ArrayList<>();
+                if (dto.getLinePortRefnos() != null) {
+                    for (String code : dto.getLinePortRefnos()) {
+                        try {
+                            com.asg.shipping.common.dto.LovItem item = lovService.getLovItemByCode(code.trim(), "TRADELANE", groupPoid, companyPoid, userPoid);
+                            if (item != null) {
+                                tradelaneDets.add(item);
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to fetch TRADELANE LOV item for code: {}", code, e);
+                        }
+                    }
+                }
+                dto.setTradelaneDets(tradelaneDets);
+                if (!tradelaneDets.isEmpty()) {
+                    dto.setTradelaneDet(tradelaneDets.get(0));
+                }
             }
             if (line.getBillTo() != null) {
                 // For billTo, we need to get by code, not POID
@@ -814,6 +833,16 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         if (lineRepository.existsByLineNameAndGroupPoidExcluding(dto.getLineName(), groupPoid, excludeLinePoid)) {
             throw new ValidationException("Line name already exists for this group");
         }
+    }
+
+    private List<String> splitCodesService(String csv) {
+        if (csv == null || csv.trim().isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return java.util.Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(code -> !code.isEmpty())
+                .collect(java.util.stream.Collectors.toList());
     }
 }
 

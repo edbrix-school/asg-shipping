@@ -130,6 +130,9 @@ public class LinePrincipalMasterCreateDTO {
     @Schema(description = "Line Port Reference (Tradelane)", example = "TRADE001")
     private String linePortRefno;
 
+    @Schema(description = "Line Port References (Tradelane - Multi Select)", example = "[\"TRADE001\",\"TRADE002\"]")
+    private List<String> linePortRefnos;
+
     @Size(max = 25, message = "Line port register name cannot exceed 25 characters")
     @Schema(description = "Line Port Register Name", example = "Port Register")
     private String linePortRegisterName;

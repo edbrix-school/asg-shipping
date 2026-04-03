@@ -9,6 +9,7 @@ import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtl;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -61,6 +62,7 @@ public class LinePrincipalMasterMapper {
                 .chamberOfCommerce(entity.getChamberOfCommerce())
                 .chamberOfCommerceExpiry(entity.getChamberOfCommerceExpiry())
                 .linePortRefno(entity.getLinePortRefno())
+                .linePortRefnos(splitCodes(entity.getLinePortRefno()))
                 .linePortRegisterName(entity.getLinePortRegisterName())
                 .terminalLineCode(entity.getTerminalLineCode())
                 .blPrintLiner(entity.getBlPrintLiner())
@@ -120,7 +122,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineType(dto.getLineType());
         entity.setChamberOfCommerce(dto.getChamberOfCommerce());
         entity.setChamberOfCommerceExpiry(dto.getChamberOfCommerceExpiry());
-        entity.setLinePortRefno(dto.getLinePortRefno());
+        entity.setLinePortRefno(resolveLinePortRefno(dto.getLinePortRefno(), dto.getLinePortRefnos()));
         entity.setLinePortRegisterName(dto.getLinePortRegisterName());
         entity.setTerminalLineCode(dto.getTerminalLineCode());
         entity.setBlPrintLiner(dto.getBlPrintLiner());
@@ -192,7 +194,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineType(dto.getLineType());
         entity.setChamberOfCommerce(dto.getChamberOfCommerce());
         entity.setChamberOfCommerceExpiry(dto.getChamberOfCommerceExpiry());
-        entity.setLinePortRefno(dto.getLinePortRefno());
+        entity.setLinePortRefno(resolveLinePortRefno(dto.getLinePortRefno(), dto.getLinePortRefnos()));
         entity.setLinePortRegisterName(dto.getLinePortRegisterName());
         entity.setTerminalLineCode(dto.getTerminalLineCode());
         entity.setBlPrintLiner(dto.getBlPrintLiner());
@@ -416,6 +418,26 @@ public class LinePrincipalMasterMapper {
         picDtl.setRemarks(dto.getRemarks());
         picDtl.setLastModifiedBy(currentUser);
         picDtl.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    private String resolveLinePortRefno(String singleCode, List<String> multiCodes) {
+        if (multiCodes != null && !multiCodes.isEmpty()) {
+            return String.join(",", multiCodes.stream()
+                    .filter(code -> code != null && !code.trim().isEmpty())
+                    .map(String::trim)
+                    .collect(Collectors.toList()));
+        }
+        return singleCode;
+    }
+
+    private List<String> splitCodes(String csv) {
+        if (csv == null || csv.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return java.util.Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(code -> !code.isEmpty())
+                .collect(Collectors.toList());
     }
 }
 
