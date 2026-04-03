@@ -167,15 +167,15 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
         // Fetch and return with LOV data
         LinePrincipalMasterDto result = mapper.mapToDto(resolvedLine);
-        List<ShipLineMasterChargeDtl> charges = chargeDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        List<ShipLineMasterChargeDtl> charges = chargeDtlRepository.findByLinePoidOrderByDetRowId(resolvedLinePoid);
         result.setCharges(mapper.mapChargeDetailsToDto(charges));
-        List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        List<ShipLineMasterType> containerTypes = containerTypeRepository.findByLinePoidOrderByDetRowId(resolvedLinePoid);
         result.setContainerTypes(mapper.mapContainerTypeDetailsToDto(containerTypes));
-        List<ShipLineMasterUserRoleDtl> savedUserRoles = userRoleDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        List<ShipLineMasterUserRoleDtl> savedUserRoles = userRoleDtlRepository.findByLinePoidOrderByDetRowId(resolvedLinePoid);
         result.setUserRoles(mapper.mapUserRoleDetailsToDto(savedUserRoles));
-        List<ShipLineMasterPicDtl> savedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
+        List<ShipLineMasterPicDtl> savedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(resolvedLinePoid);
         result.setPicDetails(mapper.mapPicDetailsToDto(savedPicDetails));
-        enrichDtoWithLovData(result, saved, groupPoid);
+        enrichDtoWithLovData(result, resolvedLine, groupPoid);
 
         log.info("Successfully created line with id: {}", resolvedLinePoid);
         return result;
