@@ -19,6 +19,9 @@ public class PicDetailDto {
     @Schema(description = "Detail Row ID (null for new rows)")
     private Long detRowId;
 
+    @Schema(description = "Row action type", example = "ISUPDATED")
+    private String actionType;
+
     @Schema(description = "Department POID")
     private Long departmentPoid;
 

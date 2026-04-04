@@ -1,10 +1,10 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_LINE_MASTER_USER_ROLE_DTL")
@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ShipLineMasterUserRoleDtlId.class)
-public class ShipLineMasterUserRoleDtl {
+public class ShipLineMasterUserRoleDtl extends BaseEntity {
 
     @Id
     @Column(name = "LINE_POID", nullable = false)
@@ -29,15 +29,4 @@ public class ShipLineMasterUserRoleDtl {
     @Column(name = "VALID_UNTIL")
     private LocalDate validUntil;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }

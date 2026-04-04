@@ -276,6 +276,9 @@ public class LinePrincipalMasterMapper {
                 .wkyrptIncludeAs(dto.getWkyrptIncludeAs())
                 .build();
 
+            charge.setCreatedBy(currentUser);
+            charge.setCreatedDate(LocalDateTime.now());
+
         return charge;
     }
 
@@ -291,6 +294,8 @@ public class LinePrincipalMasterMapper {
         charge.setExcludedFromEdi(dto.getExcludedFromEdi());
         charge.setDefaultPrintGroupEdi(dto.getDefaultPrintGroupEdi());
         charge.setWkyrptIncludeAs(dto.getWkyrptIncludeAs());
+        charge.setLastModifiedBy(currentUser);
+        charge.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**

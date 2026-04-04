@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +19,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @IdClass(ShipLineMasterChargeDtlId.class)
-public class ShipLineMasterChargeDtl {
+public class ShipLineMasterChargeDtl extends BaseEntity {
 
     @Id
     @Column(name = "LINE_POID", nullable = false)
