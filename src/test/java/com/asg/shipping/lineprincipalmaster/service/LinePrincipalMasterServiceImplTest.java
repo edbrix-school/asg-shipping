@@ -1,10 +1,12 @@
 package com.asg.shipping.lineprincipalmaster.service;
 
+import com.asg.common.lib.dto.DiffObject;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.utility.DiffUtil;
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.common.entity.ShipLineMasterType;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
@@ -14,6 +16,8 @@ import com.asg.shipping.lineprincipalmaster.dto.LinePrincipalMasterDto;
 import com.asg.shipping.lineprincipalmaster.dto.LinePrincipalMasterUpdateDTO;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMaster;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtl;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtl;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterUserRoleDtl;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterChargeDtlRepository;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterPicDtlRepository;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterRepository;
@@ -26,11 +30,14 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -45,6 +52,135 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class LinePrincipalMasterServiceImplTest {
+
+        @Test
+        void updateLine_UsesExtendedTransactionTimeout() throws NoSuchMethodException {
+                Transactional transactional = LinePrincipalMasterServiceImpl.class
+                                .getMethod("updateLine", Long.class, LinePrincipalMasterUpdateDTO.class)
+                                .getAnnotation(Transactional.class);
+
+                assertNotNull(transactional);
+                assertEquals(180, transactional.timeout());
+        }
+
+    @Test
+    void diffUtil_IgnoresRecursiveMasterChargeRelationship() {
+        ShipLineMaster oldLine = ShipLineMaster.builder()
+                .linePoid(1L)
+                .lineCode("LINE001")
+                .lineName("Old Name")
+                .build();
+        ShipLineMaster newLine = ShipLineMaster.builder()
+                .linePoid(1L)
+                .lineCode("LINE001")
+                .lineName("New Name")
+                .build();
+
+        ShipLineMasterChargeDtl oldCharge = ShipLineMasterChargeDtl.builder()
+                .linePoid(1L)
+                .detRowId(1L)
+                .chargePoid(101L)
+                .build();
+        oldCharge.setLineMaster(oldLine);
+        oldLine.setCharges(List.of(oldCharge));
+
+        ShipLineMasterChargeDtl newCharge = ShipLineMasterChargeDtl.builder()
+                .linePoid(1L)
+                .detRowId(1L)
+                .chargePoid(101L)
+                .build();
+        newCharge.setLineMaster(newLine);
+        newLine.setCharges(List.of(newCharge));
+
+        List<DiffObject> diffs = assertDoesNotThrow(() -> DiffUtil.createDiffList(oldLine, newLine, ShipLineMaster.class));
+
+        assertNotNull(diffs);
+    }
+
+    @Test
+    void diffUtil_IgnoresRecursiveChargeMasterRelationship() {
+        ShipLineMaster oldLine = ShipLineMaster.builder().linePoid(1L).lineCode("LINE001").lineName("Line One").build();
+        ShipLineMaster newLine = ShipLineMaster.builder().linePoid(1L).lineCode("LINE001").lineName("Line One").build();
+
+        ShipLineMasterChargeDtl oldCharge = ShipLineMasterChargeDtl.builder()
+                .linePoid(1L)
+                .detRowId(1L)
+                .chargePoid(101L)
+                .lineChargeCode("OLD")
+                .build();
+        oldCharge.setLineMaster(oldLine);
+        oldLine.setCharges(List.of(oldCharge));
+
+        ShipLineMasterChargeDtl newCharge = ShipLineMasterChargeDtl.builder()
+                .linePoid(1L)
+                .detRowId(1L)
+                .chargePoid(101L)
+                .lineChargeCode("NEW")
+                .build();
+        newCharge.setLineMaster(newLine);
+        newLine.setCharges(List.of(newCharge));
+
+        List<DiffObject> diffs = assertDoesNotThrow(() -> DiffUtil.createDiffList(oldCharge, newCharge, ShipLineMasterChargeDtl.class));
+
+        assertNotNull(diffs);
+    }
+
+        @Test
+        void diffUtil_SupportsContainerTypeChildRows() {
+                ShipLineMasterType oldContainerType = new ShipLineMasterType();
+                oldContainerType.setLinePoid(1L);
+                oldContainerType.setDetRowId(1L);
+                oldContainerType.setContainerTypePoid(101L);
+
+                ShipLineMasterType newContainerType = new ShipLineMasterType();
+                newContainerType.setLinePoid(1L);
+                newContainerType.setDetRowId(1L);
+                newContainerType.setContainerTypePoid(202L);
+
+                List<DiffObject> diffs = assertDoesNotThrow(() -> DiffUtil.createDiffList(oldContainerType, newContainerType, ShipLineMasterType.class));
+
+                assertNotNull(diffs);
+        }
+
+        @Test
+        void diffUtil_SupportsUserRoleChildRows() {
+                ShipLineMasterUserRoleDtl oldUserRole = ShipLineMasterUserRoleDtl.builder()
+                                .linePoid(1L)
+                                .detRowId(1L)
+                                .userRolePoid(101L)
+                                .build();
+                ShipLineMasterUserRoleDtl newUserRole = ShipLineMasterUserRoleDtl.builder()
+                                .linePoid(1L)
+                                .detRowId(1L)
+                                .userRolePoid(202L)
+                                .build();
+
+                List<DiffObject> diffs = assertDoesNotThrow(() -> DiffUtil.createDiffList(oldUserRole, newUserRole, ShipLineMasterUserRoleDtl.class));
+
+                assertNotNull(diffs);
+        }
+
+        @Test
+        void diffUtil_SupportsPicChildRows() {
+                ShipLineMasterPicDtl oldPic = ShipLineMasterPicDtl.builder()
+                                .linePoid(1L)
+                                .detRowId(1L)
+                                .departmentPoid(101L)
+                                .handledUserPoid(201L)
+                                .remarks("old")
+                                .build();
+                ShipLineMasterPicDtl newPic = ShipLineMasterPicDtl.builder()
+                                .linePoid(1L)
+                                .detRowId(1L)
+                                .departmentPoid(102L)
+                                .handledUserPoid(202L)
+                                .remarks("new")
+                                .build();
+
+                List<DiffObject> diffs = assertDoesNotThrow(() -> DiffUtil.createDiffList(oldPic, newPic, ShipLineMasterPicDtl.class));
+
+                assertNotNull(diffs);
+        }
 
     @Mock
     private ShipLineMasterRepository lineRepository;

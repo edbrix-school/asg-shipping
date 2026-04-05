@@ -8,7 +8,8 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "SHIP_LINE_MASTER_USER_ROLE_DTL")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

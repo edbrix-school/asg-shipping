@@ -193,7 +193,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
     }
 
     @Override
-    @Transactional
+    @Transactional(timeout = 180)
     public LinePrincipalMasterDto updateLine(Long id, LinePrincipalMasterUpdateDTO dto) {
         log.info("Updating line with id: {}", id);
 

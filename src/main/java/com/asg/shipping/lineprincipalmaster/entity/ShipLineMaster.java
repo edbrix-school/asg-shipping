@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -179,6 +180,9 @@ public class ShipLineMaster extends BaseEntity {
     @Column(name = "REPORT_DESCRIPTION", length = 200)
     private String reportDescription;
 
+    @AuditIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "lineMaster", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<ShipLineMasterChargeDtl> charges;
 

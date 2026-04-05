@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -53,6 +54,9 @@ public class ShipLineMasterChargeDtl extends BaseEntity {
     @Column(name = "WKYRPT_INCLUDE_AS")
     private Long wkyrptIncludeAs;
 
+    @AuditIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "LINE_POID", insertable = false, updatable = false)
     private ShipLineMaster lineMaster;
