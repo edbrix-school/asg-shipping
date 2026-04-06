@@ -1,19 +1,20 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_LINE_MASTER_PIC_DTL")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @IdClass(ShipLineMasterPicDtlId.class)
-public class ShipLineMasterPicDtl {
+public class ShipLineMasterPicDtl extends BaseEntity {
 
     @Id
     @Column(name = "LINE_POID", nullable = false)
@@ -38,15 +39,4 @@ public class ShipLineMasterPicDtl {
     @Column(name = "REMARKS", length = 500)
     private String remarks;
 
-    @Column(name = "CREATED_BY", length = 30)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 30)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }

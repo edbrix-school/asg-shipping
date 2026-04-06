@@ -19,6 +19,9 @@ public class UserRoleDetailDto {
     @Schema(description = "Detail Row ID (null for new rows)")
     private Long detRowId;
 
+    @Schema(description = "Row action type", example = "ISUPDATED")
+    private String actionType;
+
     @Schema(description = "User Role POID")
     private Long userRolePoid;
 

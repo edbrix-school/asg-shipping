@@ -22,6 +22,9 @@ public class ContainerTypeDetailDto {
     @Schema(description = "Detail Row ID (for updates, null for new container types)")
     private Long detRowId;
 
+    @Schema(description = "Row action type", example = "ISUPDATED")
+    private String actionType;
+
     @Schema(description = "Container Type POID")
     private Long containerTypePoid;
 

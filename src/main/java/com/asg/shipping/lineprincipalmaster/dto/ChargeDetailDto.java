@@ -23,6 +23,9 @@ public class ChargeDetailDto {
     @Schema(description = "Detail Row ID (for updates, null for new charges)")
     private Long detRowId;
 
+    @Schema(description = "Row action type", example = "ISUPDATED")
+    private String actionType;
+
     @Schema(description = "Charge POID")
     private Long chargePoid;
 
