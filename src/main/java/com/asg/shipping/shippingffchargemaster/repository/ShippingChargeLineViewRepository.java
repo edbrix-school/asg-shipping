@@ -1,6 +1,6 @@
-package com.asg.shipping.shippingFFChargeMaster.repository;
+package com.asg.shipping.shippingffchargemaster.repository;
 
-import com.asg.shipping.shippingFFChargeMaster.entity.ShippingChargeLineViewEntity;
+import com.asg.shipping.shippingffchargemaster.entity.ShippingChargeLineViewEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

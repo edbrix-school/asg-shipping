@@ -1,4 +1,4 @@
-package com.asg.shipping.shippingFFChargeMaster.entity;
+package com.asg.shipping.shippingffchargemaster.entity;
 
 
 import com.asg.common.lib.entity.BaseEntity;
@@ -8,7 +8,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_CHARGE_MASTER")
@@ -120,8 +119,4 @@ public class ShipChargeMaster extends BaseEntity {
         }
     }
 
-  /*  @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-    }*/
 }

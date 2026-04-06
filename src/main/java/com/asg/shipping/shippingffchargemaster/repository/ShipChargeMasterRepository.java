@@ -1,10 +1,9 @@
-package com.asg.shipping.shippingFFChargeMaster.repository;
+package com.asg.shipping.shippingffchargemaster.repository;
 
-import com.asg.shipping.shippingFFChargeMaster.entity.ShipChargeMaster;
+import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 
 @Repository

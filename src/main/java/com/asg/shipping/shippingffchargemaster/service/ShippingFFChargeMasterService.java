@@ -1,10 +1,10 @@
-package com.asg.shipping.shippingFFChargeMaster.service;
+package com.asg.shipping.shippingffchargemaster.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeUpdateDTO;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeCreateDTO;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeDto;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeUpdateDTO;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Map;
