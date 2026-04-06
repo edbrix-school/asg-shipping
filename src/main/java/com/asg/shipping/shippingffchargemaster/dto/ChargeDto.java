@@ -1,6 +1,5 @@
-package com.asg.shipping.shippingFFChargeMaster.dto;
+package com.asg.shipping.shippingffchargemaster.dto;
 
-import com.asg.common.lib.dto.LovGetListDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

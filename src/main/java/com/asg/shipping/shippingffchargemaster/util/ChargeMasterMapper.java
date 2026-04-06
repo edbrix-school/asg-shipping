@@ -1,14 +1,11 @@
-package com.asg.shipping.shippingFFChargeMaster.util;
+package com.asg.shipping.shippingffchargemaster.util;
 
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeUpdateDTO;
-import com.asg.shipping.shippingFFChargeMaster.entity.ShipChargeMaster;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeCreateDTO;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeDto;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeUpdateDTO;
+import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 @Component
 public class ChargeMasterMapper {
 
@@ -62,7 +59,6 @@ public class ChargeMasterMapper {
         entity.setGroupPoid(groupPoid);
         entity.setChargeCode(dto.getChargeCode());
         entity.setChargeName(dto.getChargeName());
-        //entity.setChargeName2(dto.getChargeName2());
         entity.setChargeRevenueType(dto.getChargeRevenueType());
         entity.setChargeType(dto.getChargeType());
         entity.setChargeApplicableType(dto.getChargeApplicableType());
@@ -73,7 +69,6 @@ public class ChargeMasterMapper {
         entity.setChargePayableGl(dto.getChargePayableGl());
         entity.setFdaGlRevenue(dto.getFdaGlRevenue());
         entity.setFdaGlCost(dto.getFdaGlCost());
-        //entity.setShFfChargeGlPoidRev(dto.getShFfChargeGlPoidRev());
         entity.setDirectRevenueGl(dto.getDirectRevenueGl());
         entity.setDirectCostOfSaleGl(dto.getDirectCostOfSaleGl());
         entity.setDirectPayableGl(dto.getDirectPayableGl());
@@ -82,10 +77,6 @@ public class ChargeMasterMapper {
         entity.setChargeGroupPoid(dto.getChargeGroupPoid());
         entity.setShFfChargeMap(dto.getShFfChargeMap());
         entity.setShFfChargeGlPoid(dto.getShFfChargeGlPoid());
-        //entity.setShFfChargeGlPoidRev(dto.getShFfChargeGlPoidRev());
-        //entity.setVisibleInFf(dto.getVisibleInFf());
-       // entity.setOldChargeGlRevenue(dto.getOldChargeGlRevenue());
-        //entity.setOldChargeGlCost(dto.getOldChargeGlCost());
         entity.setSeqno(dto.getSeqno());
 
         // Set active status (default to Y if not provided)
@@ -107,7 +98,7 @@ public class ChargeMasterMapper {
         entity.setGroupPoid(groupPoid);
         // Note: chargeCode is not updateable
         entity.setChargeName(dto.getChargeName());
-        //entity.setChargeName2(dto.getChargeName2());
+
         entity.setChargeRevenueType(dto.getChargeRevenueType());
         entity.setChargeType(dto.getChargeType());
         entity.setChargeApplicableType(dto.getChargeApplicableType());
@@ -126,10 +117,6 @@ public class ChargeMasterMapper {
         entity.setChargeGroupPoid(dto.getChargeGroupPoid());
         entity.setShFfChargeMap(dto.getShFfChargeMap());
         entity.setShFfChargeGlPoid(dto.getShFfChargeGlPoid());
-        //entity.setShFfChargeGlPoidRev(dto.getShFfChargeGlPoidRev());
-        //entity.setVisibleInFf(dto.getVisibleInFf());
-        //entity.setOldChargeGlRevenue(dto.getOldChargeGlRevenue());
-        //entity.setOldChargeGlCost(dto.getOldChargeGlCost());
 
         entity.setSeqno(dto.getSeqno());
 

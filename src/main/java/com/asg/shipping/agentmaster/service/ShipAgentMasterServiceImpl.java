@@ -61,7 +61,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .remarks(request.getRemarks())
                 .seqNo(request.getSeqNo())
                 .countryPoid(request.getCountryPoid())
-                .active(Boolean.TRUE.equals(request.getActive()) ? "Y" : "N")
+                .active(request.getActive())
                 .deleted("N")
                 .build();
 
@@ -96,7 +96,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         entity.setFaxNo(request.getFaxNo());
         entity.setRemarks(request.getRemarks());
         entity.setSeqNo(request.getSeqNo());
-        entity.setActive(Boolean.TRUE.equals(request.getActive()) ? "Y" : "N");
+        entity.setActive(request.getActive());
 
         ShipAgentMasterEntity shipAgentMasterEntity =  repository.save(entity);
 

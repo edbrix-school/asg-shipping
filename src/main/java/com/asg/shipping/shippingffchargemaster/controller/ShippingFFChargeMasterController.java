@@ -1,4 +1,4 @@
-package com.asg.shipping.shippingFFChargeMaster.controller;
+package com.asg.shipping.shippingffchargemaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
@@ -9,10 +9,10 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.ApiResponse;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeUpdateDTO;
-import com.asg.shipping.shippingFFChargeMaster.service.ShippingFFChargeMasterService;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeCreateDTO;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeDto;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeUpdateDTO;
+import com.asg.shipping.shippingffchargemaster.service.ShippingFFChargeMasterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -27,9 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 import java.util.Map;
 

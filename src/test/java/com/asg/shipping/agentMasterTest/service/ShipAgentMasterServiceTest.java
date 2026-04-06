@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.shipping.agentmaster.dto.ShipAgentMasterRequestDto;
 import com.asg.shipping.agentmaster.dto.ShipAgentMasterResponseDto;
@@ -37,6 +38,9 @@ public class ShipAgentMasterServiceTest {
 
     @Mock
     private ShipAgentMasterRepository repository;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     @Mock
     private DocumentSearchService documentService;
@@ -166,19 +170,18 @@ public class ShipAgentMasterServiceTest {
     }
 
     @Test
-    @Disabled
     void deleteAgentMaster_Success() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
-            
-            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(documentDeleteService.deleteDocument(
+                eq(1L), eq("SHIP_AGENT_MASTER"), eq("AGENT_POID"),
+                isNull(), isNull())).thenReturn("SUCCESS");
 
-            service.deleteAgentMaster(1L, null);
+        service.deleteAgentMaster(1L, null);
 
-            assertEquals("Y", entity.getDeleted());
-            assertEquals("N", entity.getActive());
-            verify(repository).findById(1L);
-        }
+        verify(repository).findById(1L);
+        verify(documentDeleteService).deleteDocument(
+                eq(1L), eq("SHIP_AGENT_MASTER"), eq("AGENT_POID"),
+                isNull(), isNull());
     }
 
     @Test
@@ -332,7 +335,6 @@ public class ShipAgentMasterServiceTest {
     }
 
     @Test
-    @Disabled
     void deleteAgentMaster_AlreadyDeleted() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getUserId).thenReturn("123");

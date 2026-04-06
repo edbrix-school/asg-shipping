@@ -4,11 +4,12 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.shippingFFChargeMaster.controller.ShippingFFChargeMasterController;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeUpdateDTO;
-import com.asg.shipping.shippingFFChargeMaster.service.ShippingFFChargeMasterService;
+import com.asg.shipping.shippingffchargemaster.controller.ShippingFFChargeMasterController;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeCreateDTO;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeDto;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeUpdateDTO;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.shippingffchargemaster.service.ShippingFFChargeMasterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class ShippingFFChargeMasterControllerTest {
+
+    @Mock
+    private LoggingService loggingService;
 
     @Mock
     private ShippingFFChargeMasterService chargeMasterService;
@@ -75,15 +79,18 @@ public class ShippingFFChargeMasterControllerTest {
     }
 
     @Test
-    @Disabled
     void getCharge_Success() {
-        when(chargeMasterService.getCharge(1L)).thenReturn(responseDto);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC001");
 
-        ResponseEntity<?> response = controller.getCharge(1L);
+            when(chargeMasterService.getCharge(1L)).thenReturn(responseDto);
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        verify(chargeMasterService).getCharge(1L);
+            ResponseEntity<?> response = controller.getCharge(1L);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(chargeMasterService).getCharge(1L);
+        }
     }
 
     @Test

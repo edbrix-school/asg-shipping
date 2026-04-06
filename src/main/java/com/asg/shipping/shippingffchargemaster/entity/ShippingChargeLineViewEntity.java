@@ -1,4 +1,4 @@
-package com.asg.shipping.shippingFFChargeMaster.entity;
+package com.asg.shipping.shippingffchargemaster.entity;
 
 
 import jakarta.persistence.Column;
