@@ -108,6 +108,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 		entity.setActive(request.getActive());
 		entity.setBerths(request.getBerths());
+        entity.setPortName2(request.getPortName2());
 		entity.setCountryPoid(request.getCountryPoid());
 		entity.setTradelanePoid(request.getTradelanePoid());
 		entity.setGlobalPortCode(request.getGlobalPortCode());
