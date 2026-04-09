@@ -48,7 +48,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
     private static final String LINE_NAME_FIELD = "LINE_NAME";
     private static final String LINE_POID_DB_FIELD = "LINE_POID";
     private static final String LINE_TYPE_FIELD = "LINE_TYPE";
-    private static final String SHIP_LINE_MASTER_TABLE = "SHIP_LINE_MASTER";
+    private static final String SHIP_LINE_MASTER = "SHIP_LINE_MASTER";
     private static final String COUNTRY_LOV = "COUNTRY";
     private static final String CURRENCY_LOV = "CURRENCY";
     private static final String CUSTOMER_MASTER_LOV = "CUSTOMER_MASTER";
@@ -257,7 +257,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
 
         documentDeleteService.deleteDocument(
                 id,
-                SHIP_LINE_MASTER_TABLE,
+                SHIP_LINE_MASTER,
                 LINE_POID_DB_FIELD,
                 deleteReasonDto,
                 null
