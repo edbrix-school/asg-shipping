@@ -237,9 +237,10 @@ public class LineMasterThirdPartyController {
     })
     public ResponseEntity<?> deleteThirdPartyLine(
             @Parameter(description = "Line POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto) {
         log.info("Deleting third party line with id: {}", id);
-        lineService.deleteThirdPartyLine(id);
+        lineService.deleteThirdPartyLine(id, deleteReasonDto);
         log.info("Successfully deleted third party line with id: {}", id);
         return ApiResponse.success("Third party line deleted successfully");
     }
