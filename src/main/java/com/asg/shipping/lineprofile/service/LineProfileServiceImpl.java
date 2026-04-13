@@ -172,7 +172,7 @@ public class LineProfileServiceImpl implements LineProfileService {
                 .orElseThrow(() -> new ResourceNotFoundException("LineProfile", "lineProfilePoid", lineProfilePoid));
 
         deleteService.deleteDocument(lineProfilePoid,"SH_LINE_PROFILE_MASTER",
-                    "TRADELANE_POID",deleteReasonDto,null);
+                    "LINE_PROFILE_POID",deleteReasonDto,null);
         }
 
 

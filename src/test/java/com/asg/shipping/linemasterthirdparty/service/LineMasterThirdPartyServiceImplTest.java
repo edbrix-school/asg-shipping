@@ -2,12 +2,14 @@ package com.asg.shipping.linemasterthirdparty.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.shipping.linemasterthirdparty.dto.*;
@@ -33,7 +35,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class LineMasterThirdPartyServiceImplTest {
+class hLineMasterThirdPartyServiceImplTest {
 
     @Mock
     private ShipLineMasterThirdPartyRepository lineRepository;
@@ -55,6 +57,9 @@ class LineMasterThirdPartyServiceImplTest {
 
     @Mock
     private DocumentSearchService documentSearchService;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     @InjectMocks
     private LineMasterThirdPartyServiceImpl service;
@@ -381,29 +386,31 @@ class LineMasterThirdPartyServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-            testLine.setDeleted("N");
+            DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
+            deleteReasonDto.setDeleteReason("Test deletion");
+            
             when(lineRepository.findByLinePoidAndGroupPoidAndThirdParty(1L, 1L)).thenReturn(Optional.of(testLine));
-            when(lineRepository.save(any(ShipLineMaster.class))).thenReturn(testLine);
+            lenient().when(documentDeleteService.deleteDocument(1L, "SHIP_LINE_MASTER", "LINE_POID", deleteReasonDto, null))
+                    .thenReturn(null);
 
-            service.deleteThirdPartyLine(1L);
+            service.deleteThirdPartyLine(1L, deleteReasonDto);
 
-            verify(lineRepository).save(argThat(line -> 
-                "Y".equals(line.getDeleted()) && "N".equals(line.getActive())
-            ));
+            verify(documentDeleteService).deleteDocument(1L, "SHIP_LINE_MASTER", "LINE_POID", deleteReasonDto, null);
         }
     }
 
     @Test
-    void deleteThirdPartyLine_AlreadyDeleted() {
+    void deleteThirdPartyLine_WithNullDeleteReason() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-            testLine.setDeleted("Y");
             when(lineRepository.findByLinePoidAndGroupPoidAndThirdParty(1L, 1L)).thenReturn(Optional.of(testLine));
+            lenient().when(documentDeleteService.deleteDocument(1L, "SHIP_LINE_MASTER", "LINE_POID", null, null))
+                    .thenReturn(null);
 
-            service.deleteThirdPartyLine(1L);
+            service.deleteThirdPartyLine(1L, null);
 
-            verify(lineRepository, never()).save(any(ShipLineMaster.class));
+            verify(documentDeleteService).deleteDocument(1L, "SHIP_LINE_MASTER", "LINE_POID", null, null);
         }
     }
 
@@ -414,7 +421,7 @@ class LineMasterThirdPartyServiceImplTest {
 
             when(lineRepository.findByLinePoidAndGroupPoidAndThirdParty(1L, 1L)).thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> service.deleteThirdPartyLine(1L));
+            assertThrows(ResourceNotFoundException.class, () -> service.deleteThirdPartyLine(1L, null));
         }
     }
 
@@ -426,7 +433,7 @@ class LineMasterThirdPartyServiceImplTest {
             testLine.setLineType("REGULAR");
             when(lineRepository.findByLinePoidAndGroupPoidAndThirdParty(1L, 1L)).thenReturn(Optional.of(testLine));
 
-            assertThrows(ResourceNotFoundException.class, () -> service.deleteThirdPartyLine(1L));
+            assertThrows(ResourceNotFoundException.class, () -> service.deleteThirdPartyLine(1L, null));
         }
     }
 }

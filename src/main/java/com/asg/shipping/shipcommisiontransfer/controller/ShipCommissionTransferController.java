@@ -177,7 +177,7 @@ public class ShipCommissionTransferController {
         }
     }
 
-    @GetMapping("/commission/voyage/{voyageId}")
+    @GetMapping("/getdetail/{voyageId}")
     @AllowedAction(UserRolesRightsEnum.EDIT)
     public ResponseEntity<?>  getCommission(
             @PathVariable Long voyageId, @RequestParam(required = false) Long transactionId) {

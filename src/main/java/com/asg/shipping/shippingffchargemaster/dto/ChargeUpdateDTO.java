@@ -1,7 +1,6 @@
-package com.asg.shipping.shippingFFChargeMaster.dto;
+package com.asg.shipping.shippingffchargemaster.dto;
 
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,6 +12,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class ChargeUpdateDTO {
+
+    @Size(max = 20, message = "Charge code must not exceed 20 characters")
+    private String chargeCode;
+
     @Size(max = 100, message = "Charge name must not exceed 100 characters")
     private String chargeName;
 
@@ -53,6 +56,5 @@ public class ChargeUpdateDTO {
     @Pattern(regexp = "^[YN]$", message = "Active must be Y or N")
     private String active;
 
-    @Positive(message = "Sequence number must be positive")
     private Integer seqno;
 }

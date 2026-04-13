@@ -133,8 +133,14 @@ public class LinePrincipalMasterDto {
     @Schema(description = "Line Port Reference (Tradelane)")
     private String linePortRefno;
 
+    @Schema(description = "Line Port References (Tradelane - Multi Select)")
+    private List<String> linePortRefnos;
+
     @Schema(description = "Tradelane details (from LOV)")
     private LovItem tradelaneDet;
+
+    @Schema(description = "Tradelane details list (from LOV - Multi Select)")
+    private List<LovItem> tradelaneDets;
 
     @Schema(description = "Line Port Register Name")
     private String linePortRegisterName;
@@ -195,6 +201,15 @@ public class LinePrincipalMasterDto {
 
     @Schema(description = "Charge Details")
     private List<ChargeDetailDto> charges;
+
+    @Schema(description = "Container Type Details")
+    private List<ContainerTypeDetailDto> containerTypes;
+
+    @Schema(description = "User Role Details")
+    private List<UserRoleDetailDto> userRoles;
+
+    @Schema(description = "PIC Details")
+    private List<PicDetailDto> picDetails;
 
     @Schema(description = "Created By")
     private String createdBy;

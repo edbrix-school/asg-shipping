@@ -1,4 +1,4 @@
-package com.asg.shipping.shippingFFChargeMaster.dto;
+package com.asg.shipping.shippingffchargemaster.dto;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;

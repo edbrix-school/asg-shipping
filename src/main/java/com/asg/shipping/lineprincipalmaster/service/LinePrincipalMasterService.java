@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.lineprincipalmaster.dto.*;
 
 import java.util.Map;
@@ -56,7 +57,7 @@ public interface LinePrincipalMasterService {
      *
      * @param id Line POID
      */
-    void deleteLine(Long id);
+    void deleteLine(Long id, DeleteReasonDto deleteReasonDto);
 
     /**
      * Copy charges from another line

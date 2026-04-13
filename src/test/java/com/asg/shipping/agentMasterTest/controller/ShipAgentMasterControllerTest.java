@@ -93,24 +93,27 @@ public class ShipAgentMasterControllerTest {
 
     @Test
     void getAgentById_Success() {
-        when(service.findByIdAgentMaster(1L)).thenReturn(responseDto);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-063");
+            when(service.findByIdAgentMaster(1L)).thenReturn(responseDto);
 
-        ResponseEntity<?> response = controller.getAgentById(1L);
+            ResponseEntity<?> response = controller.getAgentById(1L);
 
-        assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(service).findByIdAgentMaster(1L);
+            assertNotNull(response);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            verify(service).findByIdAgentMaster(1L);
+        }
     }
 
     @Test
     void deleteAgent_Success() {
-        doNothing().when(service).deleteAgentMaster(1L);
+        doNothing().when(service).deleteAgentMaster(eq(1L), isNull());
 
-        ResponseEntity<?> response = controller.deleteAgent(1L);
+        ResponseEntity<?> response = controller.deleteAgent(1L, null);
 
         assertNotNull(response);
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(service).deleteAgentMaster(1L);
+        verify(service).deleteAgentMaster(eq(1L), isNull());
     }
 
     @Test

@@ -1,25 +1,24 @@
-package com.asg.shipping.shippingFFChargeMaster.service;
+package com.asg.shipping.shippingffchargemaster.service;
 
 
-import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.*;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeCreateDTO;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeDto;
-import com.asg.shipping.shippingFFChargeMaster.dto.ChargeUpdateDTO;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeCreateDTO;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeDto;
+import com.asg.shipping.shippingffchargemaster.dto.ChargeUpdateDTO;
 import com.asg.common.lib.service.DocumentSearchService;
-import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.shippingFFChargeMaster.dto.ShippingChargeLineResponseDto;
-import com.asg.shipping.shippingFFChargeMaster.entity.ShipChargeMaster;
-import com.asg.shipping.shippingFFChargeMaster.repository.ShipChargeMasterRepository;
-import com.asg.shipping.shippingFFChargeMaster.repository.ShippingChargeLineViewRepository;
-import com.asg.shipping.shippingFFChargeMaster.util.ChargeMasterMapper;
+import com.asg.shipping.shippingffchargemaster.dto.ShippingChargeLineResponseDto;
+import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
+import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
+import com.asg.shipping.shippingffchargemaster.repository.ShippingChargeLineViewRepository;
+import com.asg.shipping.shippingffchargemaster.util.ChargeMasterMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,13 +27,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import com.asg.common.lib.dto.LovGetListDto;
 
-import java.time.LocalDateTime;
+
 import java.util.List;
 import java.util.Map;
 
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
+
 
 @Service
 @RequiredArgsConstructor
@@ -43,10 +41,14 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
 
     private final ShipChargeMasterRepository chargeRepository;
     private final ChargeMasterMapper mapper;
+    private final DocumentDeleteService documentDeleteService;
     private final DocumentSearchService documentService;
     private final ShippingChargeLineViewRepository shippingChargeLineViewRepository;
     private final LoggingService loggingService;
     private final LovDataService lovService;
+
+    private static final String FIELD_CHARGE_POID = "CHARGE_POID";
+    private static final String CHARGE = "Charge";
 
     @Override
     @Transactional
@@ -76,7 +78,7 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
         log.info("Updating charge with id: {}, groupId: {}, userPoid: {}", id, groupPoid, userPoid);
 
         ShipChargeMaster charge = chargeRepository.findByChargePoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Charge", "chargePoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(CHARGE, FIELD_CHARGE_POID, id.toString()));
 
         ShipChargeMaster oldChargeMaster = new ShipChargeMaster();
         BeanUtils.copyProperties(charge, oldChargeMaster);
@@ -90,11 +92,7 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
         validateDivision(dto.getDivisionCode());
         ShipChargeMaster saved = chargeRepository.save(charge);
 
-        String docId = UserContext.getDocumentId();
-        String key = saved.getChargePoid().toString();
-
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
-        loggingService.logChanges(oldChargeMaster, saved, ShipChargeMaster.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "CHARGE_POID");
+        loggingService.logChanges(oldChargeMaster, saved, ShipChargeMaster.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, FIELD_CHARGE_POID);
 
         log.info("Successfully updated charge with id: {}", id);
         return mapper.mapToDto(saved);
@@ -107,7 +105,7 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
 
 
         ShipChargeMaster charge = chargeRepository.findByChargePoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Charge", "chargePoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(CHARGE, "chargePoid", id.toString()));
 
         ChargeDto dto = mapper.mapToDto(charge);
 
@@ -125,83 +123,60 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
 
 
         dto.setShippingChargeLineResponseDtoList(lines);
-
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
-
         log.info("Successfully retrieved charge with id: {}", id);
         return dto;
     }
 
     @Override
     @Transactional
-    public void deleteCharge(Long id) {
-        log.info("Deleting charge with id: {}", id);
+    public void deleteCharge(Long id, DeleteReasonDto deleteReasonDto) {
 
-        ShipChargeMaster charge = chargeRepository.findByChargePoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Charge", "chargePoid", id.toString()));
 
-        // Check if already deleted (idempotent)
-        if ("Y".equals(charge.getDeleted())) {
-            log.info("Charge with id: {} is already deleted", id);
-            return;
-        }
+         chargeRepository.findByChargePoid(id)
+                .orElseThrow(() -> new ResourceNotFoundException(CHARGE, "chargePoid", id.toString()));
 
-        charge.setDeleted("Y");
-        charge.setActive("N");
-        charge.setLastModifiedBy(getCurrentUser());
-        charge.setLastModifiedDate(LocalDateTime.now());
 
-        chargeRepository.save(charge);
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_CHARGE_MASTER",
+                FIELD_CHARGE_POID,
+                deleteReasonDto,
+                null
+        );
 
-        // Log deletion
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
-        String logDetail = String.format("KeyId = CHARGE_POID:%s", id);
-        String tableName = ShipChargeMaster.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Active", "Y", "N", logDetail, tableName);
-
-        log.info("Successfully deleted charge with id: {}", id);
     }
 
     private void validateCreateUniqueness(ChargeCreateDTO dto) {
 
-        if (chargeRepository.existsByChargeCodeAndDivisionCodeAndDeletedNot(
-                dto.getChargeCode(),
-                dto.getDivisionCode(),
-                "Y")) {
+        String code = dto.getChargeCode().trim();
+        String name = dto.getChargeName().trim();
+        String division = dto.getDivisionCode();
 
+        if (chargeRepository.existsByChargeCodeAndDivisionCode(code, division)) {
             throw new ValidationException(
-                    "Charge Code '" + dto.getChargeCode()
-                            + "' already exists for Division '" + dto.getDivisionCode() + "'"
+                    "Charge Code '" + code +
+                            "' already exists for Division '" + division + "'"
             );
         }
 
-        if (chargeRepository.existsByChargeNameAndDivisionCodeAndDeletedNot(
-                dto.getChargeName(),
-                dto.getDivisionCode(),
-                "Y")) {
-
+        if (chargeRepository.existsByChargeNameIgnoreCaseAndDivisionCode(name, division)) {
             throw new ValidationException(
-                    "Charge Name '" + dto.getChargeName()
-                            + "' already exists for Division '" + dto.getDivisionCode() + "'"
+                    "Charge Name '" + name +
+                            "' already exists for Division '" + division + "'"
             );
         }
     }
 
-    private void validateUpdateUniqueness(
-            Long chargePoid,
-            ChargeUpdateDTO dto
-    ) {
+    private void validateUpdateUniqueness(Long id, ChargeUpdateDTO dto) {
 
-        if (chargeRepository.existsByChargeNameAndDivisionCodeAndChargePoidNotAndDeletedNot(
-                dto.getChargeName(),
-                dto.getDivisionCode(),
-                chargePoid,
-                "Y")) {
+        String name = dto.getChargeName().trim();
+        String division = dto.getDivisionCode();
 
+
+        if (chargeRepository.existsByChargeNameIgnoreCaseAndDivisionCodeAndChargePoidNot(name, division, id)) {
             throw new ValidationException(
-                    "Charge Name '" + dto.getChargeName()
-                            + "' already exists for Division '" + dto.getDivisionCode() + "'"
+                    "Charge Name '" + name +
+                            "' already exists for Division '" + division + "'"
             );
         }
     }
@@ -214,7 +189,7 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
 
         RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
                 "CHARGE_NAME",   // label
-                "CHARGE_POID");  // value
+                FIELD_CHARGE_POID);  // value
 
         Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
 

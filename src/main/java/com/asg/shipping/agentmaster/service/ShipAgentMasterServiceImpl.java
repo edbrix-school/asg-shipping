@@ -1,10 +1,12 @@
 package com.asg.shipping.agentmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -32,6 +34,7 @@ import java.util.Map;
 public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
 
     private final ShipAgentMasterRepository repository;
+    private final DocumentDeleteService documentDeleteService;
     private final DocumentSearchService documentService;
     private final LoggingService loggingService;
 
@@ -58,7 +61,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .remarks(request.getRemarks())
                 .seqNo(request.getSeqNo())
                 .countryPoid(request.getCountryPoid())
-                .active(Boolean.TRUE.equals(request.getActive()) ? "Y" : "N")
+                .active(request.getActive())
                 .deleted("N")
                 .build();
 
@@ -93,7 +96,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
         entity.setFaxNo(request.getFaxNo());
         entity.setRemarks(request.getRemarks());
         entity.setSeqNo(request.getSeqNo());
-        entity.setActive(Boolean.TRUE.equals(request.getActive()) ? "Y" : "N");
+        entity.setActive(request.getActive());
 
         ShipAgentMasterEntity shipAgentMasterEntity =  repository.save(entity);
 
@@ -121,31 +124,20 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
 
 
     @Override
-    public void deleteAgentMaster(Long agentPoid) {
+    public void deleteAgentMaster(Long agentPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting agent master with id: {}", agentPoid);
 
         ShipAgentMasterEntity entity = repository.findById(agentPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(AGENT_NOT_FOUND_MSG,AGENT_POID_FIELD,agentPoid));
 
-        if ("Y".equals(entity.getDeleted())) {
-            log.info("Agent master with id: {} is already deleted", agentPoid);
-            return;
-        }
 
-        entity.setDeleted("Y");
-        entity.setActive("N");
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-
-        repository.save(entity);
-
-        log.debug("Logging delete action for agent master");
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), agentPoid.toString());
-        String logDetail = String.format("KeyId = AGENT_POID:%s", agentPoid);
-        String tableName = ShipAgentMasterEntity.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), agentPoid.toString(), "Deleted", "N", "Y", logDetail, tableName);
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), agentPoid.toString(), "Active", "Y", "N", logDetail, tableName);
-        log.debug("Delete action logged successfully");
+        documentDeleteService.deleteDocument(
+                agentPoid,
+                "SHIP_AGENT_MASTER",
+                "AGENT_POID",
+                deleteReasonDto,
+                null
+        );
 
         log.info("Successfully deleted agent master with id: {}", agentPoid);
     }

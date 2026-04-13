@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.shipping.agentmaster.dto.ShipAgentMasterRequestDto;
 import com.asg.shipping.agentmaster.dto.ShipAgentMasterResponseDto;
@@ -12,6 +13,7 @@ import com.asg.shipping.agentmaster.entity.ShipAgentMasterEntity;
 import com.asg.shipping.agentmaster.repository.ShipAgentMasterRepository;
 import com.asg.shipping.agentmaster.service.ShipAgentMasterServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,6 +38,9 @@ public class ShipAgentMasterServiceTest {
 
     @Mock
     private ShipAgentMasterRepository repository;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     @Mock
     private DocumentSearchService documentService;
@@ -166,17 +171,17 @@ public class ShipAgentMasterServiceTest {
 
     @Test
     void deleteAgentMaster_Success() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
-            
-            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(documentDeleteService.deleteDocument(
+                eq(1L), eq("SHIP_AGENT_MASTER"), eq("AGENT_POID"),
+                isNull(), isNull())).thenReturn("SUCCESS");
 
-            service.deleteAgentMaster(1L);
+        service.deleteAgentMaster(1L, null);
 
-            assertEquals("Y", entity.getDeleted());
-            assertEquals("N", entity.getActive());
-            verify(repository).findById(1L);
-        }
+        verify(repository).findById(1L);
+        verify(documentDeleteService).deleteDocument(
+                eq(1L), eq("SHIP_AGENT_MASTER"), eq("AGENT_POID"),
+                isNull(), isNull());
     }
 
     @Test
@@ -184,7 +189,7 @@ public class ShipAgentMasterServiceTest {
         when(repository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, 
-                () -> service.deleteAgentMaster(1L));
+                () -> service.deleteAgentMaster(1L, null));
     }
 
    @Test
@@ -337,7 +342,7 @@ public class ShipAgentMasterServiceTest {
             entity.setDeleted("Y");
             when(repository.findById(1L)).thenReturn(Optional.of(entity));
 
-            service.deleteAgentMaster(1L);
+            service.deleteAgentMaster(1L, null);
 
             verify(repository).findById(1L);
             verify(repository, never()).save(any(ShipAgentMasterEntity.class));

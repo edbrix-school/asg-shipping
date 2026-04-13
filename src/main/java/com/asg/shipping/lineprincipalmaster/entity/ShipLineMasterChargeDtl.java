@@ -1,5 +1,7 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +20,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @IdClass(ShipLineMasterChargeDtlId.class)
-public class ShipLineMasterChargeDtl {
+public class ShipLineMasterChargeDtl extends BaseEntity {
 
     @Id
     @Column(name = "LINE_POID", nullable = false)
@@ -52,6 +54,9 @@ public class ShipLineMasterChargeDtl {
     @Column(name = "WKYRPT_INCLUDE_AS")
     private Long wkyrptIncludeAs;
 
+    @AuditIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "LINE_POID", insertable = false, updatable = false)
     private ShipLineMaster lineMaster;

@@ -389,7 +389,7 @@ class LineProfileServiceImplTest {
         when(deleteService.deleteDocument(
                 eq(1L),
                 eq("SH_LINE_PROFILE_MASTER"),
-                eq("TRADELANE_POID"),
+                eq("LINE_PROFILE_POID"),
                 eq(deleteReasonDto),
                 isNull()
         )).thenReturn("SUCCESS");
@@ -399,7 +399,7 @@ class LineProfileServiceImplTest {
         verify(deleteService).deleteDocument(
                 eq(1L),
                 eq("SH_LINE_PROFILE_MASTER"),
-                eq("TRADELANE_POID"),
+                eq("LINE_PROFILE_POID"),
                 eq(deleteReasonDto),
                 isNull()
         );

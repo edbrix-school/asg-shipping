@@ -13,7 +13,7 @@ import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
 import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import com.asg.shipping.remuneration.repository.ShipRemunerationMasterRepository;
-import com.asg.shipping.shippingFFChargeMaster.repository.ShipChargeMasterRepository;
+import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
 import jakarta.xml.bind.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

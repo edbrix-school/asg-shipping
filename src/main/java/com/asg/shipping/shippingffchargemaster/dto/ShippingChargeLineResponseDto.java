@@ -1,8 +1,7 @@
-package com.asg.shipping.shippingFFChargeMaster.dto;
+package com.asg.shipping.shippingffchargemaster.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Data

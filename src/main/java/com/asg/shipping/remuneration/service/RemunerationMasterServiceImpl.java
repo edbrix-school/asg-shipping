@@ -18,7 +18,7 @@ import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
 import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import com.asg.shipping.remuneration.mapper.ShipRemunerationMasterMapper;
 import com.asg.shipping.remuneration.repository.ShipRemunerationMasterRepository;
-import com.asg.shipping.shippingFFChargeMaster.repository.ShipChargeMasterRepository;
+import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
 import jakarta.xml.bind.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,9 +29,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
