@@ -1,8 +1,13 @@
 package com.asg.shipping.customerinvoicechargemapmaster.service.impl;
 
+import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapDetailDto;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterRequest;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterResponse;
@@ -14,10 +19,12 @@ import com.asg.shipping.customerinvoicechargemapmaster.repository.CustomerInvoic
 import com.asg.shipping.customerinvoicechargemapmaster.service.CustomerInvoiceChargeMapMasterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +36,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     private final CustomerInvoicePrtMasterRepository masterRepo;
     private final CustomerInvoicePrtDtlRepository detailRepo;
     private final LoggingService loggingService;
+    private final DocumentSearchService documentService;
 
     // ========================= GET =========================
 
@@ -134,6 +142,25 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         loggingService.createLogDetailsEntry(UserContext.getDocumentId(), customerPoid.toString(), "Detail Deleted", "EXISTS", "DELETED", logDetail, tableName);
 
         log.info("Successfully deleted customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
+    }
+
+    // ========================= LIST =========================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> list(String docId, FilterRequestDto request, Pageable pageable) {
+        String operator = documentService.resolveOperator(request);
+        String isDeleted = documentService.resolveIsDeleted(request);
+        List<FilterDto> filters = documentService.resolveFilters(request);
+
+        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
+                "CUSTOMER_POID",
+                "CUSTOMER_POID");
+
+        org.springframework.data.domain.Page<Map<String, Object>> page =
+                new org.springframework.data.domain.PageImpl<>(raw.records(), pageable, raw.totalRecords());
+
+        return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
     // ========================= PRIVATE METHODS =========================
