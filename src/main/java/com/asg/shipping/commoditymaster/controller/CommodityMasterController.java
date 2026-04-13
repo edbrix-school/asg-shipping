@@ -194,9 +194,11 @@ public class CommodityMasterController {
                     """
     )
     @DeleteMapping("/{commodityPoid}")
-    public ResponseEntity<?> softDeleteCommodity(@PathVariable Long commodityPoid) {
+    public ResponseEntity<?> softDeleteCommodity(
+            @PathVariable Long commodityPoid,
+            @Valid @RequestBody(required = false) com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto) {
         try {
-            commodityMasterService.softDeleteCommodity(commodityPoid);
+            commodityMasterService.softDeleteCommodity(commodityPoid, deleteReasonDto);
             return success("Commodity soft deleted successfully", Map.of("commodityPoid", commodityPoid));
         } catch (Exception e) {
             return internalServerError("Failed to soft delete commodity: " + e.getMessage());

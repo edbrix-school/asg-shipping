@@ -113,13 +113,16 @@ class CommodityMasterControllerTest {
 
     @Test
     void softDeleteCommodity_Success() {
-        doNothing().when(commodityService).softDeleteCommodity(1L);
+        com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto = new com.asg.common.lib.dto.DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
+        
+        doNothing().when(commodityService).softDeleteCommodity(1L, deleteReasonDto);
 
-        ResponseEntity<?> response = controller.softDeleteCommodity(1L);
+        ResponseEntity<?> response = controller.softDeleteCommodity(1L, deleteReasonDto);
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(commodityService).softDeleteCommodity(1L);
+        verify(commodityService).softDeleteCommodity(1L, deleteReasonDto);
     }
 
     @Test
@@ -135,10 +138,11 @@ class CommodityMasterControllerTest {
 
     @Test
     void softDeleteCommodity_NotFound() {
+        com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto = new com.asg.common.lib.dto.DeleteReasonDto();
         doThrow(new ResourceNotFoundException("Commodity", "commodityPoid", "1"))
-                .when(commodityService).softDeleteCommodity(1L);
+                .when(commodityService).softDeleteCommodity(1L, deleteReasonDto);
 
-        ResponseEntity<?> response = controller.softDeleteCommodity(1L);
+        ResponseEntity<?> response = controller.softDeleteCommodity(1L, deleteReasonDto);
 
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());

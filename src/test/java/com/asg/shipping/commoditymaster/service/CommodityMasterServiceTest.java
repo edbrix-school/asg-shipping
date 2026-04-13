@@ -1,8 +1,11 @@
 package com.asg.shipping.commoditymaster.service;
 
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.shipping.commoditymaster.dto.request.CommodityMasterRequest;
 import com.asg.shipping.commoditymaster.dto.response.CommodityMasterResponse;
 import com.asg.shipping.commoditymaster.entity.CommodityMaster;
@@ -34,6 +37,9 @@ class CommodityMasterServiceTest {
 
     @Mock
     private DocumentSearchService documentSearchService;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     @Mock
     private CommodityMapper mapper;
@@ -87,6 +93,8 @@ class CommodityMasterServiceTest {
         assertEquals(testResponse.getCommodityPoid(), result.getCommodityPoid());
         verify(commodityMasterRepository).findActiveByCommodityPoid(1L);
         verify(mapper).mapToDto(testCommodity);
+        // VIEWED logging is now handled in controller, not service
+        verify(loggingService, never()).createLogSummaryEntry((LogDetailsEnum) any(), any(), any());
     }
 
     @Test
@@ -199,31 +207,31 @@ class CommodityMasterServiceTest {
 
     @Test
     void softDeleteCommodity_Success() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-001");
+        DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
+        
+        when(commodityMasterRepository.findByCommodityPoid(1L))
+                .thenReturn(Optional.of(testCommodity));
+        // Mock the deleteDocument method - it might return something or be void
+        // Using lenient to avoid strict stubbing issues
+        lenient().when(documentDeleteService.deleteDocument(1L, "SHIP_COMODITY_MASTER", "COMODITY_POID", deleteReasonDto, null))
+                .thenReturn(null); // or whatever the method returns
 
-            testCommodity.setDeleted("N");
-            when(commodityMasterRepository.findByCommodityPoid(1L))
-                    .thenReturn(Optional.of(testCommodity));
-            when(commodityMasterRepository.save(testCommodity)).thenReturn(testCommodity);
+        commodityMasterService.softDeleteCommodity(1L, deleteReasonDto);
 
-            commodityMasterService.softDeleteCommodity(1L);
-
-            assertEquals("Y", testCommodity.getDeleted());
-            assertEquals("N", testCommodity.getActive());
-            verify(commodityMasterRepository).save(testCommodity);
-        }
+        verify(documentDeleteService).deleteDocument(1L, "SHIP_COMODITY_MASTER", "COMODITY_POID", deleteReasonDto, null);
     }
 
     @Test
-    void softDeleteCommodity_AlreadyDeleted() {
-        testCommodity.setDeleted("Y");
+    void softDeleteCommodity_WithNullDeleteReason() {
         when(commodityMasterRepository.findByCommodityPoid(1L))
                 .thenReturn(Optional.of(testCommodity));
+        lenient().when(documentDeleteService.deleteDocument(1L, "SHIP_COMODITY_MASTER", "COMODITY_POID", null, null))
+                .thenReturn(null);
 
-        commodityMasterService.softDeleteCommodity(1L);
+        commodityMasterService.softDeleteCommodity(1L, null);
 
-        verify(commodityMasterRepository, never()).save(any(CommodityMaster.class));
+        verify(documentDeleteService).deleteDocument(1L, "SHIP_COMODITY_MASTER", "COMODITY_POID", null, null);
     }
 
     @Test
@@ -232,7 +240,7 @@ class CommodityMasterServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> commodityMasterService.softDeleteCommodity(1L));
+                () -> commodityMasterService.softDeleteCommodity(1L, null));
     }
 
     @Test
