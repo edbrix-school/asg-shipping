@@ -25,10 +25,10 @@ public class ShipVesselTypeMaster extends BaseEntity {
     @Column(name = "GROUP_POID")
     private Long groupPoid;
 
-    @Column(name = "VESSEL_TYPE_CODE", nullable = false, length = 20, unique = true, updatable = false)
+    @Column(name = "VESSEL_TYPE_CODE", nullable = false, length = 20, updatable = false)
     private String vesselTypeCode;
 
-    @Column(name = "VESSEL_TYPE_NAME", nullable = false, length = 100, unique = true)
+    @Column(name = "VESSEL_TYPE_NAME", nullable = false, length = 100)
     private String vesselTypeName;
 
     @Column(name = "VESSEL_TYPE_NAME2", length = 100)

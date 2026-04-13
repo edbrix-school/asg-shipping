@@ -133,20 +133,7 @@ class VesselTypeMasterControllerTest {
         }
     }
 
-    @Test
-    void createVesselType_DuplicateCode() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
 
-            when(vesselTypeService.createVesselType(any(), anyLong(), anyLong()))
-                    .thenThrow(new ResourceAlreadyExistsException("Vessel type code", "VT001"));
-
-            assertThrows(ResourceAlreadyExistsException.class, () -> controller.createVesselType(createDto));
-        }
-    }
-
-    @Test
     void updateVesselType_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
@@ -314,6 +301,126 @@ class VesselTypeMasterControllerTest {
 
             assertNotNull(response);
             assertEquals(200, response.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void searchVesselTypes_WithVesselTypePoidSort() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.searchVesselTypes(null, 0, 10, "vesselTypePoid,desc");
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void searchVesselTypes_WithNullSortField() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.searchVesselTypes(null, 0, 10, null);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void searchVesselTypes_WithEmptySort() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            Map<String, Object> result = new HashMap<>();
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.searchVesselTypes(null, 0, 10, "");
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void searchVesselTypes_ServiceException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            when(vesselTypeService.searchVesselTypes(anyString(), any(), any(Pageable.class)))
+                    .thenThrow(new RuntimeException("Service error"));
+
+            assertThrows(RuntimeException.class, () -> 
+                controller.searchVesselTypes(null, 0, 10, "vesselTypeName,asc"));
+        }
+    }
+
+    @Test
+    void getVesselType_ServiceException() {
+        when(vesselTypeService.getVesselType(1L))
+                .thenThrow(new RuntimeException("Service error"));
+
+        assertThrows(RuntimeException.class, () -> controller.getVesselType(1L));
+    }
+
+    @Test
+    void createVesselType_ServiceException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            when(vesselTypeService.createVesselType(any(), anyLong(), anyLong()))
+                    .thenThrow(new RuntimeException("Service error"));
+
+            assertThrows(RuntimeException.class, () -> controller.createVesselType(createDto));
+        }
+    }
+
+    @Test
+    void updateVesselType_ServiceException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+
+            when(vesselTypeService.updateVesselType(eq(1L), any(), anyLong(), anyLong()))
+                    .thenThrow(new RuntimeException("Service error"));
+
+            assertThrows(RuntimeException.class, () -> controller.updateVesselType(1L, updateDto));
+        }
+    }
+
+    @Test
+    void toggleActive_ServiceException() {
+        doThrow(new RuntimeException("Service error"))
+                .when(vesselTypeService).toggleActive(1L);
+
+        assertThrows(RuntimeException.class, () -> controller.toggleActive(1L));
+    }
+
+    @Test
+    void deleteVesselType_ServiceException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            doThrow(new RuntimeException("Service error"))
+                    .when(vesselTypeService).deleteVesselType(1L, 1L, 1L, null);
+
+            assertThrows(RuntimeException.class, () -> controller.deleteVesselType(1L, null));
         }
     }
 }

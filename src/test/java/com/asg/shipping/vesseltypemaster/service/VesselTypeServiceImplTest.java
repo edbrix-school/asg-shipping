@@ -49,6 +49,9 @@ class VesselTypeServiceImplTest {
     @Mock
     private com.asg.common.lib.service.DocumentDeleteService documentDeleteService;
 
+    @Mock
+    private com.asg.common.lib.service.LovDataService lovService;
+
     @InjectMocks
     private VesselTypeServiceImpl vesselTypeService;
 
@@ -154,8 +157,6 @@ class VesselTypeServiceImplTest {
 
     @Test
     void createVesselType_Success() {
-        when(vesselTypeRepository.existsByVesselTypeCode(createDto.getVesselTypeCode())).thenReturn(false);
-        when(vesselTypeRepository.existsByVesselTypeName(createDto.getVesselTypeName())).thenReturn(false);
         when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
         when(mapper.mapToDto(testEntity)).thenReturn(testDto);
         lenient().doNothing().when(loggingService)
@@ -170,27 +171,11 @@ class VesselTypeServiceImplTest {
     }
 
     @Test
-    void createVesselType_DuplicateCode() {
-        when(vesselTypeRepository.existsByVesselTypeCode(createDto.getVesselTypeCode())).thenReturn(true);
-
-        assertThrows(ResourceAlreadyExistsException.class, () -> vesselTypeService.createVesselType(createDto, 1L, 1L));
-    }
-
-    @Test
-    void createVesselType_DuplicateName() {
-        when(vesselTypeRepository.existsByVesselTypeCode(createDto.getVesselTypeCode())).thenReturn(false);
-        when(vesselTypeRepository.existsByVesselTypeName(createDto.getVesselTypeName())).thenReturn(true);
-
-        assertThrows(ResourceAlreadyExistsException.class, () -> vesselTypeService.createVesselType(createDto, 1L, 1L));
-    }
-
-    @Test
     void updateVesselType_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
-            when(vesselTypeRepository.existsByVesselTypeNameExcludingPoid(updateDto.getVesselTypeName(), 1L)).thenReturn(false);
             when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
             when(mapper.mapToDto(testEntity)).thenReturn(testDto);
 
@@ -213,17 +198,6 @@ class VesselTypeServiceImplTest {
         }
     }
 
-    @Test
-    void updateVesselType_DuplicateName() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-
-            when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
-            when(vesselTypeRepository.existsByVesselTypeNameExcludingPoid(updateDto.getVesselTypeName(), 1L)).thenReturn(true);
-
-            assertThrows(ResourceAlreadyExistsException.class, () -> vesselTypeService.updateVesselType(1L, updateDto, 1L, 1L));
-        }
-    }
 
     @Test
     void toggleActive_Success_FromYToN() {
@@ -312,6 +286,116 @@ class VesselTypeServiceImplTest {
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () -> vesselTypeService.deleteVesselType(1L, 1L, 1L, null));
+        }
+    }
+
+    @Test
+    void createVesselType_WithCostCentre_Valid() {
+        createDto.setCostCentrePoid(100L);
+        com.asg.common.lib.dto.LovGetListDto lovDto = new com.asg.common.lib.dto.LovGetListDto();
+        lovDto.setPoid(100L);
+        
+        when(lovService.getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE")).thenReturn(lovDto);
+        when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
+        when(mapper.mapToDto(testEntity)).thenReturn(testDto);
+        lenient().doNothing().when(loggingService).createLogSummaryEntry(any(String.class), any(), any());
+
+        VesselTypeDto result = vesselTypeService.createVesselType(createDto, 1L, 1L);
+
+        assertNotNull(result);
+        verify(lovService).getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE");
+    }
+
+    @Test
+    void createVesselType_WithCostCentre_Invalid() {
+        createDto.setCostCentrePoid(100L);
+        
+        when(lovService.getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE")).thenReturn(null);
+
+        assertThrows(com.asg.common.lib.exception.ValidationException.class, 
+            () -> vesselTypeService.createVesselType(createDto, 1L, 1L));
+    }
+
+    @Test
+    void updateVesselType_WithCostCentre_Valid() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            
+            updateDto.setCostCentrePoid(100L);
+            com.asg.common.lib.dto.LovGetListDto lovDto = new com.asg.common.lib.dto.LovGetListDto();
+            lovDto.setPoid(100L);
+
+            when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
+            when(lovService.getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE")).thenReturn(lovDto);
+            when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
+            when(mapper.mapToDto(testEntity)).thenReturn(testDto);
+
+            VesselTypeDto result = vesselTypeService.updateVesselType(1L, updateDto, 1L, 1L);
+
+            assertNotNull(result);
+            verify(lovService).getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE");
+        }
+    }
+
+    @Test
+    void getVesselType_WithLovDataEnrichment() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+            
+            testEntity.setCostCentrePoid(100L);
+            com.asg.common.lib.dto.LovGetListDto lovDto = new com.asg.common.lib.dto.LovGetListDto();
+            lovDto.setPoid(100L);
+
+            when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
+            when(mapper.mapToDto(testEntity)).thenReturn(testDto);
+            when(lovService.getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE")).thenReturn(lovDto);
+
+            VesselTypeDto result = vesselTypeService.getVesselType(1L);
+
+            assertNotNull(result);
+            verify(lovService).getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE");
+        }
+    }
+
+    @Test
+    void getVesselType_LovDataException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+            
+            testEntity.setCostCentrePoid(100L);
+
+            when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
+            when(mapper.mapToDto(testEntity)).thenReturn(testDto);
+            when(lovService.getDetailsByPoidAndLovName(100L, "GL_COST_CENTRE")).thenThrow(new RuntimeException("LOV error"));
+
+            VesselTypeDto result = vesselTypeService.getVesselType(1L);
+
+            assertNotNull(result);
+        }
+    }
+
+    @Test
+    void deleteVesselType_WithDeleteReason() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            
+            com.asg.common.lib.dto.DeleteReasonDto deleteReason = new com.asg.common.lib.dto.DeleteReasonDto();
+            deleteReason.setDeleteReason("Test reason");
+            
+            testEntity.setDeleted("N");
+            when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
+            when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
+
+            vesselTypeService.deleteVesselType(1L, 1L, 1L, deleteReason);
+
+            verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_VESSEL_TYPE_MASTER"), eq("VESSEL_TYPE_POID"), eq(deleteReason), any());
+            verify(vesselTypeRepository).save(argThat(saved -> 
+                "Y".equals(saved.getDeleted()) && "N".equals(saved.getActive())
+            ));
         }
     }
 }

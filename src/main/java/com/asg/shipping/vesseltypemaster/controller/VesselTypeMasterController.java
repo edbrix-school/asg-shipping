@@ -6,7 +6,6 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeCreateDTO;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeDto;
