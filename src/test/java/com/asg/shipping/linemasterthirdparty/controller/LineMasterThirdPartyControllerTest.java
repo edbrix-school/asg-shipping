@@ -178,20 +178,35 @@ class LineMasterThirdPartyControllerTest {
 
     @Test
     void deleteThirdPartyLine_Success() {
-        doNothing().when(lineService).deleteThirdPartyLine(1L);
+        com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto = new com.asg.common.lib.dto.DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
+        
+        doNothing().when(lineService).deleteThirdPartyLine(1L, deleteReasonDto);
 
-        ResponseEntity<?> response = controller.deleteThirdPartyLine(1L);
+        ResponseEntity<?> response = controller.deleteThirdPartyLine(1L, deleteReasonDto);
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineService).deleteThirdPartyLine(1L);
+        verify(lineService).deleteThirdPartyLine(1L, deleteReasonDto);
+    }
+
+    @Test
+    void deleteThirdPartyLine_WithNullDeleteReason() {
+        doNothing().when(lineService).deleteThirdPartyLine(1L, null);
+
+        ResponseEntity<?> response = controller.deleteThirdPartyLine(1L, null);
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        verify(lineService).deleteThirdPartyLine(1L, null);
     }
 
     @Test
     void deleteThirdPartyLine_NotFound() {
+        com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto = new com.asg.common.lib.dto.DeleteReasonDto();
         doThrow(new ResourceNotFoundException("Third Party Line", "linePoid", "1"))
-                .when(lineService).deleteThirdPartyLine(1L);
+                .when(lineService).deleteThirdPartyLine(1L, deleteReasonDto);
 
-        assertThrows(ResourceNotFoundException.class, () -> controller.deleteThirdPartyLine(1L));
+        assertThrows(ResourceNotFoundException.class, () -> controller.deleteThirdPartyLine(1L, deleteReasonDto));
     }
 }

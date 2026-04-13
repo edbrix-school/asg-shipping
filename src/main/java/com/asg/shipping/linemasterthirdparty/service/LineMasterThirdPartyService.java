@@ -62,7 +62,8 @@ public interface LineMasterThirdPartyService {
      * Validates that LINE_TYPE = 'THIRD_PARTY'
      *
      * @param id Line POID
+     * @param deleteReasonDto Delete reason details
      */
-    void deleteThirdPartyLine(Long id);
+    void deleteThirdPartyLine(Long id, com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto);
 }
 
