@@ -1,5 +1,6 @@
 package com.asg.shipping.customerinvoicechargemapmaster.controller;
 
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
@@ -21,10 +22,14 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import static com.asg.common.lib.dto.response.ApiResponse.internalServerError;
+import static com.asg.common.lib.dto.response.ApiResponse.success;
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 @RestController
@@ -169,5 +174,36 @@ public class CustomerInvoiceChargeMapMasterController {
         return ApiResponse.success(
                 "Customer invoice charge detail deleted successfully"
         );
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @PostMapping("/list")
+    @Operation(
+            summary = "List customer invoice charge mappings",
+            description = "Retrieve paginated list of customer invoice charge mappings with optional filtering",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved customer invoice charge mapping list",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    public ResponseEntity<?> list(
+            @ParameterObject Pageable pageable,
+            @RequestBody(required = false) FilterRequestDto filters
+    ) {
+        try {
+            return success("Customer invoice charge mapping list fetched successfully",
+                    service.list(UserContext.getDocumentId(), filters, pageable));
+        } catch (Exception e) {
+            return internalServerError("Error fetching customer invoice charge mapping list: " + e.getMessage());
+        }
     }
 }
