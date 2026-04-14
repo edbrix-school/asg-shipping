@@ -13,6 +13,8 @@ import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.*;
 import com.asg.shipping.linetariffs.entity.*;
+import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
+import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -55,6 +58,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private final LineTariffMapper mapper;
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
+    private final ShipContainerTypeMasterRepository containerTypeRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -112,7 +116,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
-        LineTariffDto dto = mapper.mapToDto(tariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto dto = mapper.mapToDto(tariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
@@ -163,7 +167,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
 
-        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
         log.info("Successfully created line tariff with id: {}", saved.getTransactionPoid());
         return result;
     }
@@ -218,7 +222,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
-        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
         log.info("Successfully updated line tariff with id: {}", id);
         return result;
     }
@@ -318,7 +322,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
 
-        LineTariffDto result = mapper.mapToDto(savedNewTariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto result = mapper.mapToDto(savedNewTariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
         log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, savedNewTariff.getTransactionPoid());
         return result;
     }
@@ -783,6 +787,25 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 throw new ValidationException("Document Reference " + trimmedDocRef + " already exists. Please use a different reference.");
             }
         }
+    }
+
+    private Map<Long, ShipContainerTypeMaster> buildContainerTypeMap(
+            List<ShipLineTariffImpDtl> impDtlList,
+            List<ShipLineTariffImpPayDtl> impPayDtlList,
+            List<ShipLineTariffExpDtl> expDtlList,
+            List<ShipLineTariffExpPayDtl> expPayDtlList) {
+
+        Set<Long> poids = Stream.of(
+                impDtlList.stream().map(ShipLineTariffImpDtl::getContainerTypePoid),
+                impPayDtlList.stream().map(ShipLineTariffImpPayDtl::getContainerTypePoid),
+                expDtlList.stream().map(ShipLineTariffExpDtl::getContainerTypePoid),
+                expPayDtlList.stream().map(ShipLineTariffExpPayDtl::getContainerTypePoid)
+        ).flatMap(s -> s).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+
+        if (poids.isEmpty()) return Map.of();
+
+        return containerTypeRepository.findAllById(poids).stream()
+                .collect(Collectors.toMap(ShipContainerTypeMaster::getContainerTypePoid, ct -> ct));
     }
 
     private void validateMutuallyExclusiveFlags(

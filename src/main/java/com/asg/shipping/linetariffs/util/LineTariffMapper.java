@@ -1,11 +1,14 @@
 package com.asg.shipping.linetariffs.util;
 
+import com.asg.common.lib.dto.LovGetListDto;
+import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.linetariffs.dto.*;
 import com.asg.shipping.linetariffs.entity.*;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -25,11 +28,22 @@ public class LineTariffMapper {
     /**
      * Convert Header Entity to DTO
      */
+    public LovGetListDto toContainerTypeLov(ShipContainerTypeMaster ct) {
+        if (ct == null) return null;
+        LovGetListDto lov = new LovGetListDto();
+        lov.setPoid(ct.getContainerTypePoid());
+        lov.setCode(ct.getContainerTypeCode());
+        lov.setLabel(ct.getContainerTypeName());
+        lov.setValue(ct.getContainerTypePoid());
+        return lov;
+    }
+
     public LineTariffDto mapToDto(ShipLineTariffHdr entity,
                                    List<ShipLineTariffImpDtl> impDtlList,
                                    List<ShipLineTariffImpPayDtl> impPayDtlList,
                                    List<ShipLineTariffExpDtl> expDtlList,
-                                   List<ShipLineTariffExpPayDtl> expPayDtlList) {
+                                   List<ShipLineTariffExpPayDtl> expPayDtlList,
+                                   Map<Long, ShipContainerTypeMaster> containerTypeMap) {
         if (entity == null) {
             return null;
         }
@@ -67,22 +81,22 @@ public class LineTariffMapper {
         // Map detail lists
         if (impDtlList != null) {
             dto.setImportDemurrageCollectable(impDtlList.stream()
-                    .map(this::mapImpDtlToDto)
+                    .map(d -> mapImpDtlToDto(d, containerTypeMap))
                     .toList());
         }
         if (impPayDtlList != null) {
             dto.setImportDemurragePayable(impPayDtlList.stream()
-                    .map(this::mapImpPayDtlToDto)
+                    .map(d -> mapImpPayDtlToDto(d, containerTypeMap))
                     .toList());
         }
         if (expDtlList != null) {
             dto.setExportDetentionCollectable(expDtlList.stream()
-                    .map(this::mapExpDtlToDto)
+                    .map(d -> mapExpDtlToDto(d, containerTypeMap))
                     .toList());
         }
         if (expPayDtlList != null) {
             dto.setExportDetentionPayable(expPayDtlList.stream()
-                    .map(this::mapExpPayDtlToDto)
+                    .map(d -> mapExpPayDtlToDto(d, containerTypeMap))
                     .toList());
         }
 
@@ -92,13 +106,14 @@ public class LineTariffMapper {
     /**
      * Map Import Demurrage Collectable Detail to DTO
      */
-    public TariffDetailDto mapImpDtlToDto(ShipLineTariffImpDtl entity) {
+    public TariffDetailDto mapImpDtlToDto(ShipLineTariffImpDtl entity, Map<Long, ShipContainerTypeMaster> containerTypeMap) {
         if (entity == null) {
             return null;
         }
         return TariffDetailDto.builder()
                 .detRowId(entity.getDetRowId())
                 .containerTypePoid(entity.getContainerTypePoid())
+                .containerTypeDet(toContainerTypeLov(containerTypeMap.get(entity.getContainerTypePoid())))
                 .freeDays(entity.getFreeDays())
                 .slab1Tilldays(entity.getSlab1Tilldays())
                 .slab1Rate(entity.getSlab1Rate())
@@ -120,13 +135,14 @@ public class LineTariffMapper {
     /**
      * Map Import Demurrage Payable Detail to DTO
      */
-    public TariffDetailDto mapImpPayDtlToDto(ShipLineTariffImpPayDtl entity) {
+    public TariffDetailDto mapImpPayDtlToDto(ShipLineTariffImpPayDtl entity, Map<Long, ShipContainerTypeMaster> containerTypeMap) {
         if (entity == null) {
             return null;
         }
         return TariffDetailDto.builder()
                 .detRowId(entity.getDetRowId())
                 .containerTypePoid(entity.getContainerTypePoid())
+                .containerTypeDet(toContainerTypeLov(containerTypeMap.get(entity.getContainerTypePoid())))
                 .freeDays(entity.getFreeDays())
                 .slab1Tilldays(entity.getSlab1Tilldays())
                 .slab1Rate(entity.getSlab1Rate())
@@ -148,13 +164,14 @@ public class LineTariffMapper {
     /**
      * Map Export Detention Collectable Detail to DTO
      */
-    public TariffDetailDto mapExpDtlToDto(ShipLineTariffExpDtl entity) {
+    public TariffDetailDto mapExpDtlToDto(ShipLineTariffExpDtl entity, Map<Long, ShipContainerTypeMaster> containerTypeMap) {
         if (entity == null) {
             return null;
         }
         return TariffDetailDto.builder()
                 .detRowId(entity.getDetRowId())
                 .containerTypePoid(entity.getContainerTypePoid())
+                .containerTypeDet(toContainerTypeLov(containerTypeMap.get(entity.getContainerTypePoid())))
                 .freeDays(entity.getFreeDays())
                 .slab1Tilldays(entity.getSlab1Tilldays())
                 .slab1Rate(entity.getSlab1Rate())
@@ -176,13 +193,14 @@ public class LineTariffMapper {
     /**
      * Map Export Detention Payable Detail to DTO
      */
-    public TariffDetailDto mapExpPayDtlToDto(ShipLineTariffExpPayDtl entity) {
+    public TariffDetailDto mapExpPayDtlToDto(ShipLineTariffExpPayDtl entity, Map<Long, ShipContainerTypeMaster> containerTypeMap) {
         if (entity == null) {
             return null;
         }
         return TariffDetailDto.builder()
                 .detRowId(entity.getDetRowId())
                 .containerTypePoid(entity.getContainerTypePoid())
+                .containerTypeDet(toContainerTypeLov(containerTypeMap.get(entity.getContainerTypePoid())))
                 .freeDays(entity.getFreeDays())
                 .slab1Tilldays(entity.getSlab1Tilldays())
                 .slab1Rate(entity.getSlab1Rate())
