@@ -1,13 +1,16 @@
 package com.asg.shipping.chargegroupmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterRequestDto;
 import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterResponseDto;
@@ -21,6 +24,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +35,8 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
 
     private final ShipChargeGroupMasterRepository repository;
     private final LoggingService loggingService;
+    private final LovDataService lovService;
+    private final DocumentDeleteService documentDeleteService;
     private final DocumentSearchService documentService;
     private static final String CHARGE_GROUP_NOT_FOUND = "Charge Group not found";
     private static final String CHARGE_POID = "chargeGroupPoid";
@@ -70,7 +76,6 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         String key = saveChargeGroup.getChargeGroupPoid().toString();
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
-        loggingService.logChanges(new ShipChargeGroupMaster(), saveChargeGroup, ShipChargeGroupMaster.class, docId, key, LogDetailsEnum.CREATED, CHARGE_GROUP_POID);
         return mapToResponse(entity);
     }
 
@@ -80,9 +85,22 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         ShipChargeGroupMaster entity = repository.findById(poid)
                 .orElseThrow(() -> new ResourceNotFoundException(CHARGE_GROUP_NOT_FOUND,CHARGE_POID,poid));
 
+        //  UNIQUE NAME VALIDATION
+        if (repository.existsByChargeGroupNameAndChargeGroupPoidNot(
+                request.getChargeGroupName(), poid)) {
+            throw new RuntimeException("Charge Group Name already exists");
+        }
+
+        //  UNIQUE CODE VALIDATION (recommended)
+        if (repository.existsByChargeGroupCodeAndChargeGroupPoidNot(
+                request.getChargeGroupCode(), poid)) {
+            throw new RuntimeException("Charge Group Code already exists");
+        }
+
+
         ShipChargeGroupMaster oldChargeMaster = new ShipChargeGroupMaster();
         BeanUtils.copyProperties(entity, oldChargeMaster);
-
+        entity.setChargeGroupCode(request.getChargeGroupCode());
         entity.setChargeGroupName(request.getChargeGroupName());
         entity.setGroupPoid(UserContext.getGroupPoid());
         entity.setChargeGroupName2(request.getChargeGroupName2());
@@ -98,7 +116,6 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         String docId = UserContext.getDocumentId();
         String key = updatedEntity.getChargeGroupPoid().toString();
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
         loggingService.logChanges(oldChargeMaster, updatedEntity, ShipChargeGroupMaster.class, docId, key, LogDetailsEnum.MODIFIED, CHARGE_GROUP_POID);
 
         return mapToResponse(entity);
@@ -114,26 +131,24 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
 
 
     @Override
-    public void delete(Long poid) {
-        ShipChargeGroupMaster entity = repository.findById(poid)
+    public void delete(Long poid, DeleteReasonDto deleteReasonDto) {
+      repository.findById(poid)
                 .orElseThrow(() -> new ResourceNotFoundException(CHARGE_GROUP_NOT_FOUND,CHARGE_POID,poid));
-        entity.setDeleted("Y");
-        entity.setActive("N");
-        String docId = UserContext.getDocumentId();
-        String key = poid.toString();
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
-
-        loggingService.logSimpleFieldChange(ShipChargeGroupMaster.class, docId, key, "deleted", "N", "Y", "ChargeGroupMaster soft deleted");
-        loggingService.logSimpleFieldChange(ShipChargeGroupMaster.class, docId, key, "active", "Y", "N", "ChargeGroupMaster soft deleted");
-
+        documentDeleteService.deleteDocument(
+                poid,
+                "SHIP_CHARGE_GROUP_MASTER",
+                "CHARGE_GROUP_POID",
+                deleteReasonDto,
+                null
+        );
     }
 
     @Override
-    public Map<String, Object> listChargeGroupMaster(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> listChargeGroupMaster(String docId, FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
 
         RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
                 "CHARGE_GROUP_CODE",   // label
