@@ -6,6 +6,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
@@ -41,6 +42,8 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
     private static final String CHARGE_GROUP_NOT_FOUND = "Charge Group not found";
     private static final String CHARGE_POID = "chargeGroupPoid";
     private static final String CHARGE_GROUP_POID = "CHARGE_GROUP_POID";
+    private static final String GL_MASTER_LEDGERS = "GL_MASTER_LEDGERS";
+
 
 
     @Override
@@ -88,13 +91,13 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         //  UNIQUE NAME VALIDATION
         if (repository.existsByChargeGroupNameAndChargeGroupPoidNot(
                 request.getChargeGroupName(), poid)) {
-            throw new RuntimeException("Charge Group Name already exists");
+            throw new ValidationException("Charge Group Name already exists");
         }
 
         //  UNIQUE CODE VALIDATION (recommended)
         if (repository.existsByChargeGroupCodeAndChargeGroupPoidNot(
                 request.getChargeGroupCode(), poid)) {
-            throw new RuntimeException("Charge Group Code already exists");
+            throw new ValidationException("Charge Group Code already exists");
         }
 
 
@@ -138,7 +141,7 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         documentDeleteService.deleteDocument(
                 poid,
                 "SHIP_CHARGE_GROUP_MASTER",
-                "CHARGE_GROUP_POID",
+                CHARGE_GROUP_POID,
                 deleteReasonDto,
                 null
         );
@@ -163,12 +166,16 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
         return ChargeGroupMasterResponseDto.builder()
                 .chargeGroupPoid(e.getChargeGroupPoid())
                 .groupPoid(e.getGroupPoid())
+                .groupDet(e.getGroupPoid() != null ? lovService.getDetailsByPoidAndLovName(e.getGroupPoid(), "GROUP") : null)
                 .chargeGroupCode(e.getChargeGroupCode())
                 .chargeGroupName(e.getChargeGroupName())
                 .chargeGroupName2(e.getChargeGroupName2())
                 .chargeGlPayable(e.getChargeGlPayable())
+                .chargeGlPaybeDet(e.getChargeGlPayable() != null ? lovService.getDetailsByPoidAndLovName(e.getChargeGlPayable(), GL_MASTER_LEDGERS) : null)
                 .chargeGlSale(e.getChargeGlSale())
+                .chargeGlSaleDet(e.getChargeGlSale() != null ? lovService.getDetailsByPoidAndLovName(e.getChargeGlSale(), GL_MASTER_LEDGERS) : null)
                 .chargeGlCostSale(e.getChargeGlCostSale())
+                .chargeGlCostSaleDet(e.getChargeGlCostSale() != null ? lovService.getDetailsByPoidAndLovName(e.getChargeGlCostSale(), GL_MASTER_LEDGERS) : null)
                 .glPrefix(e.getGlPrefix())
                 .linewisePayablePosting(e.getLinewisePayablePosting())
                 .active(e.getActive())
