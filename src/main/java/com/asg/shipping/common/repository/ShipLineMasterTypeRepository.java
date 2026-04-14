@@ -49,7 +49,3 @@ public interface ShipLineMasterTypeRepository extends JpaRepository<ShipLineMast
     @Query("select case when count(d) > 0 then true else false end from ShipLineMasterType d where d.linePoid = :linePoid and d.containerTypePoid = :containerTypePoid and d.detRowId != :detRowId")
     boolean existsByLinePoidAndContainerTypePoidExcluding(@Param("linePoid") Long linePoid, @Param("containerTypePoid") Long containerTypePoid, @Param("detRowId") Long detRowId);
 }
-
-
-
-

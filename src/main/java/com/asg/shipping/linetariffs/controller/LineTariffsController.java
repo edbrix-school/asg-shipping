@@ -28,7 +28,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
@@ -79,19 +78,13 @@ public class LineTariffsController {
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction (e.g., 'description,asc')", example = "description,asc")
-            @RequestParam(required = false) String sort,
-            @RequestParam(required = false) LocalDate startDate,
-            @RequestParam(required = false) LocalDate endDate) {
+            @RequestParam(required = false) String sort) {
 
-        log.info("Searching line tariffs with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}", page, size, sort, startDate, endDate);
+        log.info("Searching line tariffs with page: {}, size: {}, sort: {}", page, size, sort);
 
         try {
-            if((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
-                return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
-            }
-
             Pageable pageable = createPageable(page, size, sort);
-            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, startDate, endDate);
+            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, null, null);
 
             log.info("Successfully retrieved line tariffs");
             return ApiResponse.success("Line tariffs retrieved successfully", result);
@@ -306,6 +299,21 @@ public class LineTariffsController {
 
         log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, copied.getTransactionPoid());
         return ApiResponse.success("Line tariff copied successfully", copied);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @PostMapping("/{id}/copy-slabs")
+    @Operation(
+            summary = "Copy collectable slabs to payable",
+            description = "Copy slab data from collectable to payable matched by container type. type=DMG copies import demurrage, type=DTN copies export detention.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> copySlabsToPayable(
+            @PathVariable Long id,
+            @RequestParam String type) {
+        log.info("Copying slabs to payable for id: {}, type: {}", id, type);
+        lineTariffsService.copySlabsToPayable(id, type);
+        return ApiResponse.success("Slabs copied to payable successfully", null);
     }
 
     /**
