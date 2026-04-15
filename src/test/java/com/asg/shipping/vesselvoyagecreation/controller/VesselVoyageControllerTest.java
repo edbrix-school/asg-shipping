@@ -226,6 +226,9 @@ class VesselVoyageControllerTest {
         when(vesselVoyageService.importSelectedXl(10L)).thenReturn("imported-selected-xl");
         assertEquals(200, controller.importSelectedXl(10L).getStatusCode().value());
 
+        doNothing().when(vesselVoyageService).ediMovesLoadDischarge(eq(10L), eq("2026-04-15"));
+        assertEquals(200, controller.ediMovesLoadDischarge(10L, "2026-04-15").getStatusCode().value());
+
         doNothing().when(vesselVoyageService).deleteVoyage(10L);
         assertEquals(200, controller.deleteVoyage(10L).getStatusCode().value());
     }
