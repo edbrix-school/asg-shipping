@@ -360,13 +360,10 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
             }
         }
 
-        // Bulk save updated records and log diffs
         processUpdates(tariffDtlRepository, toUpdate, logRequests);
 
-        // Flush CREATE log-summary entries
         logSummaryEntries(logEntries, docId, docKeyPoid);
 
-        // Bulk delete and log each deletion
         if (!toDelete.isEmpty()) {
             List<ShipPortTariffDtl> entitiesToDelete = tariffDtlRepository.findAllById(toDelete);
             tariffDtlRepository.deleteAllInBatch(entitiesToDelete);
