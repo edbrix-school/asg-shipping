@@ -1,13 +1,14 @@
 package com.asg.shipping.linecommission;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.linecommission.dto.ContainerRateDto;
@@ -79,6 +80,8 @@ class LineCommissionServiceImplTest {
     @Mock
     private LoggingService loggingService;
     @Mock
+    private DocumentDeleteService documentDeleteService;
+    @Mock
     private EntityManager entityManager;
 
     @InjectMocks
@@ -107,6 +110,7 @@ class LineCommissionServiceImplTest {
 
         userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
         userContextMock.when(UserContext::getCompanyPoid).thenReturn(20L);
+        userContextMock.when(UserContext::getGroupPoid).thenReturn(10L);
         userContextMock.when(UserContext::getDocumentId).thenReturn("DOC-1");
         userContextMock.when(UserContext::getUserId).thenReturn("user1");
     }
@@ -547,32 +551,22 @@ class LineCommissionServiceImplTest {
                 .thenReturn(Optional.of(hdrEntity));
 
         assertDoesNotThrow(() ->
-                service.delete(1L, 10L, "user1"));
-
-        verify(hdrRepository).save(argThat(e ->
-                "Y".equals(e.getDeleted())
-        ));
+                service.delete(1L, new DeleteReasonDto()));
+        verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_LINE_COMM_HDR"), eq("TRANSACTION_POID"), any(), any(LocalDate.class));
     }
 
     @Test
     void testDelete_TransactionMissing() {
         ValidationException ex = assertThrows(ValidationException.class,
-                () -> service.delete(null, 10L, "user1"));
+                () -> service.delete(null, new DeleteReasonDto()));
         assertTrue(ex.getMessage().contains("transactionPoid"));
-    }
-
-    @Test
-    void testDelete_GroupMissing() {
-        ValidationException ex = assertThrows(ValidationException.class,
-                () -> service.delete(1L, null, "user1"));
-        assertTrue(ex.getMessage().contains("groupPoid"));
     }
 
     @Test
     void testDelete_NotFound() {
         when(hdrRepository.findByTransactionPoidAndGroupPoid(1L, 10L))
                 .thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> service.delete(1L, 10L, "user1"));
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(1L, new DeleteReasonDto()));
     }
 
     // ---------------- LOAD CONTAINER TYPES ----------------

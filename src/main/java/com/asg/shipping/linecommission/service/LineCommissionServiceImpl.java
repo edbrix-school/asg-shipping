@@ -5,9 +5,11 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.dto.request.LogRequestDto;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -42,7 +44,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -68,6 +69,7 @@ public class LineCommissionServiceImpl implements LineCommissionService {
     private final LineCommissionMapper mapper;
     private final EntityManager entityManager;
     private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
 
 
 
@@ -231,20 +233,18 @@ public class LineCommissionServiceImpl implements LineCommissionService {
 
     @Override
     @Transactional
-    public void delete(Long transactionPoid, Long groupPoid, String userId) {
+    public void delete(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
         if (transactionPoid == null) throw new ValidationException("transactionPoid is required");
-        if (groupPoid == null) throw new ValidationException("groupPoid is required");
-        ShipLineCommHdrEntity hdr = hdrRepository.findByTransactionPoidAndGroupPoid(transactionPoid, groupPoid)
+        Long groupPoid = UserContext.getGroupPoid();
+        hdrRepository.findByTransactionPoidAndGroupPoid(transactionPoid, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("LineCommission", "transactionPoid", transactionPoid));
-        hdr.setDeleted("Y");
-        hdr.setLastModifiedBy(userId);
-        hdr.setLastModifiedDate(LocalDateTime.now());
-        hdrRepository.save(hdr);
-
-        String docId = UserContext.getDocumentId();
-        String key = transactionPoid.toString();
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
-        loggingService.logSimpleFieldChange(ShipLineCommHdrEntity.class, docId, key, "deleted", "N", "Y", "LineCommission soft deleted");
+        documentDeleteService.deleteDocument(
+                transactionPoid,
+                "SHIP_LINE_COMM_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                LocalDate.now()
+        );
 
     }
 

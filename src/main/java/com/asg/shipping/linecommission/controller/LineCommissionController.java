@@ -1,6 +1,7 @@
 package com.asg.shipping.linecommission.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
 import com.asg.shipping.linecommission.dto.LineCommissionResponse;
 import com.asg.shipping.linecommission.dto.LineCommissionRequest;
@@ -130,12 +131,11 @@ public class LineCommissionController {
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @Operation(summary = "Delete Line Commission (Soft delete)", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> delete(@PathVariable @NotNull @Positive Long transactionPoid,
-                                    @RequestHeader("X-Group-Poid") Long groupPoid,
-                                    @RequestHeader("X-User-Id") String userId,
+                                    @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto,
                                     @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested) {
-        log.info("Delete LineCommission request | transactionPoid={}, groupPoid={}, userId={}, actionRequested={}",
-                transactionPoid, groupPoid, userId, actionRequested);
-        service.delete(transactionPoid, groupPoid, userId);
+        log.info("Delete LineCommission request | transactionPoid={}, actionRequested={}",
+                transactionPoid, actionRequested);
+        service.delete(transactionPoid, deleteReasonDto);
         return success("Line commission deleted successfully");
     }
 
