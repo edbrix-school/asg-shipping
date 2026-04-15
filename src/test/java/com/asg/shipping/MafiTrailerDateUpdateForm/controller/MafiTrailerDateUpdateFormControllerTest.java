@@ -30,6 +30,7 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormRequest;
 import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormResponse;
 import com.asg.shipping.mafitrailerdateupdateform.service.MafiTrailerDateUpdateFormService;
+import com.asg.shipping.mafitrailerdateupdateform.controller.MafiTrailerDateUpdateFormController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,7 +47,7 @@ class MafiTrailerDateUpdateFormControllerTest {
     private LoggingService loggingService;
 
     @InjectMocks
-    private com.asg.shipping.mafitrailerdateupdateform.controller.MafiTrailerDateUpdateFormController controller;
+    private MafiTrailerDateUpdateFormController controller;
 
     @BeforeEach
     void setUp() {
