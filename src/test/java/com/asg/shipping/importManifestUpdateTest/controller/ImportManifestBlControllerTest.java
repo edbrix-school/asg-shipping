@@ -25,7 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,9 +40,6 @@ public class ImportManifestBlControllerTest {
     @Mock
     private ImportManifestBlService service;
 
-    @Mock
-    private ImportManifestService manifestService;
-
     @InjectMocks
     private ImportManifestBlController controller;
 
@@ -51,6 +48,8 @@ public class ImportManifestBlControllerTest {
 
     @Mock
     private DocumentDeleteService documentDeleteService;
+    @Mock
+    private ImportManifestService manifestService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -114,10 +113,7 @@ public class ImportManifestBlControllerTest {
         ImportManifestBlUpdateDTO updateDto = ImportManifestBlUpdateDTO.builder()
                 .blNumber("TEST123")
                 .agentReference("AGENT001")
-                .transactionDate(LocalDateTime.now())
-                .voyageTransactionPoid(100L)
-                .cargoType("FCL")
-                .blType("IMPORT")
+                .transactionDate(LocalDate.now())
                 .build();
         
         ImportManifestBlRequestDto expectedResponse = ImportManifestBlRequestDto.builder()

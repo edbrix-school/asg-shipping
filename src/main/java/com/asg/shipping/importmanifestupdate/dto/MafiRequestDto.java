@@ -1,7 +1,7 @@
 package com.asg.shipping.importmanifestupdate.dto;
 
 import lombok.*;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -14,7 +14,7 @@ public class MafiRequestDto {
     private String remarks;
     private Long mafiFreeDays;
     private Long mafiSize;
-    private LocalDateTime mafiEmptyDate;
-    private LocalDateTime backLoadDate;
+    private LocalDate mafiEmptyDate;
+    private LocalDate backLoadDate;
     private String actionType;
 }

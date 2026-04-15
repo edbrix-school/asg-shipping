@@ -3,7 +3,8 @@ package com.asg.shipping.importmanifestupdate.respository;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.RequiredArgsConstructor;
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
 
 @Repository
 @RequiredArgsConstructor
@@ -11,11 +12,11 @@ public class BlManifestValidationRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public boolean isValidFinancialYear(Long companyPoid, LocalDateTime transactionDate) {
+    public boolean isValidFinancialYear(Long companyPoid, LocalDate transactionDate) {
         try {
             String sql = "SELECT FUNC_GLOB_FINANCIAL_YEAR_VALID(?, ?) FROM DUAL";
             String result = jdbcTemplate.queryForObject(sql, String.class, companyPoid,
-                    java.sql.Timestamp.valueOf(transactionDate));
+                    java.sql.Date.valueOf(transactionDate));
             return result == null || !result.contains("ERROR");
         } catch (Exception e) {
             return false;

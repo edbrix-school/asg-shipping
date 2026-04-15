@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestupdate.dto;
 
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,7 +11,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContainerRequestDto {
+public class ContainerRequestDto implements BlManifestValidationService.ContainerValidatable {
 
     private Long detRowId;
     private String actionType; 
@@ -67,4 +68,7 @@ public class ContainerRequestDto {
     private Long amountPerDayAfterFree;
     private LocalDate actualDischargeDate;
 
+    // ---- ContainerValidatable interface ----
+    @Override public String getContainerNoValue() { return containerNo; }
+    @Override public String getEquipmentIsoTypeValue() { return equipmentIsoType; }
 }

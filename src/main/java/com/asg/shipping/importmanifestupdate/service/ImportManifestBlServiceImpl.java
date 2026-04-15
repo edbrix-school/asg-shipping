@@ -15,20 +15,19 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
+import com.asg.shipping.importmanifestupdate.constants.BlManifestValidationMessages;
 import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestupdate.entity.*;
-import com.asg.shipping.importmanifestupdate.event.BlManifestSaveEvent;
 import com.asg.shipping.importmanifestupdate.respository.*;
 import com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -37,15 +36,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -62,12 +55,12 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     private final DocumentSearchService documentService;
     private final ImportManifestBlMapper mapper;
     private final EntityManager entityManager;
-    private final BlManifestValidationRepository validationRepository;
-    private final ApplicationEventPublisher eventPublisher;
+
     private final ImportManifestBlProcRepository procRepository;
     private final AddressDetailsRepository addressDetailsRepository;
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
+    private final BlManifestValidationService blManifestValidationService;
 
     private static final String ACTION_NOCHANGES = "NOCHANGES";
     private static final String ACTION_ISCREATED = "ISCREATED";
@@ -75,53 +68,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     private static final String ACTION_ISDELETED = "ISDELETED";
 
 
-    @Override
-    @Transactional
-    public ImportManifestBlRequestDto createImportManifestBl(ImportManifestBlCreateDto dto) {
-        log.info("Creating new Import Manifest BL");
-
-        validateMandatoryFields(dto);
-        validateCreateDTO(dto);
-        validateHoldReasons(dto);
-        validateAddresses(dto);
-        validateContainers(dto);
-        validateFinancial(dto);
-        validateFreightType(dto);
-        validateDemurrage(dto);
-
-
-        ShipBlManifestHdr entity = mapper.mapToEntity(dto);
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setCompanyPoid(UserContext.getCompanyPoid());
-        entity.setGroupPoid(UserContext.getGroupPoid());
-        autoPopulateDefaults(entity);
-        formatEdiFields(entity);
-
-        ShipBlManifestHdr saved = repository.saveAndFlush(entity);
-        Long transactionPoid = saved.getTransactionPoid();
-        procRepository.validateBeforeSave(dto, transactionPoid);
-        log.info("BL Manifest header saved with transactionPoid: {}", transactionPoid);
-        ImportManifestBlUpdateDTO createDto = new ImportManifestBlUpdateDTO();
-        createDto.setGeneralCargoDetails(dto.getGeneralCargoDetails());
-        createDto.setCargoDescriptions(dto.getCargoDescriptions());
-        createDto.setContainers(dto.getContainers());
-        createDto.setChargeDetails(dto.getChargeDetails());
-        createDto.setPartBls(dto.getPartBls());
-        createDto.setNotifyParties(dto.getNotifyParties());
-        createDto.setMafiDetails(dto.getMafiDetails());
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
-
-        saveDetailTables(createDto, transactionPoid);
-        log.info("Detail tables saved for transactionPoid: {}", transactionPoid);
-
-        ImportManifestBlRequestDto result = mapper.mapToDto(saved);
-        loadDetailTables(result, transactionPoid);
-        eventPublisher.publishEvent(new BlManifestSaveEvent(saved, UserContext.getGroupPoid(), UserContext.getCompanyPoid(), "AUTOSUMWEIGHTPACKATE"));
-
-        log.info("Successfully created Import Manifest BL with id: {}", transactionPoid);
-        return result;
-    }
 
     @Override
     @Transactional
@@ -141,11 +87,37 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         BeanUtils.copyProperties(existingEntity, oldEntity);
 
         validateMandatoryFieldsForUpdate(dto);
-        validateBeforeSave(dto, id, companyPoid, groupPoid);
+
+        blManifestValidationService.validateHoldReasons(
+                dto.getHoldReason(), dto.getHoldCanDo(), dto.getHoldRemarks());
+
+        boolean addressFound = checkNotifyAddressesExist(dto);
+        blManifestValidationService.validateAddressesForCan(
+                dto.getHoldReason(), dto.getConsigneePoid(), dto.getNotifyPoid1(),
+                dto.getManuallyCanSend(), addressFound);
+
+        blManifestValidationService.validateContainerFields(
+                filterActiveContainers(dto.getContainers()));
+
+        blManifestValidationService.validateFinancialGain(
+                filterActiveCharges(dto.getChargeDetails()));
+
+        blManifestValidationService.validateFreightType(
+                dto.getFreightStatus(), dto.getHoldReason(),
+                filterActiveCharges(dto.getChargeDetails()));
+
+        blManifestValidationService.validateDemurrageChargeCode(
+                filterActiveCharges(dto.getChargeDetails()));
+
+        validateQuotationMapping(dto, id, companyPoid, groupPoid);
+
         validateUpdateDTO(dto, id, companyPoid, groupPoid);
+
         String oldFreightStatus = existingEntity.getFreightStatus();
         String oldDoNo = existingEntity.getDoNo();
-        ShipBlManifestHdr savedEntity =  mapper.mapUpdateDTOToEntity(dto, existingEntity);
+
+        // Map DTO to entity and save
+        ShipBlManifestHdr savedEntity = mapper.mapUpdateDTOToEntity(dto, existingEntity);
         if (hasAnyEdiChange(dto)) {
             formatEdiFields(savedEntity);
         }
@@ -153,37 +125,11 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         updateDetailTables(dto, saved.getTransactionPoid());
         loggingService.logChanges(oldEntity, savedEntity, ShipBlManifestHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
-        boolean callDoStatus =
-                (dto.getDoNo() != null && !dto.getDoNo().equals(oldDoNo))
-                        || (dto.getFreightStatus() != null
-                        && !dto.getFreightStatus().equals(oldFreightStatus));
-
-        Long transactionPoid = saved.getTransactionPoid();
-
-        //Register AFTER COMMIT actions
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-
-                    @Override
-                    public void afterCommit() {
-
-                        if (callDoStatus) {
-                            updateDoBlStatus(transactionPoid, groupPoid, companyPoid);
-                        }
-
-                        callAfterSaveProcedure(
-                                saved,
-                                groupPoid,
-                                companyPoid,
-                                "AUTOSUMWEIGHTPACKATE"
-                        );
-                    }
-                }
-        );
+        // Register AFTER COMMIT actions (legacy DocumentAfterSave)
+        registerAfterCommitActions(saved, groupPoid, companyPoid, oldDoNo, oldFreightStatus, dto.getDoNo(), dto.getFreightStatus());
 
         ImportManifestBlRequestDto result = mapper.mapToDto(saved);
-        loadDetailTables(result, transactionPoid);
-
+        loadDetailTables(result, id);
 
         log.info("Successfully updated Import Manifest BL with id: {}", id);
         return getImportManifestBl(id);
@@ -331,14 +277,70 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     }
 
     /**
-     * PROC_SHIP_VALD_BEFORE_SAVE - Validation before save (update)
+     * Checks if at least one notify party has SendYesNo=Y with an email/fax set.
+     * Legacy: AddressManuallyCheck() lines 870-952
      */
-    private void validateBeforeSave(ImportManifestBlUpdateDTO dto, Long id, Long companyPoid, Long groupPoid) {
+    private boolean checkNotifyAddressesExist(ImportManifestBlUpdateDTO dto) {
+        if (dto.getNotifyParties() == null || dto.getNotifyParties().isEmpty()) {
+            return false;
+        }
+        return dto.getNotifyParties().stream()
+                .anyMatch(np -> "Y".equalsIgnoreCase(np.getSendYesNo())
+                        && (np.getFax() != null || np.getEmail1() != null || np.getEmail2() != null));
+    }
+
+    /**
+     * Filters containers to only include active (non-deleted, non-nochanges) items
+     * for validation by the shared service.
+     */
+    private List<ContainerRequestDto> filterActiveContainers(List<ContainerRequestDto> containers) {
+        if (containers == null) return List.of();
+        return containers.stream()
+                .filter(c -> {
+                    String action = resolveAction(c.getActionType());
+                    return !ACTION_ISDELETED.equals(action) && !ACTION_NOCHANGES.equals(action);
+                })
+                .toList();
+    }
+
+    /**
+     * Filters charges to only include active (non-deleted) items
+     * for validation by the shared service.
+     */
+    private List<ChargeRequestDto> filterActiveCharges(List<ChargeRequestDto> charges) {
+        if (charges == null) return List.of();
+        return charges.stream()
+                .filter(c -> !ACTION_ISDELETED.equals(resolveAction(c.getActionType())))
+                .toList();
+    }
+
+    /**
+     * PROC_SHIP_VALD_BEFORE_SAVE - called as GetBlValidate() in legacy.
+     * Returns true if BL validation passes. Used as a condition together with
+     * quotation/bookedByPP checks.
+     * Legacy: GetBlValidate() lines 523-568 + DocumentBeforeSave lines 846-855
+     */
+    private void validateQuotationMapping(ImportManifestBlUpdateDTO dto, Long id, Long companyPoid, Long groupPoid) {
+        boolean blValidateResult = callBlValidateProc(dto, id, companyPoid, groupPoid);
+
+        // Legacy: if (GetBlValidate() && quotationPoid == null && freightStatus == "2")
+        //            if (bookedByPP != null && bookedByPP == "N") -> error
+        if (blValidateResult
+                && dto.getQuotationTransactionPoid() == null
+                && "2".equalsIgnoreCase(dto.getFreightStatus())) {
+            if (dto.getBookedByPp() != null && "N".equalsIgnoreCase(dto.getBookedByPp())) {
+                throw new ValidationException(BlManifestValidationMessages.QUOTATION_MAPPING_REQUIRED);
+            }
+        }
+    }
+
+    /**
+     * Calls PROC_SHIP_VALD_BEFORE_SAVE and returns boolean result.
+     * Legacy: GetBlValidate() lines 523-568
+     */
+    private boolean callBlValidateProc(ImportManifestBlUpdateDTO dto, Long id, Long companyPoid, Long groupPoid) {
         try {
             Long userPoid = com.asg.common.lib.security.util.UserContext.getUserPoid();
-            Long transactionPoid = id;
-            Long voyageTransactionPoid = dto.getVoyageTransactionPoid();
-            String validationType = "VLD_QUOTATION";
 
             StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_VALD_BEFORE_SAVE");
             query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
@@ -352,19 +354,17 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             query.setParameter("P_LOGIN_GROUP_POID", groupPoid);
             query.setParameter("P_LOGIN_COMPANY_POID", companyPoid);
             query.setParameter("P_LOGIN_USER_POID", userPoid);
-            query.setParameter("P_TRANSACTION_POID", transactionPoid);
-            query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoid);
-            query.setParameter("P_VALIDATION_TYPE", validationType);
+            query.setParameter("P_TRANSACTION_POID", id);
+            query.setParameter("P_VOYAGE_TRANSACTION_POID", dto.getVoyageTransactionPoid());
+            query.setParameter("P_VALIDATION_TYPE", "VLD_QUOTATION");
 
             query.execute();
 
             String result = (String) query.getOutputParameterValue("P_RESULT");
-            if (result != null && !result.equalsIgnoreCase("TRUE")) {
-                throw new ValidationException("Validation failed: " + result);
-            }
+            return result != null && result.equalsIgnoreCase("TRUE");
         } catch (Exception e) {
-            log.error("Error calling PROC_SHIP_VALD_BEFORE_SAVE", e);
-            throw new ValidationException("Validation error: " + e.getMessage());
+            log.error("Error calling PROC_SHIP_VALD_BEFORE_SAVE for transaction: {}", id, e);
+            return false; // Legacy returns false on exception
         }
     }
 
@@ -374,12 +374,12 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             Long voyagePoid = dto.getVoyageTransactionPoid();
             if (voyagePoid != null) {
                 if (repository.existsByVoyageTransactionPoidAndBlNumberExcludingPoid(voyagePoid, dto.getBlNumber().trim(), id)) {
-                    throw new ValidationException("BL number already exists for this voyage");
+                    throw new ValidationException(String.format(BlManifestValidationMessages.BL_NUMBER_EXISTS_FOR_VOYAGE, dto.getBlNumber().trim()));
                 }
             }
             // Validate global BL number uniqueness (excluding current record)
             if (repository.existsByBlNumberExcludingPoid(dto.getBlNumber().trim(), id)) {
-                throw new ValidationException("BL number already exists");
+                throw new ValidationException(String.format(BlManifestValidationMessages.BL_NUMBER_EXISTS, dto.getBlNumber().trim()));
             }
         }
 
@@ -388,12 +388,12 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             // Check if existing record has port of loading
             ShipBlManifestHdr existing = repository.findById(id).orElse(null);
             if (existing == null || existing.getPortOfLoadingPoid() == null) {
-                throw new ValidationException("Port of loading is required for non-EXPORT BL type");
+                throw new ValidationException(BlManifestValidationMessages.PORT_OF_LOADING_REQUIRED);
             }
         }
     }
 
-    private void formatEdiFields(ShipBlManifestHdr entity) {
+    public void formatEdiFields(ShipBlManifestHdr entity) {
         String blType = entity.getBlType();
         boolean isExport = "EXPORT".equals(blType);
 
@@ -453,8 +453,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
 
 
     private void updateDetailTables(ImportManifestBlUpdateDTO dto, Long transactionPoid) {
-        String currentUser = getCurrentUser();
-        LocalDateTime now = LocalDateTime.now();
+
         String docId = UserContext.getDocumentId();
         String docKeyPoid = transactionPoid.toString();
 
@@ -474,8 +473,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                     case ACTION_ISCREATED -> {
                         ShipBlManifestGeneralDtl entity = mapper.mapGeneralDtlFromDto(detailDto, transactionPoid);
                         entity.setId(new ShipBlManifestDtlId(transactionPoid, maxDetRowId++));
-                        entity.setCreatedBy(currentUser);
-                        entity.setCreatedDate(now);
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
@@ -486,8 +483,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                         BeanUtils.copyProperties(existing, oldEntity);
 
                         mapper.updateGeneralFromDto(detailDto, existing);
-                        existing.setLastModifiedBy(currentUser);
-                        existing.setLastModifiedDate(now);
                         toUpdate.add(existing);
 
                         String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detailDto.getDetRowId());
@@ -517,11 +512,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                generalDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on General Cargo Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestGeneralDtl> entitiesToDelete = generalDtlRepository.findAllById(toDelete);
+                generalDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
 
         }
@@ -543,8 +536,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                     case ACTION_ISCREATED -> {
                         ShipBlManifestCargoDtl entity = mapper.mapCargoDtlFromDto(detailDto, transactionPoid);
                         entity.setId(new ShipBlManifestCargoDtlId(transactionPoid, ++maxDetRowId, detailDto.getDescriptionType()));
-                        entity.setCreatedBy(currentUser);
-                        entity.setCreatedDate(now);
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
@@ -555,8 +546,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                         if (detailDto.getCargoDescription() != null)
                             existing.setCargoDescription(detailDto.getCargoDescription());
                         if (detailDto.getRecordOrder() != null) existing.setRecordOrder(detailDto.getRecordOrder());
-                        existing.setLastModifiedBy(currentUser);
-                        existing.setLastModifiedDate(now);
                         toUpdate.add(existing);
 
                         String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detailDto.getDetRowId());
@@ -587,11 +576,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                cargoDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Cargo Description Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestCargoDtl> entitiesToDelete = cargoDtlRepository.findAllById(toDelete);
+                cargoDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -613,8 +600,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
 
                         ShipBlManifestContainerDtl entity = mapper.mapContainerDtlFromDto(detailDto, transactionPoid);
                         entity.setId(new ShipBlManifestDtlId(transactionPoid, ++maxDetRowId));
-                        entity.setCreatedBy(currentUser);
-                        entity.setCreatedDate(now);
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
@@ -645,14 +630,12 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                                                 .equals(existing.getId().getDetRowId())) {
 
                                             throw new ValidationException(
-                                                    "Container number already exists: " + existing.getContainerNo()
+                                                    String.format(BlManifestValidationMessages.CONTAINER_DUPLICATE, existing.getContainerNo())
                                             );
                                         }
                                     });
                         }
 
-                        existing.setLastModifiedBy(currentUser);
-                        existing.setLastModifiedDate(now);
                         toUpdate.add(existing);
 
                         String logDetail = String.format(
@@ -697,11 +680,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                containerDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Container Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestContainerDtl> entitiesToDelete = containerDtlRepository.findAllById(toDelete);
+                containerDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -722,8 +703,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                     case ACTION_ISCREATED -> {
                         ShipBlManifestChargesDtl entity = mapper.mapChargesDtlFromDto(detailDto, transactionPoid);
                         entity.setId(new ShipBlManifestDtlId(transactionPoid, ++maxDetRowId));
-                        entity.setCreatedBy(currentUser);
-                        entity.setCreatedDate(now);
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
@@ -734,8 +713,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                         BeanUtils.copyProperties(existing, oldEntity);
 
                         mapper.updateChargesFromDto(detailDto, existing);
-                        existing.setLastModifiedBy(currentUser);
-                        existing.setLastModifiedDate(now);
                         toUpdate.add(existing);
 
                         String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detailDto.getDetRowId());
@@ -765,11 +742,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                chargesDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Charge Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestChargesDtl> entitiesToDelete = chargesDtlRepository.findAllById(toDelete);
+                chargesDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -790,8 +765,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                     case ACTION_ISCREATED -> {
                         ShipBlManifestPartBL entity = mapper.mapContainerPrtFromDto(detailDto, transactionPoid);
                         entity.setId(new ShipBlManifestDtlId(transactionPoid, ++maxDetRowId));
-                        entity.setCreatedBy(currentUser);
-                        entity.setCreatedDate(now);
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
@@ -802,8 +775,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                         BeanUtils.copyProperties(existing, oldEntity);
 
                         mapper.updatePartBlFromDto(detailDto, existing);
-                        existing.setLastModifiedBy(currentUser);
-                        existing.setLastModifiedDate(now);
                         toUpdate.add(existing);
 
                         String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detailDto.getDetRowId());
@@ -833,11 +804,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                containerPrtRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Part BL Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestPartBL> entitiesToDelete = containerPrtRepository.findAllById(toDelete);
+                containerPrtRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -858,8 +827,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                     case ACTION_ISCREATED -> {
                         ShipBlManifestEmailFaxDtl entity = mapper.mapEmailFaxDtlFromDto(detailDto, transactionPoid);
                         entity.setId(new ShipBlManifestEmailFaxId(transactionPoid, ++maxDetRowId, detailDto.getAddressType()));
-                        entity.setCreatedBy(currentUser);
-                        entity.setCreatedDate(now);
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
@@ -870,8 +837,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                         BeanUtils.copyProperties(existing, oldEntity);
 
                         mapper.updateEmailFaxFromDto(detailDto, existing);
-                        existing.setLastModifiedBy(currentUser);
-                        existing.setLastModifiedDate(now);
                         toUpdate.add(existing);
 
                         String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detailDto.getDetRowId());
@@ -901,11 +866,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                emailFaxDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on Notify Party Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestEmailFaxDtl> entitiesToDelete = emailFaxDtlRepository.findAllById(toDelete);
+                emailFaxDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
@@ -926,8 +889,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                     case ACTION_ISCREATED -> {
                         ShipBlManifestMafiDtl entity = mapper.mapMafiDtlFromDto(detailDto, transactionPoid);
                         entity.setId(new ShipBlManifestDtlId(transactionPoid, ++maxDetRowId));
-                        entity.setCreatedBy(currentUser);
-                        entity.setCreatedDate(now);
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
@@ -938,8 +899,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                         BeanUtils.copyProperties(existing, oldEntity);
 
                         mapper.updateMafiFromDto(detailDto, existing);
-                        existing.setLastModifiedBy(currentUser);
-                        existing.setLastModifiedDate(now);
                         toUpdate.add(existing);
 
                         String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detailDto.getDetRowId());
@@ -969,200 +928,14 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
 
             if (!toDelete.isEmpty()) {
-                mafiDtlRepository.deleteAllById(toDelete);
-                toDelete.forEach(id -> {
-                    String logDetail = String.format("Row Deleted on MAFI Detail with detRowId: %s", id.getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
+                List<ShipBlManifestMafiDtl> entitiesToDelete = mafiDtlRepository.findAllById(toDelete);
+                mafiDtlRepository.deleteAllInBatch(entitiesToDelete);
+                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
             }
         }
 
 
     }
-
-
-    /**
-     * Update all detail tables for a transaction (update)
-     */
-    private void saveDetailTables(ImportManifestBlUpdateDTO dto, Long transactionPoid) {
-        List<String> logEntries = new ArrayList<>();
-
-        if (dto.getGeneralCargoDetails() != null) {
-            Long detRowId =
-                    getNextDetRowId(generalDtlRepository.getMaxDetRowId(transactionPoid));
-
-            for (GeneralCargoRequestDto detailDto : dto.getGeneralCargoDetails()) {
-
-                ShipBlManifestGeneralDtl entity =
-                        mapper.mapGeneralDtlFromDto(detailDto, transactionPoid);
-
-                entity.getId().setDetRowId(detRowId);
-                generalDtlRepository.save(entity);
-
-                logEntries.add(
-                        String.format(
-                                "Row Created on General Cargo Detail with DetRowId: %s",
-                                detRowId
-                        )
-                );
-
-                detRowId++;
-            }
-        }
-        if (dto.getCargoDescriptions() != null) {
-            Long detRowId =
-                    getNextDetRowId(cargoDtlRepository.getMaxDetRowId(transactionPoid));
-
-            for (CargoDescriptionRequestDto detailDto : dto.getCargoDescriptions()) {
-
-                ShipBlManifestCargoDtl entity =
-                        mapper.mapCargoDtlFromDto(detailDto, transactionPoid);
-
-                entity.getId().setDetRowId(detRowId);
-                cargoDtlRepository.save(entity);
-
-                logEntries.add(
-                        String.format(
-                                "Row Created on Cargo Description Detail with DetRowId: %s",
-                                detRowId
-                        )
-                );
-
-                detRowId++;
-            }
-        }
-
-        if (dto.getContainers() != null) {
-            Long detRowId =
-                    getNextDetRowId(containerDtlRepository.getMaxDetRowId(transactionPoid));
-            for (ContainerRequestDto detailDto : dto.getContainers()) {
-
-                ShipBlManifestContainerDtl entity = mapper.mapContainerDtlFromDto(detailDto, transactionPoid);
-                entity.getId().setDetRowId(detRowId);
-                containerDtlRepository.save(entity);
-                logEntries.add(String.format("Row Created on Container Detail with DetRowId: %s", detRowId));
-                detRowId++;
-            }
-        }
-
-        if (CollectionUtils.isNotEmpty(dto.getChargeDetails())) {
-
-            Long nextDetRowId =
-                    getNextDetRowId(chargesDtlRepository.getMaxDetRowId(transactionPoid));
-
-            for (ChargeRequestDto detailDto : dto.getChargeDetails()) {
-
-                Long detRowId =
-                        detailDto.getDetRowId() != null ? detailDto.getDetRowId() : nextDetRowId++;
-
-                ShipBlManifestChargesDtl entity =
-                        mapper.mapChargesDtlFromDto(detailDto, transactionPoid);
-
-                if (entity.getId() == null) {
-                    entity.setId(new ShipBlManifestDtlId(transactionPoid, detRowId));
-                } else {
-                    entity.getId().setDetRowId(detRowId);
-                }
-
-                chargesDtlRepository.save(entity);
-                logEntries.add(
-                        String.format("Row Created on Charge Detail with DetRowId: %s", detRowId)
-                );
-            }
-        }
-
-
-        if (CollectionUtils.isNotEmpty(dto.getPartBls())) {
-
-            Long nextDetRowId =
-                    getNextDetRowId(containerPrtRepository.getMaxDetRowId(transactionPoid));
-
-            for (PartBlRequestDto detailDto : dto.getPartBls()) {
-
-                Long detRowId =
-                        detailDto.getDetRowId() != null ? detailDto.getDetRowId() : nextDetRowId++;
-
-                ShipBlManifestPartBL entity =
-                        mapper.mapContainerPrtFromDto(detailDto, transactionPoid);
-
-                if (entity.getId() == null) {
-                    entity.setId(new ShipBlManifestDtlId(transactionPoid, detRowId));
-                } else {
-                    entity.getId().setDetRowId(detRowId);
-                }
-
-                containerPrtRepository.save(entity);
-                logEntries.add(
-                        String.format("Row Created on Part BL Detail with DetRowId: %s", detRowId)
-                );
-            }
-        }
-
-
-        if (CollectionUtils.isNotEmpty(dto.getNotifyParties())) {
-
-            Long nextDetRowId =
-                    getNextDetRowId(emailFaxDtlRepository.getMaxDetRowId(transactionPoid));
-
-            for (NotifyPartyRequestDto detailDto : dto.getNotifyParties()) {
-
-                Long detRowId =
-                        detailDto.getDetRowId() != null ? detailDto.getDetRowId() : nextDetRowId++;
-
-                ShipBlManifestEmailFaxDtl entity =
-                        mapper.mapEmailFaxDtlFromDto(detailDto, transactionPoid);
-
-                if (entity.getId() == null) {
-                    entity.setId(
-                            new ShipBlManifestEmailFaxId(
-                                    transactionPoid,
-                                    detRowId,
-                                    detailDto.getAddressType()
-                            )
-                    );
-                } else {
-                    entity.getId().setDetRowId(detRowId);
-                }
-
-                emailFaxDtlRepository.save(entity);
-                logEntries.add(
-                        String.format("Row Created on Notify Party Detail with DetRowId: %s", detRowId)
-                );
-            }
-        }
-
-
-        if (CollectionUtils.isNotEmpty(dto.getMafiDetails())) {
-
-            Long nextDetRowId =
-                    getNextDetRowId(mafiDtlRepository.getMaxDetRowId(transactionPoid));
-
-            for (MafiRequestDto detailDto : dto.getMafiDetails()) {
-
-                Long detRowId =
-                        detailDto.getDetRowId() != null ? detailDto.getDetRowId() : nextDetRowId++;
-
-                ShipBlManifestMafiDtl entity =
-                        mapper.mapMafiDtlFromDto(detailDto, transactionPoid);
-
-                if (entity.getId() == null) {
-                    entity.setId(new ShipBlManifestDtlId(transactionPoid, detRowId));
-                } else {
-                    entity.getId().setDetRowId(detRowId);
-                }
-
-                mafiDtlRepository.save(entity);
-                logEntries.add(
-                        String.format("Row Created on MAFI Detail with DetRowId: %s", detRowId)
-                );
-            }
-        }
-        // Batch log all entries at once to optimize database calls
-        for (String logDetail : logEntries) {
-            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
-        }
-    }
-
     /**
      * PROC_SHIP_DO_BL_STATUS - Update DO/BL status
      * Parameters: P_LOGIN_GROUP_POID, P_LOGIN_COMPANY_POID, P_LOGIN_USER_POID, P_TRANSACTION_POID, P_RESULT (OUT VARCHAR)
@@ -1203,19 +976,19 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             String processType = param2 != null ? param2 : "AUTOSUMWEIGHTPACKATE";
 
             StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_SHIP_BL_PAGE_SAVE_AFTER");
-            query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_TRANSACTION_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_PARAM1", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_PARAM2", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_DET_ROW_ID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_UPDATE_TYPE", String.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_LOGIN_USER", String.class, ParameterMode.IN);
 
-            query.setParameter("P_LOGIN_GROUP_POID", groupPoid);
-            query.setParameter("P_LOGIN_COMPANY_POID", companyPoid);
-            query.setParameter("P_TRANSACTION_POID", transactionPoid);
-            query.setParameter("P_PARAM1", null);
-            query.setParameter("P_PARAM2", processType);
-            query.setParameter("P_LOGIN_USER_POID", userPoid);
+            query.setParameter("P_GROUP_POID", groupPoid);
+            query.setParameter("P_COMPANY_POID", companyPoid);
+            query.setParameter("P_DOC_KEY_POID", transactionPoid);
+            query.setParameter("P_DET_ROW_ID", null);
+            query.setParameter("P_UPDATE_TYPE", processType);
+            query.setParameter("P_LOGIN_USER", String.valueOf(userPoid));
 
             query.execute();
             log.debug("Successfully called PROC_SHIP_BL_PAGE_SAVE_AFTER for transaction: {}", transactionPoid);
@@ -1246,259 +1019,19 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         return dto;
     }
 
-    private Long getNextDetRowId(Long maxDetRowId) {
-        return (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
-    }
-
-
-    private void validateMandatoryFields(ImportManifestBlCreateDto dto) {
-        if (dto.getVoyageTransactionPoid() == null) {
-            throw new ValidationException("Voyage number is required");
-        }
-        if (dto.getCargoType() == null) {
-            throw new ValidationException("Cargo Type is required");
-        }
-        if (dto.getBlNumber() == null) {
-            throw new ValidationException("BL number is required");
-        }
-        if (dto.getBlType() == null) {
-            throw new ValidationException("BL Type is required");
-        }
-    }
 
     private void validateMandatoryFieldsForUpdate(ImportManifestBlUpdateDTO dto) {
         if (dto.getVoyageTransactionPoid() == null) {
-            throw new ValidationException("Voyage number is required");
+            throw new ValidationException(BlManifestValidationMessages.VOYAGE_REQUIRED);
         }
         if (dto.getCargoType() == null) {
-            throw new ValidationException("Cargo Type is required");
+            throw new ValidationException(BlManifestValidationMessages.CARGO_TYPE_REQUIRED);
         }
         if (dto.getBlNumber() == null) {
-            throw new ValidationException("BL number is required");
+            throw new ValidationException(BlManifestValidationMessages.BL_NUMBER_REQUIRED);
         }
         if (dto.getBlType() == null) {
-            throw new ValidationException("BL Type is required");
-        }
-    }
-
-    private void validateCreateDTO(ImportManifestBlCreateDto dto) {
-
-        validateVoyageCompany(dto.getVoyageTransactionPoid());
-
-        if (dto.getBlNumber() != null && !dto.getBlNumber().trim().isEmpty()) {
-            if (repository.existsByVoyageTransactionPoidAndBlNumber(dto.getVoyageTransactionPoid(), dto.getBlNumber().trim())) {
-                throw new ValidationException("BL number already exists for this voyage");
-            }
-        }
-
-        if (dto.getPortOfLoadingPoid() == null) {
-            throw new ValidationException("Port of loading is required for IMPORT BL");
-        }
-
-        validateFinancialYear(UserContext.getCompanyPoid(), dto.getTransactionDate() != null ? dto.getTransactionDate() : LocalDateTime.now());
-    }
-
-
-    private void validateFinancialYear(Long companyPoid, LocalDateTime transactionDate) {
-        if (!validationRepository.isValidFinancialYear(companyPoid, transactionDate)) {
-            log.error("Validation failed: Invalid financial year for company {} on date {}", companyPoid, transactionDate);
-        }
-    }
-
-    private void validateVoyageCompany(Long voyageTransactionPoid) {
-        Long voyageCompanyPoid = validationRepository.getVoyageCompanyPoid(voyageTransactionPoid);
-        if (voyageCompanyPoid == null || !voyageCompanyPoid.equals(UserContext.getCompanyPoid())) {
-            log.error("Validation failed: Voyage company mismatch. Voyage company: {}, User company: {}", voyageCompanyPoid, UserContext.getCompanyPoid());
-            throw new ValidationException("Voyage not found or company mismatch");
-        }
-    }
-
-
-    private void autoPopulateDefaults(ShipBlManifestHdr entity) {
-        if (entity.getBlType() == null) entity.setBlType("IMPORT");
-        if (entity.getCargoType() == null) entity.setCargoType("FCL-FCL");
-        if (entity.getBlIssueType() == null) entity.setBlIssueType("1");
-        if (entity.getPortOfDischargePoid() == null) entity.setPortOfDischargePoid(800L);
-        if (entity.getPlaceOfDeliveryPoid() == null) entity.setPlaceOfDeliveryPoid(800L);
-        if (entity.getHoldReason() == null) entity.setHoldReason("5");
-        if (entity.getFreightStatus() == null) entity.setFreightStatus("1");
-        if (entity.getSalesmanPoid() == null || entity.getSalesmanPoid() == 1) entity.setSalesmanPoid(51L);
-        if (entity.getComodityPoid() == null) entity.setComodityPoid(10L);
-        if (entity.getBookedByPp() == null) entity.setBookedByPp("Y");
-    }
-
-
-    private void validateHoldReasons(ImportManifestBlCreateDto dto) {
-
-        if (dto.getHoldReason() != null &&
-                Set.of("1", "2", "3").contains(dto.getHoldReason()) &&
-                (dto.getHoldRemarks() == null || dto.getHoldRemarks().trim().isEmpty())) {
-
-            log.error("Validation failed: Hold reason {} requires remarks", dto.getHoldReason());
-            throw new ValidationException("Please check Hold Remarks field");
-        }
-
-        if ("Y".equalsIgnoreCase(dto.getHoldCanDo()) &&
-                (dto.getHoldRemarks() == null || dto.getHoldRemarks().trim().isEmpty())) {
-
-            log.error("Validation failed: Hold CAN/DO requires remarks");
-            throw new ValidationException("Please check Hold Remarks field");
-        }
-    }
-
-    private void validateAddresses(ImportManifestBlCreateDto dto) {
-
-        String holdReason = dto.getHoldReason() != null ? dto.getHoldReason() : "5";
-
-        if (!"5".equalsIgnoreCase(holdReason)) {
-
-            if (dto.getConsigneePoid() == null || dto.getConsigneePoid().equals(1L)) {
-                log.error("Validation failed: Invalid Consignee POID");
-                throw new ValidationException("Invalid Consignee POID");
-            }
-
-            if (dto.getNotifyPoid1() == null || dto.getNotifyPoid1().equals(1L)) {
-                log.error("Validation failed: Invalid Notify POID");
-                throw new ValidationException("Invalid Notify POID");
-            }
-
-            boolean addressFound = checkAddressesExist(dto);
-
-            String manuallyCanSend = dto.getManuallyCanSend();
-
-            if (!addressFound &&
-                    (manuallyCanSend == null || "N".equalsIgnoreCase(manuallyCanSend))) {
-
-                log.error("Validation failed: No address selected for CAN");
-                throw new ValidationException("No address selected for CAN.");
-            }
-        }
-    }
-
-
-
-    private boolean checkAddressesExist(ImportManifestBlCreateDto dto) {
-        if (dto.getNotifyParties() != null && !dto.getNotifyParties().isEmpty()) {
-            for (NotifyPartyRequestDto party : dto.getNotifyParties()) {
-                if (party.getSendYesNo() != null && "Y".equals(party.getSendYesNo())) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    private void validateContainers(ImportManifestBlCreateDto dto) {
-        if (dto.getContainers() != null && !dto.getContainers().isEmpty()) {
-            for (ContainerRequestDto container : dto.getContainers()) {
-                if (container.getContainerNo() == null || container.getContainerNo().trim().isEmpty() ||
-                    container.getEquipmentIsoType() == null || container.getEquipmentIsoType().trim().isEmpty()) {
-                    log.error("Validation failed: Container {} missing required fields", container.getContainerNo());
-                    throw new ValidationException("Containerno / EquipmentIsotype must enter....");
-                }
-            }
-        }
-    }
-
-    private void validateFinancial(ImportManifestBlCreateDto dto) {
-        java.math.BigDecimal totalGain = calculateTotalGain(dto.getChargeDetails());
-        if (totalGain.compareTo(java.math.BigDecimal.ZERO) < 0) {
-            log.error("Validation failed: Total gain is negative: {}", totalGain);
-            throw new ValidationException("Total gain is in negetive.." + totalGain);
-        }
-
-        if (dto.getChargeDetails() != null && !dto.getChargeDetails().isEmpty()) {
-            for (ChargeRequestDto charge : dto.getChargeDetails()) {
-                if (charge.getChargePoid() == null || charge.getChargePoid() <= 0) {
-                    log.error("Validation failed: Invalid charge POID");
-                    throw new ValidationException("Charge POID is required and must be valid");
-                }
-            }
-        }
-    }
-
-    private java.math.BigDecimal calculateTotalGain(List<ChargeRequestDto> chargeDetails) {
-        if (chargeDetails == null || chargeDetails.isEmpty()) {
-            return java.math.BigDecimal.ZERO;
-        }
-
-        java.math.BigDecimal totalGain = java.math.BigDecimal.ZERO;
-        for (ChargeRequestDto charge : chargeDetails) {
-            java.math.BigDecimal saleAmount = charge.getPerQuantityAmount() != null ?
-                    java.math.BigDecimal.valueOf(charge.getPerQuantityAmount().doubleValue()) : java.math.BigDecimal.ZERO;
-            java.math.BigDecimal buyAmount = charge.getBuyPercharge() != null ?
-                    java.math.BigDecimal.valueOf(charge.getBuyPercharge().doubleValue()) : java.math.BigDecimal.ZERO;
-            totalGain = totalGain.add(saleAmount.subtract(buyAmount));
-        }
-        return totalGain;
-    }
-
-    private void validateFreightType(ImportManifestBlCreateDto dto) {
-        String holdReason = dto.getHoldReason() != null ? dto.getHoldReason() : "999";
-        String globalFreightType = determineGlobalFreightType(dto.getChargeDetails());
-
-        if ("XX".equals(globalFreightType) && !"5".equals(holdReason)) {
-            log.error("Validation failed: Freight type not entered");
-            throw new ValidationException("Freight not enter..");
-        }
-
-        if ("1".equals(dto.getFreightStatus()) &&
-                !"P".equals(globalFreightType) &&
-                !"XX".equals(globalFreightType) &&
-                !"5".equals(holdReason)) {
-            log.error("Validation failed: Freight status 1 mismatch with type {}", globalFreightType);
-            throw new ValidationException("Freight status mismatch..");
-        }
-
-        if ("2".equals(dto.getFreightStatus()) &&
-                !"C".equals(globalFreightType) &&
-                !"XX".equals(globalFreightType) &&
-                !"5".equals(holdReason)) {
-            log.error("Validation failed: Freight status 2 mismatch with type {}", globalFreightType);
-            throw new ValidationException("Freight status mismatch...");
-        }
-
-        if ("3".equals(dto.getFreightStatus()) &&
-                !"E".equals(globalFreightType) &&
-                !"XX".equals(globalFreightType) &&
-                !"5".equals(holdReason)) {
-            log.error("Validation failed: Freight status 3 mismatch with type {}", globalFreightType);
-            throw new ValidationException("Freight status mismatch....");
-        }
-    }
-
-    private String determineGlobalFreightType(List<ChargeRequestDto> chargeDetails) {
-        if (chargeDetails == null || chargeDetails.isEmpty()) {
-            return "XX";
-        }
-
-        String freightType = null;
-        for (ChargeRequestDto charge : chargeDetails) {
-            if (charge.getFreightType() != null && !charge.getFreightType().trim().isEmpty()) {
-                if (freightType == null) {
-                    freightType = charge.getFreightType();
-                } else if (!freightType.equals(charge.getFreightType())) {
-                    return "XX";
-                }
-            }
-        }
-        return freightType != null ? freightType : "XX";
-    }
-
-    private void validateDemurrage(ImportManifestBlCreateDto dto) {
-        if (dto.getChargeDetails() != null && !dto.getChargeDetails().isEmpty()) {
-            for (ChargeRequestDto charge : dto.getChargeDetails()) {
-                if (charge.getChargePoid() != null && charge.getChargePoid().equals(94L)) {
-                    log.error("Validation failed: Demurrage charge code 94 not allowed");
-                    throw new ValidationException("Use Manifested Demmurage code (DEMMF)...");
-                }
-            }
-        }
-    }
-
-    private void validateFinancialYear(LocalDate transactionDate) {
-        if (transactionDate != null && transactionDate.isAfter(LocalDate.now())) {
-            throw new ValidationException("Transaction date cannot be in future");
+            throw new ValidationException(BlManifestValidationMessages.BL_TYPE_REQUIRED);
         }
     }
 
@@ -1523,5 +1056,35 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             case "ISDELETED", "DELETED" -> ACTION_ISDELETED;
             default -> ACTION_NOCHANGES;
         };
+    }
+
+    public void registerAfterCommitActions(ShipBlManifestHdr saved, Long groupPoid, Long companyPoid,
+                                            String oldDoNo, String oldFreightStatus, String newDoNo, String newFreightStatus) {
+        boolean callDoStatus =
+                (newDoNo != null && !newDoNo.equals(oldDoNo))
+                        || (newFreightStatus != null
+                        && !newFreightStatus.equals(oldFreightStatus));
+
+        Long transactionPoid = saved.getTransactionPoid();
+
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+
+                    @Override
+                    public void afterCommit() {
+
+                        if (callDoStatus) {
+                            updateDoBlStatus(transactionPoid, groupPoid, companyPoid);
+                        }
+
+                        callAfterSaveProcedure(
+                                saved,
+                                groupPoid,
+                                companyPoid,
+                                "AUTOSUMWEIGHTPACKATE"
+                        );
+                    }
+                }
+        );
     }
 }

@@ -6,7 +6,8 @@ import com.asg.shipping.importmanifestupdate.dto.*;
 
 import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
 import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
-import jakarta.validation.Valid;
+import com.asg.shipping.importmanifestbl.dto.ImportManifestBlDto;
+import com.asg.shipping.importmanifestbl.dto.ImportManifestBlResponseDto;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
@@ -14,7 +15,7 @@ import java.util.Map;
 
 public interface ImportManifestService {
 
-    ImportManifestBlRequestDto getImportManifest(Long transactionPoId);
+    ImportManifestBlDto getImportManifest(Long transactionPoId);
 
     void delete(Long transactionPoId, DeleteReasonDto deleteReasonDto);
 
@@ -30,10 +31,10 @@ public interface ImportManifestService {
 
     Map<String, Object> list(FilterRequestDto filters, Pageable pageable);
 
-    ImportManifestBlRequestDto createImportManifestBl(ImportManifestBlCreateDto request, Long companyPoid, Long groupPoid);
+    ImportManifestBlResponseDto createImportManifestBl(ImportManifestBlDto request, Long companyPoid, Long groupPoid);
 
 
-    ImportManifestBlRequestDto updateImportManifestBl(Long id, @Valid ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid);
+    ImportManifestBlResponseDto updateImportManifestBl(Long id,  ImportManifestBlDto dto);
 
     ContainersDropDownDto getContainerTypesByVoyage(Long voyageTransPoid);
 

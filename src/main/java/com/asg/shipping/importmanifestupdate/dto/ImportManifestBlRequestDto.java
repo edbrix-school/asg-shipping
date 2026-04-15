@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,7 +20,7 @@ public class ImportManifestBlRequestDto {
     private Long groupPoid;
     private Long companyPoid;
     private String docRef;
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
     private Long voyageTransactionPoid;
     private String blNumber;
     private String agentReference;
@@ -39,11 +40,11 @@ public class ImportManifestBlRequestDto {
     private Long noOfOrgnlBls;
     private String exportReference;
     private String lpoSrnNo;
-    private LocalDateTime lpoSrnDate;
+    private LocalDate lpoSrnDate;
     private String typeOfMove;
     private String preCarriedBy;
     private Long placeOfIssuePoid;
-    private LocalDateTime dateOfIssue;
+    private LocalDate dateOfIssue;
     private String printFreightDetails;
     private BigDecimal totalVolume;
     private BigDecimal totalNetVolume;
@@ -59,13 +60,13 @@ public class ImportManifestBlRequestDto {
     private String remarks;
     private String blStatus;
     private String blOrginalPrint;
-    private LocalDateTime blOrginalDate;
+    private LocalDate blOrginalDate;
     private String blPrintedBy;
     private String uniqueBlno;
     private BigDecimal demRate;
     private Long demFreeDays;
     private String releasedStatus;
-    private LocalDateTime releasedDate;
+    private LocalDate releasedDate;
     private String relasedToPerson;
     private String relasedIdPerson;
     private String relasedAddrsPerson;
@@ -74,7 +75,7 @@ public class ImportManifestBlRequestDto {
     private String releasedType;
     private Long relasedSeqno;
     private String releasedGrantBy;
-    private LocalDateTime releasedGrantDate;
+    private LocalDate releasedGrantDate;
     private String releasedGrantReason;
     private String cargoType;
     private String blType;
@@ -97,7 +98,7 @@ public class ImportManifestBlRequestDto {
     private String holdCanDo;
     private String holdReason;
     private String canSentQueue;
-    private LocalDateTime canSentDate;
+    private LocalDate canSentDate;
     private String canSentBy;
     private Long documentCompanyPoid;
     private Long documentCompanyDivisionPoid;
