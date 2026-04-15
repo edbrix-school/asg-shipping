@@ -13,6 +13,8 @@ import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.*;
 import com.asg.shipping.linetariffs.entity.*;
+import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
+import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -55,44 +58,33 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private final LineTariffMapper mapper;
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
+    private final ShipContainerTypeMasterRepository containerTypeRepository;
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
         log.info("Searching line tariffs with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
 
-        // Resolve filter components from FilterRequestDto
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = documentService.resolveFilters(request);
-        
-        // Add date filters if provided
-        if (startDate != null && endDate != null) {
-            // Add date range filter for TRANSACTION_DATE field
-            filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
-        }
 
-        // Call documentService.search with docId, filters, operator, pageable, isDeleted
-        // Label field: "DESCRIPTION" (display field)
-        // Value field: "TRANSACTION_POID" (primary key)
         RawSearchResult raw = documentService.search(
                 docId,
                 filters,
                 operator,
                 pageable,
                 isDeleted,
-                "DESCRIPTION",        // label field for display
-                TRANSACTION_POID_COL   // value field (primary key)
+                "DESCRIPTION",
+                TRANSACTION_POID_COL
         );
 
-        // Convert RawSearchResult to Page
         Page<Map<String, Object>> page = new PageImpl<>(
                 raw.records(),
                 pageable,
                 raw.totalRecords()
         );
 
-        // Wrap with pagination and display fields
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
@@ -112,7 +104,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
-        LineTariffDto dto = mapper.mapToDto(tariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto dto = mapper.mapToDto(tariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
@@ -163,7 +155,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
 
-        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
         log.info("Successfully created line tariff with id: {}", saved.getTransactionPoid());
         return result;
     }
@@ -218,7 +210,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
-        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto result = mapper.mapToDto(saved, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
         log.info("Successfully updated line tariff with id: {}", id);
         return result;
     }
@@ -253,6 +245,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         ShipLineTariffHdr sourceTariff = tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, id.toString()));
 
+        // Validate period dates first
+        if (request.getPeriodFrom().isAfter(request.getPeriodTo())) {
+            throw new ValidationException("Period from date must be less than or equal to period to date");
+        }
+
         // Validate new period does not overlap
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
         if (tariffHdrRepository.existsOverlappingPeriod(
@@ -265,13 +262,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             throw new ValidationException("New period overlaps with an existing tariff for the same line");
         }
 
-        // Validate period dates
-        if (request.getPeriodFrom().isAfter(request.getPeriodTo())) {
-            throw new ValidationException("Period from date must be less than or equal to period to date");
-        }
-
         // Update source tariff PERIOD_TO to new PERIOD_FROM - 1 day
         LocalDate newPeriodTo = request.getPeriodFrom().minusDays(1);
+        if (!newPeriodTo.isAfter(sourceTariff.getPeriodFrom()) && !newPeriodTo.isEqual(sourceTariff.getPeriodFrom())) {
+            throw new ValidationException("New period from date would invalidate the source tariff period");
+        }
         sourceTariff.setPeriodTo(newPeriodTo);
         sourceTariff.setLastModifiedBy(getCurrentUser());
         sourceTariff.setLastModifiedDate(LocalDateTime.now());
@@ -318,7 +313,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
 
-        LineTariffDto result = mapper.mapToDto(savedNewTariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList);
+        LineTariffDto result = mapper.mapToDto(savedNewTariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
         log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, savedNewTariff.getTransactionPoid());
         return result;
     }
@@ -785,6 +780,25 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         }
     }
 
+    private Map<Long, ShipContainerTypeMaster> buildContainerTypeMap(
+            List<ShipLineTariffImpDtl> impDtlList,
+            List<ShipLineTariffImpPayDtl> impPayDtlList,
+            List<ShipLineTariffExpDtl> expDtlList,
+            List<ShipLineTariffExpPayDtl> expPayDtlList) {
+
+        Set<Long> poids = Stream.of(
+                impDtlList.stream().map(ShipLineTariffImpDtl::getContainerTypePoid),
+                impPayDtlList.stream().map(ShipLineTariffImpPayDtl::getContainerTypePoid),
+                expDtlList.stream().map(ShipLineTariffExpDtl::getContainerTypePoid),
+                expPayDtlList.stream().map(ShipLineTariffExpPayDtl::getContainerTypePoid)
+        ).flatMap(s -> s).filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+
+        if (poids.isEmpty()) return Map.of();
+
+        return containerTypeRepository.findAllById(poids).stream()
+                .collect(Collectors.toMap(ShipContainerTypeMaster::getContainerTypePoid, ct -> ct));
+    }
+
     private void validateMutuallyExclusiveFlags(
             String dmgFromSameday,
             String dmgFromNextday,
@@ -797,6 +811,56 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if ("Y".equals(dtnFromSameday) && "Y".equals(dtnFromNextday)) {
             throw new ValidationException("Same day and Next day both cannot be selected for Detention");
         }
+    }
+
+    @Override
+    @Transactional
+    public void copySlabsToPayable(Long id, String type) {
+        log.info("Copying slabs to payable for transactionPoid: {}, type: {}", id, type);
+        if ("DMG".equalsIgnoreCase(type)) {
+            List<ShipLineTariffImpDtl> collectables = impDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+            List<ShipLineTariffImpPayDtl> payables = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+            Map<Long, ShipLineTariffImpPayDtl> payableByContainerType = payables.stream()
+                    .filter(p -> p.getContainerTypePoid() != null)
+                    .collect(Collectors.toMap(ShipLineTariffImpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
+            for (ShipLineTariffImpDtl col : collectables) {
+                if (col.getContainerTypePoid() == null) continue;
+                ShipLineTariffImpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
+                if (pay == null) continue;
+                pay.setFreeDays(col.getFreeDays());
+                pay.setSlab1Tilldays(col.getSlab1Tilldays()); pay.setSlab1Rate(col.getSlab1Rate());
+                pay.setSlab2Tilldays(col.getSlab2Tilldays()); pay.setSlab2Rate(col.getSlab2Rate());
+                pay.setSlab3Tilldays(col.getSlab3Tilldays()); pay.setSlab3Rate(col.getSlab3Rate());
+                pay.setSlab4Tilldays(col.getSlab4Tilldays()); pay.setSlab4Rate(col.getSlab4Rate());
+                pay.setSlab5Tilldays(col.getSlab5Tilldays()); pay.setSlab5Rate(col.getSlab5Rate());
+                pay.setSlab6Tilldays(col.getSlab6Tilldays()); pay.setSlab6Rate(col.getSlab6Rate());
+                pay.setSlab7Tilldays(col.getSlab7Tilldays()); pay.setSlab7Rate(col.getSlab7Rate());
+                impPayDtlRepository.save(pay);
+            }
+        } else if ("DTN".equalsIgnoreCase(type)) {
+            List<ShipLineTariffExpDtl> collectables = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+            List<ShipLineTariffExpPayDtl> payables = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+            Map<Long, ShipLineTariffExpPayDtl> payableByContainerType = payables.stream()
+                    .filter(p -> p.getContainerTypePoid() != null)
+                    .collect(Collectors.toMap(ShipLineTariffExpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
+            for (ShipLineTariffExpDtl col : collectables) {
+                if (col.getContainerTypePoid() == null) continue;
+                ShipLineTariffExpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
+                if (pay == null) continue;
+                pay.setFreeDays(col.getFreeDays());
+                pay.setSlab1Tilldays(col.getSlab1Tilldays()); pay.setSlab1Rate(col.getSlab1Rate());
+                pay.setSlab2Tilldays(col.getSlab2Tilldays()); pay.setSlab2Rate(col.getSlab2Rate());
+                pay.setSlab3Tilldays(col.getSlab3Tilldays()); pay.setSlab3Rate(col.getSlab3Rate());
+                pay.setSlab4Tilldays(col.getSlab4Tilldays()); pay.setSlab4Rate(col.getSlab4Rate());
+                pay.setSlab5Tilldays(col.getSlab5Tilldays()); pay.setSlab5Rate(col.getSlab5Rate());
+                pay.setSlab6Tilldays(col.getSlab6Tilldays()); pay.setSlab6Rate(col.getSlab6Rate());
+                pay.setSlab7Tilldays(col.getSlab7Tilldays()); pay.setSlab7Rate(col.getSlab7Rate());
+                expPayDtlRepository.save(pay);
+            }
+        } else {
+            throw new ValidationException("Invalid type. Must be DMG or DTN");
+        }
+        log.info("Successfully copied slabs to payable for transactionPoid: {}, type: {}", id, type);
     }
 }
 

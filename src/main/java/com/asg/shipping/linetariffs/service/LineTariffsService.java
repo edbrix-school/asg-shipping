@@ -73,5 +73,15 @@ public interface LineTariffsService {
      * @return Newly created LineTariffDto
      */
     LineTariffDto copyLineTariff(Long id, CopyTariffRequestDTO request, Long groupPoid, Long userPoid);
+
+    /**
+     * Copy slab data from collectable to payable detail records (matching by containerTypePoid).
+     * DMG: copies ImpDtl slabs -> ImpPayDtl
+     * DTN: copies ExpDtl slabs -> ExpPayDtl
+     *
+     * @param id TRANSACTION_POID
+     * @param type "DMG" for import demurrage, "DTN" for export detention
+     */
+    void copySlabsToPayable(Long id, String type);
 }
 
