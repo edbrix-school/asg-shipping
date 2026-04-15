@@ -583,6 +583,13 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     }
 
     @Override
+    public void ediMovesLoadDischarge(Long voyagePoid, String ediDateValue) {
+        Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
+        log.info("EDI moves load/discharge | voyagePoid={} ediDateValue={} userPoid={}", voyagePoid, ediDateValue, userPoid);
+        storedProcedureRepository.procShipCsclEdiOutPp(ediDateValue, userPoid);
+    }
+
+    @Override
     public String importSelectedXl(Long voyagePoid) {
         log.info("Import selected XL template | voyagePoid={}", voyagePoid);
         return storedProcedureRepository.procLoadEdiXlTemplate(voyagePoid);

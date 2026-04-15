@@ -48,10 +48,8 @@ public class StoredProcedureRepository {
         StoredProcedureQuery q = entityManager.createStoredProcedureQuery("PROD_RESEND_CAN");
         q.registerStoredProcedureParameter(1, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);
-        q.registerStoredProcedureParameter(3, String.class, ParameterMode.IN);
         q.setParameter(1, voyageTransactionPoid);
         q.setParameter(2, blTransactionPoid);
-        q.setParameter(3, "C");
         q.execute();
     }
 
@@ -218,7 +216,7 @@ public class StoredProcedureRepository {
         List<String> linuxResult = entityManager.createNativeQuery(
                 "SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS " +
                 "WHERE PARAMETER_NAME = 'LINUX_LINE_EDI_FOLDER' " +
-                "AND PARAMETER_KEYID_TYPE = 'GROUP' " +
+                "AND PARAMETER_KEYID_TYPE = 'Company' " +
                 "AND PARAMETER_KEYID = :groupPoid " +
                 "AND NVL(DELETED,'N') = 'N' " +
                 "AND ROWNUM = 1"
@@ -233,7 +231,7 @@ public class StoredProcedureRepository {
         List<String> winResult = entityManager.createNativeQuery(
                 "SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS " +
                 "WHERE PARAMETER_NAME = 'LINE_EDI_FOLDER' " +
-                "AND PARAMETER_KEYID_TYPE = 'GROUP' " +
+                "AND PARAMETER_KEYID_TYPE = 'Company' " +
                 "AND PARAMETER_KEYID = :groupPoid " +
                 "AND NVL(DELETED,'N') = 'N' " +
                 "AND ROWNUM = 1"
@@ -247,6 +245,19 @@ public class StoredProcedureRepository {
      * Legacy: PDA_ENTRY_HDR TDR reference lookup — MIN(DOC_REF) for a voyage, REF_TYPE='TDR'.
      * Returns "NO_TDR" when no TDR exists.
      */
+    /**
+     * Legacy: EdiMovesLoadDischarge — PROC_SHIP_CSCL_EDI_OUT_PP(ediDate, userPoid)
+     * Triggers EDI moves load/discharge export for CSCL line.
+     */
+    public void procShipCsclEdiOutPp(String ediDateValue, Long loginUserPoid) {
+        StoredProcedureQuery q = entityManager.createStoredProcedureQuery("PROC_SHIP_CSCL_EDI_OUT_PP");
+        q.registerStoredProcedureParameter(1, String.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);
+        q.setParameter(1, ediDateValue);
+        q.setParameter(2, loginUserPoid);
+        q.execute();
+    }
+
     public String findTdrDocRef(Long voyagePoid) {
         @SuppressWarnings("unchecked")
         List<String> result = entityManager.createNativeQuery(

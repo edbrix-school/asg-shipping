@@ -63,6 +63,11 @@ public interface VesselVoyageService {
 
     String importSelectedXl(Long voyagePoid);
 
+    /**
+     * Legacy: EdiMovesLoadDischarge — fires PROC_SHIP_CSCL_EDI_OUT_PP(ediDateValue, userPoid)
+     */
+    void ediMovesLoadDischarge(Long voyagePoid, String ediDateValue);
+
     Resource downloadExcelExport(Long voyagePoid, String type);
 
     Resource downloadManifestReport(Long voyagePoid, String freightCargo, String importExport);
