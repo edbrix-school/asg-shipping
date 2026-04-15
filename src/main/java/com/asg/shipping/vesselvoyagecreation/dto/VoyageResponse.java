@@ -59,6 +59,12 @@ public class VoyageResponse {
     private String mscVesselVoyageReff;
 
     private String deleted;
+
+    // Populated from PDA_ENTRY_HDR (TDR reference against this voyage). "NO_TDR" when none found.
+    private String tdrDocRef;
+
+    // True when the selected line is MSC — drives MSC-specific UI fields
+    private boolean mscLine;
 }
 
 

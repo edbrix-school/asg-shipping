@@ -7,6 +7,8 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.StoredProcedureQuery;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 @Slf4j
 public class StoredProcedureRepository {
@@ -132,6 +134,63 @@ public class StoredProcedureRepository {
         q.setParameter(1, voyagePoid);
         q.execute();
         return (String) q.getOutputParameterValue(2);
+    }
+
+    /**
+     * Legacy: PROC_SHIP_BL_PAGE_SAVE_AFTER — called in DocumentAfterSave when MSC voyage ref is present.
+     * Triggers MSC data load after a voyage save.
+     */
+    public void procShipBlPageSaveAfter(Long groupPoid, Long companyPoid, Long voyagePoid, String mscRef, Long userPoid) {
+        StoredProcedureQuery q = entityManager.createStoredProcedureQuery("PROC_SHIP_BL_PAGE_SAVE_AFTER");
+        q.registerStoredProcedureParameter(1, Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(3, Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(4, String.class, ParameterMode.IN); // null
+        q.registerStoredProcedureParameter(5, String.class, ParameterMode.IN); // "MSCDATALOAD~" + mscRef
+        q.registerStoredProcedureParameter(6, Long.class, ParameterMode.IN);
+        q.setParameter(1, groupPoid);
+        q.setParameter(2, companyPoid);
+        q.setParameter(3, voyagePoid);
+        q.setParameter(4, null);
+        q.setParameter(5, "MSCDATALOAD~" + mscRef);
+        q.setParameter(6, userPoid);
+        q.execute();
+    }
+
+    /**
+     * Legacy: PROC_SHIP_DATA_TRN_EDI — called in updateFetchVoyageData to fetch/sync MSC voyage data.
+     * Returns a result string; caller should check for "ERROR".
+     */
+    public String procShipDataTrnEdi(Long groupPoid, Long companyPoid, Long voyagePoid, String mscRef, Long userPoid) {
+        StoredProcedureQuery q = entityManager.createStoredProcedureQuery("PROC_SHIP_DATA_TRN_EDI");
+        q.registerStoredProcedureParameter(1, Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(3, Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(4, String.class, ParameterMode.IN); // null
+        q.registerStoredProcedureParameter(5, String.class, ParameterMode.IN); // "MSCDATALOAD~" + mscRef
+        q.registerStoredProcedureParameter(6, String.class, ParameterMode.OUT);
+        q.registerStoredProcedureParameter(7, Long.class, ParameterMode.IN);
+        q.setParameter(1, groupPoid);
+        q.setParameter(2, companyPoid);
+        q.setParameter(3, voyagePoid);
+        q.setParameter(4, null);
+        q.setParameter(5, "MSCDATALOAD~" + mscRef);
+        q.setParameter(7, userPoid);
+        q.execute();
+        return (String) q.getOutputParameterValue(6);
+    }
+
+    /**
+     * Legacy: PDA_ENTRY_HDR TDR reference lookup — MIN(DOC_REF) for a voyage, REF_TYPE='TDR'.
+     * Returns "NO_TDR" when no TDR exists.
+     */
+    public String findTdrDocRef(Long voyagePoid) {
+        @SuppressWarnings("unchecked")
+        List<String> result = entityManager.createNativeQuery(
+                "SELECT NVL(MIN(DOC_REF),'NO_TDR') FROM PDA_ENTRY_HDR " +
+                "WHERE VOYAGE_POID = :voyagePoid AND NVL(DELETED,'N') = 'N' AND REF_TYPE = 'TDR'"
+        ).setParameter("voyagePoid", voyagePoid).getResultList();
+        return (result == null || result.isEmpty()) ? "NO_TDR" : result.get(0);
     }
 }
 

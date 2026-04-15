@@ -207,9 +207,18 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         String lineCode = voyageLineMasterRepository.findLineCodeByLinePoid(e.getLinePoid()).orElse(null);
 
+        // Legacy: TdrAgainstJobVesselVoyage — fetch TDR doc reference for this voyage
+        String tdrDocRef = storedProcedureRepository.findTdrDocRef(voyagePoid);
+
+        // Legacy: RenderMscLineVesselVoyage — check if selected line is MSC
+        boolean isMscLine = e.getLinePoid() != null && voyageLineMasterRepository.isMscLine(e.getLinePoid());
+
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), voyagePoid.toString());
 
-        return VoyageMapper.toResponse(e, lineCode);
+        VoyageResponse response = VoyageMapper.toResponse(e, lineCode);
+        response.setTdrDocRef(tdrDocRef);
+        response.setMscLine(isMscLine);
+        return response;
     }
 
     @Override
@@ -233,6 +242,14 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         ShipVoyageHdrEntity saved = voyageHdrRepository.save(entity);
         // Reload to get trigger-populated docRef/jobNo if needed
         ShipVoyageHdrEntity fresh = voyageHdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
+
+        // Legacy: DocumentAfterSave — trigger MSC data load if mscVesselVoyageReff is present and length > 5
+        if (request.getMscVesselVoyageReff() != null && request.getMscVesselVoyageReff().length() > 5) {
+            Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
+            storedProcedureRepository.procShipBlPageSaveAfter(
+                    groupPoid, companyPoid, fresh.getTransactionPoid(),
+                    request.getMscVesselVoyageReff(), userPoid);
+        }
 
         // Add logging
         String docId = UserContext.getDocumentId();
@@ -267,6 +284,14 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         VoyageMapper.updateEntity(entity, request);
         voyageHdrRepository.save(entity);
+
+        // Legacy: DocumentAfterSave — trigger MSC data load if mscVesselVoyageReff is present and length > 5
+        if (request.getMscVesselVoyageReff() != null && request.getMscVesselVoyageReff().length() > 5) {
+            Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
+            storedProcedureRepository.procShipBlPageSaveAfter(
+                    groupPoid, companyPoid, voyagePoid,
+                    request.getMscVesselVoyageReff(), userPoid);
+        }
 
         // Add logging
         String docId = UserContext.getDocumentId();
@@ -306,7 +331,10 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     public List<VwShipEdiExceptionUploadEntity> getEdiErrors(Long voyagePoid) {
-        return ediExceptionUploadRepository.findByTransactionPoidOrderByPkIdRowAsc(voyagePoid);
+        List<VwShipEdiExceptionUploadEntity> errors = ediExceptionUploadRepository.findByTransactionPoidOrderByPkIdRowAsc(voyagePoid);
+        // Legacy PressForErrorEdiAction had a bug: EdiErrors = null + ";" + value = "null;..."
+        // Returning the list directly avoids that; the FE should join them as needed.
+        return errors == null ? Collections.emptyList() : errors;
     }
 
     @Override
@@ -479,6 +507,47 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         String userCode = Optional.ofNullable(UserContext.getUserId()).orElse("0");
         log.info("General cargo import | voyagePoid={} groupPoid={} companyPoid={} user={}", voyagePoid, groupPoid, companyPoid, userCode);
         return storedProcedureRepository.procGeneralImportCargo(groupPoid, companyPoid, userCode, voyagePoid);
+    }
+
+    @Override
+    public void triggerMscDataLoad(Long voyagePoid) {
+        Long groupPoid = require(UserContext.getGroupPoid(), MISSING_GROUP_POID);
+        Long companyPoid = require(UserContext.getCompanyPoid(), MISSING_COMPANY_POID);
+        Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
+
+        ShipVoyageHdrEntity entity = voyageHdrRepository.findById(voyagePoid)
+                .orElseThrow(() -> new ResourceNotFoundException(VESSEL_VOYAGE_NOT_FOUND_PREFIX + voyagePoid));
+
+        // Legacy: DocumentAfterSave guard — only fire when mscVesselVoyageReff length > 5
+        if (entity.getMscVesselVoyageReff() == null || entity.getMscVesselVoyageReff().length() <= 5) {
+            log.info("triggerMscDataLoad skipped: mscVesselVoyageReff absent or too short for voyagePoid={}", voyagePoid);
+            return;
+        }
+        log.info("Trigger MSC data load | voyagePoid={} mscRef={}", voyagePoid, entity.getMscVesselVoyageReff());
+        storedProcedureRepository.procShipBlPageSaveAfter(
+                groupPoid, companyPoid, voyagePoid, entity.getMscVesselVoyageReff(), userPoid);
+    }
+
+    @Override
+    public String fetchMscVoyageData(Long voyagePoid) {
+        Long groupPoid = require(UserContext.getGroupPoid(), MISSING_GROUP_POID);
+        Long companyPoid = require(UserContext.getCompanyPoid(), MISSING_COMPANY_POID);
+        Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
+
+        ShipVoyageHdrEntity entity = voyageHdrRepository.findById(voyagePoid)
+                .orElseThrow(() -> new ResourceNotFoundException(VESSEL_VOYAGE_NOT_FOUND_PREFIX + voyagePoid));
+
+        // Legacy: updateFetchVoyageData guard — only fire when mscVesselVoyageReff length > 5
+        if (entity.getMscVesselVoyageReff() == null || entity.getMscVesselVoyageReff().length() <= 5) {
+            throw new IllegalArgumentException("MSC vessel voyage reference is required (min length 6)");
+        }
+        log.info("Fetch MSC voyage data | voyagePoid={} mscRef={}", voyagePoid, entity.getMscVesselVoyageReff());
+        String result = storedProcedureRepository.procShipDataTrnEdi(
+                groupPoid, companyPoid, voyagePoid, entity.getMscVesselVoyageReff(), userPoid);
+        if (result == null || result.isEmpty() || result.contains("ERROR")) {
+            throw new IllegalStateException("MSC fetch failed: " + result);
+        }
+        return "Record Inserted: " + result;
     }
 
     @Override
