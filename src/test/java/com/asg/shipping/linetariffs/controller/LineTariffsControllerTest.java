@@ -53,67 +53,23 @@ class LineTariffsControllerTest {
     @Test
     void searchLineTariffs_Success() {
         Map<String, Object> result = new HashMap<>();
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), any(), any()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null),
-                0,
-                20,
-                "description,asc",
-                null,
-                null
-        );
+                new FilterRequestDto(null, null, null), 0, 20, "description,asc");
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).searchLineTariffs(anyString(), any(), any(), isNull(), isNull());
-    }
-
-    @Test
-    void searchLineTariffs_WithOnlyStartDate_ReturnsBadRequest() {
-        ResponseEntity<?> response = controller.searchLineTariffs(
-                null,
-                0,
-                20,
-                null,
-                LocalDate.of(2026, 1, 1),
-                null
-        );
-
-        assertNotNull(response);
-        assertEquals(400, response.getStatusCode().value());
-        verifyNoInteractions(lineTariffsService);
-    }
-
-    @Test
-    void searchLineTariffs_WithOnlyEndDate_ReturnsBadRequest() {
-        ResponseEntity<?> response = controller.searchLineTariffs(
-                null,
-                0,
-                20,
-                null,
-                null,
-                LocalDate.of(2026, 12, 31));
-
-        assertNotNull(response);
-        assertEquals(400, response.getStatusCode().value());
-        verifyNoInteractions(lineTariffsService);
+        verify(lineTariffsService).searchLineTariffs(eq(DOC_ID), any(), any(), isNull(), isNull());
     }
 
     @Test
     void searchLineTariffs_WhenServiceThrows_ReturnsInternalServerError() {
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), any(), any()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
                 .thenThrow(new RuntimeException("boom"));
 
-        ResponseEntity<?> response = controller.searchLineTariffs(
-                null,
-                0,
-                20,
-                null,
-                null,
-                null
-        );
+        ResponseEntity<?> response = controller.searchLineTariffs(null, 0, 20, null);
 
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
@@ -129,19 +85,10 @@ class LineTariffsControllerTest {
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null),
-                0,
-                20,
-                " description , desc ",
-                null,
-                null);
+                new FilterRequestDto(null, null, null), 0, 20, " description , desc ");
 
-        assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-
-        var pageable = pageableCaptor.getValue();
-        assertTrue(pageable.getSort().isSorted());
-        Sort.Order order = pageable.getSort().getOrderFor("description");
+        Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("description");
         assertNotNull(order);
         assertEquals(Sort.Direction.DESC, order.getDirection());
     }
@@ -155,19 +102,9 @@ class LineTariffsControllerTest {
         when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
                 .thenReturn(result);
 
-        ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null),
-                0,
-                20,
-                "description",
-                null,
-                null);
+        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-
-        var pageable = pageableCaptor.getValue();
-        Sort.Order order = pageable.getSort().getOrderFor("description");
+        Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("description");
         assertNotNull(order);
         assertEquals(Sort.Direction.ASC, order.getDirection());
     }
@@ -181,19 +118,9 @@ class LineTariffsControllerTest {
         when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
                 .thenReturn(result);
 
-        ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null),
-                0,
-                20,
-                "",
-                null,
-                null);
+        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-
-        var pageable = pageableCaptor.getValue();
-        assertTrue(pageable.getSort().isUnsorted());
+        assertTrue(pageableCaptor.getValue().getSort().isUnsorted());
     }
 
     @Test
@@ -205,42 +132,9 @@ class LineTariffsControllerTest {
         when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
                 .thenReturn(result);
 
-        ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null),
-                0,
-                20,
-                "description,desc,extra",
-                null,
-                null);
+        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description,desc,extra");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-
-        var pageable = pageableCaptor.getValue();
-        assertTrue(pageable.getSort().isUnsorted());
-    }
-
-    @Test
-    void searchLineTariffs_withBothDates_passesDatesToService() {
-        Map<String, Object> result = new HashMap<>();
-        LocalDate startDate = LocalDate.of(2026, 1, 1);
-        LocalDate endDate = LocalDate.of(2026, 12, 31);
-
-        when(lineTariffsService.searchLineTariffs(
-                eq(DOC_ID), any(), any(), eq(startDate), eq(endDate)))
-                .thenReturn(result);
-
-        ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null),
-                0,
-                20,
-                null,
-                startDate,
-                endDate);
-
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).searchLineTariffs(eq(DOC_ID), any(), any(), eq(startDate), eq(endDate));
+        assertTrue(pageableCaptor.getValue().getSort().isUnsorted());
     }
 
     @Test
@@ -284,12 +178,8 @@ class LineTariffsControllerTest {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(1L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getUserPoid).thenReturn(2L);
 
-            LineTariffUpdateDTO updateDTO = LineTariffUpdateDTO.builder()
-                    .description("Updated")
-                    .build();
-
-            when(lineTariffsService.updateLineTariff(eq(1L), any(), anyLong(), anyLong()))
-                    .thenReturn(testDto);
+            LineTariffUpdateDTO updateDTO = LineTariffUpdateDTO.builder().description("Updated").build();
+            when(lineTariffsService.updateLineTariff(eq(1L), any(), anyLong(), anyLong())).thenReturn(testDto);
 
             ResponseEntity<?> response = controller.updateLineTariff(1L, updateDTO);
 
@@ -323,8 +213,7 @@ class LineTariffsControllerTest {
 
     @Test
     void deleteLineTariff_WhenServiceThrows_Returns500() {
-        doThrow(new RuntimeException("boom"))
-                .when(lineTariffsService).deleteLineTariff(eq(1L), any());
+        doThrow(new RuntimeException("boom")).when(lineTariffsService).deleteLineTariff(eq(1L), any());
 
         ResponseEntity<?> response = controller.deleteLineTariff(1L, null);
 
@@ -345,8 +234,7 @@ class LineTariffsControllerTest {
                     .description("Copied")
                     .build();
 
-            when(lineTariffsService.copyLineTariff(eq(1L), any(), anyLong(), anyLong()))
-                    .thenReturn(testDto);
+            when(lineTariffsService.copyLineTariff(eq(1L), any(), anyLong(), anyLong())).thenReturn(testDto);
 
             ResponseEntity<?> response = controller.copyLineTariff(1L, request);
 
@@ -355,5 +243,26 @@ class LineTariffsControllerTest {
             verify(lineTariffsService).copyLineTariff(eq(1L), any(), eq(1L), eq(2L));
         }
     }
-}
 
+    @Test
+    void copySlabsToPayable_DMG_Success() {
+        doNothing().when(lineTariffsService).copySlabsToPayable(1L, "DMG");
+
+        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG");
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        verify(lineTariffsService).copySlabsToPayable(1L, "DMG");
+    }
+
+    @Test
+    void copySlabsToPayable_DTN_Success() {
+        doNothing().when(lineTariffsService).copySlabsToPayable(1L, "DTN");
+
+        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DTN");
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        verify(lineTariffsService).copySlabsToPayable(1L, "DTN");
+    }
+}
