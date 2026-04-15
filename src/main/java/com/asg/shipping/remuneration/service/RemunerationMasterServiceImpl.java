@@ -45,8 +45,8 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
 
-    private static final String REMUNERATION="Remuneration";
-    private static final String REMUNERATION_POID="REMUNERATION_POID";
+    private static final String REMUNERATION = "Remuneration";
+    private static final String REMUNERATION_POID = "REMUNERATION_POID";
 
     @Override
     public Map<String, Object> listRemunerations(String docId, FilterRequestDto request, Pageable pageable) {
@@ -65,19 +65,16 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
     }
 
     @Override
-    public ShipRemunerationMasterResponseDto createRemuneration(ShipRemunerationMasterRequestDto requestDto) throws ValidationException {
+    public ShipRemunerationMasterResponseDto createRemuneration(ShipRemunerationMasterRequestDto requestDto) {
         log.info("Creating remuneration with code: {}", requestDto.getRemunCode());
 
-        if (StringUtils.isBlank(requestDto.getRemunCode())) {
-            throw new ValidationException("Remuneration code is required", String.valueOf(400));
-        }
         if (repository.existsByRemunCodeIgnoreCase(requestDto.getRemunCode())) {
             throw new ResourceAlreadyExistsException("Remuneration Code", requestDto.getRemunCode());
         }
-        if (!shipChargeMasterRepository.existsByChargePoid(requestDto.getRemunChargeCodePoid())) {
+        if (requestDto.getRemunChargeCodePoid() != null && !shipChargeMasterRepository.existsByChargePoid(requestDto.getRemunChargeCodePoid())) {
             throw new ResourceNotFoundException("Charge Master", "Remuneration Charge Code Poid", requestDto.getRemunChargeCodePoid());
         }
-        if (!glMasterRepository.existsByGlPoid(requestDto.getGlPoid())) {
+        if (requestDto.getGlPoid() != null && !glMasterRepository.existsByGlPoid(requestDto.getGlPoid())) {
             throw new ResourceNotFoundException("Gl Master", "Gl Poid", requestDto.getGlPoid());
         }
 
@@ -100,10 +97,10 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
         ShipRemunerationMaster oldEntity = new ShipRemunerationMaster();
         BeanUtils.copyProperties(entity, oldEntity);
 
-        if (!shipChargeMasterRepository.existsByChargePoid(requestDto.getRemunChargeCodePoid())) {
+        if (requestDto.getRemunChargeCodePoid() != null && !shipChargeMasterRepository.existsByChargePoid(requestDto.getRemunChargeCodePoid())) {
             throw new ResourceNotFoundException("Charge Master", "Remuneration Charge Code Poid", requestDto.getRemunChargeCodePoid());
         }
-        if (!glMasterRepository.existsByGlPoid(requestDto.getGlPoid())) {
+        if (requestDto.getGlPoid() != null && !glMasterRepository.existsByGlPoid(requestDto.getGlPoid())) {
             throw new ResourceNotFoundException("Gl Master", "Gl Poid", requestDto.getGlPoid());
         }
 
@@ -131,7 +128,7 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
     }
 
     @Override
-    public void softDeleteRemuneration(Long remunerationPoid, DeleteReasonDto deleteReasonDto) {
+    public void deleteRemuneration(Long remunerationPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting remuneration with id: {}", remunerationPoid);
 
         ShipRemunerationMaster entity = repository.findById(remunerationPoid)

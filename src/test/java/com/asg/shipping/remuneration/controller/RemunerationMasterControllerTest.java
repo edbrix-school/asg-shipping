@@ -92,11 +92,11 @@ class RemunerationMasterControllerTest {
     void testDelete() {
         DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
         deleteReasonDto.setDeleteReason("Test deletion");
-        doNothing().when(service).softDeleteRemuneration(anyLong(), any(DeleteReasonDto.class));
+        doNothing().when(service).deleteRemuneration(anyLong(), any(DeleteReasonDto.class));
 
         ResponseEntity<?> result = controller.delete(1L, deleteReasonDto);
         
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(service, times(1)).softDeleteRemuneration(eq(1L), any(DeleteReasonDto.class));
+        verify(service, times(1)).deleteRemuneration(eq(1L), any(DeleteReasonDto.class));
     }
 }
