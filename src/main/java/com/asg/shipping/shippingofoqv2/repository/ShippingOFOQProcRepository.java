@@ -19,5 +19,4 @@ public interface ShippingOFOQProcRepository {
                                     String responseCode, String responseMessage, String xmlResponse,
                                     String manifestType, String blNumber);
 
-    String getParameterValue(String parameterName);
 }
