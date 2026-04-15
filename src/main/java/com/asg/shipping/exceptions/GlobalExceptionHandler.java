@@ -6,6 +6,7 @@ import jakarta.xml.bind.ValidationException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -114,16 +115,77 @@ public class GlobalExceptionHandler {
         return ApiResponse.badRequest(msg);
     }
     
-    @ExceptionHandler(JpaSystemException.class)
-    public ResponseEntity<?> handleJpaSystemException(JpaSystemException ex,HttpServletRequest request) {
-    	log.error("Unexpected DB error at {} ", request.getRequestURI(), ex);
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.error("DataIntegrityViolation at {}", request.getRequestURI(), ex);
         String msg = ex.getMostSpecificCause().getMessage();
-
-        int index = msg.indexOf("\n");
-        if (index != -1) {
-            msg = msg.substring(0, index);
+        // ORA-20001: financial year violation (from SHIP_VOYAGE_HDR_GTTRG)
+        if (msg != null && msg.contains("ORA-20001")) {
+            return ApiResponse.badRequest(extractOraMessage(msg, "Changes allowed only within current Financial Period"));
         }
-        return ApiResponse.error(msg, HttpStatus.INTERNAL_SERVER_ERROR.value());
+        // ORA-20002: business rule violations (from SHIP_VOYAGE_HDR_TRG and other triggers)
+        if (msg != null && msg.contains("ORA-20002")) {
+            return ApiResponse.badRequest(extractOraMessage(msg, "Business rule violation"));
+        }
+        // FK constraint violation — e.g. invalid container type, line, vessel poid
+        if (msg != null && msg.contains("ORA-02291")) {
+            return ApiResponse.badRequest("Invalid reference: a required parent record does not exist. Please check your input values.");
+        }
+        // Unique constraint violation
+        if (msg != null && msg.contains("ORA-00001")) {
+            return ApiResponse.conflict("Duplicate record: a record with the same unique key already exists.");
+        }
+        return ApiResponse.error("Data integrity error: " + cleanOraMessage(msg), HttpStatus.BAD_REQUEST.value());
+    }
+
+    @ExceptionHandler(JpaSystemException.class)
+    public ResponseEntity<?> handleJpaSystemException(JpaSystemException ex, HttpServletRequest request) {
+        log.error("JpaSystemException at {}", request.getRequestURI(), ex);
+        String msg = ex.getMostSpecificCause().getMessage();
+        // ORA-20001: financial year violation (from SHIP_VOYAGE_HDR_GTTRG)
+        if (msg != null && msg.contains("ORA-20001")) {
+            return ApiResponse.badRequest(extractOraMessage(msg, "Changes allowed only within current Financial Period"));
+        }
+        // ORA-20002: business rule violations (from triggers)
+        if (msg != null && msg.contains("ORA-20002")) {
+            return ApiResponse.badRequest(extractOraMessage(msg, "Business rule violation"));
+        }
+        // FK constraint violation
+        if (msg != null && msg.contains("ORA-02291")) {
+            return ApiResponse.badRequest("Invalid reference: a required parent record does not exist. Please check your input values.");
+        }
+        // Unique constraint violation
+        if (msg != null && msg.contains("ORA-00001")) {
+            return ApiResponse.conflict("Duplicate record: a record with the same unique key already exists.");
+        }
+        return ApiResponse.error(cleanOraMessage(msg), HttpStatus.INTERNAL_SERVER_ERROR.value());
+    }
+
+    /**
+     * Extracts the human-readable message from an Oracle trigger error.
+     * Oracle format: "ORA-20001: <message>\nORA-06512: at ..."
+     * Returns the text after the error code, trimmed, up to the first newline.
+     */
+    private String extractOraMessage(String raw, String fallback) {
+        if (raw == null) return fallback;
+        // Find the colon after ORA-XXXXX and take text until next newline
+        int colonIdx = raw.indexOf(':');
+        if (colonIdx != -1 && colonIdx < raw.length() - 1) {
+            String after = raw.substring(colonIdx + 1).trim();
+            int newline = after.indexOf('\n');
+            String extracted = newline != -1 ? after.substring(0, newline).trim() : after.trim();
+            return extracted.isEmpty() ? fallback : extracted;
+        }
+        return fallback;
+    }
+
+    /**
+     * Strips Oracle stack trace lines (ORA-06512 etc.) leaving only the first line.
+     */
+    private String cleanOraMessage(String raw) {
+        if (raw == null) return "Unexpected database error";
+        int newline = raw.indexOf('\n');
+        return newline != -1 ? raw.substring(0, newline).trim() : raw.trim();
     }
 
     @ExceptionHandler(RuntimeException.class)

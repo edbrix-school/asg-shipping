@@ -30,6 +30,21 @@ public class ShipVoyageTranshipDtlEntity extends BaseEntity {
     @Column(name = "CONTAINER_TYPE", length = 25)
     private String containerType;
 
+    @Column(name = "SEAL_NO", length = 25)
+    private String sealNo;
+
+    @Column(name = "SEAL_NO2", length = 25)
+    private String sealNo2;
+
+    @Column(name = "SEAL_NO3", length = 25)
+    private String sealNo3;
+
+    @Column(name = "SEAL_KIND_CODE", length = 25)
+    private String sealKindCode;
+
+    @Column(name = "SEAL_KIND_CODE1", length = 25)
+    private String sealKindCode1;
+
     @Column(name = "ISO_CODE", length = 50)
     private String isoCode;
 
@@ -53,6 +68,18 @@ public class ShipVoyageTranshipDtlEntity extends BaseEntity {
 
     @Column(name = "REFFER_TEMP", length = 20)
     private String refferTemp;
+
+    @Column(name = "REFFER_HUM", length = 20)
+    private String refferHum;
+
+    @Column(name = "REFFER_VENT", length = 20)
+    private String refferVent;
+
+    @Column(name = "IMCO_CLASS_ACTUAL", length = 100)
+    private String imcoClassActual;
+
+    @Column(name = "IMO", length = 20)
+    private String imo;
 
     @Column(name = "IMO_CODE1", length = 25)
     private String imoCode1;
@@ -78,8 +105,23 @@ public class ShipVoyageTranshipDtlEntity extends BaseEntity {
     @Column(name = "OOG_R_W", length = 20)
     private String oogRW;
 
+    @Column(name = "OOG_B", length = 20)
+    private String oogB;
+
+    @Column(name = "OOG_F", length = 20)
+    private String oogF;
+
+    @Column(name = "OOG_A", length = 20)
+    private String oogA;
+
+    @Column(name = "OOG_TYPE", length = 25)
+    private String oogType;
+
     @Column(name = "LOAD_WEIGHT_KG", length = 25)
     private String loadWeightKg;
+
+    @Column(name = "WEIGHT_KG", length = 25)
+    private String weightKg;
 
     @Column(name = "WEIGHT_TON", length = 25)
     private String weightTon;
