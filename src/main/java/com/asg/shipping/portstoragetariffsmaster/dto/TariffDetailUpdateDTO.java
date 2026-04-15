@@ -20,6 +20,8 @@ public class TariffDetailUpdateDTO {
 
     private Long detRowId; // If provided, update existing; if null, create new
 
+    private String actionType;
+
     private Long containerTypePoid;
 
     @DecimalMin(value = "0.0", inclusive = true, message = "Container size must be non-negative")

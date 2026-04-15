@@ -22,18 +22,20 @@ import com.asg.shipping.portstoragetariffsmaster.repository.ShipPortTariffHdrRep
 import com.asg.shipping.portstoragetariffsmaster.util.PortStorageTariffMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import com.asg.common.lib.dto.request.LogRequestDto;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
+
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -53,17 +55,24 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
     private final PortStorageTariffMapper mapper;
     private final LoggingService loggingService;
 
-    private static final String TRANSACTION_POID="TRANSACTION_POID";
-    private static final String TRANSACTIONPOID="transactionPoid";
-    private static final String TARIFF="Tariff";
+    private static final String TRANSACTION_POID = "TRANSACTION_POID";
+    private static final String TRANSACTIONPOID  = "transactionPoid";
+    private static final String TARIFF            = "Tariff";
 
-    private static final String SLAB1="Slab 1";
-    private static final String SLAB2="Slab 2";
-    private static final String SLAB3="Slab 3";
-    private static final String SLAB4="Slab 4";
-    private static final String SLAB5="Slab 5";
-    private static final String SLAB6="Slab 6";
-    private static final String SLAB7="Slab 7";
+    private static final String ACTION_ISCREATED  = "ACTION_ISCREATED";
+    private static final String ACTION_ISUPDATED  = "ACTION_ISUPDATED";
+    private static final String ACTION_ISDELETED  = "ACTION_ISDELETED";
+    private static final String ACTION_NOCHANGES  = "ACTION_NOCHANGES";
+
+    private static final String LOG_KEY_ID_FORMAT = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
+
+    private static final String SLAB1 = "Slab 1";
+    private static final String SLAB2 = "Slab 2";
+    private static final String SLAB3 = "Slab 3";
+    private static final String SLAB4 = "Slab 4";
+    private static final String SLAB5 = "Slab 5";
+    private static final String SLAB6 = "Slab 6";
+    private static final String SLAB7 = "Slab 7";
 
 
     @Override
@@ -226,20 +235,7 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
                 "SHIP_PORT_TARIFF_HDR",
                 TRANSACTION_POID,
                 deleteReasonDto,
-                LocalDate.now()
-        );
-
-        // 4. Soft delete the tariff
-        tariff.setDeleted("Y");
-
-        tariffHdrRepository.save(tariff);
-
-        // Log deletion
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), tariffId.toString());
-        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", tariffId);
-        String tableName = ShipPortTariffHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), tariffId.toString(), "Deleted", "N", "Y", logDetail, tableName);
-
+                tariff.getTransactionDate());
         log.info("deleteTariff completed for tariffId={} companyPoid={}", tariffId, companyPoid);
     }
 
@@ -319,56 +315,110 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         }
     }
 
-    /**
-     * Update tariff detail records
-     */
+
     private void updateTariffDetails(Long transactionPoid, List<TariffDetailUpdateDTO> detailDtos) {
-        String currentUser = getCurrentUser();
-        List<ShipPortTariffDtl> existingDetails = tariffDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        Set<Long> existingDetRowIds = existingDetails.stream()
-                .map(ShipPortTariffDtl::getDetRowId)
-                .collect(Collectors.toSet());
+        if (detailDtos == null) return;
 
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .map(TariffDetailUpdateDTO::getDetRowId)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
+        String docId      = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
 
-        // Delete details not in request
-        List<Long> toDelete = existingDetRowIds.stream()
-                .filter(id -> !requestDetRowIds.contains(id))
-                .toList();
-        for (Long detRowId : toDelete) {
-            tariffDtlRepository.deleteById(new ShipPortTariffDtlId(transactionPoid, detRowId));
-        }
+        List<String>                            logEntries  = new ArrayList<>();
+        List<ShipPortTariffDtl>                 toUpdate    = new ArrayList<>();
+        List<ShipPortTariffDtlId>               toDelete    = new ArrayList<>();
+        List<LogRequestDto<ShipPortTariffDtl>>  logRequests = new ArrayList<>();
 
-        // Calculate next detRowId for new records
-        long nextDetRowId = existingDetRowIds.stream()
-                .max(Long::compareTo)
-                .orElse(0L) + 1;
-
-        // Update or create details
         for (TariffDetailUpdateDTO detailDto : detailDtos) {
             validateSlabDetails(detailDto);
-            if (detailDto.getDetRowId() != null) {
-                // Update existing
-                ShipPortTariffDtl existing = tariffDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Tariff Detail", "detRowId", detailDto.getDetRowId().toString()));
+            String action = resolveAction(detailDto.getActionType());
 
-                mapper.updateDetailFromDTO(detailDto, existing, currentUser);
-                tariffDtlRepository.save(existing);
-            } else {
-                // Create new
-                ShipPortTariffDtl newDetail = mapper.mapDetailUpdateDTOToEntity(detailDto, transactionPoid, currentUser);
-                newDetail.setDetRowId(nextDetRowId++);
-                tariffDtlRepository.save(newDetail);
+            switch (action) {
+                case ACTION_ISCREATED -> saveTariffDetail(detailDto, transactionPoid, logEntries);
+
+                case ACTION_ISUPDATED -> {
+                    ShipPortTariffDtl existing = tariffDtlRepository
+                            .findById(new ShipPortTariffDtlId(transactionPoid, detailDto.getDetRowId()))
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Tariff Detail", "detRowId", detailDto.getDetRowId()));
+
+                    ShipPortTariffDtl oldEntity = new ShipPortTariffDtl();
+                    BeanUtils.copyProperties(existing, oldEntity);
+
+                    mapper.updateDetailFromDTO(detailDto, existing, getCurrentUser());
+                    toUpdate.add(existing);
+
+                    String logDetail = String.format(LOG_KEY_ID_FORMAT, transactionPoid, detailDto.getDetRowId());
+                    logRequests.add(new LogRequestDto<>(
+                            oldEntity, existing, ShipPortTariffDtl.class, docId, docKeyPoid, logDetail));
+                }
+
+                case ACTION_ISDELETED ->
+                        Optional.ofNullable(detailDto.getDetRowId())
+                                .map(id -> new ShipPortTariffDtlId(transactionPoid, id))
+                                .ifPresent(toDelete::add);
+
+                default -> { /* ACTION_NOCHANGES – nothing to do */ }
+            }
+        }
+
+        // Bulk save updated records and log diffs
+        processUpdates(tariffDtlRepository, toUpdate, logRequests);
+
+        // Flush CREATE log-summary entries
+        logSummaryEntries(logEntries, docId, docKeyPoid);
+
+        // Bulk delete and log each deletion
+        if (!toDelete.isEmpty()) {
+            List<ShipPortTariffDtl> entitiesToDelete = tariffDtlRepository.findAllById(toDelete);
+            tariffDtlRepository.deleteAllInBatch(entitiesToDelete);
+            entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
+        }
+    }
+
+    private void saveTariffDetail(TariffDetailUpdateDTO detailDto, Long transactionPoid, List<String> logEntries) {
+        long nextDetRowId = getNextDetRowId(tariffDtlRepository.getMaxDetRowId(transactionPoid));
+        ShipPortTariffDtl entity = mapper.mapDetailUpdateDTOToEntity(detailDto, transactionPoid, getCurrentUser());
+        entity.setDetRowId(nextDetRowId);
+        tariffDtlRepository.save(entity);
+        logEntries.add(String.format("Row Created on Tariff Detail with DetRowId: %s", nextDetRowId));
+    }
+
+    /**
+     * Bulk-save updated entities and, if any field changes are detected, emit a
+     * batched audit log via {@link LoggingService#createLogBatch}.
+     */
+    private <T, ID> void processUpdates(JpaRepository<T, ID> repository,
+                                        List<T> entities,
+                                        List<LogRequestDto<T>> logRequests) {
+        if (!entities.isEmpty()) {
+            repository.saveAll(entities);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
             }
         }
     }
 
-    /**
-     * Validate TariffCreateDTO
-     */
+    private String resolveAction(String rawAction) {
+        String action = (rawAction == null || rawAction.trim().isEmpty())
+                ? ACTION_NOCHANGES
+                : rawAction.trim().toUpperCase();
+        return switch (action) {
+            case ACTION_ISCREATED, "ISCREATED", "CREATED", "NEW" -> ACTION_ISCREATED;
+            case ACTION_ISUPDATED, "ISUPDATED", "UPDATED"        -> ACTION_ISUPDATED;
+            case ACTION_ISDELETED, "ISDELETED", "DELETED"        -> ACTION_ISDELETED;
+            default                                               -> ACTION_NOCHANGES;
+        };
+    }
+
+    private void logSummaryEntries(List<String> logEntries, String docId, String docKeyPoid) {
+        if (logEntries != null) {
+            logEntries.forEach(entry -> loggingService.createLogSummaryEntry(docId, docKeyPoid, entry));
+        }
+    }
+
+    private long getNextDetRowId(Long maxDetRowId) {
+        return (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+    }
+
     private void validateTariffCreateDTO(PortStorageTariffCreateDTO dto, Long groupPoid) {
         // Validate LOVs
         validatePort(dto.getPortPoid());
