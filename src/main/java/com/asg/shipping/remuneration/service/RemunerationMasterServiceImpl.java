@@ -19,10 +19,8 @@ import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import com.asg.shipping.remuneration.mapper.ShipRemunerationMasterMapper;
 import com.asg.shipping.remuneration.repository.ShipRemunerationMasterRepository;
 import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
-import jakarta.xml.bind.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -141,6 +139,5 @@ public class RemunerationMasterServiceImpl implements RemunerationMasterService 
                 deleteReasonDto,
                 LocalDate.from(entity.getCreatedDate())
         );
-
     }
 }

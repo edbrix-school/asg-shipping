@@ -33,13 +33,13 @@ public class RemunerationMasterController {
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @PostMapping
-    public ResponseEntity<?> createRemuneration(@RequestBody ShipRemunerationMasterRequestDto requestDto) {
+    public ResponseEntity<?> createRemuneration(@RequestBody @Valid ShipRemunerationMasterRequestDto requestDto) {
         return ApiResponse.success("Remuneration created successfully", remunerationMasterService.createRemuneration(requestDto));
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @PutMapping("/{remunerationPoid}")
-    public ResponseEntity<?> update(@PathVariable Long remunerationPoid, @RequestBody ShipRemunerationMasterRequestDto requestDto) {
+    public ResponseEntity<?> update(@PathVariable Long remunerationPoid, @RequestBody @Valid ShipRemunerationMasterRequestDto requestDto) {
         return ApiResponse.success("Remuneration updated successfully", remunerationMasterService.updateRemuneration(remunerationPoid, requestDto));
     }
 
