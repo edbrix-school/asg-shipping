@@ -68,7 +68,19 @@ public interface VesselVoyageService {
     Resource downloadManifestReport(Long voyagePoid, String freightCargo, String importExport);
 
     void deleteVoyage(Long voyagePoid);
-    
+
+    /**
+     * Legacy: triggerMscDataLoad (DocumentAfterSave) — fires PROC_SHIP_BL_PAGE_SAVE_AFTER
+     * when mscVesselVoyageReff is present and length > 5.
+     */
+    void triggerMscDataLoad(Long voyagePoid);
+
+    /**
+     * Legacy: fetchMscVoyageData (updateFetchVoyageData) — fires PROC_SHIP_DATA_TRN_EDI
+     * to sync MSC voyage data. Returns result message.
+     */
+    String fetchMscVoyageData(Long voyagePoid);
+
     byte[] print(Long transactionPoid, String freightCargo, String importExport)
             throws net.sf.jasperreports.engine.JRException, java.sql.SQLException;
     

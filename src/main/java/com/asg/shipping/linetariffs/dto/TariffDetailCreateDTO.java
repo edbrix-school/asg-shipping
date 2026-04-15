@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 public class TariffDetailCreateDTO {
 
     @NotNull(message = "Container type is required")
+    @jakarta.validation.constraints.Positive(message = "Container type is required")
     private Long containerTypePoid;
 
     @PositiveOrZero(message = "Free days must be positive or zero")

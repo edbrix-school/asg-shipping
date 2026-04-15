@@ -14,4 +14,8 @@ public interface VoyageLineMasterRepository extends JpaRepository<ShipLineMaster
 
     @Query("select l.lineCode from ShipLineMasterEntity l where l.linePoid = :linePoid")
     Optional<String> findLineCodeByLinePoid(@Param("linePoid") Long linePoid);
+
+    // Used to detect MSC line for conditional UI rendering (legacy RenderMscLineVesselVoyage)
+    @Query("select count(l) > 0 from ShipLineMasterEntity l where l.lineCode = 'MSC' and l.linePoid = :linePoid")
+    boolean isMscLine(@Param("linePoid") Long linePoid);
 }

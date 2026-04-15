@@ -326,6 +326,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getImportDemurrageCollectable() != null) {
             Long maxDetRowId = impDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getImportDemurrageCollectable()) {
+                validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffImpDtl detail = mapper.mapImpDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 impDtlRepository.save(detail);
@@ -336,6 +337,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getImportDemurragePayable() != null) {
             Long maxDetRowId = impPayDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getImportDemurragePayable()) {
+                validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffImpPayDtl detail = mapper.mapImpPayDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 impPayDtlRepository.save(detail);
@@ -346,6 +348,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getExportDetentionCollectable() != null) {
             Long maxDetRowId = expDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getExportDetentionCollectable()) {
+                validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffExpDtl detail = mapper.mapExpDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 expDtlRepository.save(detail);
@@ -356,6 +359,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getExportDetentionPayable() != null) {
             Long maxDetRowId = expPayDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getExportDetentionPayable()) {
+                validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffExpPayDtl detail = mapper.mapExpPayDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 expPayDtlRepository.save(detail);
@@ -409,15 +413,13 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Update or create details
         Long maxDetRowId = impDtlRepository.getMaxDetRowId(transactionPoid);
         for (TariffDetailUpdateDTO detailDto : detailDtos) {
+            validateContainerTypeExists(detailDto.getContainerTypePoid());
             if (detailDto.getDetRowId() != null) {
-                // Update existing
                 ShipLineTariffImpDtl existing = impDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
                         .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-
                 mapper.updateImpDtlFromDTO(detailDto, existing);
                 impDtlRepository.save(existing);
             } else {
-                // Create new
                 maxDetRowId++;
                 ShipLineTariffImpDtl newDetail = mapper.mapImpDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 impDtlRepository.save(newDetail);
@@ -454,15 +456,13 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Update or create details
         Long maxDetRowId = impPayDtlRepository.getMaxDetRowId(transactionPoid);
         for (TariffDetailUpdateDTO detailDto : detailDtos) {
+            validateContainerTypeExists(detailDto.getContainerTypePoid());
             if (detailDto.getDetRowId() != null) {
-                // Update existing
                 ShipLineTariffImpPayDtl existing = impPayDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
                         .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-
                 mapper.updateImpPayDtlFromDTO(detailDto, existing);
                 impPayDtlRepository.save(existing);
             } else {
-                // Create new
                 maxDetRowId++;
                 ShipLineTariffImpPayDtl newDetail = mapper.mapImpPayDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 impPayDtlRepository.save(newDetail);
@@ -499,15 +499,13 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Update or create details
         Long maxDetRowId = expDtlRepository.getMaxDetRowId(transactionPoid);
         for (TariffDetailUpdateDTO detailDto : detailDtos) {
+            validateContainerTypeExists(detailDto.getContainerTypePoid());
             if (detailDto.getDetRowId() != null) {
-                // Update existing
                 ShipLineTariffExpDtl existing = expDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
                         .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-
                 mapper.updateExpDtlFromDTO(detailDto, existing);
                 expDtlRepository.save(existing);
             } else {
-                // Create new
                 maxDetRowId++;
                 ShipLineTariffExpDtl newDetail = mapper.mapExpDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 expDtlRepository.save(newDetail);
@@ -544,15 +542,13 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Update or create details
         Long maxDetRowId = expPayDtlRepository.getMaxDetRowId(transactionPoid);
         for (TariffDetailUpdateDTO detailDto : detailDtos) {
+            validateContainerTypeExists(detailDto.getContainerTypePoid());
             if (detailDto.getDetRowId() != null) {
-                // Update existing
                 ShipLineTariffExpPayDtl existing = expPayDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
                         .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-
                 mapper.updateExpPayDtlFromDTO(detailDto, existing);
                 expPayDtlRepository.save(existing);
             } else {
-                // Create new
                 maxDetRowId++;
                 ShipLineTariffExpPayDtl newDetail = mapper.mapExpPayDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
                 expPayDtlRepository.save(newDetail);
@@ -797,6 +793,15 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         return containerTypeRepository.findAllById(poids).stream()
                 .collect(Collectors.toMap(ShipContainerTypeMaster::getContainerTypePoid, ct -> ct));
+    }
+
+    private void validateContainerTypeExists(Long containerTypePoid) {
+        if (containerTypePoid == null || containerTypePoid <= 0) {
+            throw new ValidationException("Container type is required");
+        }
+        if (!containerTypeRepository.existsById(containerTypePoid)) {
+            throw new ValidationException("Invalid container type: " + containerTypePoid);
+        }
     }
 
     private void validateMutuallyExclusiveFlags(

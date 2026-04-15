@@ -112,6 +112,10 @@ public class ShipVoyageHdrEntity extends BaseEntity {
     @Column(name = "MSC_VESSEL_VOYAGE_REFF", length = 100)
     private String mscVesselVoyageReff;
 
+    // Set to 'Y' by DB trigger SHIP_VOYAGE_HDR_TRG when arrival date changes on update
+    @Column(name = "ARRIVAL_DATE_CHANGED", length = 1)
+    private String arrivalDateChanged;
+
     @Column(name = "PRE_ARRIVAL_MSG_VESSEL")
     private LocalDateTime preArrivalMsgVessel;
 
