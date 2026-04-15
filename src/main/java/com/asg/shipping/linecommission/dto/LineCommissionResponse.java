@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,8 +23,13 @@ public class LineCommissionResponse {
     private LocalDate periodFrom;
     private LocalDate periodTo;
     private LocalDate renewalDate;
+    private LocalDate transactionDate;
     private Long currencyPoid;
     private LovGetListDto currencyDet;
+    private String createdBy;
+    private LocalDateTime createdDate;
+    private String updatedBy;
+    private LocalDateTime updatedDate;
     private String deleted;
 
     private List<ContainerRateDto> containerRates = new ArrayList<>();
