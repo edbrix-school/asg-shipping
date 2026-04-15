@@ -12,11 +12,11 @@ import java.util.Map;
 public interface RemunerationMasterService {
     Map<String, Object> listRemunerations(String docId, FilterRequestDto request, Pageable pageable);
 
-    ShipRemunerationMasterResponseDto createRemuneration(ShipRemunerationMasterRequestDto requestDto) throws ValidationException;
+    ShipRemunerationMasterResponseDto createRemuneration(ShipRemunerationMasterRequestDto requestDto);
 
     ShipRemunerationMasterResponseDto updateRemuneration(Long id, ShipRemunerationMasterRequestDto requestDto);
 
     ShipRemunerationMasterResponseDto getRemunerationById(Long id);
 
-    void softDeleteRemuneration(Long id, DeleteReasonDto deleteReasonDto);
+    void deleteRemuneration(Long id, DeleteReasonDto deleteReasonDto);
 }

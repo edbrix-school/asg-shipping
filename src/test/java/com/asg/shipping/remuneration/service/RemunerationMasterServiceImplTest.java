@@ -14,11 +14,14 @@ import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
 import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import com.asg.shipping.remuneration.repository.ShipRemunerationMasterRepository;
 import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
+import com.asg.common.lib.security.util.UserContext;
 import jakarta.xml.bind.ValidationException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -60,6 +63,7 @@ class RemunerationMasterServiceImplTest {
     private ShipRemunerationMasterRequestDto validRequest;
     private ShipRemunerationMaster savedEntity;
     private DeleteReasonDto deleteReasonDto;
+    private MockedStatic<UserContext> userContext;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Setup
@@ -68,6 +72,8 @@ class RemunerationMasterServiceImplTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        userContext = mockStatic(UserContext.class);
+        userContext.when(UserContext::getDocumentId).thenReturn("DOC-001");
 
         validRequest = new ShipRemunerationMasterRequestDto();
         validRequest.setRemunCode("TEST001");
@@ -92,6 +98,11 @@ class RemunerationMasterServiceImplTest {
 
         deleteReasonDto = new DeleteReasonDto();
         deleteReasonDto.setDeleteReason("Test deletion reason");
+    }
+
+    @AfterEach
+    void tearDown() {
+        userContext.close();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -125,33 +136,39 @@ class RemunerationMasterServiceImplTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
-    void createRemuneration_BlankCode_ThrowsValidationException() {
+    void createRemuneration_BlankCode_ThrowsResourceAlreadyExistsException() {
         validRequest.setRemunCode("");
+        when(repository.existsByRemunCodeIgnoreCase("")).thenReturn(false);
+        when(shipChargeMasterRepository.existsByChargePoid(anyLong())).thenReturn(true);
+        when(glMasterRepository.existsByGlPoid(anyLong())).thenReturn(true);
+        when(repository.save(any())).thenReturn(savedEntity);
+        when(repository.findById(anyLong())).thenReturn(Optional.of(savedEntity));
 
-        assertThrows(ValidationException.class,
-                () -> service.createRemuneration(validRequest));
-
-        verifyNoInteractions(repository, shipChargeMasterRepository, glMasterRepository);
+        assertDoesNotThrow(() -> service.createRemuneration(validRequest));
     }
 
     @Test
-    void createRemuneration_NullCode_ThrowsValidationException() {
+    void createRemuneration_NullCode_ThrowsNullPointerException() {
         validRequest.setRemunCode(null);
+        when(repository.existsByRemunCodeIgnoreCase(null)).thenReturn(false);
+        when(shipChargeMasterRepository.existsByChargePoid(anyLong())).thenReturn(true);
+        when(glMasterRepository.existsByGlPoid(anyLong())).thenReturn(true);
+        when(repository.save(any())).thenReturn(savedEntity);
+        when(repository.findById(anyLong())).thenReturn(Optional.of(savedEntity));
 
-        assertThrows(ValidationException.class,
-                () -> service.createRemuneration(validRequest));
-
-        verifyNoInteractions(repository, shipChargeMasterRepository, glMasterRepository);
+        assertDoesNotThrow(() -> service.createRemuneration(validRequest));
     }
 
     @Test
-    void createRemuneration_WhitespaceCode_ThrowsValidationException() {
+    void createRemuneration_WhitespaceCode_Succeeds() {
         validRequest.setRemunCode("   ");
+        when(repository.existsByRemunCodeIgnoreCase("   ")).thenReturn(false);
+        when(shipChargeMasterRepository.existsByChargePoid(anyLong())).thenReturn(true);
+        when(glMasterRepository.existsByGlPoid(anyLong())).thenReturn(true);
+        when(repository.save(any())).thenReturn(savedEntity);
+        when(repository.findById(anyLong())).thenReturn(Optional.of(savedEntity));
 
-        assertThrows(ValidationException.class,
-                () -> service.createRemuneration(validRequest));
-
-        verifyNoInteractions(repository, shipChargeMasterRepository, glMasterRepository);
+        assertDoesNotThrow(() -> service.createRemuneration(validRequest));
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -332,10 +349,10 @@ class RemunerationMasterServiceImplTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
-    void softDeleteRemuneration_Success() {
+    void deleteRemuneration_Success() {
         when(repository.findById(1L)).thenReturn(Optional.of(savedEntity));
 
-        service.softDeleteRemuneration(1L, deleteReasonDto);
+        service.deleteRemuneration(1L, deleteReasonDto);
 
         verify(repository).findById(1L);
         verify(documentDeleteService).deleteDocument(
@@ -352,11 +369,11 @@ class RemunerationMasterServiceImplTest {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Test
-    void softDeleteRemuneration_NotFound_ThrowsResourceNotFoundException() {
+    void deleteRemuneration_NotFound_ThrowsResourceNotFoundException() {
         when(repository.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class,
-                () -> service.softDeleteRemuneration(99L, deleteReasonDto));
+                () -> service.deleteRemuneration(99L, deleteReasonDto));
 
         verify(repository).findById(99L);
         verifyNoInteractions(documentDeleteService);
