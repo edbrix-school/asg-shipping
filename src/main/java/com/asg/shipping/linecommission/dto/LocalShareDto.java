@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -19,6 +20,10 @@ public class LocalShareDto {
     private Long percent;
     private Long amount;
     private String remarks;
+    private String createdBy;
+    private LocalDateTime createdDate;
+    private String updatedBy;
+    private LocalDateTime updatedDate;
 }
 
 

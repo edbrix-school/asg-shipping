@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.LovGetListDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -25,6 +26,10 @@ public class OtherRemunerationDto {
     private Long amountPerTeu;
     private Long paybackPercent;
     private String remarks;
+    private String createdBy;
+    private LocalDateTime createdDate;
+    private String updatedBy;
+    private LocalDateTime updatedDate;
 }
 
 

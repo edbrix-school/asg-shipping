@@ -93,6 +93,7 @@ class LineCommissionServiceImplTest {
     void setup() {
         request = new LineCommissionRequest();
         request.setLinePoid(1L);
+        request.setTransactionDate(LocalDate.now());
         request.setPeriodFrom(LocalDate.now());
         request.setPeriodTo(LocalDate.now().plusDays(10));
 

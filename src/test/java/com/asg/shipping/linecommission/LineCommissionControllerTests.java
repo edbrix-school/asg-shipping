@@ -59,6 +59,7 @@ class LineCommissionControllerTests {
         requestDTO = new LineCommissionRequest();
         requestDTO.setLinePoid(1L);
         requestDTO.setCurrencyPoid(1L);
+        requestDTO.setTransactionDate(java.time.LocalDate.of(2024, 1, 1));
         requestDTO.setPeriodFrom(java.time.LocalDate.of(2024, 1, 1));
         requestDTO.setPeriodTo(java.time.LocalDate.of(2024, 12, 31));
         requestDTO.setRenewalDate(java.time.LocalDate.of(2024, 12, 31));
