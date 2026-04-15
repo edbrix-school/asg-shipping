@@ -4,7 +4,6 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
-import jakarta.xml.bind.ValidationException;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Map;
