@@ -8,18 +8,15 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.service.LovDataService;
+import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
+import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
-import com.asg.shipping.linetariffs.entity.ShipLineTariffHdr;
-import com.asg.shipping.linetariffs.repository.ShipLineTariffExpDtlRepository;
-import com.asg.shipping.linetariffs.repository.ShipLineTariffExpPayDtlRepository;
-import com.asg.shipping.linetariffs.repository.ShipLineTariffHdrRepository;
-import com.asg.shipping.linetariffs.repository.ShipLineTariffImpDtlRepository;
-import com.asg.shipping.linetariffs.repository.ShipLineTariffImpPayDtlRepository;
+import com.asg.shipping.linetariffs.entity.*;
+import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,9 +29,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -45,26 +44,16 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class LineTariffsServiceImplTest {
 
-    @Mock
-    private ShipLineTariffHdrRepository tariffHdrRepository;
-    @Mock
-    private ShipLineTariffImpDtlRepository impDtlRepository;
-    @Mock
-    private ShipLineTariffImpPayDtlRepository impPayDtlRepository;
-    @Mock
-    private ShipLineTariffExpDtlRepository expDtlRepository;
-    @Mock
-    private ShipLineTariffExpPayDtlRepository expPayDtlRepository;
-    @Mock
-    private DocumentSearchService documentService;
-    @Mock
-    private LovDataService lovService;
-    @Mock
-    private LineTariffMapper mapper;
-    @Mock
-    private LoggingService loggingService;
-    @Mock
-    private DocumentDeleteService documentDeleteService;
+    @Mock private ShipLineTariffHdrRepository tariffHdrRepository;
+    @Mock private ShipLineTariffImpDtlRepository impDtlRepository;
+    @Mock private ShipLineTariffImpPayDtlRepository impPayDtlRepository;
+    @Mock private ShipLineTariffExpDtlRepository expDtlRepository;
+    @Mock private ShipLineTariffExpPayDtlRepository expPayDtlRepository;
+    @Mock private DocumentSearchService documentService;
+    @Mock private LineTariffMapper mapper;
+    @Mock private LoggingService loggingService;
+    @Mock private DocumentDeleteService documentDeleteService;
+    @Mock private ShipContainerTypeMasterRepository containerTypeRepository;
 
     @InjectMocks
     private LineTariffsServiceImpl service;
@@ -139,7 +128,7 @@ class LineTariffsServiceImplTest {
             when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList())).thenReturn(dto);
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
 
             LineTariffDto result = service.getLineTariff(1L);
 
@@ -153,9 +142,7 @@ class LineTariffsServiceImplTest {
     void getLineTariff_NotFound() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
-
             assertThrows(ResourceNotFoundException.class, () -> service.getLineTariff(1L));
         }
     }
@@ -175,7 +162,7 @@ class LineTariffsServiceImplTest {
             when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList())).thenReturn(dto);
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
 
             LineTariffDto result = service.createLineTariff(createDTO, 1L, 2L);
 
@@ -189,10 +176,8 @@ class LineTariffsServiceImplTest {
     void createLineTariff_InvalidPeriod_ThrowsValidationException() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
-
             createDTO.setPeriodFrom(LocalDate.of(2026, 12, 31));
             createDTO.setPeriodTo(LocalDate.of(2026, 1, 1));
-
             assertThrows(ValidationException.class, () -> service.createLineTariff(createDTO, 1L, 2L));
         }
     }
@@ -201,10 +186,8 @@ class LineTariffsServiceImplTest {
     void createLineTariff_OverlappingPeriod_ThrowsValidationException() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
-
             when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), isNull()))
                     .thenReturn(true);
-
             assertThrows(ValidationException.class, () -> service.createLineTariff(createDTO, 1L, 2L));
         }
     }
@@ -213,12 +196,10 @@ class LineTariffsServiceImplTest {
     void createLineTariff_DocRefExists_ThrowsValidationException() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
-
             createDTO.setDocRef("DOC1");
             when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), isNull()))
                     .thenReturn(false);
             when(tariffHdrRepository.existsByDocRef("DOC1")).thenReturn(true);
-
             assertThrows(ValidationException.class, () -> service.createLineTariff(createDTO, 1L, 2L));
         }
     }
@@ -244,7 +225,7 @@ class LineTariffsServiceImplTest {
             when(impPayDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
             when(expDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
             when(expPayDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
-            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList())).thenReturn(dto);
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
 
             LineTariffDto result = service.updateLineTariff(1L, updateDTO, 1L, 2L);
 
@@ -264,7 +245,6 @@ class LineTariffsServiceImplTest {
     void deleteLineTariff_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
 
             service.deleteLineTariff(1L, null);
@@ -278,7 +258,6 @@ class LineTariffsServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
-
             assertThrows(ResourceNotFoundException.class, () -> service.deleteLineTariff(1L, null));
         }
     }
@@ -304,45 +283,32 @@ class LineTariffsServiceImplTest {
                     .description("Copied")
                     .build();
 
+            ShipLineTariffHdr newHdr = new ShipLineTariffHdr();
+            newHdr.setTransactionPoid(99L);
+
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(5L, 1L)).thenReturn(Optional.of(source));
             when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), isNull()))
                     .thenReturn(false);
-
-            ShipLineTariffHdr newHdr = new ShipLineTariffHdr();
-            newHdr.setTransactionPoid(99L);
             lenient().when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenAnswer(invocation -> {
                 ShipLineTariffHdr arg = invocation.getArgument(0);
-                if (arg.getTransactionPoid() == null) {
-                    return newHdr;
-                }
-                return arg;
+                return arg.getTransactionPoid() == null ? newHdr : arg;
             });
 
-            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
-            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
-            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
-            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
-
-            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
-            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
-            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
-            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
-
-            when(mapper.mapToDto(eq(newHdr), anyList(), anyList(), anyList(), anyList())).thenReturn(dto);
-
-            ArgumentCaptor<ShipLineTariffHdr> hdrCaptor = ArgumentCaptor.forClass(ShipLineTariffHdr.class);
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(anyLong())).thenReturn(Collections.emptyList());
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(anyLong())).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(anyLong())).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(anyLong())).thenReturn(Collections.emptyList());
+            when(mapper.mapToDto(eq(newHdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
 
             LineTariffDto result = service.copyLineTariff(5L, request, 1L, 2L);
 
             assertNotNull(result);
-
+            ArgumentCaptor<ShipLineTariffHdr> hdrCaptor = ArgumentCaptor.forClass(ShipLineTariffHdr.class);
             verify(tariffHdrRepository, atLeastOnce()).save(hdrCaptor.capture());
             ShipLineTariffHdr savedSource = hdrCaptor.getAllValues().stream()
                     .filter(h -> Long.valueOf(5L).equals(h.getTransactionPoid()))
-                    .findFirst()
-                    .orElseThrow();
+                    .findFirst().orElseThrow();
             assertEquals(request.getPeriodFrom().minusDays(1), savedSource.getPeriodTo());
-
             verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("100-050"), eq("99"));
         }
     }
@@ -358,8 +324,6 @@ class LineTariffsServiceImplTest {
                     .build();
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(5L, 1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), isNull()))
-                    .thenReturn(false);
 
             assertThrows(ValidationException.class, () -> service.copyLineTariff(5L, request, 1L, 2L));
         }
@@ -382,5 +346,78 @@ class LineTariffsServiceImplTest {
             assertThrows(ValidationException.class, () -> service.copyLineTariff(5L, request, 1L, 2L));
         }
     }
-}
 
+    @Test
+    void copySlabsToPayable_DMG_CopiesMatchingContainerType() {
+        ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
+        col.setContainerTypePoid(1L);
+        col.setFreeDays(5);
+        col.setSlab1Tilldays(10);
+        col.setSlab1Rate(BigDecimal.valueOf(100));
+
+        ShipLineTariffImpPayDtl pay = ShipLineTariffImpPayDtl.builder()
+                .transactionPoid(1L)
+                .detRowId(1L)
+                .containerTypePoid(1L)
+                .freeDays(0)
+                .build();
+
+        when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
+        when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
+
+        service.copySlabsToPayable(1L, "DMG");
+
+        verify(impPayDtlRepository).save(pay);
+        assertEquals(5, pay.getFreeDays());
+        assertEquals(10, pay.getSlab1Tilldays());
+        assertEquals(BigDecimal.valueOf(100), pay.getSlab1Rate());
+    }
+
+    @Test
+    void copySlabsToPayable_DTN_CopiesMatchingContainerType() {
+        ShipLineTariffExpDtl col = new ShipLineTariffExpDtl();
+        col.setContainerTypePoid(1L);
+        col.setFreeDays(7);
+        col.setSlab1Tilldays(14);
+        col.setSlab1Rate(BigDecimal.valueOf(80));
+
+        ShipLineTariffExpPayDtl pay = new ShipLineTariffExpPayDtl();
+        pay.setTransactionPoid(1L);
+        pay.setDetRowId(1L);
+        pay.setContainerTypePoid(1L);
+        pay.setFreeDays(0);
+
+        when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
+        when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
+
+        service.copySlabsToPayable(1L, "DTN");
+
+        verify(expPayDtlRepository).save(pay);
+        assertEquals(7, pay.getFreeDays());
+        assertEquals(14, pay.getSlab1Tilldays());
+        assertEquals(BigDecimal.valueOf(80), pay.getSlab1Rate());
+    }
+
+    @Test
+    void copySlabsToPayable_NoMatchingContainerType_SkipsUpdate() {
+        ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
+        col.setContainerTypePoid(1L);
+        col.setFreeDays(5);
+
+        ShipLineTariffImpPayDtl pay = ShipLineTariffImpPayDtl.builder()
+                .containerTypePoid(2L) // different container type
+                .build();
+
+        when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
+        when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
+
+        service.copySlabsToPayable(1L, "DMG");
+
+        verify(impPayDtlRepository, never()).save(any());
+    }
+
+    @Test
+    void copySlabsToPayable_InvalidType_ThrowsValidationException() {
+        assertThrows(ValidationException.class, () -> service.copySlabsToPayable(1L, "INVALID"));
+    }
+}
