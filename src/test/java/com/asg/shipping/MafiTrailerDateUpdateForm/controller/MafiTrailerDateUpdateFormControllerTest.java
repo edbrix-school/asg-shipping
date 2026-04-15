@@ -1,4 +1,4 @@
-package com.asg.shipping.mafitrailerdateupdateform.controller;
+package com.asg.shipping.MafiTrailerDateUpdateForm.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -46,7 +46,7 @@ class MafiTrailerDateUpdateFormControllerTest {
     private LoggingService loggingService;
 
     @InjectMocks
-    private MafiTrailerDateUpdateFormController controller;
+    private com.asg.shipping.mafitrailerdateupdateform.controller.MafiTrailerDateUpdateFormController controller;
 
     @BeforeEach
     void setUp() {

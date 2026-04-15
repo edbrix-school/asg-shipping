@@ -357,11 +357,10 @@ class PortStorageTariffsServiceImplTest {
 
             testTariffHdr.setDeleted("N");
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testTariffHdr));
-            when(tariffHdrRepository.save(any(ShipPortTariffHdr.class))).thenReturn(testTariffHdr);
 
             service.deleteTariff(1L, 1L, 1L, null);
 
-            verify(tariffHdrRepository).save(argThat(tariff -> "Y".equals(tariff.getDeleted())));
+            verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_PORT_TARIFF_HDR"), eq("TRANSACTION_POID"), isNull(), any(LocalDate.class));
         }
     }
 
@@ -475,6 +474,7 @@ class PortStorageTariffsServiceImplTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC_ID");
 
+            detailUpdateDto.setActionType("ACTION_ISUPDATED");
             updateDto.setTariffDetails(List.of(detailUpdateDto));
 
             ShipPortTariffDtl existingDetail = new ShipPortTariffDtl();
@@ -486,14 +486,14 @@ class PortStorageTariffsServiceImplTest {
             when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyString(), anyLong(), any(), any(), anyLong())).thenReturn(false);
             when(tariffHdrRepository.save(any(ShipPortTariffHdr.class))).thenReturn(testTariffHdr);
             when(mapper.mapToDto(testTariffHdr)).thenReturn(testDto);
-            when(tariffDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(existingDetail));
-            when(tariffDtlRepository.findByTransactionPoidAndDetRowId(1L, 1L)).thenReturn(Optional.of(existingDetail));
+            when(tariffDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(tariffDtlRepository.findById(new ShipPortTariffDtlId(1L, 1L))).thenReturn(Optional.of(existingDetail));
             when(mapper.mapDetailsToDto(anyList())).thenReturn(Collections.emptyList());
 
             PortStorageTariffDto result = service.updateTariff(1L, updateDto, 1L, 1L, 1L);
 
             assertNotNull(result);
-            verify(tariffDtlRepository).save(existingDetail);
+            verify(tariffDtlRepository).saveAll(anyList());
         }
     }
 
@@ -504,6 +504,7 @@ class PortStorageTariffsServiceImplTest {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC_ID");
 
             TariffDetailUpdateDTO newDetail = TariffDetailUpdateDTO.builder()
+                    .actionType("ACTION_ISCREATED")
                     .containerTypePoid(200L)
                     .containerSize(new BigDecimal("40"))
                     .freeDays(7)
@@ -520,6 +521,8 @@ class PortStorageTariffsServiceImplTest {
             when(tariffHdrRepository.save(any(ShipPortTariffHdr.class))).thenReturn(testTariffHdr);
             when(mapper.mapToDto(testTariffHdr)).thenReturn(testDto);
             when(tariffDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(tariffDtlRepository.getMaxDetRowId(1L)).thenReturn(null);
+            when(tariffDtlRepository.save(any(ShipPortTariffDtl.class))).thenReturn(new ShipPortTariffDtl());
             when(mapper.mapDetailUpdateDTOToEntity(any(), anyLong(), anyString())).thenReturn(new ShipPortTariffDtl());
             when(mapper.mapDetailsToDto(anyList())).thenReturn(Collections.emptyList());
 
@@ -536,7 +539,12 @@ class PortStorageTariffsServiceImplTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC_ID");
 
-            updateDto.setTariffDetails(Collections.emptyList());
+            TariffDetailUpdateDTO deleteDetail = TariffDetailUpdateDTO.builder()
+                    .actionType("ACTION_ISDELETED")
+                    .detRowId(1L)
+                    .build();
+
+            updateDto.setTariffDetails(List.of(deleteDetail));
 
             ShipPortTariffDtl existingDetail = new ShipPortTariffDtl();
             existingDetail.setDetRowId(1L);
@@ -547,13 +555,14 @@ class PortStorageTariffsServiceImplTest {
             when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyString(), anyLong(), any(), any(), anyLong())).thenReturn(false);
             when(tariffHdrRepository.save(any(ShipPortTariffHdr.class))).thenReturn(testTariffHdr);
             when(mapper.mapToDto(testTariffHdr)).thenReturn(testDto);
-            when(tariffDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(existingDetail));
+            when(tariffDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(tariffDtlRepository.findAllById(anyList())).thenReturn(List.of(existingDetail));
             when(mapper.mapDetailsToDto(anyList())).thenReturn(Collections.emptyList());
 
             PortStorageTariffDto result = service.updateTariff(1L, updateDto, 1L, 1L, 1L);
 
             assertNotNull(result);
-            verify(tariffDtlRepository).deleteById(new ShipPortTariffDtlId(1L, 1L));
+            verify(tariffDtlRepository).deleteAllInBatch(anyList());
         }
     }
 
@@ -595,12 +604,10 @@ class PortStorageTariffsServiceImplTest {
 
             testTariffHdr.setDeleted("N");
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testTariffHdr));
-            when(tariffHdrRepository.save(any(ShipPortTariffHdr.class))).thenReturn(testTariffHdr);
 
             service.deleteTariff(1L, 1L, 1L, deleteReasonDto);
 
             verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_PORT_TARIFF_HDR"), eq("TRANSACTION_POID"), eq(deleteReasonDto), any(LocalDate.class));
-            verify(tariffHdrRepository).save(argThat(tariff -> "Y".equals(tariff.getDeleted())));
         }
     }
 
