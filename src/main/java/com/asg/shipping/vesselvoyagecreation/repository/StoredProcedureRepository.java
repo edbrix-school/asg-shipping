@@ -25,7 +25,7 @@ public class StoredProcedureRepository {
         return (String) q.getOutputParameterValue(2);
     }
 
-    public String procAttachmentsEdiProcNew( Long groupPoid, Long companyPoid, String docId, Long docKeyPoid, Long jobPoid, Long userPoid) {
+    public String procAttachmentsEdiProcNew(Long groupPoid, Long companyPoid, String docId, Long docKeyPoid, Long jobPoid, Long userPoid) {
         StoredProcedureQuery q = entityManager.createStoredProcedureQuery("PROC_ATTACHMENTS_EDI_PROC_NEW");
         q.registerStoredProcedureParameter(1, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);
@@ -33,13 +33,13 @@ public class StoredProcedureRepository {
         q.registerStoredProcedureParameter(4, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(5, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(6, String.class, ParameterMode.OUT);
-        q.registerStoredProcedureParameter(7, Long.class, ParameterMode.IN);
+        q.registerStoredProcedureParameter(7, String.class, ParameterMode.IN); // P_LOGIN_USER is VARCHAR2 in DB
         q.setParameter(1, groupPoid);
         q.setParameter(2, companyPoid);
         q.setParameter(3, docId);
         q.setParameter(4, docKeyPoid);
         q.setParameter(5, jobPoid);
-        q.setParameter(7, userPoid);
+        q.setParameter(7, userPoid != null ? userPoid.toString() : "0");
         q.execute();
         return (String) q.getOutputParameterValue(6);
     }
@@ -178,6 +178,69 @@ public class StoredProcedureRepository {
         q.setParameter(7, userPoid);
         q.execute();
         return (String) q.getOutputParameterValue(6);
+    }
+
+    /**
+     * Inserts a GLOBAL_ATTACHMENTS record with ACTIVE='N' so LINE_EDI_READ_TRANSFER
+     * EDI_FILE_COPY cursor picks it up for processing.
+     * FILE_NAME_MAPPED is set to the original filename so the full path resolves as:
+     * LINUX_AttachmentsPath + FILE_NAME_MAPPED
+     */
+    public void insertEdiAttachment(Long groupPoid, Long companyPoid, Long voyagePoid,
+                                    String fileName, String createdBy) {
+        entityManager.createNativeQuery(
+                "INSERT INTO GLOBAL_ATTACHMENTS " +
+                "(GROUP_POID, COMPANY_POID, DOC_ID, DOC_KEY_POID, FILE_NAME, FILE_NAME_MAPPED, " +
+                " CHECKLIST_NAME, EDI_JOB_POID, ACTIVE, DELETED, CREATED_BY, CREATED_DATE) " +
+                "VALUES (:groupPoid, :companyPoid, '100-101', :voyagePoid, :fileName, :fileName, " +
+                " 'EDI', :voyagePoid, 'N', 'N', :createdBy, SYSDATE)"
+        )
+        .setParameter("groupPoid", groupPoid)
+        .setParameter("companyPoid", companyPoid)
+        .setParameter("voyagePoid", voyagePoid)
+        .setParameter("fileName", fileName)
+        .setParameter("createdBy", createdBy)
+        .executeUpdate();
+        log.info("EDI attachment record inserted | voyagePoid={} fileName={}", voyagePoid, fileName);
+    }
+
+    /**
+     * Fetches the EDI upload directory path from GLOBAL_PARAMETERS table.
+     * The DB procedure LINE_EDI_READ_TRANSFER reads files from this directory.
+     * On Linux servers: LINUX_LINE_EDI_FOLDER = /cloudfs/EDI_ALL/LINE_EDI
+     * On Windows servers: LINE_EDI_FOLDER = E:\LINE_EDI
+     * Tries Linux path first, falls back to Windows path.
+     */
+    public String getEdiUploadDirectory(Long groupPoid) {
+        String groupPoidStr = groupPoid.toString();
+        // Try Linux path first (production servers are Linux)
+        @SuppressWarnings("unchecked")
+        List<String> linuxResult = entityManager.createNativeQuery(
+                "SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS " +
+                "WHERE PARAMETER_NAME = 'LINUX_LINE_EDI_FOLDER' " +
+                "AND PARAMETER_KEYID_TYPE = 'GROUP' " +
+                "AND PARAMETER_KEYID = :groupPoid " +
+                "AND NVL(DELETED,'N') = 'N' " +
+                "AND ROWNUM = 1"
+        ).setParameter("groupPoid", groupPoidStr).getResultList();
+
+        if (linuxResult != null && !linuxResult.isEmpty() && linuxResult.get(0) != null) {
+            return linuxResult.get(0).trim();
+        }
+
+        // Fall back to Windows path
+        @SuppressWarnings("unchecked")
+        List<String> winResult = entityManager.createNativeQuery(
+                "SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS " +
+                "WHERE PARAMETER_NAME = 'LINE_EDI_FOLDER' " +
+                "AND PARAMETER_KEYID_TYPE = 'GROUP' " +
+                "AND PARAMETER_KEYID = :groupPoid " +
+                "AND NVL(DELETED,'N') = 'N' " +
+                "AND ROWNUM = 1"
+        ).setParameter("groupPoid", groupPoidStr).getResultList();
+
+        return (winResult == null || winResult.isEmpty() || winResult.get(0) == null)
+                ? null : winResult.get(0).trim();
     }
 
     /**

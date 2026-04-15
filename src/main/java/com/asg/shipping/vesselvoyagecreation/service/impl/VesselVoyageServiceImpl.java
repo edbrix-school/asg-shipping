@@ -357,19 +357,37 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     }
 
     @Override
+    @Transactional
     public String uploadAndProcessEdi(Long voyagePoid, MultipartFile file) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("EDI file is required");
 
-        // Save file into a configured directory (must align with LINE_EDI_READ_TRANSFER backend expectations)
+        Long groupPoid = Optional.ofNullable(UserContext.getGroupPoid()).orElse(1L);
+        Long companyPoid = Optional.ofNullable(UserContext.getCompanyPoid()).orElse(1L);
+        String userId = Optional.ofNullable(UserContext.getUserId()).orElse("0");
+        String originalFilename = Objects.requireNonNull(file.getOriginalFilename());
+
+        // Resolve upload directory from GLOBAL_PARAMETERS (LINUX_LINE_EDI_FOLDER or LINE_EDI_FOLDER)
+        // This must be a path accessible from the DB server for FILE_API.LIST to work.
+        // On dev (Windows), this will save locally — FILE_API.LIST will still fail unless
+        // the app is deployed on the same server as the DB.
+        String dbDir = storedProcedureRepository.getEdiUploadDirectory(groupPoid);
+        String uploadDir = (dbDir != null && !dbDir.isBlank()) ? dbDir.trim() : ediUploadDir;
+
+        // Save file to the EDI folder
         try {
-            Path dir = Path.of(ediUploadDir);
+            Path dir = Path.of(uploadDir);
             Files.createDirectories(dir);
-            Path target = dir.resolve(Objects.requireNonNull(file.getOriginalFilename()));
+            Path target = dir.resolve(originalFilename);
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
             log.info("EDI file stored at {}", target.toAbsolutePath());
         } catch (IOException e) {
             throw new IllegalArgumentException("Unable to store EDI file: " + e.getMessage());
         }
+
+        // Insert GLOBAL_ATTACHMENTS record with ACTIVE='N' so EDI_FILE_COPY cursor picks it up.
+        // The mapped filename is the original filename — the attachments path + this = full source path.
+        storedProcedureRepository.insertEdiAttachment(
+                groupPoid, companyPoid, voyagePoid, originalFilename, userId);
 
         return reprocessEdi(voyagePoid);
     }
