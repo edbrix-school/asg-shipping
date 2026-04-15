@@ -318,17 +318,4 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
         return status;
     }
 
-    @Override
-    public String getParameterValue(String parameterName) {
-        try {
-            String query = "SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS WHERE PARAMETER_NAME = ? AND DELETED = 'N'";
-            return (String) entityManager.createNativeQuery(query)
-                    .setParameter(1, parameterName)
-                    .getSingleResult();
-        } catch (Exception e) {
-            log.warn("Failed to load parameter {}: {}", parameterName, e.getMessage());
-            return null;
-        }
-    }
-
 }

@@ -1,5 +1,6 @@
 package com.asg.shipping.shippingofoqv2.service.impl;
 
+import com.asg.common.lib.service.GlobalParameterService;
 import com.asg.shipping.shippingofoqv2.dto.OFOQCheckStatusCustomsResponseDto;
 import com.asg.shipping.shippingofoqv2.dto.OFOQManifestSubmitResponseDto;
 import com.asg.shipping.shippingofoqv2.repository.ShippingOFOQProcRepository;
@@ -24,15 +25,14 @@ public class OFOQApiServiceImpl implements OFOQApiService {
 
     private final ShippingOFOQProcRepository procRepository;
     private final RestTemplate restTemplates;
+    private final GlobalParameterService globalParameterService;
 
-    private String getParameterValue(String parameterName) {
-        return procRepository.getParameterValue(parameterName);
-    }
 
     private void validateOFOQConfiguration() {
-        String apiUrl = getParameterValue("OFOQ_API_LINK");
-        String credentials = getParameterValue("OFOQ_API_USER_AUTH");
-        
+        String apiUrl = getApiUrl();
+        String credentials = getCredentials();
+        log.info("Retrieved OFOQ API configuration - URL: {}, Credentials length: {}", apiUrl, credentials);
+
         if (apiUrl == null || credentials == null) {
             log.error("Failed to call OFOQ API: Missing configuration parameters");
             throw new ValidationException("Failed to call OFOQ API: Missing OFOQ_API_LINK or OFOQ_API_USER_AUTH configuration");
@@ -40,8 +40,8 @@ public class OFOQApiServiceImpl implements OFOQApiService {
     }
 
     private HttpHeaders createHeaders() {
-        String credentials = getParameterValue("OFOQ_API_USER_AUTH");
-        
+        String credentials = getCredentials();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_XML);
         headers.setAccept(List.of(MediaType.APPLICATION_XML));
@@ -51,12 +51,16 @@ public class OFOQApiServiceImpl implements OFOQApiService {
         return headers;
     }
 
+    private String getCredentials() {
+        return globalParameterService.getParameterValue("OFOQ_API_USER_AUTH", "GROUP", "1", "String");
+    }
+
     private String getApiUrl() {
-        return getParameterValue("OFOQ_API_LINK");
+        return globalParameterService.getParameterValue("OFOQ_API_LINK", "GROUP", "1", "String");
     }
 
     @Override
-    public OFOQManifestSubmitResponseDto callOFOQApi(
+    public String callOFOQApi(
             String xmlData,
             String manifestType,
             String blNumber,
@@ -66,6 +70,7 @@ public class OFOQApiServiceImpl implements OFOQApiService {
         log.info("Submitting OFOQ manifest for transactionPoid: {}, docRef: {}", transactionPoId, docRef);
 
         validateOFOQConfiguration();
+        String functionalRefId = null;
 
         try {
             HttpHeaders headers = createHeaders();
@@ -81,7 +86,6 @@ public class OFOQApiServiceImpl implements OFOQApiService {
             log.debug("OFOQ API response status: {}", response.getStatusCode());
 
             String message = extractMessage(response.getBody());
-            String functionalRefId = null;
 
             try {
                 functionalRefId = procRepository.saveOFOQApiResponse(
@@ -96,27 +100,31 @@ public class OFOQApiServiceImpl implements OFOQApiService {
                 log.warn("Failed to save OFOQ API response to DB", e);
             }
 
-            return OFOQManifestSubmitResponseDto.builder()
-                    .functionalRefId(functionalRefId)
-                    .status(response.getStatusCode().toString())
-                    .message(message)
-                    .build();
+            return functionalRefId;
 
-        }
-        catch (HttpClientErrorException | HttpServerErrorException ex) {
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
             log.error(
                     "Customs API failed | status={} | response={}",
                     ex.getStatusCode(),
                     ex.getResponseBodyAsString()
             );
-            throw ex;
-        }
-        catch (Exception e) {
+                String errorMessage = extractMessage(ex.getResponseBodyAsString());
+                functionalRefId = procRepository.saveOFOQApiResponse(
+                        transactionPoId,
+                        docRef,
+                        manifestType,
+                        ex.getStatusCode().value(),
+                        errorMessage != null ? errorMessage : ex.getResponseBodyAsString(),
+                        ex.getResponseBodyAsString()
+                );
+            return functionalRefId;
+
+
+        } catch (Exception e) {
             log.error("Unexpected error calling customs API", e);
             throw new RuntimeException("Error while calling customs API", e);
         }
     }
-
 
     @Override
     public OFOQCheckStatusCustomsResponseDto getManifestStatus(String functionalRefId) {

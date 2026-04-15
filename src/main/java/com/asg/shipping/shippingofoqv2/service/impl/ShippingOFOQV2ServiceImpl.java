@@ -476,11 +476,12 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     xmlDtos.stream()
                             .map(OFOQManifestXmlDto::getXmlData)
                             .collect(Collectors.joining());
-            OFOQManifestSubmitResponseDto apiResponse = OFOQApiService.callOFOQApi(xmlData, manifestType, blNumber, transactionPoid, docRef);
-            if (apiResponse.getFunctionalRefId() != null) {
-                log.info("OFOQ manifest submitted successfully with functionalRefId: {}", apiResponse.getFunctionalRefId());
+            log.debug("Calling OFOQ API with xmlData length: {}", xmlData);
+            String functionalRefId = OFOQApiService.callOFOQApi(xmlData, manifestType, blNumber, transactionPoid, docRef);
+            if (functionalRefId != null) {
+                log.info("OFOQ manifest submitted successfully with functionalRefId: {}", functionalRefId);
                 return checkStatus(OFOQCheckStatusDto.builder()
-                        .functionalReference(apiResponse.getFunctionalRefId())
+                        .functionalReference(functionalRefId)
                         .transactionPoid(transactionPoid)
                         .docReference(docRef)
                         .blNumber(blNumber)
@@ -489,7 +490,7 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                 log.warn("OFOQ manifest submission returned null functionalRefId for transactionPoid: {}", transactionPoid);
                 OfoqApiDataHdrEntity header = findEntityById(transactionPoid);
                 OFOQCheckStatusResponseDto responseDto = new OFOQCheckStatusResponseDto();
-                responseDto.setHeader(ofoqMapper.toHeaderDto(header, apiResponse.getFunctionalRefId()));
+                responseDto.setHeader(ofoqMapper.toHeaderDto(header, functionalRefId));
                 responseDto.setManifestResponses(new ArrayList<>());
                 return responseDto;
             }
