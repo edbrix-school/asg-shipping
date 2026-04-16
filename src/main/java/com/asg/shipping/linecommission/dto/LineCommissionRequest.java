@@ -35,6 +35,9 @@ public class LineCommissionRequest {
     @NotNull(message = "currencyPoid is required")
     private Long currencyPoid;
 
+    @NotNull(message = "transactionDate is required")
+    private LocalDate transactionDate;
+
     @Size(max = 100, message = "description cannot exceed 100 characters")
     private String description;
 

@@ -1,11 +1,11 @@
 package com.asg.shipping.importmanifestupdate.entity;
 
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipBlManifestContainerDtl {
+public class ShipBlManifestContainerDtl extends BaseEntity {
 
     @EmbeddedId
     private ShipBlManifestDtlId id;
@@ -183,15 +183,4 @@ public class ShipBlManifestContainerDtl {
     @Column(name = "ACTUAL_DISCHARGE_DATE")
     private LocalDate actualDischargeDate;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }

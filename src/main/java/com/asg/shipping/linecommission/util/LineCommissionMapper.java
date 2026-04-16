@@ -1,6 +1,5 @@
 package com.asg.shipping.linecommission.util;
 
-import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.util.ContainerTypeMapper;
@@ -15,9 +14,6 @@ import com.asg.shipping.linecommission.entity.ShipLineCommHdrEntity;
 import com.asg.shipping.linecommission.entity.ShipLineCommLocalDtlEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,7 +29,7 @@ public class LineCommissionMapper {
                                                       String userId) {
         ShipLineCommHdrEntity hdr = new ShipLineCommHdrEntity();
 //        hdr.setTransactionPoid(-999L); // placeholder; trigger overwrites with sequence NEXTVAL
-        hdr.setTransactionDate(DateUtil.getCurrentDateInUserTimeZone());
+        hdr.setTransactionDate(request.getTransactionDate());
         hdr.setGroupPoid(groupPoid);
         hdr.setCompanyPoid(companyPoid);
         hdr.setLinePoid(request.getLinePoid());
@@ -162,7 +158,12 @@ public class LineCommissionMapper {
         r.setPeriodFrom(hdr.getPeriodFrom());
         r.setPeriodTo(hdr.getPeriodTo());
         r.setRenewalDate(hdr.getRenewalDate());
+        r.setTransactionDate(hdr.getTransactionDate());
         r.setCurrencyPoid(hdr.getCurrencyPoid());
+        r.setCreatedBy(hdr.getCreatedBy());
+        r.setCreatedDate(hdr.getCreatedDate());
+        r.setUpdatedBy(hdr.getLastModifiedBy());
+        r.setUpdatedDate(hdr.getLastModifiedDate());
         r.setDeleted(hdr.getDeleted() != null ? hdr.getDeleted() : "N");
 
         r.setContainerRates(cntnr.stream().map(this::toDto).toList());
@@ -179,6 +180,10 @@ public class LineCommissionMapper {
         d.setExportBoxRate(e.getExportBoxRate());
         d.setTranshipBoxRate(e.getTranshipBoxRate());
         d.setShortLegAmount(e.getShortLegAmount());
+        d.setCreatedBy(e.getCreatedBy());
+        d.setCreatedDate(e.getCreatedDate());
+        d.setUpdatedBy(e.getLastModifiedBy());
+        d.setUpdatedDate(e.getLastModifiedDate());
         d.setRemarks(e.getRemarks());
         return d;
     }
@@ -197,6 +202,10 @@ public class LineCommissionMapper {
         d.setSplEqpPercentage(e.getSplEqpPercentage());
         d.setAmountPerTeu(e.getAmountPerTue());
         d.setPrincipalBookPutClt(e.getPpBookingPercentageCollect());
+        d.setCreatedBy(e.getCreatedBy());
+        d.setCreatedDate(e.getCreatedDate());
+        d.setUpdatedBy(e.getLastModifiedBy());
+        d.setUpdatedDate(e.getLastModifiedDate());
         d.setRemarks(e.getRemarks());
         return d;
     }
@@ -207,6 +216,10 @@ public class LineCommissionMapper {
         d.setChargePoid(e.getChargePoid());
         d.setPercent(e.getPercent());
         d.setAmount(e.getShareAmount());
+        d.setCreatedBy(e.getCreatedBy());
+        d.setCreatedDate(e.getCreatedDate());
+        d.setUpdatedBy(e.getLastModifiedBy());
+        d.setUpdatedDate(e.getLastModifiedDate());
         d.setRemarks(e.getRemarks());
         return d;
     }

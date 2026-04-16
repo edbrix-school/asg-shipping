@@ -1,13 +1,14 @@
 package com.asg.shipping.chargegroupmaster.controller;
 
-
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterRequestDto;
 import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterResponseDto;
 import com.asg.shipping.chargegroupmaster.service.ChargeGroupMasterService;
 import com.asg.shipping.exceptions.GlobalExceptionHandler;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,6 +20,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -32,6 +35,9 @@ public class ChargeGroupMasterControllerTest {
 
     @Mock
     private ChargeGroupMasterService service;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private ChargeGroupMasterController controller;
@@ -48,7 +54,10 @@ public class ChargeGroupMasterControllerTest {
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
+
         objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+
         requestDto = ChargeGroupMasterRequestDto.builder()
                 .chargeGroupCode("CGM001")
                 .chargeGroupName("Test Charge Group")
@@ -88,7 +97,9 @@ public class ChargeGroupMasterControllerTest {
         mockMvc.perform(post("/v1/charge-group-master")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Charge Group Master created successfully"));
 
         verify(service).create(any(ChargeGroupMasterRequestDto.class));
     }
@@ -109,53 +120,6 @@ public class ChargeGroupMasterControllerTest {
     }
 
     @Test
-    void updateChargeGroupMaster_Success() throws Exception {
-        Long id = 1L;
-        when(service.update(eq(id), any(ChargeGroupMasterRequestDto.class))).thenReturn(responseDto);
-
-        mockMvc.perform(put("/v1/charge-group-master/{id}", id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isOk());
-
-        verify(service).update(eq(id), any(ChargeGroupMasterRequestDto.class));
-    }
-
-    @Test
-    void getChargeGroupMaster_Success() throws Exception {
-        Long id = 1L;
-        when(service.findById(id)).thenReturn(responseDto);
-
-        mockMvc.perform(get("/v1/charge-group-master/{id}", id))
-                .andExpect(status().isOk());
-
-        verify(service).findById(id);
-    }
-
-    @Test
-    void deleteChargeGroupMaster_Success() throws Exception {
-        Long id = 1L;
-        doNothing().when(service).delete(id);
-
-        mockMvc.perform(delete("/v1/charge-group-master/{id}", id))
-                .andExpect(status().isOk());
-
-        verify(service).delete(id);
-    }
-
-    @Test
-    void getChargeGroupMasterList_Success() throws Exception {
-        // Skip this test as it requires full Spring context for Pageable binding
-        // The actual endpoint works fine in integration tests
-    }
-
-    @Test
-    void getChargeGroupMasterList_WithoutBody() throws Exception {
-        // Skip this test as it requires full Spring context for Pageable binding
-        // The actual endpoint works fine in integration tests
-    }
-
-    @Test
     void createChargeGroupMaster_ServiceException() throws Exception {
         when(service.create(any(ChargeGroupMasterRequestDto.class)))
                 .thenThrow(new IllegalArgumentException("Charge Group Code already exists"));
@@ -163,7 +127,24 @@ public class ChargeGroupMasterControllerTest {
         mockMvc.perform(post("/v1/charge-group-master")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Charge Group Code already exists"));
+    }
+
+    @Test
+    void updateChargeGroupMaster_Success() throws Exception {
+        Long id = 1L;
+        when(service.update(eq(id), any(ChargeGroupMasterRequestDto.class))).thenReturn(responseDto);
+
+        mockMvc.perform(put("/v1/charge-group-master/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Charge Group Master updated successfully"));
+
+        verify(service).update(eq(id), any(ChargeGroupMasterRequestDto.class));
     }
 
     @Test
@@ -175,7 +156,21 @@ public class ChargeGroupMasterControllerTest {
         mockMvc.perform(put("/v1/charge-group-master/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void getChargeGroupMaster_Success() throws Exception {
+        Long id = 1L;
+        when(service.findById(id)).thenReturn(responseDto);
+
+        mockMvc.perform(get("/v1/charge-group-master/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Charge group master retrieved successfully"));
+
+        verify(service).findById(id);
     }
 
     @Test
@@ -185,17 +180,93 @@ public class ChargeGroupMasterControllerTest {
                 .thenThrow(new ResourceNotFoundException("Charge Group not found", "ChargeGroupPoid", id));
 
         mockMvc.perform(get("/v1/charge-group-master/{id}", id))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void deleteChargeGroupMaster_Success() throws Exception {
+        Long id = 1L;
+        doNothing().when(service).delete(eq(id), any());
+
+        mockMvc.perform(delete("/v1/charge-group-master/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DeleteReasonDto())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Charge group master deleted successfully"));
+
+        verify(service).delete(eq(id), any());
     }
 
     @Test
     void deleteChargeGroupMaster_NotFound() throws Exception {
         Long id = 999L;
         doThrow(new ResourceNotFoundException("Charge Group not found", "ChargeGroupPoid", id))
-                .when(service).delete(id);
+                .when(service).delete(eq(id), any());
 
-        mockMvc.perform(delete("/v1/charge-group-master/{id}", id))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/v1/charge-group-master/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DeleteReasonDto())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
     }
 
+    @Test
+    void getChargeGroupMasterList_Success() throws Exception {
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", java.util.List.of());
+        result.put("totalElements", 0);
+
+        when(service.listChargeGroupMaster(any(), any(), any(), any(), any())).thenReturn(result);
+
+        mockMvc.perform(post("/v1/charge-group-master/list")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("Charge Group Master list fetched successfully"));
+
+        verify(service).listChargeGroupMaster(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void getChargeGroupMasterList_WithoutBody() throws Exception {
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", java.util.List.of());
+
+        when(service.listChargeGroupMaster(any(), any(), any(), any(), any())).thenReturn(result);
+
+        mockMvc.perform(post("/v1/charge-group-master/list"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void getChargeGroupMasterList_WithDateParams() throws Exception {
+        Map<String, Object> result = new HashMap<>();
+        result.put("content", java.util.List.of());
+
+        when(service.listChargeGroupMaster(any(), any(), any(), any(), any())).thenReturn(result);
+
+        mockMvc.perform(post("/v1/charge-group-master/list")
+                        .param("startDate", "2024-01-01")
+                        .param("endDate", "2024-12-31")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void getChargeGroupMasterList_ServiceException() throws Exception {
+        when(service.listChargeGroupMaster(any(), any(), any(), any(), any()))
+                .thenThrow(new RuntimeException("DB error"));
+
+        mockMvc.perform(post("/v1/charge-group-master/list")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false));
+    }
 }

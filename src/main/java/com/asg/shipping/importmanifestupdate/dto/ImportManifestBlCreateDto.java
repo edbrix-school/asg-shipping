@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -20,7 +20,7 @@ public class ImportManifestBlCreateDto {
     private Long transactionPoid;
     private String docRef;
 
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
     private Long voyageTransactionPoid;
 
     @Size(max = 50, message = "BL number must not exceed 50 characters")
@@ -50,7 +50,7 @@ public class ImportManifestBlCreateDto {
     @Size(max = 25, message = "LPO/SRN number must not exceed 25 characters")
     private String lpoSrnNo;
 
-    private LocalDateTime lpoSrnDate;
+    private LocalDate lpoSrnDate;
 
     @Size(max = 25, message = "Type of move must not exceed 25 characters")
     private String typeOfMove;
@@ -59,7 +59,7 @@ public class ImportManifestBlCreateDto {
     private String preCarriedBy;
 
     private Long placeOfIssuePoid;
-    private LocalDateTime dateOfIssue;
+    private LocalDate dateOfIssue;
 
     @Pattern(regexp = "^[YN]?$", message = "Print freight details must be Y or N")
     private String printFreightDetails;

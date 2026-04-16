@@ -213,7 +213,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
     }
 
     @Override
-    public void validateBeforeSave(ImportManifestBlCreateDto dto, Long transactionPoid) {
+    public void validateBeforeSave(Long voyageTransactionPoid, Long transactionPoid,Long quotationPoid,String freight,String bookedByPrincipal) {
         try {
             Long userPoid = UserContext.getUserPoid();
             Long groupPoid = UserContext.getGroupPoid();
@@ -233,7 +233,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
             query.setParameter("P_LOGIN_COMPANY_POID", companyPoid);
             query.setParameter("P_LOGIN_USER_POID", userPoid);
             query.setParameter("P_DOC_KEY_POID", String.valueOf(transactionPoid));
-            query.setParameter("P_OTHER_POID", String.valueOf(dto.getVoyageTransactionPoid()));
+            query.setParameter("P_OTHER_POID", String.valueOf(voyageTransactionPoid));
             query.setParameter("P_STRING", "VLD_QUOTATION");
 
             query.execute();
@@ -241,9 +241,9 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
             String result = (String) query.getOutputParameterValue("P_RESULT");
 
             if (!"TRUE".equalsIgnoreCase(result)) {
-                if (dto.getQuotationTransactionPoid() == null
-                        && "2".equals(dto.getFreightStatus())
-                        && "N".equals(dto.getBookedByPp())) {
+                if (quotationPoid == null
+                        && "2".equals(freight)
+                        && "N".equals(bookedByPrincipal)) {
                     log.error("Validation failed: Quotation mapping required for transaction {}", transactionPoid);
                     throw new ValidationException("Map Quotation in manifest");
                 }

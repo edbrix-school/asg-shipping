@@ -1,12 +1,8 @@
 package com.asg.shipping.importmanifestupdate.respository;
 
-import com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto;
-import com.asg.shipping.importmanifestupdate.dto.EmailVerificationResponseDto;
-import com.asg.shipping.importmanifestupdate.dto.ResendCanResponseDto;
-import com.asg.shipping.importmanifestupdate.dto.SendEdiEmailsResponseDto;
-import com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto;
-import com.asg.shipping.importmanifestupdate.dto.ImportManifestBlCreateDto;
+
 import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
+import com.asg.shipping.importmanifestupdate.dto.*;
 
 public interface ImportManifestBlProcRepository {
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
@@ -14,7 +10,7 @@ public interface ImportManifestBlProcRepository {
     SendEdiEmailsResponseDto getEdiEmails(Long transactionPoId);
     BlStatusResponseDto getBlStatus(Long transactionPoId);
     void processBlSaveAfter(Long transactionPoid, Long groupPoid, Long companyPoid, String processType);
-    void validateBeforeSave(ImportManifestBlCreateDto dto, Long transactionPoid);
+    void validateBeforeSave(Long voyageTransactionPoid, Long transactionPoid,Long quotationPoid,String freight,String bookedByPrincipal);
     DefaultValueDto callDefaultGetValue(Long loginGroupPoid, Long loginCompanyPoid, Long loginUserPoid, String docId);
     void saveEmailsToDb(Long transactionPoId, String addressType,
                         String email1, String email2, String scope);

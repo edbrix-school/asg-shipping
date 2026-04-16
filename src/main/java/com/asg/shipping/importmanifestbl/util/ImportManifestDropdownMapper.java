@@ -19,8 +19,8 @@ public class ImportManifestDropdownMapper {
                 .containerTareWeight((BigDecimal) row[8])
                 .containerTeuFactor((BigDecimal) row[9])
                 .containerTypeCategory((String) row[10])
-                .active(row[10] != null ? row[10].toString() : null)
-                .seqno(row[12] != null ? ((BigDecimal) row[12]).longValue() : null)
+                .active(row[11] != null ? row[11].toString() : null)
+                .seqno(row[12] != null ? ((Number) row[12]).longValue() : null)
                 .containerApmtTypeCode((String) row[13])
                 .build();
     }

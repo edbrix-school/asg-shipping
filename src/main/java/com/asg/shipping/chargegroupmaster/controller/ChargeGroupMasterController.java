@@ -2,9 +2,12 @@ package com.asg.shipping.chargegroupmaster.controller;
 
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterRequestDto;
 import com.asg.shipping.chargegroupmaster.dto.ChargeGroupMasterResponseDto;
 import com.asg.shipping.chargegroupmaster.service.ChargeGroupMasterService;
@@ -25,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.internalServerError;
@@ -41,6 +45,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.success;
 public class ChargeGroupMasterController {
 
     private final ChargeGroupMasterService service;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @PostMapping
@@ -157,6 +162,7 @@ public class ChargeGroupMasterController {
         log.info("Getting charge group master with id: {}", id);
         ChargeGroupMasterResponseDto charge = service.findById(id);
         log.info("Successfully retrieved charge group master with id: {}", id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         return ApiResponse.success("Charge group master retrieved successfully", charge);
     }
 
@@ -186,9 +192,10 @@ public class ChargeGroupMasterController {
     })
     public ResponseEntity<?> deleteCharge(
             @Parameter(description = "Charge group master POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting charge with id: {}", id);
-        service.delete(id);
+        service.delete(id,deleteReasonDto);
         log.info("Successfully deleted charge group master with id: {}", id);
         return ApiResponse.success("Charge group master deleted successfully");
     }
@@ -254,9 +261,16 @@ public class ChargeGroupMasterController {
     )
     @PostMapping("/list")
     public ResponseEntity<?> getChargeGroupMasterList(@ParameterObject Pageable pageable,
-                                            @RequestBody(required = false) FilterRequestDto filters) {
+                                            @RequestBody(required = false) FilterRequestDto filters,
+                                                         @RequestParam(required = false)
+                                                          @Parameter(description = "Start date (inclusive) for TRANSACTION_DATE filter")
+                                                          LocalDate startDate,
+
+                                                      @RequestParam(required = false)
+                                                          @Parameter(description = "End date (inclusive) for TRANSACTION_DATE filter")
+                                                          LocalDate endDate) {
         try {
-            Map<String, Object> countries = service.listChargeGroupMaster(UserContext.getDocumentId(), filters, pageable);
+            Map<String, Object> countries = service.listChargeGroupMaster(UserContext.getDocumentId(), filters, startDate, endDate, pageable);
             return success("Charge Group Master list fetched successfully", countries);
         } catch (Exception e) {
             return internalServerError("Error fetching Charge Group Master List: " + e.getMessage());

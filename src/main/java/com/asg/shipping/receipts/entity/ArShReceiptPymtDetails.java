@@ -51,5 +51,4 @@ public class ArShReceiptPymtDetails extends BaseEntity {
 
 	@Column(name = "TT_BANK_POID")
 	private Long ttBankPoid;
-;
 }

@@ -1,10 +1,11 @@
 package com.asg.shipping.importmanifestupdate.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -13,11 +14,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "SHIP_BL_MANIFEST_HDR")
-public class ShipBlManifestHdr {
+public class ShipBlManifestHdr extends BaseEntity {
 
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long transactionPoid;
 
     /* ================= BASIC INFO ================= */
@@ -29,7 +31,7 @@ public class ShipBlManifestHdr {
     private Long companyPoid;
 
     @Column(name = "TRANSACTION_DATE")
-    private LocalDateTime transactionDate;
+    private LocalDate transactionDate;
 
     @Column(name = "VOYAGE_TRANSACTION_POID", nullable = false)
     private Long voyageTransactionPoid;
@@ -95,7 +97,7 @@ public class ShipBlManifestHdr {
     private String lpoSrnNo;
 
     @Column(name = "LPO_SRN_DATE")
-    private LocalDateTime lpoSrnDate;
+    private LocalDate lpoSrnDate;
 
     @Column(name = "TYPE_OF_MOVE", length = 25)
     private String typeOfMove;
@@ -107,7 +109,7 @@ public class ShipBlManifestHdr {
     private Long placeOfIssuePoid;
 
     @Column(name = "DATE_OF_ISSUE")
-    private LocalDateTime dateOfIssue;
+    private LocalDate dateOfIssue;
 
     @Column(name = "PRINT_FREIGHT_DETAILS", length = 1)
     private String printFreightDetails;
@@ -161,7 +163,7 @@ public class ShipBlManifestHdr {
     private String blOrginalPrint;
 
     @Column(name = "BL_ORGINAL_DATE")
-    private LocalDateTime blOrginalDate;
+    private LocalDate blOrginalDate;
 
     @Column(name = "BL_PRINTED_BY", length = 20)
     private String blPrintedBy;
@@ -183,7 +185,7 @@ public class ShipBlManifestHdr {
     private String releasedStatus;
 
     @Column(name = "RELEASED_DATE")
-    private LocalDateTime releasedDate;
+    private LocalDate releasedDate;
 
     @Column(name = "RELASED_TO_PERSON", length = 50)
     private String relasedToPerson;
@@ -210,24 +212,10 @@ public class ShipBlManifestHdr {
     private String releasedGrantBy;
 
     @Column(name = "RELEASED_GRANT_DATE")
-    private LocalDateTime releasedGrantDate;
+    private LocalDate releasedGrantDate;
 
     @Column(name = "RELEASED_GRANT_REASON", length = 200)
     private String releasedGrantReason;
-
-    /* ================= AUDIT ================= */
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     /* ================= TYPE & DOC ================= */
 
@@ -302,7 +290,7 @@ public class ShipBlManifestHdr {
     private String canSentQueue;
 
     @Column(name = "CAN_SENT_DATE")
-    private LocalDateTime canSentDate;
+    private LocalDate canSentDate;
 
     @Column(name = "CAN_SENT_BY", length = 20)
     private String canSentBy;

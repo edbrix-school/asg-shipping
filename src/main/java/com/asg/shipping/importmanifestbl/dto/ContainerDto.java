@@ -1,38 +1,39 @@
 package com.asg.shipping.importmanifestbl.dto;
 
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ContainerDto {
+public class ContainerDto implements BlManifestValidationService.ContainerValidatable {
 
     private Long detRowId;
     private String socType;
     private String containerNumber;
     private String sealNumber;
 
-    private Long isoTypePoid;
+    private String equipmentIsoType;
     private String shortDescription;
     private Long commodityPoid;
 
-    private Double cbm;
-    private Double grossWeight;
-    private Double netWeight;
-    private Double tareWeight;
+    private Long cbm;
+    private Long grossWeight;
+    private Long netWeight;
+    private Long tareWeight;
 
-    private Integer packs;
+    private Long packs;
     private String packsType;
 
     private String hsCode;
     private String hsDescription;
 
-    private Integer customerDays;
-    private Integer principalDays;
+    private Long customerDays;
+    private Long principalDays;
 
     private Boolean imco;
     private Boolean reefer;
@@ -41,16 +42,16 @@ public class ContainerDto {
     private Boolean grantFlag;
     private String grantBy;
 
-    private Double amountPerDayAfterFree;
+    private Long amountPerDayAfterFree;
 
-    private LocalDateTime actualDischargeDate;
-    private LocalDateTime emptyDate;
-    private LocalDateTime collectionDate;
+    private LocalDate actualDischargeDate;
+    private LocalDate emptyDate;
+    private LocalDate collectionDate;
 
-    private Double collectionAmount;
-    private Integer collectionDays;
+    private Long collectionAmount;
+    private Long collectionDays;
 
-    private Long imcoTypePoid;
+    private String imcoType;
     private String imcoNumber;
     private String imcoClassDescription;
 
@@ -59,7 +60,7 @@ public class ContainerDto {
     private String rfVent;
     private String rfTemperature;
 
-    private Long oogTypePoid;
+    private String oogType;
     private String oogBack;
     private String oogLeftWidth;
     private String oogRightWidth;
@@ -68,4 +69,7 @@ public class ContainerDto {
     private String oogAdditional;
     private String oogFront;
     private String actionType;
+
+    @Override public String getContainerNoValue() { return containerNumber; }
+    @Override public String getEquipmentIsoTypeValue() { return equipmentIsoType; }
 }

@@ -1,4 +1,4 @@
-package com.asg.shipping.mafitrailerdateupdateform.controller;
+package com.asg.shipping.MafiTrailerDateUpdateForm.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -30,6 +30,7 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormRequest;
 import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormResponse;
 import com.asg.shipping.mafitrailerdateupdateform.service.MafiTrailerDateUpdateFormService;
+import com.asg.shipping.mafitrailerdateupdateform.controller.MafiTrailerDateUpdateFormController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)

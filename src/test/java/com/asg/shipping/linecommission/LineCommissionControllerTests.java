@@ -1,5 +1,6 @@
 package com.asg.shipping.linecommission;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
 import com.asg.shipping.linecommission.controller.LineCommissionController;
@@ -59,6 +60,7 @@ class LineCommissionControllerTests {
         requestDTO = new LineCommissionRequest();
         requestDTO.setLinePoid(1L);
         requestDTO.setCurrencyPoid(1L);
+        requestDTO.setTransactionDate(java.time.LocalDate.of(2024, 1, 1));
         requestDTO.setPeriodFrom(java.time.LocalDate.of(2024, 1, 1));
         requestDTO.setPeriodTo(java.time.LocalDate.of(2024, 12, 31));
         requestDTO.setRenewalDate(java.time.LocalDate.of(2024, 12, 31));
@@ -156,11 +158,11 @@ class LineCommissionControllerTests {
     @Test
     void testDeleteLineCommission() throws Exception {
 
-        doNothing().when(service).delete(eq(1L), eq(100L), eq("admin"));
+        doNothing().when(service).delete(eq(1L), any(DeleteReasonDto.class));
 
         mockMvc.perform(delete("/v1/line-commission/1")
-                        .header("X-Group-Poid", 100L)
-                        .header("X-User-Id", "admin"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DeleteReasonDto())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")

@@ -36,4 +36,8 @@ public interface ShipPortTariffDtlRepository extends JpaRepository<ShipPortTarif
      * Find detail by transaction POID and det row ID
      */
     Optional<ShipPortTariffDtl> findByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
+
+
+    @Query("SELECT MAX(d.detRowId) FROM ShipPortTariffDtl d WHERE d.transactionPoid = :transactionPoid")
+    Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 }

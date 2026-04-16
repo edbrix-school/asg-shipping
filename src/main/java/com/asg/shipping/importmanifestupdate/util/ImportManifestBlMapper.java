@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
-
 @Component
 public class ImportManifestBlMapper {
 
@@ -352,8 +350,6 @@ public class ImportManifestBlMapper {
         entity.setForwarderPin(dto.getForwarderPin());
         entity.setManifestEmailVerified(dto.getManifestEmailVerified());
         entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         return entity;
     }
 
