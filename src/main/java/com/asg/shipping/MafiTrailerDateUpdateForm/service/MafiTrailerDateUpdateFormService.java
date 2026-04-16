@@ -1,5 +1,6 @@
 package com.asg.shipping.mafitrailerdateupdateform.service;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import org.springframework.data.domain.Pageable;
@@ -9,11 +10,10 @@ import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormR
 import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormResponse;
 
 public interface MafiTrailerDateUpdateFormService {
-	Map<String, Object> getAll(String docId, FilterRequestDto request, Pageable pageable);
+	Map<String, Object> getAll(String docId, FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate);
 
-	MafiTrailerDateUpdateFormResponse getById(Long transactionPoid, Long groupPoid, Long companyPoid);
+	MafiTrailerDateUpdateFormResponse getById(Long transactionPoid);
 
-	void update(Long transactionPoid, MafiTrailerDateUpdateFormRequest request,
-			Long groupPoid, Long companyPoid, String userId);
+    MafiTrailerDateUpdateFormResponse update(Long transactionPoid, MafiTrailerDateUpdateFormRequest request);
 
 }

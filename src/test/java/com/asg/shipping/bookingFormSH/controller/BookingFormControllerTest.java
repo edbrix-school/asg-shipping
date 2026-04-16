@@ -25,12 +25,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -80,12 +82,12 @@ class BookingFormControllerTest {
 
         Map<String, Object> response = Map.of("content", List.of(createMockDto()), "totalElements", 1);
 
-        when(bookingFormService.searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class))).thenReturn(response);
+        when(bookingFormService.searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class), isNull(), isNull())).thenReturn(response);
 
         mockMvc.perform(post("/v1/booking-form-sh/search").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(filters))).andExpect(status().isOk());
 
-        verify(bookingFormService).searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class));
+        verify(bookingFormService).searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class), isNull(), isNull());
     }
 
     @Test
@@ -94,12 +96,12 @@ class BookingFormControllerTest {
         response.put("content", List.of());
         response.put("totalElements", 0);
 
-        when(bookingFormService.searchBookingForm(eq("DOC123"), eq(null), any(Pageable.class))).thenReturn(response);
+        when(bookingFormService.searchBookingForm(eq("DOC123"), isNull(), any(Pageable.class), isNull(), isNull())).thenReturn(response);
 
         mockMvc.perform(post("/v1/booking-form-sh/search").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-        verify(bookingFormService).searchBookingForm(eq("DOC123"), eq(null), any(Pageable.class));
+        verify(bookingFormService).searchBookingForm(eq("DOC123"), isNull(), any(Pageable.class), isNull(), isNull());
     }
 
     /* ---------------- GET BY ID ---------------- */
@@ -185,9 +187,10 @@ class BookingFormControllerTest {
 
     @Test
     void getEmptyShipper_Success() throws Exception {
+        mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(2001L);
         when(bookingFormService.getEmptyShipper(2001L)).thenReturn("SHIPPER.1");
 
-        mockMvc.perform(get("/v1/booking-form-sh/empty-shipper").param("companyPoid", "2001"))
+        mockMvc.perform(get("/v1/booking-form-sh/empty-shipper"))
                 .andExpect(status().isOk());
 
         verify(bookingFormService).getEmptyShipper(2001L);

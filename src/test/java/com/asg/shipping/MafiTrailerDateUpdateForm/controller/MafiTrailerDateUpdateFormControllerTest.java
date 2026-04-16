@@ -2,10 +2,12 @@ package com.asg.shipping.MafiTrailerDateUpdateForm.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -84,16 +86,16 @@ class MafiTrailerDateUpdateFormControllerTest {
         Map<String, Object> response =
                 Map.of("content", List.of(), "totalElements", 0);
 
-        when(service.getAll(eq("DOC123"), eq(filters), any(Pageable.class)))
+        when(service.getAll(eq("DOC123"), eq(filters), any(Pageable.class), isNull(), isNull()))
                 .thenReturn(response);
 
-        mockMvc.perform(post("/v1/mafi-trailer-date-update/list")
+        mockMvc.perform(post("/v1/mafi-trailer-date-update/search")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(filters)))
                 .andExpect(status().isOk());
 
         verify(service)
-                .getAll(eq("DOC123"), eq(filters), any(Pageable.class));
+                .getAll(eq("DOC123"), eq(filters), any(Pageable.class), isNull(), isNull());
     }
 
     // ------------------------------------------------------
@@ -102,7 +104,7 @@ class MafiTrailerDateUpdateFormControllerTest {
     @Test
     void getById_Success() throws Exception {
 
-        when(service.getById(1001L, 2001L, 3001L))
+        when(service.getById(1001L))
                 .thenReturn(new MafiTrailerDateUpdateFormResponse());
 
         mockMvc.perform(get("/v1/mafi-trailer-date-update/1001")
@@ -110,7 +112,7 @@ class MafiTrailerDateUpdateFormControllerTest {
                 .param("companyPoid", "3001"))
                 .andExpect(status().isOk());
 
-        verify(service).getById(1001L, 2001L, 3001L);
+        verify(service).getById(1001L);
         verify(loggingService).createLogSummaryEntry(
                 LogDetailsEnum.VIEWED,
                 "DOC123",
@@ -126,12 +128,8 @@ class MafiTrailerDateUpdateFormControllerTest {
         MafiTrailerDateUpdateFormRequest request =
                 new MafiTrailerDateUpdateFormRequest();
 
-        doNothing().when(service)
-                .update(eq(1001L),
-                        any(MafiTrailerDateUpdateFormRequest.class),
-                        eq(2001L),
-                        eq(3001L),
-                        eq("admin"));
+        when(service.update(eq(1001L), any(MafiTrailerDateUpdateFormRequest.class)))
+                .thenReturn(new MafiTrailerDateUpdateFormResponse());
 
         mockMvc.perform(put("/v1/mafi-trailer-date-update/1001")
                 .param("groupPoid", "2001")
@@ -142,9 +140,6 @@ class MafiTrailerDateUpdateFormControllerTest {
                 .andExpect(status().isOk());
 
         verify(service).update(eq(1001L),
-                any(MafiTrailerDateUpdateFormRequest.class),
-                eq(2001L),
-                eq(3001L),
-                eq("admin"));
+                any(MafiTrailerDateUpdateFormRequest.class));
     }
 }
