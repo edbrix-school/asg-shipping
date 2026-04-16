@@ -3,16 +3,15 @@ package com.asg.shipping.mafitrailerdateupdateform.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
+@Setter
 public class MafiDetailDto {
 
-	private Long transactionPoid;
 	private Long detRowId;
 	private Long blPoid;
 	private String mafiRef;

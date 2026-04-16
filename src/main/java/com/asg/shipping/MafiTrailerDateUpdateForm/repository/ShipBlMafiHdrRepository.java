@@ -62,8 +62,7 @@ public interface ShipBlMafiHdrRepository extends JpaRepository<ShipBlMafiHdr, Lo
 			@Param("transactionDateFrom") LocalDate transactionDateFrom,
 			@Param("transactionDateTo") LocalDate transactionDateTo, Pageable pageable);
 
-	Optional<ShipBlMafiHdr> findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(Long transactionPoid,
-			Long groupPoid, Long companyPoid, String deleted);
+	Optional<ShipBlMafiHdr> findByTransactionPoidAndDeleted(Long transactionPoid, String deleted);
 	
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Query(value = """

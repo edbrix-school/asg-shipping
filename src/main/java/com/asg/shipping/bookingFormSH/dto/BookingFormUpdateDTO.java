@@ -57,7 +57,7 @@ public class BookingFormUpdateDTO {
 	private String shipperDetailsManually;
 
 	// Detail tables
-	private List<BookingFormCargoDetailDto> cargoDetails;
-	private List<BookingFormChargesDetailDto> chargesDetails;
-	private List<BookingFormContainerDetailDto> containerDetails;
+	private List<BookingFormCargoDetailDtoRequest> cargoDetails;
+	private List<BookingFormChargesDetailDtoRequest> chargesDetails;
+	private List<BookingFormContainerDetailDtoRequest> containerDetails;
 }

@@ -1,28 +1,29 @@
 package com.asg.shipping.mafitrailerdateupdateform.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "SHIP_BL_MAFI_DTL")
+@IdClass(ShipBlMafiDtl.CompositeKey.class)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class ShipBlMafiDtl extends BaseEntity {
 
-    @EmbeddedId
-    private ShipBlMafiDtlId id;
+    @Id
+    @Column(name = "TRANSACTION_POID")
+    private Long transactionPoid;
+
+    @Id
+    @Column(name = "DET_ROW_ID")
+    private Long detRowId;
 
     @Column(name = "BL_POID")
     private Long blPoid;
@@ -44,4 +45,12 @@ public class ShipBlMafiDtl extends BaseEntity {
 
     @Column(name = "REMARKS", length = 200)
     private String remarks;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CompositeKey implements Serializable {
+        private Long transactionPoid;
+        private Long detRowId;
+    }
 }

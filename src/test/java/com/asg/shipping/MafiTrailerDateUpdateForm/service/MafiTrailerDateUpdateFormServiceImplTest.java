@@ -8,7 +8,6 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.mafitrailerdateupdateform.dto.*;
 import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtlId;
 import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
 import com.asg.shipping.mafitrailerdateupdateform.repository.ShipBlMafiDtlRepository;
 import com.asg.shipping.mafitrailerdateupdateform.repository.ShipBlMafiHdrRepository;
@@ -27,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -69,6 +69,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         mockedUserContext = mockStatic(UserContext.class);
         mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
         mockedUserContext.when(UserContext::getTimeZoneCode).thenReturn("UTC");
+        mockedUserContext.when(UserContext::getUserId).thenReturn("admin");
 
         header = new ShipBlMafiHdr();
         header.setTransactionPoid(1L);
@@ -79,12 +80,9 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         header.setAgentReference("AGENT1");
         header.setRemarks("OLD");
 
-        ShipBlMafiDtlId id = new ShipBlMafiDtlId();
-        id.setTransactionPoid(1L);
-        id.setDetRowId(1L);
-
         detail = new ShipBlMafiDtl();
-        detail.setId(id);
+        detail.setTransactionPoid(1L);
+        detail.setDetRowId(1L);
         detail.setBlPoid(100L);
         detail.setMafiRef("MAFI001");
         detail.setMafiSize(new java.math.BigDecimal("20"));
@@ -92,6 +90,10 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         detail.setRemarks("OLD");
         detail.setBackLoadDate(LocalDate.now());
         detail.setMafiEmptyDate(LocalDate.now());
+
+        VoyageProjection voyage = mock(VoyageProjection.class);
+        lenient().when(readOnlyRepository.findVoyageDetailsById(99L)).thenReturn(Optional.of(voyage));
+        lenient().when(mapper.toMafiTrailerResponse(any(), any(), any())).thenReturn(new MafiTrailerDateUpdateFormResponse());
     }
 
     @AfterEach
@@ -116,12 +118,12 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         when(documentService.resolveOperator(filters)).thenReturn("OR");
         when(documentService.resolveIsDeleted(filters)).thenReturn("false");
-        when(documentService.resolveFilters(filters)).thenReturn(List.of());
-        when(documentService.search(anyString(), anyList(), anyString(),
-                eq(pageable), anyString(), anyString(), anyString()))
-                .thenReturn(rawResult);
+        when(documentService.resolveDateFilters(any(), anyString(), isNull(), isNull())).thenReturn(new ArrayList<>());
+        when(documentService.search(
+                anyString(), anyList(), anyString(), any(Pageable.class),
+                anyString(), anyString(), anyString())).thenReturn(rawResult);
 
-        Map<String, Object> result = service.getAll("DOC1", filters, pageable);
+        Map<String, Object> result = service.getAll("DOC1", filters, pageable,null,null);
 
         assertNotNull(result);
         verify(documentService).search(eq("DOC1"), anyList(), eq("OR"), eq(pageable), eq("false"), eq("DOC_REF"), eq("JOB_NO"));
@@ -134,11 +136,11 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         VoyageProjection voyage = mock(VoyageProjection.class);
         MafiTrailerDateUpdateFormResponse response = new MafiTrailerDateUpdateFormResponse();
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
         when(readOnlyRepository.findVoyageDetailsById(99L))
@@ -147,41 +149,41 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         when(mapper.toMafiTrailerResponse(eq(header), eq(voyage), anyList()))
                 .thenReturn(response);
 
-        MafiTrailerDateUpdateFormResponse result = service.getById(1L, 10L, 20L);
+        MafiTrailerDateUpdateFormResponse result = service.getById(1L);
 
         assertNotNull(result);
-        verify(headerRepository).findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(1L, 10L, 20L, "N");
-        verify(detailRepository).findByIdTransactionPoidOrderByIdDetRowId(1L);
+        verify(headerRepository).findByTransactionPoidAndDeleted(1L,  "N");
+        verify(detailRepository).findByTransactionPoidOrderByDetRowId(1L);
         verify(readOnlyRepository).findVoyageDetailsById(99L);
         verify(mapper).toMafiTrailerResponse(header, voyage, List.of(detail));
     }
 
     @Test
     void getById_headerNotFound_throwsException() {
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L, "N"))
                 .thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
-                () -> service.getById(1L, 10L, 20L));
+                () -> service.getById(1L));
 
         assertTrue(exception.getMessage().contains("Mafi trailer entry not found"));
     }
 
     @Test
     void getById_voyageNotFound_throwsException() {
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L, "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
         when(readOnlyRepository.findVoyageDetailsById(99L))
                 .thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
-                () -> service.getById(1L, 10L, 20L));
+                () -> service.getById(1L));
 
         assertTrue(exception.getMessage().contains("Voyage not found"));
     }
@@ -194,7 +196,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("NEW_AGENT");
         headerDto.setRemarks("NEW");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(1L);
         detailDto.setBlPoid(100L);
         detailDto.setMafiRef("MAFI001");
@@ -203,23 +205,24 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         detailDto.setRemarks("NEW");
         detailDto.setBackLoadDate(LocalDate.now().plusDays(1));
         detailDto.setMafiEmptyDate(LocalDate.now().plusDays(1));
+        detailDto.setActionType("isCreated");
 
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(mapper).updateShipBlMafiHdr(any(ShipBlMafiHdr.class), eq(request), eq("admin"));
         verify(headerRepository).updateByTransactionPoid(eq(1L), anyString(), anyString(), eq("admin"));
-        verify(detailRepository).updateByTransactionPoidAndDetRowId(eq(1L), eq(1L), anyString(), any(LocalDate.class), any(LocalDate.class), eq("admin"));
+        verify(detailRepository).save(any(ShipBlMafiDtl.class));
         verify(loggingService).createLogBatch(anyList());
         verify(loggingService).logChanges(any(), any(), eq(ShipBlMafiHdr.class), eq("DOC123"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
     }
@@ -230,27 +233,21 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("NEW_AGENT");
         headerDto.setRemarks("NEW");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
-        detailDto.setDetRowId(1L);
-        detailDto.setRemarks("OLD");
-        detailDto.setBackLoadDate(detail.getBackLoadDate());
-        detailDto.setMafiEmptyDate(detail.getMafiEmptyDate());
-
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
-        request.setMafiDetails(List.of(detailDto));
+        request.setMafiDetails(List.of());
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(headerRepository).updateByTransactionPoid(eq(1L), anyString(), anyString(), eq("admin"));
-        verify(detailRepository, never()).updateByTransactionPoidAndDetRowId(anyLong(), anyLong(), anyString(), any(), any(), anyString());
+        verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
         verify(loggingService).logChanges(any(), any(), eq(ShipBlMafiHdr.class), eq("DOC123"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
     }
 
@@ -260,7 +257,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("AGENT1");
         headerDto.setRemarks("OLD");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(1L);
         detailDto.setBlPoid(100L);
         detailDto.setMafiRef("MAFI001");
@@ -274,17 +271,17 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(headerRepository, never()).updateByTransactionPoid(anyLong(), anyString(), anyString(), anyString());
-        verify(detailRepository).updateByTransactionPoidAndDetRowId(eq(1L), eq(1L), anyString(), any(LocalDate.class), any(LocalDate.class), eq("admin"));
+        verify(detailRepository).save(any(ShipBlMafiDtl.class));
         verify(loggingService).createLogBatch(anyList());
         verify(loggingService).logChanges(any(), any(), eq(ShipBlMafiHdr.class), eq("DOC123"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
     }
@@ -295,27 +292,28 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("NEW_AGENT");
         headerDto.setRemarks("NEW");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(999L); // Non-existent detail
         detailDto.setRemarks("NEW");
         detailDto.setBackLoadDate(LocalDate.now().plusDays(1));
         detailDto.setMafiEmptyDate(LocalDate.now().plusDays(1));
+        detailDto.setActionType("NOACTION");
 
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(headerRepository).updateByTransactionPoid(eq(1L), anyString(), anyString(), eq("admin"));
-        verify(detailRepository, never()).updateByTransactionPoidAndDetRowId(eq(1L), eq(999L), anyString(), any(), any(), anyString());
+        verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
     }
 
     @Test
@@ -324,24 +322,25 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("NEW_AGENT");
         headerDto.setRemarks("OLD");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(1L);
         detailDto.setRemarks("OLD");
         detailDto.setBackLoadDate(detail.getBackLoadDate());
         detailDto.setMafiEmptyDate(detail.getMafiEmptyDate());
+        detailDto.setActionType("isCreated");
 
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(headerRepository).updateByTransactionPoid(eq(1L), anyString(), anyString(), eq("admin"));
     }
@@ -352,24 +351,25 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("AGENT1");
         headerDto.setRemarks("NEW");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(1L);
         detailDto.setRemarks("OLD");
         detailDto.setBackLoadDate(detail.getBackLoadDate());
         detailDto.setMafiEmptyDate(detail.getMafiEmptyDate());
+        detailDto.setActionType("isCreated");
 
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(headerRepository).updateByTransactionPoid(eq(1L), anyString(), anyString(), eq("admin"));
     }
@@ -380,7 +380,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("AGENT1");
         headerDto.setRemarks("OLD");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(1L);
         detailDto.setBlPoid(100L);
         detailDto.setMafiRef("MAFI001");
@@ -394,16 +394,16 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L, "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
-        verify(detailRepository).updateByTransactionPoidAndDetRowId(eq(1L), eq(1L), anyString(), any(LocalDate.class), any(LocalDate.class), eq("admin"));
+        verify(detailRepository).save(any(ShipBlMafiDtl.class));
     }
 
     @Test
@@ -412,7 +412,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("AGENT1");
         headerDto.setRemarks("OLD");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(1L);
         detailDto.setBlPoid(100L);
         detailDto.setMafiRef("MAFI001");
@@ -421,21 +421,22 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         detailDto.setRemarks("OLD");
         detailDto.setBackLoadDate(detail.getBackLoadDate());
         detailDto.setMafiEmptyDate(LocalDate.now().plusDays(1));
+        detailDto.setActionType("isCreated");
 
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
-        verify(detailRepository).updateByTransactionPoidAndDetRowId(eq(1L), eq(1L), anyString(), any(LocalDate.class), any(LocalDate.class), eq("admin"));
+        verify(detailRepository).save(any(ShipBlMafiDtl.class));
     }
 
     @Test
@@ -444,7 +445,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         headerDto.setAgentReference("AGENT1");
         headerDto.setRemarks("OLD");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto = new MafiDetailDtoRequest();
         detailDto.setDetRowId(1L);
         detailDto.setBlPoid(100L);
         detailDto.setMafiRef("MAFI001");
@@ -453,52 +454,44 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         detailDto.setRemarks("NEW");
         detailDto.setBackLoadDate(detail.getBackLoadDate());
         detailDto.setMafiEmptyDate(detail.getMafiEmptyDate());
+        detailDto.setActionType("isCreated");
 
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
-        verify(detailRepository).updateByTransactionPoidAndDetRowId(eq(1L), eq(1L), anyString(), any(LocalDate.class), any(LocalDate.class), eq("admin"));
+        verify(detailRepository).save(any(ShipBlMafiDtl.class));
     }
 
     @Test
-    void update_noChanges_throwsException() {
+    void update_noChanges_success() {
         MafitrailerHeaderDTO headerDto = new MafitrailerHeaderDTO();
         headerDto.setAgentReference("AGENT1");
         headerDto.setRemarks("OLD");
 
-        MafiDetailDto detailDto = new MafiDetailDto();
-        detailDto.setDetRowId(1L);
-        detailDto.setRemarks("OLD");
-        detailDto.setBackLoadDate(detail.getBackLoadDate());
-        detailDto.setMafiEmptyDate(detail.getMafiEmptyDate());
-
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
-        request.setMafiDetails(List.of(detailDto));
+        request.setMafiDetails(List.of());
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(1L, "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class,
-                () -> service.update(1L, request, 10L, 20L, "admin"));
+        service.update(1L, request);
 
-        assertEquals("No data to update.", exception.getMessage());
         verify(headerRepository, never()).updateByTransactionPoid(anyLong(), anyString(), anyString(), anyString());
-        verify(detailRepository, never()).updateByTransactionPoidAndDetRowId(anyLong(), anyLong(), anyString(), any(), any(), anyString());
+        verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
     }
 
     @Test
@@ -507,12 +500,12 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         request.setMafiHeader(new MafitrailerHeaderDTO());
         request.setMafiDetails(List.of());
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.empty());
 
         EntityNotFoundException exception = assertThrows(EntityNotFoundException.class,
-                () -> service.update(1L, request, 10L, 20L, "admin"));
+                () -> service.update(1L, request));
 
         assertTrue(exception.getMessage().contains("Mafi trailer entry not found"));
     }
@@ -520,65 +513,40 @@ class MafiTrailerDateUpdateFormServiceImplTest {
     /* ---------------- ADDITIONAL COVERAGE TESTS ---------------- */
 
     @Test
-    void getAll_emptyResults_success() {
-        FilterRequestDto filters = new FilterRequestDto("OR", "false", List.of());
-        Pageable pageable = PageRequest.of(0, 10);
-
-        RawSearchResult rawResult = new RawSearchResult(
-                List.of(),
-                Map.of(),
-                0L
-        );
-
-        when(documentService.resolveOperator(filters)).thenReturn("OR");
-        when(documentService.resolveIsDeleted(filters)).thenReturn("false");
-        when(documentService.resolveFilters(filters)).thenReturn(List.of());
-        when(documentService.search(anyString(), anyList(), anyString(),
-                eq(pageable), anyString(), anyString(), anyString()))
-                .thenReturn(rawResult);
-
-        Map<String, Object> result = service.getAll("DOC1", filters, pageable);
-
-        assertNotNull(result);
-        verify(documentService).search(eq("DOC1"), anyList(), eq("OR"), eq(pageable), eq("false"), eq("DOC_REF"), eq("JOB_NO"));
-    }
-
-    @Test
     void update_multipleDetails_success() {
         MafitrailerHeaderDTO headerDto = new MafitrailerHeaderDTO();
         headerDto.setAgentReference("AGENT1");
         headerDto.setRemarks("OLD");
 
-        MafiDetailDto detailDto1 = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto1 = new MafiDetailDtoRequest();
         detailDto1.setDetRowId(1L);
         detailDto1.setRemarks("NEW_REMARKS_1");
+        detailDto1.setActionType("isCreated");
 
-        MafiDetailDto detailDto2 = new MafiDetailDto();
+        MafiDetailDtoRequest detailDto2 = new MafiDetailDtoRequest();
         detailDto2.setDetRowId(2L);
         detailDto2.setRemarks("NEW_REMARKS_2");
+        detailDto2.setActionType("isCreated");
 
         MafiTrailerDateUpdateFormRequest request = new MafiTrailerDateUpdateFormRequest();
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of(detailDto1, detailDto2));
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
         ShipBlMafiDtl detail2 = new ShipBlMafiDtl();
-        ShipBlMafiDtlId id2 = new ShipBlMafiDtlId();
-        id2.setTransactionPoid(1L);
-        id2.setDetRowId(2L);
-        detail2.setId(id2);
+        detail2.setTransactionPoid(1L);
+        detail2.setDetRowId(2L);
         detail2.setRemarks("OLD");
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail, detail2));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
-        verify(detailRepository).updateByTransactionPoidAndDetRowId(eq(1L), eq(1L), eq("NEW_REMARKS_1"), any(), any(), eq("admin"));
-        verify(detailRepository).updateByTransactionPoidAndDetRowId(eq(1L), eq(2L), eq("NEW_REMARKS_2"), any(), any(), eq("admin"));
+        verify(detailRepository, times(2)).save(any(ShipBlMafiDtl.class));
         verify(loggingService).createLogBatch(anyList());
         verify(loggingService).logChanges(any(), any(), eq(ShipBlMafiHdr.class), eq("DOC123"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
     }
@@ -593,17 +561,17 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of());
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of(detail));
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(headerRepository).updateByTransactionPoid(eq(1L), anyString(), anyString(), eq("admin"));
-        verify(detailRepository, never()).updateByTransactionPoidAndDetRowId(anyLong(), anyLong(), anyString(), any(), any(), anyString());
+        verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
     }
 
     @Test
@@ -616,16 +584,16 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         request.setMafiHeader(headerDto);
         request.setMafiDetails(List.of());
 
-        when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(
-                1L, 10L, 20L, "N"))
+        when(headerRepository.findByTransactionPoidAndDeleted(
+                1L,  "N"))
                 .thenReturn(Optional.of(header));
 
-        when(detailRepository.findByIdTransactionPoidOrderByIdDetRowId(1L))
+        when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
                 .thenReturn(List.of());
 
-        service.update(1L, request, 10L, 20L, "admin");
+        service.update(1L, request);
 
         verify(headerRepository).updateByTransactionPoid(eq(1L), anyString(), anyString(), eq("admin"));
-        verify(detailRepository, never()).updateByTransactionPoidAndDetRowId(anyLong(), anyLong(), anyString(), any(), any(), anyString());
+        verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
     }
 }

@@ -1,5 +1,6 @@
 package com.asg.shipping.bookingformsh.service;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import org.springframework.data.domain.Pageable;
@@ -17,7 +18,7 @@ public interface BookingFormService {
 	/**
 	 * Search Booking Form records
 	 */
-	Map<String, Object> searchBookingForm(String docId, FilterRequestDto request, Pageable pageable);
+	Map<String, Object> searchBookingForm(String docId, FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate);
 
 	/**
 	 * Get Booking Form by ID
@@ -48,6 +49,8 @@ public interface BookingFormService {
 	 * Get empty shipper POID
 	 */
 	String getEmptyShipper(Long companyPoid);
+
+
 
 	/**
 	 * Process empty container load
