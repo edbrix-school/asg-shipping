@@ -246,6 +246,16 @@ public class VesselVoyageController {
 	}
 
 	@AllowedAction(UserRolesRightsEnum.EDIT)
+	@PostMapping("/{voyagePoid}/edi/moves-load-discharge")
+	public ResponseEntity<?> ediMovesLoadDischarge(@PathVariable Long voyagePoid,
+			@RequestParam String ediDateValue) {
+		log.info("Action={} | EDI moves load/discharge | voyagePoid={} ediDateValue={}",
+				UserContext.getActionRequested(), voyagePoid, ediDateValue);
+		vesselVoyageService.ediMovesLoadDischarge(voyagePoid, ediDateValue);
+		return ApiResponse.success("EDI moves load/discharge triggered");
+	}
+
+	@AllowedAction(UserRolesRightsEnum.EDIT)
 	@PostMapping("/{voyagePoid}/imports/selected-xl")
 	public ResponseEntity<?> importSelectedXl(@PathVariable Long voyagePoid) {
 		log.info("Action={} | Import selected XL | voyagePoid={}", UserContext.getActionRequested(), voyagePoid);
