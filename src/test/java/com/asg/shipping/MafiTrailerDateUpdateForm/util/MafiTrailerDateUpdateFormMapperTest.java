@@ -6,17 +6,13 @@ import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormR
 import com.asg.shipping.mafitrailerdateupdateform.dto.MafitrailerHeaderDTO;
 import com.asg.shipping.mafitrailerdateupdateform.dto.VoyageProjection;
 import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtlId;
 import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -58,10 +54,8 @@ class MafiTrailerDateUpdateFormMapperTest {
         when(voyage.getVesselName()).thenReturn("VesselName");
 
         ShipBlMafiDtl detail = new ShipBlMafiDtl();
-        ShipBlMafiDtlId id = new ShipBlMafiDtlId();
-        id.setTransactionPoid(10L);
-        id.setDetRowId(1L);
-        detail.setId(id);
+        detail.setTransactionPoid(10L);
+        detail.setDetRowId(1L);
         detail.setBlPoid(20L);
         detail.setMafiRef("MafiRef");
         detail.setMafiSize(java.math.BigDecimal.valueOf(40));
@@ -99,7 +93,7 @@ class MafiTrailerDateUpdateFormMapperTest {
         assertNotNull(response.getMafiDetails());
         assertEquals(1, response.getMafiDetails().size());
         MafiDetailDto pDto = response.getMafiDetails().get(0);
-        assertEquals(10L, pDto.getTransactionPoid());
+        assertEquals(10L, detail.getTransactionPoid());
         assertEquals(1L, (Long) pDto.getDetRowId());
         assertEquals(20L, pDto.getBlPoid());
         assertEquals("MafiRef", pDto.getMafiRef());

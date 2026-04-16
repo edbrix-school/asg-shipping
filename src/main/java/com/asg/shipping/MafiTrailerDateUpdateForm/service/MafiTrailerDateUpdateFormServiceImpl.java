@@ -5,13 +5,14 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.mafitrailerdateupdateform.dto.*;
 import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtlId;
 import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
 import com.asg.shipping.mafitrailerdateupdateform.repository.ShipBlMafiDtlRepository;
 import com.asg.shipping.mafitrailerdateupdateform.repository.ShipBlMafiHdrRepository;
@@ -27,10 +28,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,21 +47,21 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> getAll(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> getAll(String docId, FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
 
-        return listMafiTrailers(docId, request, pageable);
+        return listMafiTrailers(docId, request, pageable, startDate, endDate);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public MafiTrailerDateUpdateFormResponse getById(Long transactionPoid, Long groupPoid, Long companyPoid) {
+    public MafiTrailerDateUpdateFormResponse getById(Long transactionPoid) {
 
         ShipBlMafiHdr header = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(transactionPoid, groupPoid, companyPoid, "N")
+                .findByTransactionPoidAndDeleted(transactionPoid, "N")
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Mafi trailer entry not found for transactionPoid: " + transactionPoid));
 
-        List<ShipBlMafiDtl> details = detailRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid);
+        List<ShipBlMafiDtl> details = detailRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
 
         VoyageProjection voyage = readOnlyRepository.findVoyageDetailsById(header.getVoyageTransactionPoid())
                 .orElseThrow(
@@ -72,13 +72,12 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
 
     @Override
     @Transactional
-    public void update(Long transactionPoid, MafiTrailerDateUpdateFormRequest request, Long groupPoid, Long companyPoid,
-                       String userId) {
+    public MafiTrailerDateUpdateFormResponse update(Long transactionPoid, MafiTrailerDateUpdateFormRequest request) {
 
-        boolean anyUpdateDone = false;
+        String userId=UserContext.getUserId();
 
         ShipBlMafiHdr existingEntity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoidAndDeleted(transactionPoid, groupPoid, companyPoid, "N")
+                .findByTransactionPoidAndDeleted(transactionPoid, "N")
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Mafi trailer entry not found for transactionPoid: " + transactionPoid));
         ShipBlMafiHdr headerEntity = new ShipBlMafiHdr();
@@ -92,71 +91,111 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
             mapper.updateShipBlMafiHdr(headerEntity, request, userId);
             headerRepository.updateByTransactionPoid(headerEntity.getTransactionPoid(),
                     headerEntity.getAgentReference(), headerEntity.getRemarks(), userId);
-            anyUpdateDone = true;
         }
-
-        List<ShipBlMafiDtl> existingDetails = detailRepository
-                .findByIdTransactionPoidOrderByIdDetRowId(transactionPoid);
-
-        Map<Long, ShipBlMafiDtl> detailMap = existingDetails.stream()
-                .collect(Collectors.toMap(d -> d.getId().getDetRowId(), d -> d));
 
         List<LogRequestDto<ShipBlMafiDtl>> logRequests = new ArrayList<>();
 
         String docId = UserContext.getDocumentId();
-        String docKeyPoid = transactionPoid.toString();
 
-        for (MafiDetailDto dto : request.getMafiDetails()) {
+        processDetails(transactionPoid, request.getMafiDetails());
 
-            ShipBlMafiDtl entity = detailMap.get(dto.getDetRowId());
-            if (entity == null) {
-                continue;
-            }
-
-            boolean changed = !Objects.equals(dto.getRemarks(), entity.getRemarks())
-                    || !Objects.equals(dto.getBackLoadDate(), entity.getBackLoadDate())
-                    || !Objects.equals(dto.getMafiEmptyDate(), entity.getMafiEmptyDate());
-
-            if (changed) {
-                detailRepository.updateByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId(),
-                        dto.getRemarks(), dto.getBackLoadDate(), dto.getMafiEmptyDate(), userId);
-                anyUpdateDone = true;
-                ShipBlMafiDtl newEntity = new ShipBlMafiDtl();
-                ShipBlMafiDtlId id = new ShipBlMafiDtlId();
-                id.setTransactionPoid(transactionPoid);
-                id.setDetRowId(dto.getDetRowId());
-                newEntity.setId(id);
-                newEntity.setBlPoid(dto.getBlPoid());
-                newEntity.setMafiRef(dto.getMafiRef());
-                newEntity.setMafiSize(dto.getMafiSize());
-                newEntity.setMafiFreeDays(dto.getMafiFreeDays());
-                newEntity.setBackLoadDate(dto.getBackLoadDate());
-                newEntity.setMafiEmptyDate(dto.getMafiEmptyDate());
-                newEntity.setRemarks(dto.getRemarks());
-                logRequests.add(new LogRequestDto<>(entity, newEntity, ShipBlMafiDtl.class, docId,
-                        docKeyPoid, "BLMAFIDTL DET_ROW_ID: " + dto.getDetRowId()));
-            }
-        }
-
-        if (!anyUpdateDone) {
-            throw new IllegalStateException("No data to update.");
-        }
         loggingService.createLogBatch(logRequests);
         loggingService.logChanges(existingEntity, headerEntity, ShipBlMafiHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
+        return getById(transactionPoid);
     }
 
-    private Map<String, Object> listMafiTrailers(String docId, FilterRequestDto request, Pageable pageable) {
+    private void processDetails(Long transactionPoid, List<MafiDetailDtoRequest> details) {
+        List<LogRequestDto<ShipBlMafiDtl>> logRequests = new ArrayList<>();
+        String docId = UserContext.getDocumentId();
 
-        String operator = documentService.resolveOperator(request);
-        String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        // Auto-generate detRowId for new records
+        Long maxDetRowId = detailRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
+        AtomicLong detRowIdSeq = new AtomicLong(maxDetRowId != null ? maxDetRowId + 1 : 1);
 
-        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "DOC_REF",
+        for (MafiDetailDtoRequest detail : details) {
+            String actionType = detail.getActionType() != null ? detail.getActionType().toUpperCase() : "ISCREATED";
+
+            switch (actionType) {
+                case "ISCREATED" -> {
+
+                    Long newDetRowId = detRowIdSeq.getAndIncrement();
+                    detail.setDetRowId(newDetRowId);
+
+                    ShipBlMafiDtl newEntity = getShipBlMafiDtl(transactionPoid, detail, newDetRowId);
+                    detailRepository.save(newEntity);
+                    String logDetail = String.format("Row Created on Mafi trailer update form Detail with detRowId: %s", newEntity.getDetRowId());
+                    loggingService.createLogSummaryEntry(docId, transactionPoid.toString(), logDetail);
+                }
+                case "ISUPDATED" -> {
+                    validateDetRowID(detail.getDetRowId());
+                    ShipBlMafiDtl existing = detailRepository.findByTransactionPoidAndDetRowId(transactionPoid, detail.getDetRowId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Mafi Trailer Update Form Detail", "detRowId", detail.getDetRowId()));
+
+                    ShipBlMafiDtl oldEntity = new ShipBlMafiDtl();
+                    BeanUtils.copyProperties(existing, oldEntity);
+
+                    existing.setBlPoid(detail.getBlPoid());
+                    existing.setMafiRef(detail.getMafiRef());
+                    existing.setMafiSize(detail.getMafiSize());
+                    existing.setMafiFreeDays(detail.getMafiFreeDays());
+                    existing.setBackLoadDate(detail.getBackLoadDate());
+                    existing.setMafiEmptyDate(detail.getMafiEmptyDate());
+                    existing.setRemarks(detail.getRemarks());
+                    detailRepository.save(existing);
+
+                    String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detail.getDetRowId());
+                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipBlMafiDtl.class, docId, transactionPoid.toString(), logDetailForUpdate));
+                }
+                case "ISDELETED" -> {
+                    validateDetRowID(detail.getDetRowId());
+                    detailRepository.findByTransactionPoidAndDetRowId(transactionPoid, detail.getDetRowId())
+                            .ifPresent(entity -> {
+                                detailRepository.delete(entity);
+                                loggingService.logDelete(detail, docId, transactionPoid.toString());
+                            });
+                }
+            }
+        }
+
+        if (!logRequests.isEmpty()) {
+            loggingService.createLogBatch(logRequests);
+        }
+    }
+
+    private void validateDetRowID(Long detRowId){
+        Optional.ofNullable(detRowId).orElseThrow(()-> new ValidationException(String.format("Validation Error on %s RowId is Required","detail")));
+    }
+
+    private static ShipBlMafiDtl getShipBlMafiDtl(Long transactionPoid, MafiDetailDtoRequest detail, Long newDetRowId) {
+        ShipBlMafiDtl newEntity = new ShipBlMafiDtl();
+        newEntity.setTransactionPoid(transactionPoid);
+        newEntity.setDetRowId(newDetRowId);
+        newEntity.setBlPoid(detail.getBlPoid());
+        newEntity.setMafiRef(detail.getMafiRef());
+        newEntity.setMafiSize(detail.getMafiSize());
+        newEntity.setMafiFreeDays(detail.getMafiFreeDays());
+        newEntity.setBackLoadDate(detail.getBackLoadDate());
+        newEntity.setMafiEmptyDate(detail.getMafiEmptyDate());
+        newEntity.setRemarks(detail.getRemarks());
+        return newEntity;
+    }
+
+    private Map<String, Object> listMafiTrailers(String docId, FilterRequestDto filters, Pageable pageable, LocalDate startDate, LocalDate endDate) {
+
+        log.info("get LOR MafiTrailerUpdateForm started for docId={}", docId);
+
+        String operator = documentService.resolveOperator(filters);
+        String isDeleted = documentService.resolveIsDeleted(filters);
+        List<FilterDto> filtersList = documentService.resolveDateFilters(filters,"TRANSACTION_DATE", startDate,
+                endDate);
+
+
+        RawSearchResult raw = documentService.search(docId, filtersList, operator, pageable, isDeleted, "DOC_REF",
                 "JOB_NO");
 
         Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
-
+        log.info("get LOR MafiTrailerUpdateForm completed for docId={} count={}", docId, page.getNumber());
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 }

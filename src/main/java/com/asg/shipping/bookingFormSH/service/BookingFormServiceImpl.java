@@ -44,6 +44,7 @@ import java.nio.file.Paths;
 import java.sql.CallableStatement;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -72,19 +73,21 @@ public class BookingFormServiceImpl implements BookingFormService {
     private static final String ISCREATED = "ISCREATED";
     private static final String ISUPDATED = "ISUPDATED";
     private static final String ISDELETED = "ISDELETED";
+    private static final String NOCHANGES = "NOCHANGES";
     private static final String ALLOCATESPLITBOOKING = "ALLOCATESPLITBOOKING";
     private static final String TRANSACTIONPOID = "transactionPoid";
     private static final String BOOKINGFORM = "Booking Form";
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchBookingForm(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchBookingForm(String docId, FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
         log.info("Searching booking form records with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(),
                 pageable.getPageSize());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request,"TRANSACTION_DATE", startDate,
+                endDate);
 
         RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "DOC_REF",
                 "TRANSACTION_POID");
@@ -99,11 +102,8 @@ public class BookingFormServiceImpl implements BookingFormService {
     public BookingFormDto getBookingForm(Long id) {
         log.info("Getting booking form with id: {}", id);
 
-        Long groupPoid = UserContext.getGroupPoid();
-        Long companyPoid = UserContext.getCompanyPoid();
-
         ShipMateHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
@@ -157,7 +157,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         Long userPoid = UserContext.getUserPoid();
         callProcShipBlPageSaveAfter(groupPoid, companyPoid, entity.getTransactionPoid(), null, ALLOCATESPLITBOOKING,
                 userPoid);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), entity.toString());
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), entity.getTransactionPoid().toString());
 
         // Reload and return
         return getBookingForm(entity.getTransactionPoid());
@@ -172,7 +172,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         Long companyPoid = UserContext.getCompanyPoid();
 
         ShipMateHdr existingData = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
         if ("Y".equals(existingData.getDeleted())) {
@@ -231,11 +231,8 @@ public class BookingFormServiceImpl implements BookingFormService {
     public void deleteBookingForm(Long id) {
         log.info("Deleting booking form with id: {}", id);
 
-        Long groupPoid = UserContext.getGroupPoid();
-        Long companyPoid = UserContext.getCompanyPoid();
-
         ShipMateHdr entity = headerRepository
-                .findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
+                .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
         entity.setDeleted("Y");
@@ -494,7 +491,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         for (D dto : dtos) {
 
-            String action = actionExtractor.apply(dto).toUpperCase();
+            String action = actionExtractor.apply(dto) != null ? actionExtractor.apply(dto).toUpperCase() : ISCREATED;
             Long rowId = rowIdExtractor.apply(dto);
 
             switch (action) {
@@ -528,6 +525,8 @@ public class BookingFormServiceImpl implements BookingFormService {
                     loggingService.logDelete(dto, docId, docKey);
                 }
 
+                case NOCHANGES -> {}
+
                 default -> throw new ValidationException("Invalid action: " + action);
             }
         }
@@ -554,17 +553,17 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     private void saveDetailTables(
             Long transactionPoid,
-            List<BookingFormCargoDetailDto> cargoDetails,
-            List<BookingFormChargesDetailDto> chargesDetails,
-            List<BookingFormContainerDetailDto> containerDetails) {
+            List<BookingFormCargoDetailDtoRequest> cargoDetails,
+            List<BookingFormChargesDetailDtoRequest> chargesDetails,
+            List<BookingFormContainerDetailDtoRequest> containerDetails) {
 
         /* -------------------- CARGO -------------------- */
         processDetails(
                 transactionPoid,
                 cargoDetails,
                 cargoDtlRepository.getMaxDetRowId(transactionPoid),
-                BookingFormCargoDetailDto::getAction,
-                BookingFormCargoDetailDto::getDetRowId,
+                BookingFormCargoDetailDtoRequest::getActionType,
+                BookingFormCargoDetailDtoRequest::getDetRowId,
                 BookingFormMapper::mapCargoDtlFromDto,
                 this::mapCargoDtlFromDto,
                 cargoDtlRepository::findByTransactionPoidAndDetRowId,
@@ -579,8 +578,8 @@ public class BookingFormServiceImpl implements BookingFormService {
                 transactionPoid,
                 chargesDetails,
                 chargesDtlRepository.getMaxDetRowId(transactionPoid),
-                BookingFormChargesDetailDto::getAction,
-                BookingFormChargesDetailDto::getDetRowId,
+                BookingFormChargesDetailDtoRequest::getActionType,
+                BookingFormChargesDetailDtoRequest::getDetRowId,
                 BookingFormMapper::mapChargesDtlFromDto,
                 this::mapChargesDtlFromDto,
                 chargesDtlRepository::findByTransactionPoidAndDetRowId,
@@ -595,8 +594,8 @@ public class BookingFormServiceImpl implements BookingFormService {
                 transactionPoid,
                 containerDetails,
                 containerDtlRepository.getMaxDetRowId(transactionPoid),
-                BookingFormContainerDetailDto::getAction,
-                BookingFormContainerDetailDto::getDetRowId,
+                BookingFormContainerDetailDtoRequest::getActionType,
+                BookingFormContainerDetailDtoRequest::getDetRowId,
                 BookingFormMapper::mapContainerDtlFromDto,
                 this::mapContainerDtlFromDto,
                 containerDtlRepository::findByTransactionPoidAndDetRowId,

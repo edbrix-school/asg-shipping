@@ -18,23 +18,27 @@ public class MafiTrailerDateUpdateFormMapper {
 			return null;
 		}
 
-		MafitrailerHeaderDTO responseHeader = MafitrailerHeaderDTO.builder().voyageNo(voyage.getVoyageNo())
-				.jobNo(voyage.getJobNo()).linePoid(voyage.getLinePoid())
+		MafitrailerHeaderDTO responseHeader = MafitrailerHeaderDTO.builder()
+                .transactionPoid(header.getTransactionPoid())
+                .transactionDate(header.getTransactionDate()).docRef(header.getDocRef())
+                .voyageTransactionPoid(header.getVoyageTransactionPoid())
+                .voyageNo(voyage.getVoyageNo()).jobNo(voyage.getJobNo())
+                .linePoid(voyage.getLinePoid())
 				.lineDetail(Map.of("poid", voyage.getLinePoid(), "code", voyage.getLineCode(), "description",
 						voyage.getLineName()))
 				.agentReference(header.getAgentReference()).remarks(header.getRemarks())
 				.vesselPoid(voyage.getVesselPoid()).vesselDetail(Map.of("poid", voyage.getVesselPoid(), "code",
 						voyage.getVesselCode(), "description", voyage.getVesselName()))
+                .createdDate(header.getCreatedDate()).createdBy(header.getCreatedBy())
+                .lastModifiedBy(header.getLastModifiedBy()).lastModifiedDate(header.getLastModifiedDate())
 				.build();
 
 		List<MafiDetailDto> detailsDto = new ArrayList<>();
-		details.stream().forEach(val -> {
+		details.forEach(val -> {
 			MafiDetailDto detailDto = new MafiDetailDto();
 
-			detailDto.setTransactionPoid(val.getId().getTransactionPoid());
-			detailDto.setDetRowId(val.getId().getDetRowId());
+			detailDto.setDetRowId(val.getDetRowId());
 			detailDto.setBlPoid(val.getBlPoid());
-//			detailDto.setBldetail(Map.of("poid", val.getBlPoid()));
 			detailDto.setMafiRef(val.getMafiRef());
 			detailDto.setMafiSize(val.getMafiSize());
 			detailDto.setMafiFreeDays(val.getMafiFreeDays());
@@ -45,10 +49,8 @@ public class MafiTrailerDateUpdateFormMapper {
 			detailsDto.add(detailDto);
 		});
 
-		MafiTrailerDateUpdateFormResponse response = MafiTrailerDateUpdateFormResponse.builder()
-				.mafiHeader(responseHeader).mafiDetails(detailsDto).build();
-
-		return response;
+		return MafiTrailerDateUpdateFormResponse.builder()
+                .mafiHeader(responseHeader).mafiDetails(detailsDto).build();
 	}
 
 	public void updateShipBlMafiHdr(ShipBlMafiHdr entity, MafiTrailerDateUpdateFormRequest request, String userId) {
