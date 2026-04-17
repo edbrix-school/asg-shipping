@@ -1,10 +1,12 @@
 package com.asg.shipping.customerinvoicechargemapmaster.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -37,6 +39,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     private final CustomerInvoicePrtDtlRepository detailRepo;
     private final LoggingService loggingService;
     private final DocumentSearchService documentService;
+    private final DocumentDeleteService documentDeleteService;
 
     // ========================= GET =========================
 
@@ -118,30 +121,23 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     @Override
     public void deleteDetail(
             Long customerPoid,
-            Long detRowId,
-            Long groupPoid) {
+            DeleteReasonDto deleteReasonDto) {
 
-        log.info("Deleting customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
+        log.info("Deleting customer invoice charge mapping for customerPoid: {}", customerPoid);
 
-        CustomerInvoicePrtDtlId id = new CustomerInvoicePrtDtlId();
-        id.setCustomerPoid(customerPoid);
-        id.setDetRowId(detRowId);
+        masterRepo.findById(customerPoid)
+                .orElseThrow(() -> new com.asg.common.lib.exception.ResourceNotFoundException(
+                        "Customer invoice charge mapping", "customerPoid", customerPoid.toString()));
 
-        CustomerInvoicePrtDtlEntity entity =
-                detailRepo.findById(id)
-                        .orElseThrow(() ->
-                                new com.asg.common.lib.exception.ResourceNotFoundException(
-                                        "Charge detail", "detRowId", detRowId.toString()));
+        documentDeleteService.deleteDocument(
+                customerPoid,
+                "CUSTOMER_INVOICE_PRT_MASTER",
+                "CUSTOMER_POID",
+                deleteReasonDto,
+                null
+        );
 
-        // HARD DELETE (as per SRS)
-        detailRepo.delete(entity);
-
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), customerPoid.toString());
-        String logDetail = String.format("KeyId = CUSTOMER_POID:%s, DET_ROW_ID:%s", customerPoid, detRowId);
-        String tableName = CustomerInvoicePrtDtlEntity.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), customerPoid.toString(), "Detail Deleted", "EXISTS", "DELETED", logDetail, tableName);
-
-        log.info("Successfully deleted customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
+        log.info("Successfully deleted customer invoice charge mapping for customerPoid: {}", customerPoid);
     }
 
     // ========================= LIST =========================

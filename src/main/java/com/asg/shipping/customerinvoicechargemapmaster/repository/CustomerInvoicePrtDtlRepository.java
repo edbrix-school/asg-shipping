@@ -15,6 +15,8 @@ public interface CustomerInvoicePrtDtlRepository
 
     List<CustomerInvoicePrtDtlEntity> findByIdCustomerPoid(Long customerPoid);
 
+    void deleteByIdCustomerPoid(Long customerPoid);
+
     @Query("SELECT COALESCE(MAX(d.id.detRowId), 0) FROM CustomerInvoicePrtDtlEntity d WHERE d.id.customerPoid = :customerPoid")
     Long findMaxDetRowId(@Param("customerPoid") Long customerPoid);
 }

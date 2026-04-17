@@ -1,7 +1,9 @@
 package com.asg.shipping.customerinvoicechargemapmaster.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapDetailDto;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterRequest;
@@ -34,6 +36,9 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
 
     @Mock
     private CustomerInvoicePrtDtlRepository detailRepo;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
 
     @Mock
     private LoggingService loggingService;
@@ -180,39 +185,33 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
     }
 
     @Test
-    void deleteDetail_success_hardDeletes_andLogs() {
+    void deleteDetail_success_callsDocumentDeleteService() {
         Long customerPoid = 1L;
-        Long detRowId = 10L;
-        Long groupPoid = 2L;
+        DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
 
-        CustomerInvoicePrtDtlEntity entity = new CustomerInvoicePrtDtlEntity();
-        CustomerInvoicePrtDtlId id = new CustomerInvoicePrtDtlId();
-        id.setCustomerPoid(customerPoid);
-        id.setDetRowId(detRowId);
-        entity.setId(id);
+        CustomerInvoicePrtMasterEntity master = new CustomerInvoicePrtMasterEntity();
+        master.setCustomerPoid(customerPoid);
+        when(masterRepo.findById(customerPoid)).thenReturn(Optional.of(master));
 
-        when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.of(entity));
-        doNothing().when(detailRepo).delete(any(CustomerInvoicePrtDtlEntity.class));
+        service.deleteDetail(customerPoid, deleteReasonDto);
 
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
-
-            service.deleteDetail(customerPoid, detRowId, groupPoid);
-        }
-
-        verify(detailRepo).delete(entity);
-        verify(loggingService).createLogSummaryEntry(LogDetailsEnum.DELETED, "DOC123", "1");
-
-        // Last two params are (logDetail, tableName)
-        verify(loggingService).createLogDetailsEntry(
-                eq("DOC123"),
-                eq("1"),
-                eq("Detail Deleted"),
-                eq("EXISTS"),
-                eq("DELETED"),
-                anyString(),
-                eq("CUSTOMER_INVOICE_PRT_DTL")
+        verify(documentDeleteService).deleteDocument(
+                eq(customerPoid),
+                eq("CUSTOMER_INVOICE_PRT_MASTER"),
+                eq("CUSTOMER_POID"),
+                eq(deleteReasonDto),
+                isNull()
         );
+    }
+
+    @Test
+    void deleteDetail_masterNotFound_throwsResourceNotFound() {
+        Long customerPoid = 99L;
+
+        when(masterRepo.findById(customerPoid)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> service.deleteDetail(customerPoid, new DeleteReasonDto()));
+        verify(documentDeleteService, never()).deleteDocument(any(), any(), any(), any(), any());
     }
 }
 

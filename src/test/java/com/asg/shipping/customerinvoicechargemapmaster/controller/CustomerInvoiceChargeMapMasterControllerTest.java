@@ -1,5 +1,6 @@
 package com.asg.shipping.customerinvoicechargemapmaster.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapDetailDto;
@@ -11,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -188,29 +188,17 @@ class CustomerInvoiceChargeMapMasterControllerTest {
     @Test
     void deleteDetail_Success() throws Exception {
 
-        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1/details/10")
+        mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/1")
                         .header("X-Group-Poid", "100")
-                        .header("X-User-Id", "user123"))
+                        .header("X-User-Id", "user123")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DeleteReasonDto())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
-                        .value("Customer invoice charge detail deleted successfully"));
+                        .value("Customer invoice charge details deleted successfully"));
 
-        verify(service).deleteDetail(eq(1L), eq(10L), isNull());
-    }
-
-    @Test
-    void deleteDetail_InvalidCustomerPoid_Negative() throws Exception {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-
-            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
-            mockedUserContext.when(UserContext::getUserId).thenReturn("user123");
-
-            mockMvc.perform(delete("/v1/customer-invoice-charge-map-master/-1/details/10"))
-                    .andExpect(status().isOk());
-
-            verify(service).deleteDetail(-1L, 10L, 100L);
-        }
+        verify(service).deleteDetail(eq(1L), any(DeleteReasonDto.class));
     }
 
 
