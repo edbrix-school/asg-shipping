@@ -1,5 +1,6 @@
 package com.asg.shipping.customerinvoicechargemapmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterRequest;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterResponse;
@@ -18,8 +19,7 @@ public interface CustomerInvoiceChargeMapMasterService {
 
     void deleteDetail(
             Long customerPoid,
-            Long detRowId,
-            Long groupPoid
+            DeleteReasonDto deleteReasonDto
     );
 
     Map<String, Object> list(String docId, FilterRequestDto request, Pageable pageable);

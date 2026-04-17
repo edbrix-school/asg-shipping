@@ -1,5 +1,6 @@
 package com.asg.shipping.customerinvoicechargemapmaster.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -139,21 +140,21 @@ public class CustomerInvoiceChargeMapMasterController {
      * Delete a specific charge detail
      */
     @AllowedAction(UserRolesRightsEnum.DELETE)
-    @DeleteMapping("/{customerPoid}/details/{detRowId}")
+    @DeleteMapping("/{customerPoid}")
     @Operation(
-            summary = "Delete customer invoice charge mapping detail",
-            description = "Delete a specific charge detail from customer invoice charge mapping",
+            summary = "Delete customer invoice charge mapping details",
+            description = "Delete all charge details for a customer invoice charge mapping",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
-                    description = "Successfully deleted customer invoice charge detail",
+                    description = "Successfully deleted customer invoice charge details",
                     content = @Content(mediaType = "application/json")
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "404",
-                    description = "Customer invoice charge detail not found",
+                    description = "Customer invoice charge mapping not found",
                     content = @Content(mediaType = "application/json")
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -165,14 +166,13 @@ public class CustomerInvoiceChargeMapMasterController {
     public ResponseEntity<?> deleteDetail(
             @Parameter(description = "Customer POID", required = true, example = "12345")
             @PathVariable @NotNull @Positive Long customerPoid,
-            @Parameter(description = "Detail Row ID", required = true, example = "1")
-            @PathVariable @NotNull @Positive Long detRowId
+            @RequestBody(required = false) DeleteReasonDto deleteReasonDto
     ) {
-        log.info("Deleting customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
-        service.deleteDetail(customerPoid, detRowId, UserContext.getGroupPoid());
-        log.info("Successfully deleted customer invoice charge detail with customerPoid: {}, detRowId: {}", customerPoid, detRowId);
+        log.info("Deleting charge mapping for customerPoid: {}", customerPoid);
+        service.deleteDetail(customerPoid, deleteReasonDto);
+        log.info("Successfully deleted charge mapping for customerPoid: {}", customerPoid);
         return ApiResponse.success(
-                "Customer invoice charge detail deleted successfully"
+                "Customer invoice charge details deleted successfully"
         );
     }
 
