@@ -1,12 +1,12 @@
-package com.asg.shipping.mafitrailerdateupdateform.util;
+package com.asg.shipping.MafiTrailerDateUpdateForm.util;
 
-import com.asg.shipping.mafitrailerdateupdateform.dto.MafiDetailDto;
-import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormRequest;
-import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormResponse;
-import com.asg.shipping.mafitrailerdateupdateform.dto.MafitrailerHeaderDTO;
-import com.asg.shipping.mafitrailerdateupdateform.dto.VoyageProjection;
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiDetailDto;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormResponse;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafitrailerHeaderDTO;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.VoyageProjection;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiHdr;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

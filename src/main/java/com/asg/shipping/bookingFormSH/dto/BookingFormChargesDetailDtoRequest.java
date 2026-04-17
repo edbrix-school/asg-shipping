@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingformsh.dto;
+package com.asg.shipping.bookingFormSH.dto;
 
 import lombok.*;
 

@@ -1,4 +1,4 @@
-package com.asg.shipping.mafitrailerdateupdateform.repository;
+package com.asg.shipping.MafiTrailerDateUpdateForm.repository;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiHdr;
 
 @Repository
 public interface ShipBlMafiHdrRepository extends JpaRepository<ShipBlMafiHdr, Long> {

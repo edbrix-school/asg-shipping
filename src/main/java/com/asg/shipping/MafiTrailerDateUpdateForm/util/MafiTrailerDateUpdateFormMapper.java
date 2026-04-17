@@ -1,8 +1,8 @@
-package com.asg.shipping.mafitrailerdateupdateform.util;
+package com.asg.shipping.MafiTrailerDateUpdateForm.util;
 
-import com.asg.shipping.mafitrailerdateupdateform.dto.*;
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiHdr;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.*;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiHdr;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

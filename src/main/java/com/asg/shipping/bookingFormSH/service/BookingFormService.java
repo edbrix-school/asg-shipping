@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingformsh.service;
+package com.asg.shipping.bookingFormSH.service;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -6,9 +6,9 @@ import java.util.Map;
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.bookingformsh.dto.BookingFormCreateDTO;
-import com.asg.shipping.bookingformsh.dto.BookingFormDto;
-import com.asg.shipping.bookingformsh.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
+import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
+import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
 
 /**
  * Service interface for Booking Form operations

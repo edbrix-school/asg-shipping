@@ -1,11 +1,11 @@
-package com.asg.shipping.bookingformsh.util;
+package com.asg.shipping.bookingFormSH.util;
 
 import com.asg.common.lib.utility.DateUtil;
-import com.asg.shipping.bookingformsh.dto.*;
-import com.asg.shipping.bookingformsh.entity.ShipMateCargoDtl;
-import com.asg.shipping.bookingformsh.entity.ShipMateChargesDtl;
-import com.asg.shipping.bookingformsh.entity.ShipMateContainerDtl;
-import com.asg.shipping.bookingformsh.entity.ShipMateHdr;
+import com.asg.shipping.bookingFormSH.dto.*;
+import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 
 import java.util.List;
 import java.util.stream.Collectors;

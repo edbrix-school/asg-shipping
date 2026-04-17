@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingformsh.repository;
+package com.asg.shipping.bookingFormSH.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -8,8 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.asg.shipping.bookingformsh.entity.ShipMateChargesDtl;
-import com.asg.shipping.bookingformsh.entity.ShipMateChargesDtlId;
+import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtlId;
 
 /**
  * Repository for ShipMateChargesDtl entity

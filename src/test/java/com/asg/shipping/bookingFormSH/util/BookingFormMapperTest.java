@@ -1,9 +1,9 @@
-package com.asg.shipping.bookingformsh.util;
+package com.asg.shipping.bookingFormSH.util;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.asg.shipping.bookingformsh.dto.*;
-import com.asg.shipping.bookingformsh.entity.*;
+import com.asg.shipping.bookingFormSH.dto.*;
+import com.asg.shipping.bookingFormSH.entity.*;
 import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalDate;

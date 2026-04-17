@@ -1,4 +1,4 @@
-package com.asg.shipping.mafitrailerdateupdateform.dto;
+package com.asg.shipping.MafiTrailerDateUpdateForm.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
