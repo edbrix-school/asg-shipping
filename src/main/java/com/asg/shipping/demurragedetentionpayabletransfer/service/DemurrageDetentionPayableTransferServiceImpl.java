@@ -188,7 +188,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), String.format("%s %s", LogDetailsEnum.CREATED, saved.getDocRef()));
 
         log.info("Successfully created demurrage/detention payable transfer with id: {}", saved.getTransactionPoid());
         return result;
@@ -227,6 +227,18 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             }
         }
 
+        // Create old entity for change tracking
+        ShipDemDetnTransferHdr oldEntity = ShipDemDetnTransferHdr.builder()
+                .transactionDate(entity.getTransactionDate())
+                .docRef(entity.getDocRef())
+                .linePoid(entity.getLinePoid())
+                .blType(entity.getBlType())
+                .emptyFromDate(entity.getEmptyFromDate())
+                .emptyToDate(entity.getEmptyToDate())
+                .payableGlPoid(entity.getPayableGlPoid())
+                .incomeGlPoid(entity.getIncomeGlPoid())
+                .build();
+
         // Update header entity
         mapper.mapUpdateDTOToEntity(dto, entity);
 
@@ -239,6 +251,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
         ShipDemDetnTransferHdr saved = headerRepository.save(entity);
 
+        loggingService.logChanges(oldEntity, saved, ShipDemDetnTransferHdr.class, com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+
         // Update detail records
         updateDetailRecords(id, dto.getTransferDetails(), dto.getBillDetails());
 
@@ -250,8 +264,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.setTransferDetails(mapper.mapTransferDtlListToDto(transferDetails));
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
-
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully updated demurrage/detention payable transfer with id: {}", id);
         return result;
@@ -283,11 +295,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         entity.setLastModifiedDate(LocalDateTime.now());
 
         headerRepository.save(entity);
-
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString());
-        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", id);
-        String tableName = ShipDemDetnTransferHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
 
         log.info("Successfully deleted demurrage/detention payable transfer with id: {}", id);
     }
