@@ -1,4 +1,4 @@
-package com.asg.shipping.mafitrailerdateupdateform.controller;
+package com.asg.shipping.MafiTrailerDateUpdateForm.controller;
 
 import static com.asg.common.lib.dto.response.ApiResponse.badRequest;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
@@ -24,9 +24,9 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormRequest;
-import com.asg.shipping.mafitrailerdateupdateform.dto.MafiTrailerDateUpdateFormResponse;
-import com.asg.shipping.mafitrailerdateupdateform.service.MafiTrailerDateUpdateFormService;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
+import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormResponse;
+import com.asg.shipping.MafiTrailerDateUpdateForm.service.MafiTrailerDateUpdateFormService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingformsh.entity;
+package com.asg.shipping.bookingFormSH.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

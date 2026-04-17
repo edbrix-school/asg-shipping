@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingformsh.controller;
+package com.asg.shipping.bookingFormSH.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -8,10 +8,10 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.bookingformsh.dto.BookingFormCreateDTO;
-import com.asg.shipping.bookingformsh.dto.BookingFormDto;
-import com.asg.shipping.bookingformsh.dto.BookingFormUpdateDTO;
-import com.asg.shipping.bookingformsh.service.BookingFormService;
+import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
+import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
+import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingFormSH.service.BookingFormService;
 import com.asg.shipping.portmaster.dto.PortMasterResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

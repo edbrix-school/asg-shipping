@@ -1,6 +1,6 @@
-package com.asg.shipping.mafitrailerdateupdateform.repository;
+package com.asg.shipping.MafiTrailerDateUpdateForm.repository;
 
-import com.asg.shipping.mafitrailerdateupdateform.entity.ShipBlMafiDtl;
+import com.asg.shipping.MafiTrailerDateUpdateForm.entity.ShipBlMafiDtl;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

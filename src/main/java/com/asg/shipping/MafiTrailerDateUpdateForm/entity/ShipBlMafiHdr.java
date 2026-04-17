@@ -1,4 +1,4 @@
-package com.asg.shipping.mafitrailerdateupdateform.entity;
+package com.asg.shipping.MafiTrailerDateUpdateForm.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;

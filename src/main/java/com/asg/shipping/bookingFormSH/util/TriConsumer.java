@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingformsh.util;
+package com.asg.shipping.bookingFormSH.util;
 
 @FunctionalInterface
 public interface TriConsumer<A, B, C> {

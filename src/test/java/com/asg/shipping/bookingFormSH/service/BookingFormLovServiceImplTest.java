@@ -1,4 +1,4 @@
-package com.asg.shipping.bookingformsh.service;
+package com.asg.shipping.bookingFormSH.service;
 
 import com.asg.shipping.common.dto.LovItem;
 import org.junit.jupiter.api.BeforeEach;
