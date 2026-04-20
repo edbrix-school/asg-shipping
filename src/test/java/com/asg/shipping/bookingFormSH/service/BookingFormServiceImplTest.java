@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.bookingFormSH.dto.*;
 import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
@@ -66,6 +67,8 @@ class BookingFormServiceImplTest {
     private ShipMateContainerDtlRepository containerRepo;
     @Mock
     private BookingFormLovService lovService;
+
+    private LovDataService commonLovService;
     @Mock
     private DocumentSearchService documentService;
     @Mock
@@ -88,7 +91,7 @@ class BookingFormServiceImplTest {
         userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
         service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo,
-                lovService, documentService, jdbcTemplate, printService, dataSource, loggingService);
+                lovService,commonLovService, documentService, jdbcTemplate, printService, dataSource, loggingService);
     }
 
     @AfterEach

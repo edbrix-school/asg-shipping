@@ -8,6 +8,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.bookingFormSH.dto.*;
@@ -65,6 +66,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final ShipMateChargesDtlRepository chargesDtlRepository;
     private final ShipMateContainerDtlRepository containerDtlRepository;
     private final BookingFormLovService lovService;
+    private final LovDataService commonLovService;
     private final DocumentSearchService documentService;
     private final JdbcTemplate jdbcTemplate;
     private final PrintService printService;
@@ -162,7 +164,20 @@ public class BookingFormServiceImpl implements BookingFormService {
         BookingFormDto dto = BookingFormMapper.mapToDto(entity);
 
         // Map detail tables
-        dto.setCargoDetails(BookingFormMapper.mapCargoDtlListToDto(cargoDetails));
+        List<BookingFormCargoDetailDto> cargoDetailResponse=BookingFormMapper.mapCargoDtlListToDto(cargoDetails).stream().map(val->{
+            val.setEquipmentIsoTypeDet(val.getEquipmentIsoType()!=null?commonLovService.getLovItemByCodeFast(val.getEquipmentIsoType(),"CONTAINER_TYPE_MASTER_MATE"):null);
+            return val;
+        }).toList();
+        dto.setCargoDetails(cargoDetailResponse);
+
+        List<BookingFormContainerDetailDto> containerDetailResponse = BookingFormMapper.mapContainerDtlListToDto(containerDetails).stream().map(val->{
+            val.setEquipmentIsoTypeDet(val.getEquipmentIsoType()!=null?commonLovService.getLovItemByCodeFast(val.getEquipmentIsoType(),"CONTAINER_TYPE_MASTER_MATE"):null);
+            val.setImcoClassTypeDet(val.getImcoClassType()!=null?commonLovService.getLovItemByCodeFast(val.getImcoClassType(), "IMCO_CLASS"):null);
+            val.setOogTypeDet(val.getOogType()!=null?commonLovService.getLovItemByCodeFast(val.getOogType(),"OOG_TYPE"):null);
+            return val;
+
+        }).toList();
+        dto.setContainerDetails(containerDetailResponse);
         dto.setChargesDetails(BookingFormMapper.mapChargesDtlListToDto(chargesDetails));
         dto.setContainerDetails(BookingFormMapper.mapContainerDtlListToDto(containerDetails));
         // Enrich with LOV data

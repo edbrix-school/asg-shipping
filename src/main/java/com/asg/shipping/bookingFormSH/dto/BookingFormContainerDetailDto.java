@@ -1,5 +1,6 @@
 package com.asg.shipping.bookingFormSH.dto;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +23,7 @@ public class BookingFormContainerDetailDto {
     private String containerNo;
     private String equipmentSealNo;
     private String equipmentIsoType;
-    //	private LovItem equipmentIsoTypeDet; // LOV data
+    private LovGetListDto equipmentIsoTypeDet; // LOV data
     private String equipmentType;
     //	private LovItem equipmentTypeDet; // LOV data
     private String equipmentSize;
@@ -60,7 +61,9 @@ public class BookingFormContainerDetailDto {
     private String oogA;
     private String isSplit;
     private String imcoClassType;
+    private LovGetListDto imcoClassTypeDet; //Lov data
     private String oogType;
+    private LovGetListDto oogTypeDet; // Lov data
     private BigDecimal vgmWeight;
     private String vgmDocId;
     private LocalDate vgmDate;
