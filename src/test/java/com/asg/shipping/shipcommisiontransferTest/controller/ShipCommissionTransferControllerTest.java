@@ -68,7 +68,7 @@ class ShipCommissionTransferControllerTest {
         result.put("records", new Object[]{});
         result.put("totalElements", 0);
 
-        when(commissionTransferService.searchShipCommissionTransfer(any(), any(), any()))
+        when(commissionTransferService.searchShipCommissionTransfer(any(), any(), any(), any(),any()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/v1/ship-commission-transfer/list")
@@ -189,7 +189,7 @@ class ShipCommissionTransferControllerTest {
 
     @Test
     void testListWithException() throws Exception {
-        when(commissionTransferService.searchShipCommissionTransfer(any(), any(), any()))
+        when(commissionTransferService.searchShipCommissionTransfer(any(), any(),any(), any(), any()))
                 .thenThrow(new RuntimeException("Database error"));
 
         mockMvc.perform(post("/v1/ship-commission-transfer/list")
