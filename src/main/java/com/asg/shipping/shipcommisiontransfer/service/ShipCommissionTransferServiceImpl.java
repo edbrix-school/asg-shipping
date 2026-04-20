@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.ResultSet;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -67,12 +68,12 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchShipCommissionTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchShipCommissionTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info("Searching ship commission transfer records with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
 
         RawSearchResult raw = documentService.search(
                 docId,

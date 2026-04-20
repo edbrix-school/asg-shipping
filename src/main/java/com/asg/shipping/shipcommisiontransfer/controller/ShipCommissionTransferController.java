@@ -10,6 +10,7 @@ import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferUpdateDTO;
 import com.asg.shipping.shipcommisiontransfer.service.ShipCommissionTransferService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -23,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -52,12 +54,18 @@ public class ShipCommissionTransferController {
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters,
             @RequestHeader("X-Document-Id") String docId,
-            @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested
+            @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested,
+            @RequestParam(required = false)
+            @Parameter(description = "Start date (inclusive) for TRANSACTION_DATE filter")
+            LocalDate startDate,
+            @RequestParam(required = false)
+            @Parameter(description = "End date (inclusive) for TRANSACTION_DATE filter")
+            LocalDate endDate
     ) {
         try {
             log.info("List Ship Commission Transfer request | page={}, size={}, docId={}, actionRequested={}",
                     pageable.getPageNumber(), pageable.getPageSize(), docId, actionRequested);
-            Map<String, Object> result = commissionTransferService.searchShipCommissionTransfer(docId, filters, pageable);
+            Map<String, Object> result = commissionTransferService.searchShipCommissionTransfer(docId, filters, startDate, endDate, pageable);
             return success("Ship Commission Transfer list fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Unable to fetch ship commission transfers: " + e.getMessage());
