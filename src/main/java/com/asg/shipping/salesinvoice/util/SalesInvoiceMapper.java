@@ -1,27 +1,23 @@
 package com.asg.shipping.salesinvoice.util;
 
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceChargDtl;
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceContnrDtl;
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceHdr;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
-@Component
 public class SalesInvoiceMapper {
 
     /**
      * Map Create DTO to Entity
      */
-    public void mapCreateDTOToEntity(SalesInvoiceShippingCreateDTO dto, ArShSalesInvoiceHdr entity, Long groupPoid, Long companyPoid) {
+    public static void mapCreateDTOToEntity(SalesInvoiceShippingCreateDTO dto, ArShSalesInvoiceHdr entity, Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : LocalDate.now());
+        entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : DateUtil.getCurrentDateInUserTimeZone());
         entity.setInvDate(dto.getInvDate());
         entity.setJobnoPoid(dto.getJobnoPoid());
         entity.setCustomerAddrPoid(dto.getCustomerAddrPoid());
@@ -49,7 +45,7 @@ public class SalesInvoiceMapper {
     /**
      * Map Update DTO to Entity
      */
-    public void mapUpdateDTOToEntity(SalesInvoiceShippingUpdateDTO dto, ArShSalesInvoiceHdr entity) {
+    public static void mapUpdateDTOToEntity(SalesInvoiceShippingUpdateDTO dto, ArShSalesInvoiceHdr entity) {
         if (dto.getTransactionDate() != null) {
             entity.setTransactionDate(dto.getTransactionDate());
         }
@@ -121,7 +117,7 @@ public class SalesInvoiceMapper {
     /**
      * Map entity to DTO
      */
-    public SalesInvoiceShippingDto mapToDto(ArShSalesInvoiceHdr entity) {
+    public static SalesInvoiceShippingDto mapToDto(ArShSalesInvoiceHdr entity) {
         return SalesInvoiceShippingDto.builder()
                 .transactionPoid(entity.getTransactionPoid())
                 .groupPoid(entity.getGroupPoid())
@@ -175,7 +171,7 @@ public class SalesInvoiceMapper {
     /**
      * Map Container Detail Entity to DTO
      */
-    public SalesInvoiceContainerDtlDto mapContainerDtlToDto(ArShSalesInvoiceContnrDtl entity) {
+    public static SalesInvoiceContainerDtlDto mapContainerDtlToDto(ArShSalesInvoiceContnrDtl entity) {
         return SalesInvoiceContainerDtlDto.builder()
                 .detRowId(entity.getDetRowId())
                 .blPoid(entity.getBlPoid())
@@ -199,7 +195,7 @@ public class SalesInvoiceMapper {
     /**
      * Map Container Detail DTO to Entity
      */
-    public ArShSalesInvoiceContnrDtl mapContainerDtlFromDto(SalesInvoiceContainerDtlDto dto, Long transactionPoid) {
+    public static ArShSalesInvoiceContnrDtl mapContainerDtlFromDto(SalesInvoiceContainerDtlDto dto, Long transactionPoid) {
         return ArShSalesInvoiceContnrDtl.builder()
                 .transactionPoid(transactionPoid)
                 .detRowId(dto.getDetRowId())
@@ -224,7 +220,7 @@ public class SalesInvoiceMapper {
     /**
      * Map Charges Detail Entity to DTO
      */
-    public SalesInvoiceChargesDtlDto mapChargesDtlToDto(ArShSalesInvoiceChargDtl entity) {
+    public static SalesInvoiceChargesDtlDto mapChargesDtlToDto(ArShSalesInvoiceChargDtl entity) {
         return SalesInvoiceChargesDtlDto.builder()
                 .detRowId(entity.getDetRowId())
                 .blPoid(entity.getBlPoid())
@@ -258,7 +254,7 @@ public class SalesInvoiceMapper {
     /**
      * Map Charges Detail DTO to Entity
      */
-    public ArShSalesInvoiceChargDtl mapChargesDtlFromDto(SalesInvoiceChargesDtlDto dto, Long transactionPoid) {
+    public static ArShSalesInvoiceChargDtl mapChargesDtlFromDto(SalesInvoiceChargesDtlDto dto, Long transactionPoid) {
         return ArShSalesInvoiceChargDtl.builder()
                 .transactionPoid(transactionPoid)
                 .detRowId(dto.getDetRowId())

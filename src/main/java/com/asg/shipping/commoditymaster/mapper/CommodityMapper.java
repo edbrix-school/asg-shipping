@@ -27,8 +27,8 @@ public class CommodityMapper {
                 .seqno(commodity.getSeqno())
                 .createdBy(commodity.getCreatedBy())
                 .createdDate(commodity.getCreatedDate())
-                .lastmodifiedBy(commodity.getLastmodifiedBy())
-                .lastmodifiedDate(commodity.getLastmodifiedDate())
+                .lastmodifiedBy(commodity.getLastModifiedBy())
+                .lastmodifiedDate(commodity.getLastModifiedDate())
                 .deleted(commodity.getDeleted())
                 .build();
     }
@@ -40,10 +40,6 @@ public class CommodityMapper {
         commodity.setActive(dto.getActive() != null ? dto.getActive() : "Y");
         commodity.setSeqno(dto.getSeqno());
         commodity.setGroupPoid(groupPoid);
-        commodity.setCreatedBy(userPoid);
-        commodity.setCreatedDate(Timestamp.from(Instant.now()));
-        commodity.setLastmodifiedBy(userPoid);
-        commodity.setLastmodifiedDate(Timestamp.from(Instant.now()));
         commodity.setDeleted("N");
         // commodityCode will be set by database trigger
     }
@@ -53,7 +49,5 @@ public class CommodityMapper {
         commodity.setCommodityName2(dto.getCommodityName2());
         commodity.setActive(dto.getActive());
         commodity.setSeqno(dto.getSeqno());
-        commodity.setLastmodifiedBy(userPoid);
-        commodity.setLastmodifiedDate(Timestamp.from(Instant.now()));
     }
 }

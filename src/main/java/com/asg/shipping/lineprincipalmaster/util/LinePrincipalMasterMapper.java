@@ -3,9 +3,13 @@ package com.asg.shipping.lineprincipalmaster.util;
 import com.asg.shipping.lineprincipalmaster.dto.*;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMaster;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtl;
+import com.asg.shipping.common.entity.ShipLineMasterType;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterUserRoleDtl;
+import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtl;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -58,6 +62,7 @@ public class LinePrincipalMasterMapper {
                 .chamberOfCommerce(entity.getChamberOfCommerce())
                 .chamberOfCommerceExpiry(entity.getChamberOfCommerceExpiry())
                 .linePortRefno(entity.getLinePortRefno())
+                .linePortRefnos(splitCodes(entity.getLinePortRefno()))
                 .linePortRegisterName(entity.getLinePortRegisterName())
                 .terminalLineCode(entity.getTerminalLineCode())
                 .blPrintLiner(entity.getBlPrintLiner())
@@ -117,7 +122,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineType(dto.getLineType());
         entity.setChamberOfCommerce(dto.getChamberOfCommerce());
         entity.setChamberOfCommerceExpiry(dto.getChamberOfCommerceExpiry());
-        entity.setLinePortRefno(dto.getLinePortRefno());
+        entity.setLinePortRefno(resolveLinePortRefno(dto.getLinePortRefno(), dto.getLinePortRefnos()));
         entity.setLinePortRegisterName(dto.getLinePortRegisterName());
         entity.setTerminalLineCode(dto.getTerminalLineCode());
         entity.setBlPrintLiner(dto.getBlPrintLiner());
@@ -151,10 +156,6 @@ public class LinePrincipalMasterMapper {
         }
 
         // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -193,7 +194,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineType(dto.getLineType());
         entity.setChamberOfCommerce(dto.getChamberOfCommerce());
         entity.setChamberOfCommerceExpiry(dto.getChamberOfCommerceExpiry());
-        entity.setLinePortRefno(dto.getLinePortRefno());
+        entity.setLinePortRefno(resolveLinePortRefno(dto.getLinePortRefno(), dto.getLinePortRefnos()));
         entity.setLinePortRegisterName(dto.getLinePortRegisterName());
         entity.setTerminalLineCode(dto.getTerminalLineCode());
         entity.setBlPrintLiner(dto.getBlPrintLiner());
@@ -223,8 +224,6 @@ public class LinePrincipalMasterMapper {
         }
 
         // Update audit fields (do not update createdBy/createdDate)
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**
@@ -275,11 +274,10 @@ public class LinePrincipalMasterMapper {
                 .excludedFromEdi(dto.getExcludedFromEdi())
                 .defaultPrintGroupEdi(dto.getDefaultPrintGroupEdi())
                 .wkyrptIncludeAs(dto.getWkyrptIncludeAs())
-                .createdBy(currentUser)
-                .createdDate(LocalDateTime.now())
-                .lastModifiedBy(currentUser)
-                .lastModifiedDate(LocalDateTime.now())
                 .build();
+
+            charge.setCreatedBy(currentUser);
+            charge.setCreatedDate(LocalDateTime.now());
 
         return charge;
     }
@@ -298,6 +296,153 @@ public class LinePrincipalMasterMapper {
         charge.setWkyrptIncludeAs(dto.getWkyrptIncludeAs());
         charge.setLastModifiedBy(currentUser);
         charge.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    /**
+     * Map container type detail entities to DTOs
+     */
+    public List<ContainerTypeDetailDto> mapContainerTypeDetailsToDto(List<ShipLineMasterType> containerTypes) {
+        if (containerTypes == null || containerTypes.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+
+        return containerTypes.stream()
+                .map(this::mapContainerTypeDetailToDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Map container type detail entity to DTO
+     */
+    public ContainerTypeDetailDto mapContainerTypeDetailToDto(ShipLineMasterType containerType) {
+        if (containerType == null) {
+            return null;
+        }
+
+        return ContainerTypeDetailDto.builder()
+                .detRowId(containerType.getDetRowId())
+                .containerTypePoid(containerType.getContainerTypePoid())
+                .validUntil(containerType.getValidUntil())
+                .build();
+    }
+
+    /**
+     * Map container type detail DTO to entity
+     */
+    public ShipLineMasterType mapContainerTypeDetailDtoToEntity(ContainerTypeDetailDto dto, Long linePoid, String currentUser) {
+        ShipLineMasterType containerType = new ShipLineMasterType();
+        containerType.setLinePoid(linePoid);
+        containerType.setContainerTypePoid(dto.getContainerTypePoid());
+        containerType.setValidUntil(dto.getValidUntil());
+        containerType.setCreatedBy(currentUser);
+        containerType.setCreatedDate(LocalDateTime.now());
+
+        return containerType;
+    }
+
+    /**
+     * Update container type detail entity from DTO
+     */
+    public void updateContainerTypeDetailFromDto(ContainerTypeDetailDto dto, ShipLineMasterType containerType, String currentUser) {
+        containerType.setContainerTypePoid(dto.getContainerTypePoid());
+        containerType.setValidUntil(dto.getValidUntil());
+        containerType.setLastModifiedBy(currentUser);
+        containerType.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    public List<UserRoleDetailDto> mapUserRoleDetailsToDto(List<ShipLineMasterUserRoleDtl> userRoles) {
+        if (userRoles == null || userRoles.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return userRoles.stream().map(this::mapUserRoleDetailToDto).collect(Collectors.toList());
+    }
+
+    public UserRoleDetailDto mapUserRoleDetailToDto(ShipLineMasterUserRoleDtl userRole) {
+        if (userRole == null) return null;
+        return UserRoleDetailDto.builder()
+                .detRowId(userRole.getDetRowId())
+                .userRolePoid(userRole.getUserRolePoid())
+                .validUntil(userRole.getValidUntil())
+                .build();
+    }
+
+    public ShipLineMasterUserRoleDtl mapUserRoleDetailDtoToEntity(UserRoleDetailDto dto, Long linePoid, String currentUser) {
+        ShipLineMasterUserRoleDtl userRole = new ShipLineMasterUserRoleDtl();
+        userRole.setLinePoid(linePoid);
+        userRole.setUserRolePoid(dto.getUserRolePoid());
+        userRole.setValidUntil(dto.getValidUntil());
+        userRole.setCreatedBy(currentUser);
+        userRole.setCreatedDate(LocalDateTime.now());
+        return userRole;
+    }
+
+    public void updateUserRoleDetailFromDto(UserRoleDetailDto dto, ShipLineMasterUserRoleDtl userRole, String currentUser) {
+        userRole.setUserRolePoid(dto.getUserRolePoid());
+        userRole.setValidUntil(dto.getValidUntil());
+        userRole.setLastModifiedBy(currentUser);
+        userRole.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    public List<PicDetailDto> mapPicDetailsToDto(List<ShipLineMasterPicDtl> picDetails) {
+        if (picDetails == null || picDetails.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return picDetails.stream().map(this::mapPicDetailToDto).collect(Collectors.toList());
+    }
+
+    public PicDetailDto mapPicDetailToDto(ShipLineMasterPicDtl picDtl) {
+        if (picDtl == null) return null;
+        return PicDetailDto.builder()
+                .detRowId(picDtl.getDetRowId())
+                .departmentPoid(picDtl.getDepartmentPoid())
+                .handledUserPoid(picDtl.getHandledUserPoid())
+                .periodFrom(picDtl.getPeriodFrom())
+                .periodTo(picDtl.getPeriodTo())
+                .remarks(picDtl.getRemarks())
+                .build();
+    }
+
+    public ShipLineMasterPicDtl mapPicDetailDtoToEntity(PicDetailDto dto, Long linePoid, String currentUser) {
+        ShipLineMasterPicDtl picDtl = new ShipLineMasterPicDtl();
+        picDtl.setLinePoid(linePoid);
+        picDtl.setDepartmentPoid(dto.getDepartmentPoid());
+        picDtl.setHandledUserPoid(dto.getHandledUserPoid());
+        picDtl.setPeriodFrom(dto.getPeriodFrom());
+        picDtl.setPeriodTo(dto.getPeriodTo());
+        picDtl.setRemarks(dto.getRemarks());
+        picDtl.setCreatedBy(currentUser);
+        picDtl.setCreatedDate(LocalDateTime.now());
+        return picDtl;
+    }
+
+    public void updatePicDetailFromDto(PicDetailDto dto, ShipLineMasterPicDtl picDtl, String currentUser) {
+        picDtl.setDepartmentPoid(dto.getDepartmentPoid());
+        picDtl.setHandledUserPoid(dto.getHandledUserPoid());
+        picDtl.setPeriodFrom(dto.getPeriodFrom());
+        picDtl.setPeriodTo(dto.getPeriodTo());
+        picDtl.setRemarks(dto.getRemarks());
+        picDtl.setLastModifiedBy(currentUser);
+        picDtl.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    private String resolveLinePortRefno(String singleCode, List<String> multiCodes) {
+        if (multiCodes != null && !multiCodes.isEmpty()) {
+            return String.join(",", multiCodes.stream()
+                    .filter(code -> code != null && !code.trim().isEmpty())
+                    .map(String::trim)
+                    .collect(Collectors.toList()));
+        }
+        return singleCode;
+    }
+
+    private List<String> splitCodes(String csv) {
+        if (csv == null || csv.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return java.util.Arrays.stream(csv.split(","))
+                .map(String::trim)
+                .filter(code -> !code.isEmpty())
+                .collect(Collectors.toList());
     }
 }
 

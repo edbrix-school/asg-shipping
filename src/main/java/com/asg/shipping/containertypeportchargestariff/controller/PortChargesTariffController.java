@@ -1,9 +1,12 @@
 package com.asg.shipping.containertypeportchargestariff.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import com.asg.shipping.containertypeportchargestariff.service.PortChargesTariffService;
 import jakarta.validation.Valid;
@@ -23,6 +26,7 @@ import static com.asg.shipping.common.ApiResponse.success;
 public class PortChargesTariffController {
 
     private final PortChargesTariffService portChargesTariffService;
+    final LoggingService loggingService;
 
     @PostMapping("/list")
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -35,6 +39,7 @@ public class PortChargesTariffController {
     public ResponseEntity<?> getPortChargesTariff(@PathVariable Long id) {
         log.info("Getting port charges tariff with id: {}", id);
         PortChargesTariffDto tariff = portChargesTariffService.getPortChargesTariff(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved port charges tariff with id: {}", id);
         return success("Port charges tariff retrieved successfully", tariff);
     }
@@ -61,9 +66,10 @@ public class PortChargesTariffController {
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePortChargesTariff(@PathVariable Long id) {
+    public ResponseEntity<?> deletePortChargesTariff(@PathVariable Long id,
+                                                     @Valid @RequestBody DeleteReasonDto deleteReasonDto) {
         log.info("Deleting port charges tariff with id: {}", id);
-        portChargesTariffService.deletePortChargesTariff(id);
+        portChargesTariffService.deletePortChargesTariff(id, deleteReasonDto);
         log.info("Successfully deleted port charges tariff with id: {}", id);
         return success("Port charges tariff deleted successfully");
     }
@@ -71,7 +77,7 @@ public class PortChargesTariffController {
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/validate-overlap")
     public ResponseEntity<?> validateOverlap(@Valid @RequestBody ValidateOverlapRequestDto request) {
-        log.info("Validating overlap for port: {}, line: {}, division: {}", 
+        log.info("Validating overlap for port: {}, line: {}, division: {}",
                 request.getPortPoid(), request.getChargeLinePoid(), request.getChargeDivision());
         ValidateOverlapResponseDto result = portChargesTariffService.validateOverlap(request);
         return success("Overlap validation completed", result);

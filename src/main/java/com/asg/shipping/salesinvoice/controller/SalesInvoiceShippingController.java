@@ -2,9 +2,11 @@ package com.asg.shipping.salesinvoice.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.ExcelExportService;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.service.SalesInvoiceShippingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,9 +22,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
@@ -41,6 +47,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 public class SalesInvoiceShippingController {
 
     private final SalesInvoiceShippingService service;
+    private final ExcelExportService excelExportService;
 
     /**
      * Search Sales Invoice records
@@ -160,6 +167,50 @@ public class SalesInvoiceShippingController {
             return badRequest(ex.getMessage());
         } catch (Exception ex) {
             return internalServerError("Error creating Sales Invoice: " + ex.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @Operation(summary = "Export Sales Invoice to Excel")
+    @GetMapping("/excel")
+    public ResponseEntity<?> excelExport(
+            @Parameter(description = "BL POID", required = true, example = "123")
+            @RequestParam Long blPoid,
+            @Parameter(description = "Currency Code", required = true, example = "USD")
+            @RequestParam String currencyCode,
+            @Parameter(description = "Currency Rate", required = true, example = "1.0")
+            @RequestParam BigDecimal currencyRate,
+            @Parameter(description = "Customer POID", required = true, example = "456")
+            @RequestParam Long customerPoid,
+            @Parameter(description = "Transaction POID", required = true, example = "318")
+            @RequestParam Long transactionPoid) {
+        try {
+            BigDecimal companyPoid = service.getBillCompany(blPoid, customerPoid);
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("P_BL_POID", blPoid);
+            parameters.put("P_TRANSACTION_POID", transactionPoid);
+            parameters.put("P_CUR_CODE", currencyCode);
+            parameters.put("P_CUR_RATE", currencyRate);
+            String docId;
+            String fileName;
+            if (currencyCode.contains("USD")) {
+                docId = "300-102";
+                fileName = "Shipping_Invoice_Excel_Export_USD.xlsx";
+            } else if (currencyCode.contains("BHD")) {
+                docId = "100-310";
+                fileName = "Shipping_Invoice_Excel_Export_BHD.xlsx";
+            } else {
+                docId = "300-102";
+                fileName = "Shipping_Invoice_Excel_Export_USD.xlsx";
+            }
+            ExcelFileData data = excelExportService.generateExcel(docId, null, parameters, fileName);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + data.getFileName())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(data.getContent());
+        } catch (Exception e) {
+            log.error("Failed to generate Excel", e);
+            return ResponseEntity.status(500).body("Failed to generate Excel: " + e.getMessage());
         }
     }
 
@@ -709,5 +760,67 @@ public class SalesInvoiceShippingController {
         };
     }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print-invoice/{transactionPoid}")
+    public ResponseEntity<?> printInvoice(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "BL POID", example = "92170", required = true)
+            @RequestParam Long blPoid) {
+        try {
+            byte[] pdf = service.printInvoice(transactionPoid,blPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=sales-invoice-shipping-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Journal Voucher: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/customer-autocharge/{transactionPoid}")
+    public ResponseEntity<?> printCustomerAutoCharge(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "BL POID", example = "92170", required = true)
+            @RequestParam Long blPoid) {
+        try {
+            byte[] pdf = service.printCustomerAutoCharge(transactionPoid,blPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=sales-invoice-shipping-customer-autocharge" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Journal Voucher: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print/{transactionPoid}")
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", example = "12345")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "BL POID", example = "67890")
+            @RequestParam Long blPoid
+    ) {
+        try {
+            byte[] pdf = service.print(transactionPoid, blPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=sales-invoice-shipping" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("error",e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
 }
 

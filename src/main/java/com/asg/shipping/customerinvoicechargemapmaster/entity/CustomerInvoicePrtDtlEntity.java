@@ -1,18 +1,20 @@
 package com.asg.shipping.customerinvoicechargemapmaster.entity;
 
-import jakarta.persistence.*;
+import com.asg.common.lib.entity.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "CUSTOMER_INVOICE_PRT_DTL", schema = "PRODUCTION")
+@Table(name = "CUSTOMER_INVOICE_PRT_DTL")
 @Getter
 @Setter
-public class CustomerInvoicePrtDtlEntity {
+public class CustomerInvoicePrtDtlEntity extends BaseEntity {
 
     @EmbeddedId
     private CustomerInvoicePrtDtlId id;
@@ -26,16 +28,5 @@ public class CustomerInvoicePrtDtlEntity {
     @Column(name = "VALID_UNTIL")
     private LocalDate validUntil;
 
-    @Column(name = "CREATED_BY")
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY")
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }
 

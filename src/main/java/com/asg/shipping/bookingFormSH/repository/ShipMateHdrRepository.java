@@ -15,8 +15,7 @@ import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 @Repository
 public interface ShipMateHdrRepository extends JpaRepository<ShipMateHdr, Long> {
 
-	Optional<ShipMateHdr> findByTransactionPoidAndGroupPoidAndCompanyPoid(Long transactionPoid, Long groupPoid,
-			Long companyPoid);
+	Optional<ShipMateHdr> findByTransactionPoid(Long transactionPoid);
 
 	Optional<ShipMateHdr> findByDocRefAndDeletedNot(String docRef, String deleted);
 

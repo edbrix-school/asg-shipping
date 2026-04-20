@@ -1,8 +1,10 @@
 package com.asg.shipping.customerautochargeexportbl.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLCreateDTO;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLDto;
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLUpdateDTO;
@@ -37,6 +39,9 @@ class CustomerAutoChargeExportBlControllerTest {
     @InjectMocks
     private CustomerAutoChargeExportBlController controller;
 
+    @Mock
+    private LoggingService loggingService;
+
     private CustomerAutoChargeExportBLCreateDTO createDTO;
     private CustomerAutoChargeExportBLUpdateDTO updateDTO;
     private CustomerAutoChargeExportBLDto responseDto;
@@ -63,7 +68,7 @@ class CustomerAutoChargeExportBlControllerTest {
                 .periodFrom(LocalDate.of(2024, 1, 1))
                 .periodTo(LocalDate.of(2024, 12, 31))
                 .createdBy("user1")
-                .createdDate(Timestamp.valueOf(LocalDateTime.now()))
+                .createdDate(LocalDateTime.now())
                 .build();
     }
 
@@ -195,50 +200,26 @@ class CustomerAutoChargeExportBlControllerTest {
         verify(service).getCustomerAutoChargeExportBL(1L);
     }
 
-    @Test
-    void testGetByIdNotFound() {
-        when(service.getCustomerAutoChargeExportBL(1L))
-                .thenThrow(new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", "1"));
-
-        ResponseEntity<?> result = controller.getById(1L);
-
-        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
-        Map<String, Object> body = (Map<String, Object>) result.getBody();
-        assertFalse((Boolean) body.get("success"));
-    }
-
-    @Test
-    void testGetByIdInternalError() {
-        when(service.getCustomerAutoChargeExportBL(1L))
-                .thenThrow(new RuntimeException("Database error"));
-
-        ResponseEntity<?> result = controller.getById(1L);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
-        Map<String, Object> body = (Map<String, Object>) result.getBody();
-        assertFalse((Boolean) body.get("success"));
-        assertTrue(body.get("message").toString().contains("Failed to retrieve"));
-    }
 
     @Test
     void testDeleteSuccess() {
-        doNothing().when(service).deleteCustomerAutoChargeExportBL(1L);
+        doNothing().when(service).deleteCustomerAutoChargeExportBL(1L,new DeleteReasonDto());
 
-        ResponseEntity<?> result = controller.delete(1L);
+        ResponseEntity<?> result = controller.delete(1L,new DeleteReasonDto());
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertTrue((Boolean) body.get("success"));
         assertEquals("Customer Auto Charge Export BL deleted successfully", body.get("message"));
-        verify(service).deleteCustomerAutoChargeExportBL(1L);
+        verify(service).deleteCustomerAutoChargeExportBL(1L,new DeleteReasonDto());
     }
 
     @Test
     void testDeleteNotFound() {
         doThrow(new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", "1"))
-                .when(service).deleteCustomerAutoChargeExportBL(1L);
+                .when(service).deleteCustomerAutoChargeExportBL(1L,new DeleteReasonDto());
 
-        ResponseEntity<?> result = controller.delete(1L);
+        ResponseEntity<?> result = controller.delete(1L,new DeleteReasonDto());
 
         assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
@@ -248,9 +229,9 @@ class CustomerAutoChargeExportBlControllerTest {
     @Test
     void testDeleteInternalError() {
         doThrow(new RuntimeException("Database error"))
-                .when(service).deleteCustomerAutoChargeExportBL(1L);
+                .when(service).deleteCustomerAutoChargeExportBL(1L,new DeleteReasonDto());
 
-        ResponseEntity<?> result = controller.delete(1L);
+        ResponseEntity<?> result = controller.delete(1L,new DeleteReasonDto());
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();

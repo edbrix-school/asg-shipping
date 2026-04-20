@@ -24,7 +24,28 @@ public interface ShipLineMasterTypeRepository extends JpaRepository<ShipLineMast
             order by m.containerTypeCode
             """)
     List<ShipContainerTypeMaster> findContainerTypeMastersByLine(@Param("linePoid") Long linePoid);
+
+    /**
+     * Find all container type details for a line ordered by detail row ID
+     */
+    @Query("select d from ShipLineMasterType d where d.linePoid = :linePoid order by d.detRowId")
+    List<ShipLineMasterType> findByLinePoidOrderByDetRowId(@Param("linePoid") Long linePoid);
+
+    /**
+     * Find the maximum detail row ID for a line
+     */
+    @Query("select max(d.detRowId) from ShipLineMasterType d where d.linePoid = :linePoid")
+    Long findMaxDetRowIdByLinePoid(@Param("linePoid") Long linePoid);
+
+    /**
+     * Check if a container type POID exists for a line
+     */
+    @Query("select case when count(d) > 0 then true else false end from ShipLineMasterType d where d.linePoid = :linePoid and d.containerTypePoid = :containerTypePoid")
+    boolean existsByLinePoidAndContainerTypePoid(@Param("linePoid") Long linePoid, @Param("containerTypePoid") Long containerTypePoid);
+
+    /**
+     * Check if a container type POID exists for a line, excluding a specific detail row
+     */
+    @Query("select case when count(d) > 0 then true else false end from ShipLineMasterType d where d.linePoid = :linePoid and d.containerTypePoid = :containerTypePoid and d.detRowId != :detRowId")
+    boolean existsByLinePoidAndContainerTypePoidExcluding(@Param("linePoid") Long linePoid, @Param("containerTypePoid") Long containerTypePoid, @Param("detRowId") Long detRowId);
 }
-
-
-

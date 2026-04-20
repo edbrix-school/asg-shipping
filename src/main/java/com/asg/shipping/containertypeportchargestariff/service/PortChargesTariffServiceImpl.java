@@ -1,26 +1,30 @@
 package com.asg.shipping.containertypeportchargestariff.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.containertypeportchargestariff.dto.*;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesDtl;
 import com.asg.shipping.containertypeportchargestariff.entity.ShipPortChargesHdr;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesDtlRepository;
 import com.asg.shipping.containertypeportchargestariff.repository.ShipPortChargesHdrRepository;
-import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linemasterthirdparty.repository.ShipLineMasterThirdPartyRepository;
-import com.asg.shipping.portMaster.repository.PortMasterRepository;
+import com.asg.shipping.portmaster.repository.PortMasterRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +50,8 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
     private final ShipPortChargesDtlRepository dtlRepository;
     private final PortMasterRepository portMasterRepository;
     private final ShipLineMasterThirdPartyRepository lineMasterThirdPartyRepository;
+    private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
 
     @Override
     @Transactional
@@ -63,6 +69,8 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
     @Override
     @Transactional
     public PortChargesTariffDto getPortChargesTariff(Long transactionPoid) {
+        log.info("Getting port charges tariff with id: {}", transactionPoid);
+
         Long groupPoid = UserContext.getGroupPoid();
 
         ShipPortChargesHdr hdr = hdrRepository.findById(transactionPoid)
@@ -73,17 +81,21 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         }
 
         List<ShipPortChargesDtl> details = dtlRepository.findByTransactionPoid(transactionPoid);
+
+        log.info("Successfully retrieved port charges tariff with id: {}", transactionPoid);
         return mapToDto(hdr, details);
     }
 
     @Override
     @Transactional
     public PortChargesTariffDto createPortChargesTariff(PortChargesTariffCreateDto dto, Long groupPoid, Long userPoid) {
+        log.info("Creating port charges tariff with description: {}", dto.getDescription());
+
         validateCreateRequest(dto);
         validateDateOverlap(dto.getPortPoid(), dto.getChargeLinePoid(), dto.getChargeDivision(), dto.getPeriodFrom(), dto.getPeriodTo(), null, groupPoid);
 
         ShipPortChargesHdr hdr = new ShipPortChargesHdr();
-        hdr.setTransactionDate(LocalDate.now());
+        hdr.setTransactionDate(DateUtil.getCurrentDateInUserTimeZone());
         hdr.setGroupPoid(groupPoid);
         hdr.setPortPoid(dto.getPortPoid());
         hdr.setDescription(dto.getDescription());
@@ -92,10 +104,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdr.setSeqNo(dto.getSeqNo());
         hdr.setChargeLinePoid(dto.getChargeLinePoid());
         hdr.setChargeDivision(dto.getChargeDivision());
-        hdr.setCreatedBy(getCurrentUser());
-        hdr.setCreatedDate(LocalDateTime.now());
-        hdr.setLastModifiedBy(getCurrentUser());
-        hdr.setLastModifiedDate(LocalDateTime.now());
         hdr.setDeleted("N");
 
         ShipPortChargesHdr savedHdr = hdrRepository.save(hdr);
@@ -106,17 +114,25 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
             processCreateDetails(savedHdr.getTransactionPoid(), dto.getDetails());
         }
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), savedHdr.getTransactionPoid().toString());
+
+        log.info("Successfully created port charges tariff with id: {}", savedHdr.getTransactionPoid());
         return getPortChargesTariff(savedHdr.getTransactionPoid());
     }
 
     @Override
     @Transactional
     public PortChargesTariffDto updatePortChargesTariff(Long id, PortChargesTariffUpdateDto dto, Long groupPoid, Long userPoid) {
+        log.info("Updating port charges tariff with id: {}", id);
+
         ShipPortChargesHdr hdr = hdrRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Port Charges Tariff", "transactionPoid", id.toString()));
 
         if (!groupPoid.equals(hdr.getGroupPoid())) {
             throw new ResourceNotFoundException("Port Charges Tariff", "transactionPoid", id.toString());
         }
+
+        ShipPortChargesHdr oldHdr = new ShipPortChargesHdr();
+        BeanUtils.copyProperties(hdr, oldHdr);
 
         validateUpdateRequest(dto, id);
 
@@ -131,8 +147,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdr.setSeqNo(dto.getSeqNo());
         hdr.setChargeLinePoid(dto.getChargeLinePoid());
         hdr.setChargeDivision(dto.getChargeDivision());
-        hdr.setLastModifiedBy(getCurrentUser());
-        hdr.setLastModifiedDate(LocalDateTime.now());
 
         // 🔑 flush so DB reflects new state
         hdrRepository.saveAndFlush(hdr);
@@ -147,32 +161,32 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
             processDetails(id, dto.getDetails());
         }
 
+        String docId = UserContext.getDocumentId();
+        String key = hdr.getTransactionPoid().toString();
+
+        loggingService.logChanges(oldHdr, hdr, ShipPortChargesHdr.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+
+        log.info("Successfully updated port charges tariff with id: {}", id);
         return getPortChargesTariff(hdr.getTransactionPoid());
     }
 
 
     @Override
     @Transactional
-    public void deletePortChargesTariff(Long transactionPoid) {
-        Long groupPoid = UserContext.getGroupPoid();
+    public void deletePortChargesTariff(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
+        log.info("Deleting port charges tariff with id: {}", transactionPoid);
 
         ShipPortChargesHdr hdr = hdrRepository.findById(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Port Charges Tariff", "transactionPoid", transactionPoid.toString()));
 
-        if (!groupPoid.equals(hdr.getGroupPoid())) {
-            throw new ResourceNotFoundException("Port Charges Tariff", "transactionPoid", transactionPoid.toString());
-        }
+        documentDeleteService.deleteDocument(
+                transactionPoid,
+                "SHIP_PORT_CHARGES_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                hdr.getTransactionDate()
+        );
 
-        if ("Y".equals(hdr.getDeleted())) {
-            return;
-        }
-
-        hdr.setDeleted("Y");
-        hdr.setLastModifiedBy(getCurrentUser());
-        hdr.setLastModifiedDate(LocalDateTime.now());
-        hdrRepository.save(hdr);
-
-        dtlRepository.deleteByTransactionPoid(transactionPoid);
     }
 
     @Override
@@ -302,8 +316,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         entity.setAmount53Cost(dto.getAmount53Cost());
         entity.setAmountOtherCost(dto.getAmountOtherCost());
         entity.setShipChargeType(dto.getShipChargeType());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
         entitiesToSave.add(entity);
     }
 
@@ -326,10 +338,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         newEntity.setAmount53Cost(dto.getAmount53Cost());
         newEntity.setAmountOtherCost(dto.getAmountOtherCost());
         newEntity.setShipChargeType(dto.getShipChargeType());
-        newEntity.setCreatedBy(getCurrentUser());
-        newEntity.setCreatedDate(LocalDateTime.now());
-        newEntity.setLastModifiedBy(getCurrentUser());
-        newEntity.setLastModifiedDate(LocalDateTime.now());
         entitiesToSave.add(newEntity);
     }
 
@@ -356,10 +364,6 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
             entity.setAmount53Cost(dto.getAmount53Cost());
             entity.setAmountOtherCost(dto.getAmountOtherCost());
             entity.setShipChargeType(dto.getShipChargeType());
-            entity.setCreatedBy(getCurrentUser());
-            entity.setCreatedDate(LocalDateTime.now());
-            entity.setLastModifiedBy(getCurrentUser());
-            entity.setLastModifiedDate(LocalDateTime.now());
             entitiesToSave.add(entity);
         }
 

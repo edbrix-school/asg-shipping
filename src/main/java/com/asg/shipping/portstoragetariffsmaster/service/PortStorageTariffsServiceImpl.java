@@ -1,9 +1,11 @@
 package com.asg.shipping.portstoragetariffsmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
@@ -20,17 +22,20 @@ import com.asg.shipping.portstoragetariffsmaster.repository.ShipPortTariffHdrRep
 import com.asg.shipping.portstoragetariffsmaster.util.PortStorageTariffMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import com.asg.common.lib.dto.request.LogRequestDto;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Optional;
+
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
@@ -45,9 +50,30 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
     private final ShipPortTariffHdrRepository tariffHdrRepository;
     private final ShipPortTariffDtlRepository tariffDtlRepository;
     private final DocumentSearchService documentService;
+    private final DocumentDeleteService documentDeleteService;
     private final LovDataService lovService;
     private final PortStorageTariffMapper mapper;
     private final LoggingService loggingService;
+
+    private static final String TRANSACTION_POID = "TRANSACTION_POID";
+    private static final String TRANSACTIONPOID  = "transactionPoid";
+    private static final String TARIFF            = "Tariff";
+
+    private static final String ACTION_ISCREATED  = "ACTION_ISCREATED";
+    private static final String ACTION_ISUPDATED  = "ACTION_ISUPDATED";
+    private static final String ACTION_ISDELETED  = "ACTION_ISDELETED";
+    private static final String ACTION_NOCHANGES  = "ACTION_NOCHANGES";
+
+    private static final String LOG_KEY_ID_FORMAT = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
+
+    private static final String SLAB1 = "Slab 1";
+    private static final String SLAB2 = "Slab 2";
+    private static final String SLAB3 = "Slab 3";
+    private static final String SLAB4 = "Slab 4";
+    private static final String SLAB5 = "Slab 5";
+    private static final String SLAB6 = "Slab 6";
+    private static final String SLAB7 = "Slab 7";
+
 
     @Override
     @Transactional(readOnly = true)
@@ -69,7 +95,7 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
                 pageable,
                 isDeleted,
                 "DESCRIPTION",   // label field for display
-                "TRANSACTION_POID"    // value field (primary key)
+                TRANSACTION_POID    // value field (primary key)
         );
 
         // Convert RawSearchResult to Page
@@ -91,7 +117,7 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
 
         ShipPortTariffHdr tariff = tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Tariff", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(TARIFF, TRANSACTIONPOID, id.toString()));
 
         PortStorageTariffDto dto = mapper.mapToDto(tariff);
 
@@ -100,10 +126,9 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         dto.setTariffDetails(mapper.mapDetailsToDto(details));
 
         // Enrich with LOV data
-        enrichLovData(dto, groupPoid);
+        enrichLovData(dto);
 
         // Log view
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully retrieved tariff with id: {}", id);
         return dto;
@@ -133,7 +158,7 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         PortStorageTariffDto result = mapper.mapToDto(saved);
         List<ShipPortTariffDtl> details = tariffDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
         result.setTariffDetails(mapper.mapDetailsToDto(details));
-        enrichLovData(result, groupPoid);
+        enrichLovData(result);
 
         // Log creation
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getTransactionPoid().toString());
@@ -149,7 +174,7 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
 
         // Find existing tariff
         ShipPortTariffHdr tariff = tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Tariff", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(TARIFF, TRANSACTIONPOID, id.toString()));
 
         // Validate
         validateTariffUpdateDTO(dto, id, groupPoid);
@@ -178,10 +203,10 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         PortStorageTariffDto result = mapper.mapToDto(saved);
         List<ShipPortTariffDtl> details = tariffDtlRepository.findByTransactionPoidOrderByDetRowId(saved.getTransactionPoid());
         result.setTariffDetails(mapper.mapDetailsToDto(details));
-        enrichLovData(result, groupPoid);
+        enrichLovData(result);
 
         // Log changes
-        loggingService.logChanges(oldTariff, saved, ShipPortTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+        loggingService.logChanges(oldTariff, saved, ShipPortTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID);
 
         log.info("Successfully updated tariff with id: {}", id);
         return result;
@@ -189,85 +214,89 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
 
     @Override
     @Transactional
-    public void deleteTariff(Long id) {
-        log.info("Deleting tariff with id: {}", id);
+    public void deleteTariff(Long groupPoid, Long tariffId, Long companyPoid, DeleteReasonDto deleteReasonDto) {
+        log.info("deleteTariff started for tariffId={} companyPoid={} groupPoid={}", 
+            tariffId, companyPoid, groupPoid);
 
-        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+        // 1. Validate entity exists
+        ShipPortTariffHdr tariff = tariffHdrRepository
+                .findByTransactionPoidAndGroupPoid(tariffId, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException(TARIFF, TRANSACTIONPOID, tariffId));
 
-        ShipPortTariffHdr tariff = tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Tariff", "transactionPoid", id.toString()));
-
-        // Check if already deleted (idempotent)
+        // 2. Check if already deleted
         if ("Y".equals(tariff.getDeleted())) {
-            log.info("Tariff with id: {} is already deleted", id);
-            return;
+            log.warn("deleteTariff found companyPoid={} tariffId={} already deleted", companyPoid, tariffId);
+            throw new com.asg.shipping.exceptions.CustomException("Cannot delete tariff. It is already deleted.");
         }
 
-        // Soft delete
-        tariff.setDeleted("Y");
-        tariff.setLastModifiedBy(getCurrentUser());
-        tariff.setLastModifiedDate(LocalDateTime.now());
-
-        tariffHdrRepository.save(tariff);
-
-        // Log deletion
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
-        String logDetail = String.format("KeyId = TRANSACTION_POID:%s", id);
-        String tableName = ShipPortTariffHdr.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), id.toString(), "Deleted", "N", "Y", logDetail, tableName);
-
-        log.info("Successfully deleted tariff with id: {}", id);
+        // 3. Use DocumentDeleteService to handle delete reason
+        documentDeleteService.deleteDocument(
+                tariffId,
+                "SHIP_PORT_TARIFF_HDR",
+                TRANSACTION_POID,
+                deleteReasonDto,
+                tariff.getTransactionDate());
+        log.info("deleteTariff completed for tariffId={} companyPoid={}", tariffId, companyPoid);
     }
 
     /**
      * Enrich DTO with LOV data
      */
-    private void enrichLovData(PortStorageTariffDto dto, Long groupPoid) {
-        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
-        Long userPoid = com.asg.common.lib.security.util.UserContext.getUserPoid();
+    private void enrichLovData(PortStorageTariffDto dto) {
+        enrichPort(dto);
+        enrichTariffDetails(dto);
+    }
 
-        // Port LOV
-        if (dto.getPortPoid() != null) {
-            try {
-                LovGetListDto portDet = lovService.getDetailsByPoidAndLovName(
-                        dto.getPortPoid(),
-                        "PORT_MASTER"
-                );
-                dto.setPortDet(portDet);
-            } catch (Exception e) {
-                log.warn("Failed to fetch PORT_MASTER LOV for portPoid: {}", dto.getPortPoid(), e);
-            }
+    private void enrichPort(PortStorageTariffDto dto) {
+        if (dto.getPortPoid() == null) return;
+
+        try {
+            LovGetListDto portDet = lovService.getDetailsByPoidAndLovName(
+                    dto.getPortPoid(),
+                    "PORT_MASTER"
+            );
+            dto.setPortDet(portDet);
+        } catch (Exception e) {
+            log.warn("Failed to fetch PORT_MASTER LOV for portPoid: {}", dto.getPortPoid(), e);
         }
+    }
 
-        // Enrich detail LOVs
-        if (dto.getTariffDetails() != null) {
-            for (TariffDetailDto detailDto : dto.getTariffDetails()) {
-                // Container Type LOV
-                if (detailDto.getContainerTypePoid() != null) {
-                    try {
-                        LovGetListDto containerTypeDet = lovService.getDetailsByPoidAndLovName(
-                                detailDto.getContainerTypePoid(),
-                                "CONTAINER_TYPE_MASTER"
-                        );
-                        detailDto.setContainerTypeDet(containerTypeDet);
-                    } catch (Exception e) {
-                        log.warn("Failed to fetch CONTAINER_TYPE_MASTER LOV for containerTypePoid: {}", detailDto.getContainerTypePoid(), e);
-                    }
-                }
+    private void enrichTariffDetails(PortStorageTariffDto dto) {
+        if (dto.getTariffDetails() == null) return;
 
-                // Container Size LOV (code-based dropdown)
-                if (detailDto.getContainerSize() != null) {
-                    try {
-                        LovGetListDto containerSizeDet = lovService.getDetailsByCodeAndLovName(
-                                detailDto.getContainerSize().toString(),
-                                "SHIP_CONTAINER_SIZE_PORT"
-                        );
-                        detailDto.setContainerSizeDet(containerSizeDet);
-                    } catch (Exception e) {
-                        log.warn("Failed to fetch SHIP_CONTAINER_SIZE_PORT LOV for containerSize: {}", detailDto.getContainerSize(), e);
-                    }
-                }
-            }
+        for (TariffDetailDto detailDto : dto.getTariffDetails()) {
+            enrichContainerType(detailDto);
+            enrichContainerSize(detailDto);
+        }
+    }
+
+    private void enrichContainerType(TariffDetailDto detailDto) {
+        if (detailDto.getContainerTypePoid() == null) return;
+
+        try {
+            LovGetListDto containerTypeDet = lovService.getDetailsByPoidAndLovName(
+                    detailDto.getContainerTypePoid(),
+                    "CONTAINER_TYPE_MASTER"
+            );
+            detailDto.setContainerTypeDet(containerTypeDet);
+        } catch (Exception e) {
+            log.warn("Failed to fetch CONTAINER_TYPE_MASTER LOV for containerTypePoid: {}",
+                    detailDto.getContainerTypePoid(), e);
+        }
+    }
+
+    private void enrichContainerSize(TariffDetailDto detailDto) {
+        if (detailDto.getContainerSize() == null) return;
+
+        try {
+            LovGetListDto containerSizeDet = lovService.getDetailsByCodeAndLovName(
+                    detailDto.getContainerSize().toString(),
+                    "SHIP_CONTAINER_SIZE_PORT"
+            );
+            detailDto.setContainerSizeDet(containerSizeDet);
+        } catch (Exception e) {
+            log.warn("Failed to fetch SHIP_CONTAINER_SIZE_PORT LOV for containerSize: {}",
+                    detailDto.getContainerSize(), e);
         }
     }
 
@@ -286,87 +315,132 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         }
     }
 
-    /**
-     * Update tariff detail records
-     */
+
     private void updateTariffDetails(Long transactionPoid, List<TariffDetailUpdateDTO> detailDtos) {
-        String currentUser = getCurrentUser();
-        List<ShipPortTariffDtl> existingDetails = tariffDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        Set<Long> existingDetRowIds = existingDetails.stream()
-                .map(ShipPortTariffDtl::getDetRowId)
-                .collect(Collectors.toSet());
+        if (detailDtos == null) return;
 
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .map(TariffDetailUpdateDTO::getDetRowId)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
+        String docId      = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
 
-        // Delete details not in request
-        List<Long> toDelete = existingDetRowIds.stream()
-                .filter(id -> !requestDetRowIds.contains(id))
-                .collect(Collectors.toList());
-        for (Long detRowId : toDelete) {
-            tariffDtlRepository.deleteById(new ShipPortTariffDtlId(transactionPoid, detRowId));
-        }
+        List<String>                            logEntries  = new ArrayList<>();
+        List<ShipPortTariffDtl>                 toUpdate    = new ArrayList<>();
+        List<ShipPortTariffDtlId>               toDelete    = new ArrayList<>();
+        List<LogRequestDto<ShipPortTariffDtl>>  logRequests = new ArrayList<>();
 
-        // Calculate next detRowId for new records
-        long nextDetRowId = existingDetRowIds.stream()
-                .max(Long::compareTo)
-                .orElse(0L) + 1;
-
-        // Update or create details
         for (TariffDetailUpdateDTO detailDto : detailDtos) {
             validateSlabDetails(detailDto);
-            if (detailDto.getDetRowId() != null) {
-                // Update existing
-                ShipPortTariffDtl existing = tariffDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Tariff Detail", "detRowId", detailDto.getDetRowId().toString()));
+            String action = resolveAction(detailDto.getActionType());
 
-                mapper.updateDetailFromDTO(detailDto, existing, currentUser);
-                tariffDtlRepository.save(existing);
-            } else {
-                // Create new
-                ShipPortTariffDtl newDetail = mapper.mapDetailUpdateDTOToEntity(detailDto, transactionPoid, currentUser);
-                newDetail.setDetRowId(nextDetRowId++);
-                tariffDtlRepository.save(newDetail);
+            switch (action) {
+                case ACTION_ISCREATED -> saveTariffDetail(detailDto, transactionPoid, logEntries);
+
+                case ACTION_ISUPDATED -> {
+                    ShipPortTariffDtl existing = tariffDtlRepository
+                            .findById(new ShipPortTariffDtlId(transactionPoid, detailDto.getDetRowId()))
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Tariff Detail", "detRowId", detailDto.getDetRowId()));
+
+                    ShipPortTariffDtl oldEntity = new ShipPortTariffDtl();
+                    BeanUtils.copyProperties(existing, oldEntity);
+
+                    mapper.updateDetailFromDTO(detailDto, existing, getCurrentUser());
+                    toUpdate.add(existing);
+
+                    String logDetail = String.format(LOG_KEY_ID_FORMAT, transactionPoid, detailDto.getDetRowId());
+                    logRequests.add(new LogRequestDto<>(
+                            oldEntity, existing, ShipPortTariffDtl.class, docId, docKeyPoid, logDetail));
+                }
+
+                case ACTION_ISDELETED ->
+                        Optional.ofNullable(detailDto.getDetRowId())
+                                .map(id -> new ShipPortTariffDtlId(transactionPoid, id))
+                                .ifPresent(toDelete::add);
+
+                default -> { /* ACTION_NOCHANGES – nothing to do */ }
+            }
+        }
+
+        processUpdates(tariffDtlRepository, toUpdate, logRequests);
+
+        logSummaryEntries(logEntries, docId, docKeyPoid);
+
+        if (!toDelete.isEmpty()) {
+            List<ShipPortTariffDtl> entitiesToDelete = tariffDtlRepository.findAllById(toDelete);
+            tariffDtlRepository.deleteAllInBatch(entitiesToDelete);
+            entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
+        }
+    }
+
+    private void saveTariffDetail(TariffDetailUpdateDTO detailDto, Long transactionPoid, List<String> logEntries) {
+        long nextDetRowId = getNextDetRowId(tariffDtlRepository.getMaxDetRowId(transactionPoid));
+        ShipPortTariffDtl entity = mapper.mapDetailUpdateDTOToEntity(detailDto, transactionPoid, getCurrentUser());
+        entity.setDetRowId(nextDetRowId);
+        tariffDtlRepository.save(entity);
+        logEntries.add(String.format("Row Created on Tariff Detail with DetRowId: %s", nextDetRowId));
+    }
+
+    /**
+     * Bulk-save updated entities and, if any field changes are detected, emit a
+     * batched audit log via {@link LoggingService#createLogBatch}.
+     */
+    private <T, ID> void processUpdates(JpaRepository<T, ID> repository,
+                                        List<T> entities,
+                                        List<LogRequestDto<T>> logRequests) {
+        if (!entities.isEmpty()) {
+            repository.saveAll(entities);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
             }
         }
     }
 
-    /**
-     * Validate TariffCreateDTO
-     */
+    private String resolveAction(String rawAction) {
+        String action = (rawAction == null || rawAction.trim().isEmpty())
+                ? ACTION_NOCHANGES
+                : rawAction.trim().toUpperCase();
+        return switch (action) {
+            case ACTION_ISCREATED, "ISCREATED", "CREATED", "NEW" -> ACTION_ISCREATED;
+            case ACTION_ISUPDATED, "ISUPDATED", "UPDATED"        -> ACTION_ISUPDATED;
+            case ACTION_ISDELETED, "ISDELETED", "DELETED"        -> ACTION_ISDELETED;
+            default                                               -> ACTION_NOCHANGES;
+        };
+    }
+
+    private void logSummaryEntries(List<String> logEntries, String docId, String docKeyPoid) {
+        if (logEntries != null) {
+            logEntries.forEach(entry -> loggingService.createLogSummaryEntry(docId, docKeyPoid, entry));
+        }
+    }
+
+    private long getNextDetRowId(Long maxDetRowId) {
+        return (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
+    }
+
     private void validateTariffCreateDTO(PortStorageTariffCreateDTO dto, Long groupPoid) {
         // Validate LOVs
         validatePort(dto.getPortPoid());
         validateTariffType(dto.getTariffType());
 
         // Date validation: periodFrom must be <= periodTo
-        if (dto.getPeriodFrom() != null && dto.getPeriodTo() != null) {
-            if (dto.getPeriodFrom().isAfter(dto.getPeriodTo())) {
+        if (dto.getPeriodFrom() != null && dto.getPeriodTo() != null && dto.getPeriodFrom().isAfter(dto.getPeriodTo())) {
                 throw new ValidationException("Period from date must be less than or equal to period to date");
-            }
         }
 
         // Check for date overlap
         if (dto.getPortPoid() != null && dto.getTariffType() != null &&
-                dto.getPeriodFrom() != null && dto.getPeriodTo() != null) {
-            if (tariffHdrRepository.existsOverlappingPeriod(
-                    dto.getPortPoid(),
-                    dto.getTariffType(),
-                    groupPoid,
-                    dto.getPeriodFrom(),
-                    dto.getPeriodTo(),
-                    null)) {
+                dto.getPeriodFrom() != null && dto.getPeriodTo() != null && tariffHdrRepository.existsOverlappingPeriod(
+                dto.getPortPoid(),
+                dto.getTariffType(),
+                groupPoid,
+                dto.getPeriodFrom(),
+                dto.getPeriodTo(),
+                null)) {
                 throw new ValidationException("Period overlaps with an existing tariff for the same port and tariff type");
-            }
         }
 
         // Check if document reference already exists
-        if (dto.getDocRef() != null && !dto.getDocRef().isEmpty()) {
-            if (tariffHdrRepository.existsByDocRef(dto.getDocRef())) {
-                throw new ValidationException("Document reference already exists");
-            }
+        if (dto.getDocRef() != null && !dto.getDocRef().isEmpty() && tariffHdrRepository.existsByDocRef(dto.getDocRef())) {
+            throw new ValidationException("Document reference already exists");
         }
 
         // Validate detail LOVs
@@ -386,31 +460,26 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         validateTariffType(dto.getTariffType());
 
         // Date validation: periodFrom must be <= periodTo
-        if (dto.getPeriodFrom() != null && dto.getPeriodTo() != null) {
-            if (dto.getPeriodFrom().isAfter(dto.getPeriodTo())) {
-                throw new ValidationException("Period from date must be less than or equal to period to date");
-            }
+        if (dto.getPeriodFrom() != null && dto.getPeriodTo() != null && dto.getPeriodFrom().isAfter(dto.getPeriodTo())) {
+            throw new ValidationException("Period from date must be less than or equal to period to date");
         }
 
         // Check for date overlap (excluding current transaction)
         if (dto.getPortPoid() != null && dto.getTariffType() != null &&
-                dto.getPeriodFrom() != null && dto.getPeriodTo() != null) {
-            if (tariffHdrRepository.existsOverlappingPeriod(
-                    dto.getPortPoid(),
-                    dto.getTariffType(),
-                    groupPoid,
-                    dto.getPeriodFrom(),
-                    dto.getPeriodTo(),
-                    excludeTransactionPoid)) {
-                throw new ValidationException("Period overlaps with an existing tariff for the same port and tariff type");
-            }
+                dto.getPeriodFrom() != null && dto.getPeriodTo() != null &&
+                tariffHdrRepository.existsOverlappingPeriod(
+                        dto.getPortPoid(),
+                        dto.getTariffType(),
+                        groupPoid,
+                        dto.getPeriodFrom(),
+                        dto.getPeriodTo(),
+                        excludeTransactionPoid)) {
+            throw new ValidationException("Period overlaps with an existing tariff for the same port and tariff type");
         }
 
         // Check if document reference already exists (excluding current transaction)
-        if (dto.getDocRef() != null && !dto.getDocRef().isEmpty()) {
-            if (tariffHdrRepository.existsByDocRefExcludingPoid(dto.getDocRef(), excludeTransactionPoid)) {
-                throw new ValidationException("Document reference already exists");
-            }
+        if (dto.getDocRef() != null && !dto.getDocRef().isEmpty() && tariffHdrRepository.existsByDocRefExcludingPoid(dto.getDocRef(), excludeTransactionPoid)) {
+            throw new ValidationException("Document reference already exists");
         }
 
         // Validate detail LOVs
@@ -425,40 +494,40 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
      * Validate slab details for TariffDetailCreateDTO
      */
     private void validateSlabDetails(TariffDetailCreateDTO dto) {
-        validateSlabSequence(dto.getSlab1Tilldays(), dto.getSlab2Tilldays(), "Slab 1", "Slab 2");
-        validateSlabSequence(dto.getSlab2Tilldays(), dto.getSlab3Tilldays(), "Slab 2", "Slab 3");
-        validateSlabSequence(dto.getSlab3Tilldays(), dto.getSlab4Tilldays(), "Slab 3", "Slab 4");
-        validateSlabSequence(dto.getSlab4Tilldays(), dto.getSlab5Tilldays(), "Slab 4", "Slab 5");
-        validateSlabSequence(dto.getSlab5Tilldays(), dto.getSlab6Tilldays(), "Slab 5", "Slab 6");
-        validateSlabSequence(dto.getSlab6Tilldays(), dto.getSlab7Tilldays(), "Slab 6", "Slab 7");
+        validateSlabSequence(dto.getSlab1Tilldays(), dto.getSlab2Tilldays(), SLAB1, SLAB2);
+        validateSlabSequence(dto.getSlab2Tilldays(), dto.getSlab3Tilldays(), SLAB2, SLAB3);
+        validateSlabSequence(dto.getSlab3Tilldays(), dto.getSlab4Tilldays(), SLAB3, SLAB4);
+        validateSlabSequence(dto.getSlab4Tilldays(), dto.getSlab5Tilldays(), SLAB4, SLAB5);
+        validateSlabSequence(dto.getSlab5Tilldays(), dto.getSlab6Tilldays(), SLAB5, SLAB6);
+        validateSlabSequence(dto.getSlab6Tilldays(), dto.getSlab7Tilldays(), SLAB6, SLAB7);
 
-        validateSlabRate(dto.getSlab1Tilldays(), dto.getSlab1Rate(), "Slab 1");
-        validateSlabRate(dto.getSlab2Tilldays(), dto.getSlab2Rate(), "Slab 2");
-        validateSlabRate(dto.getSlab3Tilldays(), dto.getSlab3Rate(), "Slab 3");
-        validateSlabRate(dto.getSlab4Tilldays(), dto.getSlab4Rate(), "Slab 4");
-        validateSlabRate(dto.getSlab5Tilldays(), dto.getSlab5Rate(), "Slab 5");
-        validateSlabRate(dto.getSlab6Tilldays(), dto.getSlab6Rate(), "Slab 6");
-        validateSlabRate(dto.getSlab7Tilldays(), dto.getSlab7Rate(), "Slab 7");
+        validateSlabRate(dto.getSlab1Tilldays(), dto.getSlab1Rate(), SLAB1);
+        validateSlabRate(dto.getSlab2Tilldays(), dto.getSlab2Rate(), SLAB2);
+        validateSlabRate(dto.getSlab3Tilldays(), dto.getSlab3Rate(), SLAB3);
+        validateSlabRate(dto.getSlab4Tilldays(), dto.getSlab4Rate(), SLAB4);
+        validateSlabRate(dto.getSlab5Tilldays(), dto.getSlab5Rate(), SLAB5);
+        validateSlabRate(dto.getSlab6Tilldays(), dto.getSlab6Rate(), SLAB6);
+        validateSlabRate(dto.getSlab7Tilldays(), dto.getSlab7Rate(), SLAB7);
     }
 
     /**
      * Validate slab details for TariffDetailUpdateDTO
      */
     private void validateSlabDetails(TariffDetailUpdateDTO dto) {
-        validateSlabSequence(dto.getSlab1Tilldays(), dto.getSlab2Tilldays(), "Slab 1", "Slab 2");
-        validateSlabSequence(dto.getSlab2Tilldays(), dto.getSlab3Tilldays(), "Slab 2", "Slab 3");
-        validateSlabSequence(dto.getSlab3Tilldays(), dto.getSlab4Tilldays(), "Slab 3", "Slab 4");
-        validateSlabSequence(dto.getSlab4Tilldays(), dto.getSlab5Tilldays(), "Slab 4", "Slab 5");
-        validateSlabSequence(dto.getSlab5Tilldays(), dto.getSlab6Tilldays(), "Slab 5", "Slab 6");
-        validateSlabSequence(dto.getSlab6Tilldays(), dto.getSlab7Tilldays(), "Slab 6", "Slab 7");
+        validateSlabSequence(dto.getSlab1Tilldays(), dto.getSlab2Tilldays(), SLAB1, SLAB2);
+        validateSlabSequence(dto.getSlab2Tilldays(), dto.getSlab3Tilldays(), SLAB2, SLAB3);
+        validateSlabSequence(dto.getSlab3Tilldays(), dto.getSlab4Tilldays(), SLAB3, SLAB4);
+        validateSlabSequence(dto.getSlab4Tilldays(), dto.getSlab5Tilldays(), SLAB4, SLAB5);
+        validateSlabSequence(dto.getSlab5Tilldays(), dto.getSlab6Tilldays(), SLAB5, SLAB6);
+        validateSlabSequence(dto.getSlab6Tilldays(), dto.getSlab7Tilldays(), SLAB6, SLAB7);
 
-        validateSlabRate(dto.getSlab1Tilldays(), dto.getSlab1Rate(), "Slab 1");
-        validateSlabRate(dto.getSlab2Tilldays(), dto.getSlab2Rate(), "Slab 2");
-        validateSlabRate(dto.getSlab3Tilldays(), dto.getSlab3Rate(), "Slab 3");
-        validateSlabRate(dto.getSlab4Tilldays(), dto.getSlab4Rate(), "Slab 4");
-        validateSlabRate(dto.getSlab5Tilldays(), dto.getSlab5Rate(), "Slab 5");
-        validateSlabRate(dto.getSlab6Tilldays(), dto.getSlab6Rate(), "Slab 6");
-        validateSlabRate(dto.getSlab7Tilldays(), dto.getSlab7Rate(), "Slab 7");
+        validateSlabRate(dto.getSlab1Tilldays(), dto.getSlab1Rate(), SLAB1);
+        validateSlabRate(dto.getSlab2Tilldays(), dto.getSlab2Rate(), SLAB2);
+        validateSlabRate(dto.getSlab3Tilldays(), dto.getSlab3Rate(), SLAB3);
+        validateSlabRate(dto.getSlab4Tilldays(), dto.getSlab4Rate(), SLAB4);
+        validateSlabRate(dto.getSlab5Tilldays(), dto.getSlab5Rate(), SLAB5);
+        validateSlabRate(dto.getSlab6Tilldays(), dto.getSlab6Rate(), SLAB6);
+        validateSlabRate(dto.getSlab7Tilldays(), dto.getSlab7Rate(), SLAB7);
     }
 
     /**

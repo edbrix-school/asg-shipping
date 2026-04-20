@@ -1,5 +1,6 @@
 package com.asg.shipping.linecommission;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
 import com.asg.shipping.linecommission.controller.LineCommissionController;
@@ -37,7 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LineCommissionControllerTests {
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
     @Mock
     private LineCommissionService service;
@@ -56,11 +58,14 @@ class LineCommissionControllerTests {
                 .build();
 
         requestDTO = new LineCommissionRequest();
-        // set mandatory fields if any
-        // requestDTO.setLinePoid(1L);
+        requestDTO.setLinePoid(1L);
+        requestDTO.setCurrencyPoid(1L);
+        requestDTO.setTransactionDate(java.time.LocalDate.of(2024, 1, 1));
+        requestDTO.setPeriodFrom(java.time.LocalDate.of(2024, 1, 1));
+        requestDTO.setPeriodTo(java.time.LocalDate.of(2024, 12, 31));
+        requestDTO.setRenewalDate(java.time.LocalDate.of(2024, 12, 31));
 
         responseDTO = new LineCommissionResponse();
-        // responseDTO.setTransactionPoid(1L);
     }
 
     // ---------- LIST ----------
@@ -153,11 +158,11 @@ class LineCommissionControllerTests {
     @Test
     void testDeleteLineCommission() throws Exception {
 
-        doNothing().when(service).delete(eq(1L), eq(100L), eq("admin"));
+        doNothing().when(service).delete(eq(1L), any(DeleteReasonDto.class));
 
         mockMvc.perform(delete("/v1/line-commission/1")
-                        .header("X-Group-Poid", 100L)
-                        .header("X-User-Id", "admin"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new DeleteReasonDto())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")

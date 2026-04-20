@@ -1,9 +1,8 @@
 package com.asg.shipping.bookingFormSH.entity;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
-import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.entity.BaseEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,8 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
-public class ShipMateChargesDtl {
+public class ShipMateChargesDtl extends BaseEntity {
 
 	@Id
 	@Column(name = "TRANSACTION_POID", nullable = false)
@@ -58,33 +55,8 @@ public class ShipMateChargesDtl {
 	@Column(name = "CURRENCY_CODE", length = 50)
 	private String currencyCode;
 
-	@Column(name = "CREATED_BY", length = 20)
-	private String createdBy;
-
-	@Column(name = "CREATED_DATE")
-	private LocalDateTime createdDate;
-
-	@Column(name = "LASTMODIFIED_BY", length = 20)
-	private String lastModifiedBy;
-
-	@Column(name = "LASTMODIFIED_DATE")
-	private LocalDateTime lastModifiedDate;
-
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
 	private ShipMateHdr shipMateHdr;
 
-	@PrePersist
-	protected void onCreate() {
-		createdDate = LocalDateTime.now();
-		if (createdBy == null) {
-			createdBy = UserContext.getUserName();
-		}
-	}
-
-	@PreUpdate
-	protected void onUpdate() {
-		lastModifiedDate = LocalDateTime.now();
-		lastModifiedBy = UserContext.getUserName();
-	}
 }

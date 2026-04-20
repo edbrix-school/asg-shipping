@@ -23,6 +23,8 @@ public interface ShipMateCargoDtlRepository extends JpaRepository<ShipMateCargoD
 
 	void deleteByTransactionPoid(Long transactionPoid);
 
+    void deleteByTransactionPoidAndDetRowIdIn( Long transactionPoid, List<Long> detRowIds);
+
 	@Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM ShipMateCargoDtl d WHERE d.transactionPoid = :transactionPoid")
 	Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 }

@@ -1,14 +1,13 @@
 package com.asg.shipping.remuneration.mapper;
 
-import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterRequestDto;
 import com.asg.shipping.remuneration.dto.ShipRemunerationMasterResponseDto;
 import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import org.apache.commons.lang3.StringUtils;
 
-import java.time.LocalDateTime;
-
 public class ShipRemunerationMasterMapper {
+
+    private ShipRemunerationMasterMapper() {}
 
     public static ShipRemunerationMasterResponseDto toResponseDto(ShipRemunerationMaster entity) {
 
@@ -58,11 +57,6 @@ public class ShipRemunerationMasterMapper {
         entity.setRemunBookedByUsed(dto.getRemunBookedByUsed());
 
         entity.setDeleted("N");
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setCreatedBy(UserContext.getUserId());
-        entity.setLastModifiedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(UserContext.getUserId());
-
         return entity;
     }
 
@@ -81,7 +75,5 @@ public class ShipRemunerationMasterMapper {
         entity.setGlPoid(dto.getGlPoid());
         entity.setRemunBookedByUsed(dto.getRemunBookedByUsed());
 
-        entity.setLastModifiedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(UserContext.getUserId());
     }
 }

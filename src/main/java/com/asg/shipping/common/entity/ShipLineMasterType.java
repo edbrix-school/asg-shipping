@@ -1,18 +1,18 @@
 package com.asg.shipping.common.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "SHIP_LINE_MASTER_TYPE_DTL")
 @IdClass(ShipLineMasterTypeId.class)
 @Getter
 @Setter
-public class ShipLineMasterType {
+public class ShipLineMasterType extends BaseEntity {
 
     @Id
     @Column(name = "LINE_POID", nullable = false)
@@ -28,17 +28,6 @@ public class ShipLineMasterType {
     @Column(name = "VALID_UNTIL")
     private LocalDate validUntil;
 
-    @Column(name = "CREATED_BY")
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY")
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 }
 
 

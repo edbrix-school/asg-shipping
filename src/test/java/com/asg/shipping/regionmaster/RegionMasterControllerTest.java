@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -51,6 +52,11 @@ class RegionMasterControllerTest {
 
     @BeforeEach
     void setup() {
+        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
+        userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+        userContextMock.when(UserContext::getUserId).thenReturn("admin");
+        userContextMock.when(UserContext::getDocumentId).thenReturn("100-480");
+
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
                 .build();
@@ -65,22 +71,6 @@ class RegionMasterControllerTest {
         response.setRegionCode("ME");
         response.setRegionName("Middle East");
         response.setActive("Y");
-    }
-    @BeforeEach
-    void mockUserContext() {
-        userContextMock = org.mockito.Mockito.mockStatic(UserContext.class);
-
-        userContextMock.when(UserContext::getGroupPoid)
-                .thenReturn(1L);
-        userContextMock.when(UserContext::getUserId)
-                .thenReturn("admin");
-        userContextMock.when(UserContext::getDocumentId)
-                .thenReturn("100-480");
-    }
-
-    @AfterEach
-    void closeMock() {
-        userContextMock.close();
     }
 
     private FilterRequestDto buildFilterRequest() {
@@ -104,6 +94,20 @@ class RegionMasterControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
                         .value("Region masters retrieved successfully"));
+    }
+
+    @Test
+    void testSearchRegionMasters_WhenServiceThrows_ReturnsInternalServerError() throws Exception {
+        when(service.listRegionMasters(any(), any(), any()))
+                .thenThrow(new RuntimeException("boom"));
+
+        mockMvc.perform(post("/v1/region-master/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFilterRequest())))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message")
+                        .value("Unable to fetch region masters: boom"));
     }
 
     // ---------- GET BY ID ----------
@@ -154,8 +158,9 @@ class RegionMasterControllerTest {
         doNothing().when(service)
                 .toggleActiveStatus(1L, 1L, "admin");
 
-        mockMvc.perform(patch("/v1/region-master/1/activate"))
+        mockMvc.perform(put("/v1/region-master/1/activate"))
                 .andExpect(status().isOk())
+                .andDo(print())
                 .andExpect(jsonPath("$.success").value(true));
     }
 
@@ -163,13 +168,22 @@ class RegionMasterControllerTest {
     @Test
     void testDeleteRegionMaster() throws Exception {
         doNothing().when(service)
-                .delete(1L, 1L, "admin");
+                .delete(eq(1L), any());
 
-        mockMvc.perform(delete("/v1/region-master/1"))
+        mockMvc.perform(delete("/v1/region-master/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"deleteReason\":\"Test deletion\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message")
                         .value("Region master deleted successfully"));
+    }
+
+    @AfterEach
+    void closeMock() {
+        if (userContextMock != null) {
+            userContextMock.close();
+        }
     }
 }
 

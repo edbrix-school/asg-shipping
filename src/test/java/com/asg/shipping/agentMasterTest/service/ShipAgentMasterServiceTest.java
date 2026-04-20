@@ -5,13 +5,15 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterRequestDto;
-import com.asg.shipping.agentMaster.dto.ShipAgentMasterResponseDto;
-import com.asg.shipping.agentMaster.entity.ShipAgentMasterEntity;
-import com.asg.shipping.agentMaster.repository.ShipAgentMasterRepository;
-import com.asg.shipping.agentMaster.service.ShipAgentMasterServiceImpl;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterRequestDto;
+import com.asg.shipping.agentmaster.dto.ShipAgentMasterResponseDto;
+import com.asg.shipping.agentmaster.entity.ShipAgentMasterEntity;
+import com.asg.shipping.agentmaster.repository.ShipAgentMasterRepository;
+import com.asg.shipping.agentmaster.service.ShipAgentMasterServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,7 +40,13 @@ public class ShipAgentMasterServiceTest {
     private ShipAgentMasterRepository repository;
 
     @Mock
+    private DocumentDeleteService documentDeleteService;
+
+    @Mock
     private DocumentSearchService documentService;
+
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
 
     @InjectMocks
     private ShipAgentMasterServiceImpl service;
@@ -80,8 +88,6 @@ public class ShipAgentMasterServiceTest {
                 .seqNo(1)
                 .active("Y")
                 .deleted("N")
-                .createdBy("testUser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         responseDto = ShipAgentMasterResponseDto.builder()
@@ -165,17 +171,17 @@ public class ShipAgentMasterServiceTest {
 
     @Test
     void deleteAgentMaster_Success() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
-            
-            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(repository.findById(1L)).thenReturn(Optional.of(entity));
+        when(documentDeleteService.deleteDocument(
+                eq(1L), eq("SHIP_AGENT_MASTER"), eq("AGENT_POID"),
+                isNull(), isNull())).thenReturn("SUCCESS");
 
-            service.deleteAgentMaster(1L);
+        service.deleteAgentMaster(1L, null);
 
-            assertEquals("Y", entity.getDeleted());
-            assertEquals("N", entity.getActive());
-            verify(repository).findById(1L);
-        }
+        verify(repository).findById(1L);
+        verify(documentDeleteService).deleteDocument(
+                eq(1L), eq("SHIP_AGENT_MASTER"), eq("AGENT_POID"),
+                isNull(), isNull());
     }
 
     @Test
@@ -183,7 +189,7 @@ public class ShipAgentMasterServiceTest {
         when(repository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, 
-                () -> service.deleteAgentMaster(1L));
+                () -> service.deleteAgentMaster(1L, null));
     }
 
    @Test
@@ -229,6 +235,117 @@ public class ShipAgentMasterServiceTest {
             String result = ShipAgentMasterServiceImpl.getCurrentUser();
             
             assertEquals("SYSTEM", result);
+        }
+    }
+
+    @Test
+    void createAgentMaster_WithNullEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(null);
+            when(repository.save(any(ShipAgentMasterEntity.class))).thenReturn(entity);
+
+            ShipAgentMasterResponseDto result = service.createAgentMaster(requestDto);
+
+            assertNotNull(result);
+            verify(repository).save(any(ShipAgentMasterEntity.class));
+        }
+    }
+
+    @Test
+    void createAgentMaster_WithEmptyEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(Collections.emptyList());
+            when(repository.save(any(ShipAgentMasterEntity.class))).thenReturn(entity);
+
+            ShipAgentMasterResponseDto result = service.createAgentMaster(requestDto);
+
+            assertNotNull(result);
+            verify(repository).save(any(ShipAgentMasterEntity.class));
+        }
+    }
+
+    @Test
+    void createAgentMaster_WithActiveFalse() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setActive("N");
+            entity.setActive("N");
+            when(repository.save(any(ShipAgentMasterEntity.class))).thenReturn(entity);
+
+            ShipAgentMasterResponseDto result = service.createAgentMaster(requestDto);
+
+            assertNotNull(result);
+            assertEquals("N", result.getActive());
+            verify(repository).save(any(ShipAgentMasterEntity.class));
+        }
+    }
+
+    @Test
+    void updateAgentMaster_WithNullEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(null);
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            ShipAgentMasterResponseDto result = service.updateAgentMaster(1L, requestDto);
+
+            assertNotNull(result);
+            verify(repository).findById(1L);
+        }
+    }
+
+    @Test
+    void updateAgentMaster_WithEmptyEmail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setEmail(Collections.emptyList());
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            ShipAgentMasterResponseDto result = service.updateAgentMaster(1L, requestDto);
+
+            assertNotNull(result);
+            verify(repository).findById(1L);
+        }
+    }
+
+    @Test
+    void updateAgentMaster_WithActiveFalse() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            requestDto.setActive("N");
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            ShipAgentMasterResponseDto result = service.updateAgentMaster(1L, requestDto);
+
+            assertNotNull(result);
+            assertEquals("N", result.getActive());
+            verify(repository).findById(1L);
+        }
+    }
+
+    @Test
+    void deleteAgentMaster_AlreadyDeleted() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getUserId).thenReturn("123");
+            
+            entity.setDeleted("Y");
+            when(repository.findById(1L)).thenReturn(Optional.of(entity));
+
+            service.deleteAgentMaster(1L, null);
+
+            verify(repository).findById(1L);
+            verify(repository, never()).save(any(ShipAgentMasterEntity.class));
         }
     }
 }

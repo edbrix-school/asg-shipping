@@ -14,9 +14,6 @@ import com.asg.shipping.linecommission.entity.ShipLineCommHdrEntity;
 import com.asg.shipping.linecommission.entity.ShipLineCommLocalDtlEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +29,7 @@ public class LineCommissionMapper {
                                                       String userId) {
         ShipLineCommHdrEntity hdr = new ShipLineCommHdrEntity();
 //        hdr.setTransactionPoid(-999L); // placeholder; trigger overwrites with sequence NEXTVAL
-        hdr.setTransactionDate(LocalDate.now());
+        hdr.setTransactionDate(request.getTransactionDate());
         hdr.setGroupPoid(groupPoid);
         hdr.setCompanyPoid(companyPoid);
         hdr.setLinePoid(request.getLinePoid());
@@ -43,10 +40,6 @@ public class LineCommissionMapper {
         hdr.setDescription(request.getDescription());
         hdr.setRemarks(request.getRemarks());
         hdr.setDeleted("N");
-        hdr.setCreatedBy(userId);
-        hdr.setCreatedDate(LocalDateTime.now());
-        hdr.setLastModifiedBy(userId);
-        hdr.setLastModifiedDate(LocalDateTime.now());
         return hdr;
     }
 
@@ -62,8 +55,6 @@ public class LineCommissionMapper {
         hdr.setCurrencyPoid(request.getCurrencyPoid());
         hdr.setDescription(request.getDescription());
         hdr.setRemarks(request.getRemarks());
-        hdr.setLastModifiedBy(userId);
-        hdr.setLastModifiedDate(LocalDateTime.now());
     }
 
     public List<ShipLineCommCntnrDtlEntity> toContainerEntities(long transactionPoid, LineCommissionRequest request, String userId) {
@@ -78,26 +69,20 @@ public class LineCommissionMapper {
     }
 
     public ShipLineCommCntnrDtlEntity toNewContainerEntity(long transactionPoid, long detRowId, ContainerRateDto d, String userId) {
-        LocalDateTime now = LocalDateTime.now();
         ShipLineCommCntnrDtlEntity e = new ShipLineCommCntnrDtlEntity();
         e.setTransactionPoid(transactionPoid);
         e.setDetRowId(detRowId);
         applyUpdateContainerEntity(e, d, userId);
-        e.setCreatedBy(userId);
-        e.setCreatedDate(now);
         return e;
     }
 
     public void applyUpdateContainerEntity(ShipLineCommCntnrDtlEntity e, ContainerRateDto d, String userId) {
-        LocalDateTime now = LocalDateTime.now();
         e.setContainerTypePoid(d.getContainerTypePoid());
         e.setImportBoxRate(d.getImportBoxRate());
         e.setExportBoxRate(d.getExportBoxRate());
         e.setTranshipBoxRate(d.getTranshipBoxRate());
         e.setShortLegAmount(d.getShortLegAmount());
         e.setRemarks(d.getRemarks());
-        e.setLastModifiedBy(userId);
-        e.setLastModifiedDate(now);
     }
 
     public List<ShipLineCommDtlEntity> toOtherRemunerationEntities(long transactionPoid, LineCommissionRequest request, String userId) {
@@ -112,18 +97,14 @@ public class LineCommissionMapper {
     }
 
     public ShipLineCommDtlEntity toNewOtherRemunerationEntity(long transactionPoid, long detRowId, OtherRemunerationDto d, String userId) {
-        LocalDateTime now = LocalDateTime.now();
         ShipLineCommDtlEntity e = new ShipLineCommDtlEntity();
         e.setTransactionPoid(transactionPoid);
         e.setDetRowId(detRowId);
         applyUpdateOtherRemunerationEntity(e, d, userId);
-        e.setCreatedBy(userId);
-        e.setCreatedDate(now);
         return e;
     }
 
     public void applyUpdateOtherRemunerationEntity(ShipLineCommDtlEntity e, OtherRemunerationDto d, String userId) {
-        LocalDateTime now = LocalDateTime.now();
         e.setRemunerationPoid(d.getRemunerationPoid());
         e.setCurrencyPoid(d.getCurrencyPoid());
         e.setAmount(d.getAmount());
@@ -136,8 +117,6 @@ public class LineCommissionMapper {
         e.setAmountPerTue(d.getAmountPerTeu());
         e.setPpBookingPercentageCollect(d.getPrincipalBookPutClt());
         e.setRemarks(d.getRemarks());
-        e.setLastModifiedBy(userId);
-        e.setLastModifiedDate(now);
     }
 
     public List<ShipLineCommLocalDtlEntity> toLocalShareEntities(long transactionPoid, LineCommissionRequest request, String userId) {
@@ -152,24 +131,18 @@ public class LineCommissionMapper {
     }
 
     public ShipLineCommLocalDtlEntity toNewLocalShareEntity(long transactionPoid, long detRowId, LocalShareDto d, String userId) {
-        LocalDateTime now = LocalDateTime.now();
         ShipLineCommLocalDtlEntity e = new ShipLineCommLocalDtlEntity();
         e.setTransactionPoid(transactionPoid);
         e.setDetRowId(detRowId);
         applyUpdateLocalShareEntity(e, d, userId);
-        e.setCreatedBy(userId);
-        e.setCreatedDate(now);
         return e;
     }
 
     public void applyUpdateLocalShareEntity(ShipLineCommLocalDtlEntity e, LocalShareDto d, String userId) {
-        LocalDateTime now = LocalDateTime.now();
         e.setChargePoid(d.getChargePoid());
         e.setPercent(d.getPercent());
         e.setShareAmount(d.getAmount());
         e.setRemarks(d.getRemarks());
-        e.setLastModifiedBy(userId);
-        e.setLastModifiedDate(now);
     }
 
     public LineCommissionResponse toResponse(ShipLineCommHdrEntity hdr,
@@ -185,7 +158,12 @@ public class LineCommissionMapper {
         r.setPeriodFrom(hdr.getPeriodFrom());
         r.setPeriodTo(hdr.getPeriodTo());
         r.setRenewalDate(hdr.getRenewalDate());
+        r.setTransactionDate(hdr.getTransactionDate());
         r.setCurrencyPoid(hdr.getCurrencyPoid());
+        r.setCreatedBy(hdr.getCreatedBy());
+        r.setCreatedDate(hdr.getCreatedDate());
+        r.setUpdatedBy(hdr.getLastModifiedBy());
+        r.setUpdatedDate(hdr.getLastModifiedDate());
         r.setDeleted(hdr.getDeleted() != null ? hdr.getDeleted() : "N");
 
         r.setContainerRates(cntnr.stream().map(this::toDto).toList());
@@ -202,6 +180,10 @@ public class LineCommissionMapper {
         d.setExportBoxRate(e.getExportBoxRate());
         d.setTranshipBoxRate(e.getTranshipBoxRate());
         d.setShortLegAmount(e.getShortLegAmount());
+        d.setCreatedBy(e.getCreatedBy());
+        d.setCreatedDate(e.getCreatedDate());
+        d.setUpdatedBy(e.getLastModifiedBy());
+        d.setUpdatedDate(e.getLastModifiedDate());
         d.setRemarks(e.getRemarks());
         return d;
     }
@@ -220,6 +202,10 @@ public class LineCommissionMapper {
         d.setSplEqpPercentage(e.getSplEqpPercentage());
         d.setAmountPerTeu(e.getAmountPerTue());
         d.setPrincipalBookPutClt(e.getPpBookingPercentageCollect());
+        d.setCreatedBy(e.getCreatedBy());
+        d.setCreatedDate(e.getCreatedDate());
+        d.setUpdatedBy(e.getLastModifiedBy());
+        d.setUpdatedDate(e.getLastModifiedDate());
         d.setRemarks(e.getRemarks());
         return d;
     }
@@ -230,6 +216,10 @@ public class LineCommissionMapper {
         d.setChargePoid(e.getChargePoid());
         d.setPercent(e.getPercent());
         d.setAmount(e.getShareAmount());
+        d.setCreatedBy(e.getCreatedBy());
+        d.setCreatedDate(e.getCreatedDate());
+        d.setUpdatedBy(e.getLastModifiedBy());
+        d.setUpdatedDate(e.getLastModifiedDate());
         d.setRemarks(e.getRemarks());
         return d;
     }

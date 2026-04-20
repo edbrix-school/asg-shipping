@@ -29,6 +29,9 @@ class CommodityMasterControllerTest {
     @Mock
     private CommodityMapper mapper;
 
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
+
     @InjectMocks
     private CommodityMasterController controller;
 
@@ -110,13 +113,16 @@ class CommodityMasterControllerTest {
 
     @Test
     void softDeleteCommodity_Success() {
-        doNothing().when(commodityService).softDeleteCommodity(1L);
+        com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto = new com.asg.common.lib.dto.DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
+        
+        doNothing().when(commodityService).softDeleteCommodity(1L, deleteReasonDto);
 
-        ResponseEntity<?> response = controller.softDeleteCommodity(1L);
+        ResponseEntity<?> response = controller.softDeleteCommodity(1L, deleteReasonDto);
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(commodityService).softDeleteCommodity(1L);
+        verify(commodityService).softDeleteCommodity(1L, deleteReasonDto);
     }
 
     @Test
@@ -132,12 +138,74 @@ class CommodityMasterControllerTest {
 
     @Test
     void softDeleteCommodity_NotFound() {
+        com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto = new com.asg.common.lib.dto.DeleteReasonDto();
         doThrow(new ResourceNotFoundException("Commodity", "commodityPoid", "1"))
-                .when(commodityService).softDeleteCommodity(1L);
+                .when(commodityService).softDeleteCommodity(1L, deleteReasonDto);
 
-        ResponseEntity<?> response = controller.softDeleteCommodity(1L);
+        ResponseEntity<?> response = controller.softDeleteCommodity(1L, deleteReasonDto);
 
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
+    }
+
+    @Test
+    void getCommodities_Success() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-001");
+
+            com.asg.common.lib.dto.FilterRequestDto filterRequest = 
+                new com.asg.common.lib.dto.FilterRequestDto("AND", "N", null);
+            org.springframework.data.domain.Pageable pageable = 
+                org.springframework.data.domain.PageRequest.of(0, 20);
+            java.util.Map<String, Object> result = new java.util.HashMap<>();
+            result.put("content", java.util.Collections.emptyList());
+            result.put("totalElements", 0);
+
+            when(commodityService.listCommodities(eq("100-001"), any(), any()))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.getCommodities(pageable, filterRequest);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(commodityService).listCommodities(eq("100-001"), any(), any());
+        }
+    }
+
+    @Test
+    void getCommodities_WithNullFilters() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-001");
+
+            org.springframework.data.domain.Pageable pageable = 
+                org.springframework.data.domain.PageRequest.of(0, 20);
+            java.util.Map<String, Object> result = new java.util.HashMap<>();
+
+            when(commodityService.listCommodities(eq("100-001"), any(), any()))
+                    .thenReturn(result);
+
+            ResponseEntity<?> response = controller.getCommodities(pageable, null);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+        }
+    }
+
+    @Test
+    void getCommodities_Exception() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-001");
+
+            org.springframework.data.domain.Pageable pageable = 
+                org.springframework.data.domain.PageRequest.of(0, 20);
+
+            when(commodityService.listCommodities(eq("100-001"), any(), any()))
+                    .thenThrow(new RuntimeException("Database error"));
+
+            ResponseEntity<?> response = controller.getCommodities(pageable, null);
+
+            assertNotNull(response);
+            assertEquals(500, response.getStatusCode().value());
+        }
     }
 }

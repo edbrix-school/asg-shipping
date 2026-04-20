@@ -2,8 +2,6 @@ package com.asg.shipping.bookingFormSH.dto;
 
 import java.math.BigDecimal;
 
-import com.asg.shipping.common.dto.LovItem;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

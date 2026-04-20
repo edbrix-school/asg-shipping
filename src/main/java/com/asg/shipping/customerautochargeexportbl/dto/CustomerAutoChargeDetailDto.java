@@ -65,4 +65,6 @@ public class CustomerAutoChargeDetailDto {
 
     @Schema(description = "Cost Amount for 53ft Container", example = "140.00")
     private BigDecimal amount53Cost;
+
+    private String actionType;
 }

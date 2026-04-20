@@ -1,19 +1,16 @@
 package com.asg.shipping.bookingFormSH.controller;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import java.util.List;
-import java.util.Map;
-
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.excel.ExcelFileData;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.ExcelExportService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
+import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
+import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingFormSH.service.BookingFormService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,176 +25,335 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.security.util.UserContext;
-import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
-import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
-import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
-import com.asg.shipping.bookingFormSH.service.BookingFormService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class BookingFormControllerTest {
 
-	private MockMvc mockMvc;
-	private ObjectMapper objectMapper;
-	private MockedStatic<UserContext> mockedUserContext;
+    private MockMvc mockMvc;
+    private ObjectMapper objectMapper;
+    private MockedStatic<UserContext> mockedUserContext;
 
-	@Mock
-	private BookingFormService bookingFormService;
+    @Mock
+    private BookingFormService bookingFormService;
 
-	@InjectMocks
-	private BookingFormController controller;
+    @Mock
+    private ExcelExportService excelExportService;
 
-	@BeforeEach
-	void setUp() {
-		objectMapper = new ObjectMapper();
+    @Mock
+    private LoggingService loggingService;
 
-		mockedUserContext = mockStatic(UserContext.class);
-		mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
-		mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1001L);
-		mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(2001L);
+    @InjectMocks
+    private BookingFormController controller;
 
-		PageableHandlerMethodArgumentResolver pageableResolver = new PageableHandlerMethodArgumentResolver();
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
 
-		mockMvc = MockMvcBuilders.standaloneSetup(controller).setCustomArgumentResolvers(pageableResolver).build();
-	}
+        mockedUserContext = mockStatic(UserContext.class);
+        mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
-	@AfterEach
-	void tearDown() {
-		mockedUserContext.close();
-	}
+        PageableHandlerMethodArgumentResolver pageableResolver = new PageableHandlerMethodArgumentResolver();
 
-	@Test
-	void searchBookingForm_Success() throws Exception {
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).setCustomArgumentResolvers(pageableResolver).build();
+    }
 
-		FilterRequestDto filters = new FilterRequestDto("OR", "false", List.of());
+    @AfterEach
+    void tearDown() {
+        mockedUserContext.close();
+    }
 
-		Map<String, Object> response = Map.of("content", List.of(createMockDto()), "totalElements", 1);
+    /* ---------------- SEARCH ---------------- */
 
-		when(bookingFormService.searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class))).thenReturn(response);
+    @Test
+    void searchBookingForm_Success() throws Exception {
+        FilterRequestDto filters = new FilterRequestDto("OR", "false", List.of());
 
-		mockMvc.perform(post("/v1/booking-form-sh/search").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(filters))).andExpect(status().isOk());
+        Map<String, Object> response = Map.of("content", List.of(createMockDto()), "totalElements", 1);
 
-		verify(bookingFormService).searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class));
-	}
+        when(bookingFormService.searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class), isNull(), isNull())).thenReturn(response);
 
-	@Test
-	void getBookingFormById_Success() throws Exception {
+        mockMvc.perform(post("/v1/booking-form-sh/search").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(filters))).andExpect(status().isOk());
 
-		when(bookingFormService.getBookingForm(1L)).thenReturn(createMockDto());
+        verify(bookingFormService).searchBookingForm(eq("DOC123"), eq(filters), any(Pageable.class), isNull(), isNull());
+    }
 
-		mockMvc.perform(get("/v1/booking-form-sh/1")).andExpect(status().isOk());
+    @Test
+    void searchBookingForm_WithoutFilters() throws Exception {
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", List.of());
+        response.put("totalElements", 0);
 
-		verify(bookingFormService).getBookingForm(1L);
-	}
+        when(bookingFormService.searchBookingForm(eq("DOC123"), isNull(), any(Pageable.class), isNull(), isNull())).thenReturn(response);
 
-	@Test
-	void createBookingForm_Success() throws Exception {
+        mockMvc.perform(post("/v1/booking-form-sh/search").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
 
-		BookingFormCreateDTO createDTO = createMockCreateDto();
+        verify(bookingFormService).searchBookingForm(eq("DOC123"), isNull(), any(Pageable.class), isNull(), isNull());
+    }
 
-		when(bookingFormService.createBookingForm(any())).thenReturn(createMockDto());
+    /* ---------------- GET BY ID ---------------- */
 
-		mockMvc.perform(post("/v1/booking-form-sh").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(createDTO))).andExpect(status().isOk());
+    @Test
+    void getBookingFormById_Success_WithLogging() throws Exception {
+        when(bookingFormService.getBookingForm(1L)).thenReturn(createMockDto());
 
-		verify(bookingFormService).createBookingForm(any());
-	}
+        mockMvc.perform(get("/v1/booking-form-sh/1")).andExpect(status().isOk());
 
-	@Test
-	void updateBookingForm_Success() throws Exception {
+        verify(bookingFormService).getBookingForm(1L);
+        verify(loggingService).createLogSummaryEntry(LogDetailsEnum.VIEWED, "DOC123", "1");
+    }
 
-		BookingFormUpdateDTO updateDTO = createMockUpdateDto();
+    /* ---------------- CREATE ---------------- */
 
-		when(bookingFormService.getBookingForm(1L)).thenReturn(createMockDto());
+    @Test
+    void createBookingForm_Success() throws Exception {
+        when(bookingFormService.createBookingForm(any())).thenReturn(createMockDto());
 
-		mockMvc.perform(put("/v1/booking-form-sh/1").contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(updateDTO))).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/booking-form-sh").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createMockCreateDto()))).andExpect(status().isOk());
 
-		verify(bookingFormService).updateBookingForm(eq(1L), any());
-		verify(bookingFormService).getBookingForm(1L);
-	}
+        verify(bookingFormService).createBookingForm(any());
+    }
 
-	@Test
-	void deleteBookingForm_Success() throws Exception {
+    /* ---------------- UPDATE ---------------- */
 
-		mockMvc.perform(delete("/v1/booking-form-sh/1")).andExpect(status().isOk());
+    @Test
+    void updateBookingForm_Success() throws Exception {
+        when(bookingFormService.getBookingForm(1L)).thenReturn(createMockDto());
+        doNothing().when(bookingFormService).updateBookingForm(eq(1L), any());
 
-		verify(bookingFormService).deleteBookingForm(1L);
-	}
+        mockMvc.perform(put("/v1/booking-form-sh/1").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createMockUpdateDto()))).andExpect(status().isOk());
 
-	@Test
-	void generateCoprarBooking_Success() throws Exception {
+        verify(bookingFormService).updateBookingForm(eq(1L), any());
+        verify(bookingFormService).getBookingForm(1L);
+    }
 
-		when(bookingFormService.generateCoprarBooking(1L)).thenReturn("COPRAR generated successfully");
+    /* ---------------- DELETE ---------------- */
 
-		mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isOk());
+    @Test
+    void deleteBookingForm_Success_WithLogging() throws Exception {
+        doNothing().when(bookingFormService).deleteBookingForm(1L);
 
-		verify(bookingFormService).generateCoprarBooking(1L);
-	}
+        mockMvc.perform(delete("/v1/booking-form-sh/1")).andExpect(status().isOk());
 
-	@Test
-	void generateCoprarBooking_Error() throws Exception {
+        verify(bookingFormService).deleteBookingForm(1L);
+        verify(loggingService).createLogSummaryEntry(LogDetailsEnum.DELETED, "DOC123", "1");
+    }
 
-		when(bookingFormService.generateCoprarBooking(1L)).thenReturn("ERROR: COPRAR failed");
+    /* ---------------- COPRAR ---------------- */
 
-		mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isBadRequest());
+    @Test
+    void generateCoprarBooking_Success() throws Exception {
+        when(bookingFormService.generateCoprarBooking(1L)).thenReturn("COPRAR generated successfully");
 
-		verify(bookingFormService).generateCoprarBooking(1L);
-	}
+        mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isOk());
 
-	@Test
-	void getEmptyShipper_Success() throws Exception {
+        verify(bookingFormService).generateCoprarBooking(1L);
+    }
 
-		when(bookingFormService.getEmptyShipper(2001L)).thenReturn("SHIPPER.1");
+    @Test
+    void generateCoprarBooking_Error() throws Exception {
+        when(bookingFormService.generateCoprarBooking(1L)).thenReturn("ERROR: COPRAR failed");
 
-		mockMvc.perform(get("/v1/booking-form-sh/empty-shipper").param("companyPoid", "2001"))
-				.andExpect(status().isOk());
+        mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isBadRequest());
 
-		verify(bookingFormService).getEmptyShipper(2001L);
-	}
+        verify(bookingFormService).generateCoprarBooking(1L);
+    }
 
-	@Test
-	void processEmptyContainerLoad_Success() throws Exception {
+    @Test
+    void generateCoprarBooking_ErrorLowerCase() throws Exception {
+        when(bookingFormService.generateCoprarBooking(1L)).thenReturn("error: coprar failed");
 
-		when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("Successfully Uploaded Empty Containers");
+        mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isBadRequest());
 
-		mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load")).andExpect(status().isOk());
+        verify(bookingFormService).generateCoprarBooking(1L);
+    }
 
-		verify(bookingFormService).processEmptyContainerLoad(1L);
-	}
+    /* ---------------- EMPTY SHIPPER ---------------- */
 
-	@Test
-	void processEmptyContainerLoad_Error() throws Exception {
+    @Test
+    void getEmptyShipper_Success() throws Exception {
+        mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(2001L);
+        when(bookingFormService.getEmptyShipper(2001L)).thenReturn("SHIPPER.1");
 
-		when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("ERROR: Uploaded Empty Containers");
+        mockMvc.perform(get("/v1/booking-form-sh/empty-shipper"))
+                .andExpect(status().isOk());
 
-		mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load"))
-				.andExpect(status().isInternalServerError());
+        verify(bookingFormService).getEmptyShipper(2001L);
+    }
 
-		verify(bookingFormService).processEmptyContainerLoad(1L);
-	}
+    /* ---------------- EMPTY CONTAINER LOAD ---------------- */
 
-	/* ------------------ Mock DTOs ------------------ */
+    @Test
+    void processEmptyContainerLoad_Success() throws Exception {
+        when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("Success");
 
-	private BookingFormDto createMockDto() {
-		BookingFormDto dto = new BookingFormDto();
-		dto.setTransactionPoid(1L);
-		dto.setBookingIssueNo("BK001");
-		return dto;
-	}
+        mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load")).andExpect(status().isOk());
 
-	private BookingFormCreateDTO createMockCreateDto() {
-		BookingFormCreateDTO dto = new BookingFormCreateDTO();
-		dto.setBookingIssueNo("BK001");
-		return dto;
-	}
+        verify(bookingFormService).processEmptyContainerLoad(1L);
+    }
 
-	private BookingFormUpdateDTO createMockUpdateDto() {
-		BookingFormUpdateDTO dto = new BookingFormUpdateDTO();
-		dto.setBookingIssueNo("BK001-UPDATED");
-		return dto;
-	}
+    @Test
+    void processEmptyContainerLoad_Error() throws Exception {
+        when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("ERROR: Failed");
+
+        mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load"))
+                .andExpect(status().isInternalServerError());
+
+        verify(bookingFormService).processEmptyContainerLoad(1L);
+    }
+
+    @Test
+    void processEmptyContainerLoad_ErrorLowerCase() throws Exception {
+        when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("error: failed");
+
+        mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load"))
+                .andExpect(status().isInternalServerError());
+
+        verify(bookingFormService).processEmptyContainerLoad(1L);
+    }
+
+    /* ---------------- EXCEL EXPORT ---------------- */
+
+    @Test
+    void exportExcel_Success() throws Exception {
+        byte[] excelContent = "Excel Content".getBytes();
+        ExcelFileData excelData = new ExcelFileData(excelContent, "VGMCustXLFile.xlsx");
+
+        when(excelExportService.generateExcel(eq("100-311"), eq("476"), eq(null), eq("VGMCustXLFile.xlsx")))
+                .thenReturn(excelData);
+
+        mockMvc.perform(get("/v1/booking-form-sh/excel/vgmCustXLGenerateXL/476"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=VGMCustXLFile.xlsx"))
+                .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM));
+
+        verify(excelExportService).generateExcel(eq("100-311"), eq("476"), eq(null), eq("VGMCustXLFile.xlsx"));
+    }
+
+    @Test
+    void exportExcel_Exception() throws Exception {
+        when(excelExportService.generateExcel(eq("100-311"), eq("476"), eq(null), eq("VGMCustXLFile.xlsx")))
+                .thenThrow(new RuntimeException("Excel generation failed"));
+
+        mockMvc.perform(get("/v1/booking-form-sh/excel/vgmCustXLGenerateXL/476"))
+                .andExpect(status().isInternalServerError());
+
+        verify(excelExportService).generateExcel(eq("100-311"), eq("476"), eq(null), eq("VGMCustXLFile.xlsx"));
+    }
+
+    /* ---------------- PRINT FORMS ---------------- */
+
+    @Test
+    void mateBookingPrintForm_Success() throws Exception {
+        byte[] pdfContent = "PDF Content".getBytes();
+
+        when(bookingFormService.mateBookingPrintForm(21L)).thenReturn(pdfContent);
+
+        mockMvc.perform(get("/v1/booking-form-sh/mateBookingPrintForm/21"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=container-mate-receipts-21.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+
+        verify(bookingFormService).mateBookingPrintForm(21L);
+    }
+
+    @Test
+    void mateBookingPrintForm_Exception() throws Exception {
+        when(bookingFormService.mateBookingPrintForm(21L)).thenThrow(new RuntimeException("PDF generation failed"));
+
+        mockMvc.perform(get("/v1/booking-form-sh/mateBookingPrintForm/21"))
+                .andExpect(status().isInternalServerError());
+
+        verify(bookingFormService).mateBookingPrintForm(21L);
+    }
+
+    @Test
+    void cntEmptyBookingPrintForm_Success() throws Exception {
+        byte[] pdfContent = "PDF Content".getBytes();
+
+        when(bookingFormService.cntEmptyBookingPrintForm(21L)).thenReturn(pdfContent);
+
+        mockMvc.perform(get("/v1/booking-form-sh/empty-release/21"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=container-empty-release-21.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+
+        verify(bookingFormService).cntEmptyBookingPrintForm(21L);
+    }
+
+    @Test
+    void cntEmptyBookingPrintForm_Exception() throws Exception {
+        when(bookingFormService.cntEmptyBookingPrintForm(21L)).thenThrow(new RuntimeException("PDF generation failed"));
+
+        mockMvc.perform(get("/v1/booking-form-sh/empty-release/21"))
+                .andExpect(status().isInternalServerError());
+
+        verify(bookingFormService).cntEmptyBookingPrintForm(21L);
+    }
+
+    @Test
+    void cntReturnBookingPrintFormAll_Success() throws Exception {
+        byte[] pdfContent = "PDF Content".getBytes();
+
+        when(bookingFormService.cntReturnBookingPrintFormAll(21L, "Y")).thenReturn(pdfContent);
+
+        mockMvc.perform(get("/v1/booking-form-sh/all-container/21").param("printStamp", "Y"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=all-container-21.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+
+        verify(bookingFormService).cntReturnBookingPrintFormAll(21L, "Y");
+    }
+
+    @Test
+    void cntReturnBookingPrintFormAll_Exception() throws Exception {
+        when(bookingFormService.cntReturnBookingPrintFormAll(21L, "Y"))
+                .thenThrow(new RuntimeException("PDF generation failed"));
+
+        mockMvc.perform(get("/v1/booking-form-sh/all-container/21").param("printStamp", "Y"))
+                .andExpect(status().isInternalServerError());
+
+        verify(bookingFormService).cntReturnBookingPrintFormAll(21L, "Y");
+    }
+
+    /* ---------------- HELPER METHODS ---------------- */
+
+    private BookingFormDto createMockDto() {
+        BookingFormDto dto = new BookingFormDto();
+        dto.setTransactionPoid(1L);
+        dto.setBookingIssueNo("BK001");
+        return dto;
+    }
+
+    private BookingFormCreateDTO createMockCreateDto() {
+        BookingFormCreateDTO dto = new BookingFormCreateDTO();
+        dto.setBookingIssueNo("BK001");
+        dto.setSalesmanPoid(1L);
+        dto.setShipperPoid(1L);
+        dto.setLinePoid(1L);
+        dto.setVesselPoid(1L);
+        dto.setVesselEtaDate(java.time.LocalDate.now());
+        return dto;
+    }
+
+    private BookingFormUpdateDTO createMockUpdateDto() {
+        BookingFormUpdateDTO dto = new BookingFormUpdateDTO();
+        dto.setBookingIssueNo("BK001-UPDATED");
+        return dto;
+    }
 }

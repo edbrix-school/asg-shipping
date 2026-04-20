@@ -1,7 +1,12 @@
 package com.asg.shipping.customerinvoicechargemapmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterRequest;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterResponse;
+import org.springframework.data.domain.Pageable;
+
+import java.util.Map;
 
 public interface CustomerInvoiceChargeMapMasterService {
 
@@ -9,14 +14,13 @@ public interface CustomerInvoiceChargeMapMasterService {
 
     void saveOrUpdate(
             CustomerInvoiceChargeMapMasterRequest request,
-            Long groupPoid,
-            String userId
+            Long groupPoid
     );
 
     void deleteDetail(
             Long customerPoid,
-            Long detRowId,
-            Long groupPoid,
-            String userId
+            DeleteReasonDto deleteReasonDto
     );
+
+    Map<String, Object> list(String docId, FilterRequestDto request, Pageable pageable);
 }

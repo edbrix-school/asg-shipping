@@ -1,6 +1,7 @@
 package com.asg.shipping.portstoragetariffsmaster.service;
 
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffCreateDTO;
 import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffDto;
 import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffUpdateDTO;
@@ -57,7 +58,10 @@ public interface PortStorageTariffsService {
     /**
      * Soft delete a tariff
      *
-     * @param id Transaction POID
+     * @param groupPoid Group POID from UserContext
+     * @param tariffId Transaction POID
+     * @param companyPoid Company POID from UserContext
+     * @param deleteReasonDto Delete reason information
      */
-    void deleteTariff(Long id);
+    void deleteTariff(Long groupPoid, Long tariffId, Long companyPoid, DeleteReasonDto deleteReasonDto);
 }

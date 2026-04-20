@@ -1,5 +1,6 @@
 package com.asg.shipping.linepayabletransfetasperreporting.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,7 +22,7 @@ import static com.asg.common.lib.security.util.UserContext.getUserName;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false)
-public class ShipLineReportTransferHdr {
+public class ShipLineReportTransferHdr extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -49,17 +50,6 @@ public class ShipLineReportTransferHdr {
     @Column(name = "REPORT_END_DATE")
     private LocalDate reportEndDate;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "DOC_REF", length = 25, unique = true)
     private String docRef;
@@ -68,27 +58,4 @@ public class ShipLineReportTransferHdr {
     @Builder.Default
     private String deleted = "N";
 
-    @PrePersist
-    protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-        if (createdBy == null) {
-            createdBy = getUserName();
-        }
-        if (deleted == null) {
-            deleted = "N";
-        }
-        if (transactionDate == null) {
-            transactionDate = LocalDate.now();
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        if (lastModifiedBy == null) {
-            lastModifiedBy = getUserName();
-        }
-    }
 }

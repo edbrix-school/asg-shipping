@@ -1,6 +1,7 @@
 package com.asg.shipping.linepayabletransfetasperreporting.util;
 
 
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingCreateDTO;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingDtlDto;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingDto;
@@ -52,7 +53,7 @@ public class LinePayableTransferReportingMapper {
                                      Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
         entity.setCompanyPoid(companyPoid);
-        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate(): DateUtil.getCurrentDateInUserTimeZone());
         entity.setLinePoid(dto.getLinePoid());
         entity.setBlType(dto.getBlType());
         entity.setReportStartDate(dto.getReportStartDate());

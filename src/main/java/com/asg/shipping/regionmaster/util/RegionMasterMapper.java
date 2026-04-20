@@ -24,6 +24,7 @@ public class RegionMasterMapper {
         response.setRegionPoid(entity.getRegionPoid());
         response.setRegionCode(entity.getRegionCode());
         response.setRegionName(entity.getRegionName());
+        response.setRegionName2(entity.getRegionName2());
         response.setActive(entity.getActive());
         response.setSeqno(entity.getSeqno());
         response.setCreatedBy(entity.getCreatedBy());
@@ -60,6 +61,12 @@ public class RegionMasterMapper {
                         : null
         );
 
+        entity.setRegionName2(
+                request.getRegionName2() != null
+                        ? request.getRegionName2().trim()
+                        : null
+        );
+
         entity.setSeqno(request.getSeqno());
 
         String activeValue = request.getActive() != null ? request.getActive() : "Y";
@@ -71,12 +78,6 @@ public class RegionMasterMapper {
         );
 
         entity.setDeleted("N");
-
-        entity.setCreatedBy(userId);
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
-
         entity.setGroupPoid(groupPoid);
 
         return entity;
@@ -102,6 +103,10 @@ public class RegionMasterMapper {
             entity.setRegionName(request.getRegionName().trim());
         }
 
+        if (request.getRegionName2() != null) {
+            entity.setRegionName2(request.getRegionName2().trim());
+        }
+
         if (request.getSeqno() != null) {
             entity.setSeqno(request.getSeqno());
         }
@@ -115,9 +120,6 @@ public class RegionMasterMapper {
                             : "N"
             );
         }
-
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 
     /**

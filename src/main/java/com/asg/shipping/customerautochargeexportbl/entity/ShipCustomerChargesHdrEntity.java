@@ -1,21 +1,20 @@
 package com.asg.shipping.customerautochargeexportbl.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.Date;
 
 @Entity
 @Table(name = "SHIP_CUSTOMER_CHARGES_HDR")
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ShipCustomerChargesHdrEntity {
+public class ShipCustomerChargesHdrEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,8 +22,7 @@ public class ShipCustomerChargesHdrEntity {
     private Long transactionPoid;
 
     @Column(name = "TRANSACTION_DATE")
-    @Temporal(TemporalType.DATE)
-    private Date transactionDate;
+    private LocalDate transactionDate;
 
     @Column(name = "GROUP_POID")
     private Long groupPoid;
@@ -42,18 +40,6 @@ public class ShipCustomerChargesHdrEntity {
     @Column(name = "PERIOD_TO", nullable = false)
     @Temporal(TemporalType.DATE)
     private Date periodTo;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastModifiedDate;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;

@@ -1,5 +1,6 @@
 package com.asg.shipping.shippingmanifestcorrector.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,7 +20,7 @@ import static com.asg.common.lib.security.util.UserContext.*;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = false)
-public class ShipBlReprintHdr {
+public class ShipBlReprintHdr extends BaseEntity {
 
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
@@ -69,18 +70,6 @@ public class ShipBlReprintHdr {
     @Column(name = "DELETED", length = 1)
     @Builder.Default
     private String deleted = "N";
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "COMPANY_POID")
     private Long companyPoid;
@@ -143,12 +132,6 @@ public class ShipBlReprintHdr {
 
     @PrePersist
     protected void onCreate() {
-        if (createdDate == null) {
-            createdDate = LocalDateTime.now();
-        }
-        if (createdBy == null) {
-            createdBy = getUserName();
-        }
         if (deleted == null) {
             deleted = "N";
         }
@@ -172,12 +155,6 @@ public class ShipBlReprintHdr {
         }
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        lastModifiedDate = LocalDateTime.now();
-        if (lastModifiedBy == null) {
-            lastModifiedBy = getUserName();
-        }
-    }
+
 }
 

@@ -54,6 +54,7 @@ public class LineMasterThirdPartyMapper {
         entity.setCountryPoid(dto.getCountryPoid());
         entity.setCurrencyPoid(dto.getCurrencyPoid());
         entity.setBillTo(dto.getBillTo());
+        entity.setSeqno(dto.getSeqno());
 
         // Set active status (default to Y if not provided)
         if (dto.getActive() != null && !dto.getActive().isEmpty()) {
@@ -61,12 +62,6 @@ public class LineMasterThirdPartyMapper {
         } else {
             entity.setActive("Y");
         }
-
-        // Set audit fields
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -91,9 +86,6 @@ public class LineMasterThirdPartyMapper {
             entity.setActive(dto.getActive());
         }
 
-        // Update audit fields (do not update createdBy/createdDate)
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
     }
 }
 

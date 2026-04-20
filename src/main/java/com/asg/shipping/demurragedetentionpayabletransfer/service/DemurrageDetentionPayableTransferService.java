@@ -1,5 +1,6 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 
@@ -11,9 +12,9 @@ import java.util.Map;
 public interface DemurrageDetentionPayableTransferService {
 
     /**
-     * Search/list Demurrage/Detention Payable Transfer records
+     * Search/list Demurrage/Detention Payable Transfer records with date range
      */
-    Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, FilterRequestDto request, java.time.LocalDate startDate, java.time.LocalDate endDate, org.springframework.data.domain.Pageable pageable);
 
     /**
      * Get a single Demurrage/Detention Payable Transfer record by ID
@@ -35,7 +36,7 @@ public interface DemurrageDetentionPayableTransferService {
     /**
      * Delete (soft delete) a Demurrage/Detention Payable Transfer record
      */
-    void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid);
+    void deleteDemurrageDetentionPayableTransfer(Long id, Long companyPoid, Long groupPoid, DeleteReasonDto deleteReasonDto);
 
     /**
      * Process and load available containers based on Line and BL Type (BEFORE create)
@@ -68,4 +69,14 @@ public interface DemurrageDetentionPayableTransferService {
      */
     @Deprecated
     void updateFreeDays(Long id, UpdateFreeDaysRequestDTO request);
+
+    /**
+     * Get auto-populated GL accounts when Line and BL Type are provided
+     */
+    Map<String, Object> getAutoPopulatedGlAccounts(Long linePoid, String blType, Long groupPoid);
+
+    /**
+     * Get GL accounts directly from stored procedure without LOV enrichment
+     */
+    Map<String, Object> getGlAccountsDirectFromSp(Long linePoid, String blType);
 }

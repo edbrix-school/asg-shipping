@@ -1,39 +1,39 @@
-package com.asg.shipping.portMaster.service;
+package com.asg.shipping.portmaster.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
 import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.portMaster.dto.PortMasterRequest;
-import com.asg.shipping.portMaster.dto.PortMasterResponse;
-import com.asg.shipping.portMaster.entity.PortMaster;
-import com.asg.shipping.portMaster.entity.PortMasterId;
-import com.asg.shipping.portMaster.repository.PortMasterRepository;
+import com.asg.shipping.portmaster.dto.PortMasterRequest;
+import com.asg.shipping.portmaster.dto.PortMasterResponse;
+import com.asg.shipping.portmaster.entity.PortMaster;
+import com.asg.shipping.portmaster.entity.PortMasterId;
+import com.asg.shipping.portmaster.repository.PortMasterRepository;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
 
@@ -52,13 +52,21 @@ class PortMasterServiceImplTest {
 	@Mock
 	private ShipTradeLaneService tradeLaneService;
 
+	@Mock
+	private LoggingService loggingService;
+
 	@InjectMocks
 	private PortMasterServiceImpl service;
 
 	private PortMaster entity;
+	private MockedStatic<UserContext> mockedUserContext;
 
 	@BeforeEach
 	void setup() {
+		mockedUserContext = mockStatic(UserContext.class);
+		mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+		mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+
 		entity = new PortMaster();
 		entity.setGroupPoid(100L);
 		entity.setPortPoid(1L);
@@ -71,23 +79,57 @@ class PortMasterServiceImplTest {
 		entity.setCreatedDate(LocalDateTime.now());
 	}
 
+	@AfterEach
+	void tearDown() {
+		if (mockedUserContext != null) {
+			mockedUserContext.close();
+		}
+	}
+
 	@Test
 	void createPort_Success() {
 		PortMasterRequest request = new PortMasterRequest();
 		request.setPortCode("P003");
 		request.setPortName("Port C");
+		// also test null active fallback -> "Y"
+		request.setActive(null);
 
 		PortMaster saved = new PortMaster();
 		saved.setPortPoid(99L);
 
-		when(repository.findByGroupPoidAndPortCode(100L, "P003")).thenReturn(Optional.empty())
+		when(repository.findByGroupPoidAndPortCode(100L, "P003"))
+				.thenReturn(Optional.empty()) // First call in validation
+				.thenReturn(Optional.of(saved)); // Second call after save
+
+		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
+
+		Map<String, Object> result = service.createPort(request);
+
+		assertEquals(99L, result.get("portPoid"));
+		verify(repository).save(any(PortMaster.class));
+		verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("DOC123"), eq("99"));
+	}
+
+	@Test
+	void createPort_Success_WithActive() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("P003");
+		request.setPortName("Port C");
+		request.setActive("N");
+
+		PortMaster saved = new PortMaster();
+		saved.setPortPoid(99L);
+
+		when(repository.findByGroupPoidAndPortCode(100L, "P003"))
+				.thenReturn(Optional.empty())
 				.thenReturn(Optional.of(saved));
 
 		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
 
-		Map<String, Object> result = service.createPort(100L, request, "admin");
+		Map<String, Object> result = service.createPort( request);
 
 		assertEquals(99L, result.get("portPoid"));
+		verify(repository).save(any(PortMaster.class));
 	}
 
 	@Test
@@ -97,7 +139,8 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByGroupPoidAndPortCode(100L, "P001")).thenReturn(Optional.of(new PortMaster()));
 
-		assertThrows(RuntimeException.class, () -> service.createPort(100L, request, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
+		assertEquals("Port Code already exists", exception.getMessage());
 	}
 
 	@Test
@@ -110,31 +153,130 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByGroupPoidAndPortName(100L, "Port A")).thenReturn(Optional.of(new PortMaster()));
 
-		assertThrows(RuntimeException.class, () -> service.createPort(100L, request, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
+		assertEquals("Port Name already exists", exception.getMessage());
 	}
 
 	@Test
-	void updatePort_Success() {
+	void createPort_NotFoundAfterSave_Throws() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("P003");
+		request.setPortName("Port C");
+
+		when(repository.findByGroupPoidAndPortCode(100L, "P003"))
+				.thenReturn(Optional.empty()) // Validation
+				.thenReturn(Optional.empty()); // After save
+
+		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
+
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
+		assertEquals("Port not found after save", exception.getMessage());
+	}
+
+	@Test
+	void updatePort_Success_NoCodeOrNameChange() {
 		PortMasterRequest request = new PortMasterRequest();
 		request.setPortCode("P001");
-		request.setPortName("Port Updated");
+		request.setPortName("Port A");
+		request.setActive("N");
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
 
-		when(tradeLaneService.getById(any())).thenReturn(new ShipTradelaneResponse());
+		ShipTradelaneResponse tradeLane = new ShipTradelaneResponse();
+		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
 
-		when(countryRepository.findById(any())).thenReturn(Optional.of(new GlobalCountryMaster()));
+		GlobalCountryMaster country = new GlobalCountryMaster();
+		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
 
-		PortMasterResponse response = service.updatePort(100L, 1L, request, "admin");
+		PortMasterResponse response = service.updatePort(1L, request);
 
 		assertNotNull(response);
+		verify(repository).save(any(PortMaster.class));
+		verify(loggingService).logChanges(any(), any(), eq(PortMaster.class), eq("DOC123"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("PORT_POID"));
 	}
 
 	@Test
-	void updatePort_PortNotFound_Throws() {
-		when(repository.findById(any())).thenReturn(Optional.empty());
+	void updatePort_Success_WithCodeAndNameChange() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("P002");
+		request.setPortName("Port B");
 
-		assertThrows(RuntimeException.class, () -> service.updatePort(100L, 1L, new PortMasterRequest(), "admin"));
+		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
+
+		when(repository.findByPortCode("P002")).thenReturn(Optional.empty()); // Or return a port with same portPoid
+		when(repository.findByPortName("Port B")).thenReturn(Optional.empty());
+
+		ShipTradelaneResponse tradeLane = new ShipTradelaneResponse();
+		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
+
+		GlobalCountryMaster country = new GlobalCountryMaster();
+		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
+
+		PortMasterResponse response = service.updatePort( 1L, request);
+
+		assertNotNull(response);
+		verify(repository).save(any(PortMaster.class));
+	}
+
+	@Test
+	void updatePort_DuplicateCodeFoundButSamePoid_Success() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("P002");
+		request.setPortName("Port A");
+
+		PortMaster existingSamePoid = new PortMaster();
+		existingSamePoid.setPortPoid(1L); // Same ID!
+
+		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
+		when(repository.findByPortCode("P002")).thenReturn(Optional.of(existingSamePoid)); 
+
+		ShipTradelaneResponse tradeLane = new ShipTradelaneResponse();
+		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
+
+		GlobalCountryMaster country = new GlobalCountryMaster();
+		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
+
+		PortMasterResponse response = service.updatePort( 1L, request);
+
+		assertNotNull(response);
+		verify(repository).save(any(PortMaster.class));
+	}
+
+    @Test
+	void updatePort_DuplicateNameFoundButSamePoid_Success() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("P001");
+		request.setPortName("Port B");
+
+		PortMaster existingSamePoid = new PortMaster();
+		existingSamePoid.setPortPoid(1L); // Same ID!
+
+		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
+		when(repository.findByPortName("Port B")).thenReturn(Optional.of(existingSamePoid)); 
+
+		ShipTradelaneResponse tradeLane = new ShipTradelaneResponse();
+		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
+
+		GlobalCountryMaster country = new GlobalCountryMaster();
+		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
+
+		PortMasterResponse response = service.updatePort( 1L, request);
+
+		assertNotNull(response);
+		verify(repository).save(any(PortMaster.class));
+	}
+
+
+	@Test
+	void updatePort_PortNotFound_Throws() {
+        PortMasterRequest request = new PortMasterRequest();
+
+        when(repository.findById(any())).thenReturn(Optional.empty());
+
+        RuntimeException exception = assertThrows(RuntimeException.class,
+                () -> service.updatePort( 1L, request));
+
+        assertEquals("Port not found", exception.getMessage());
 	}
 
 	@Test
@@ -151,7 +293,8 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByPortCode("NEW_CODE")).thenReturn(Optional.of(existing));
 
-		assertThrows(RuntimeException.class, () -> service.updatePort(100L, 1L, request, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort( 1L, request));
+		assertEquals("Port Code already exists", exception.getMessage());
 	}
 
 	@Test
@@ -168,7 +311,8 @@ class PortMasterServiceImplTest {
 
 		when(repository.findByPortName("NEW_NAME")).thenReturn(Optional.of(existing));
 
-		assertThrows(RuntimeException.class, () -> service.updatePort(100L, 1L, request, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort( 1L, request));
+		assertEquals("Port Name already exists", exception.getMessage());
 	}
 
 	@Test
@@ -188,18 +332,26 @@ class PortMasterServiceImplTest {
 		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
 		when(countryRepository.findById(any())).thenReturn(Optional.of(country));
 
-		PortMasterResponse response = service.getPortById(100L, 1L);
+		PortMasterResponse response = service.getPortById( 1L);
 
 		assertNotNull(response);
 		assertNotNull(response.getCountryDetail());
+		assertEquals(10L, response.getCountryDetail().get("poid"));
+		assertEquals("IN", response.getCountryDetail().get("code"));
+		assertEquals("India", response.getCountryDetail().get("description"));
+
 		assertNotNull(response.getTradelaneDetail());
+		assertEquals(20L, response.getTradelaneDetail().get("poid"));
+		assertEquals("TL01", response.getTradelaneDetail().get("code"));
+		assertEquals("Asia", response.getTradelaneDetail().get("description"));
 	}
 
 	@Test
 	void getPortById_NotFound_Throws() {
 		when(repository.findById(any())).thenReturn(Optional.empty());
 
-		assertThrows(RuntimeException.class, () -> service.getPortById(100L, 1L));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.getPortById( 1L));
+		assertEquals("Port not found", exception.getMessage());
 	}
 
 	@Test
@@ -210,7 +362,7 @@ class PortMasterServiceImplTest {
 
 		when(countryRepository.findById(any())).thenReturn(Optional.empty());
 
-		assertThrows(ResourceNotFoundException.class, () -> service.getPortById(100L, 1L));
+		assertThrows(ResourceNotFoundException.class, () -> service.getPortById(1L));
 	}
 
 	@Test
@@ -230,13 +382,14 @@ class PortMasterServiceImplTest {
 		Map<String, Object> result = service.getAllPorts("DOC1", filters, pageable);
 
 		assertNotNull(result);
+		verify(documentService).search(eq("DOC1"), anyList(), eq("OR"), eq(pageable), eq("false"), eq("PORT_NAME"), eq("PORT_POID"));
 	}
 
 	@Test
 	void deletePort_Success() {
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
 
-		service.deletePort(100L, 1L, "admin");
+		service.deletePort(1L);
 
 		assertEquals("Y", entity.getDeleted());
 	}
@@ -247,13 +400,15 @@ class PortMasterServiceImplTest {
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
 
-		assertThrows(RuntimeException.class, () -> service.deletePort(100L, 1L, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort( 1L));
+		assertEquals("Port has already been deleted.", exception.getMessage());
 	}
 
 	@Test
 	void deletePort_NotFound_Throws() {
 		when(repository.findById(any())).thenReturn(Optional.empty());
 
-		assertThrows(RuntimeException.class, () -> service.deletePort(100L, 1L, "admin"));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort( 1L));
+		assertEquals("Port not found", exception.getMessage());
 	}
 }

@@ -1,5 +1,6 @@
 package com.asg.shipping.linecommission.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
 import com.asg.shipping.linecommission.dto.LineCommissionResponse;
@@ -18,7 +19,7 @@ public interface LineCommissionService {
 
     LineCommissionResponse update(Long transactionPoid, LineCommissionRequest request, Long groupPoid, String userId, String docId);
 
-    void delete(Long transactionPoid, Long groupPoid, String userId);
+    void delete(Long transactionPoid, DeleteReasonDto deleteReasonDto);
 
     List<ContainerTypeDto> loadContainerTypes(Long transactionPoid, Long groupPoid, String userId);
 }

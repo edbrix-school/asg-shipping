@@ -1,10 +1,11 @@
 package com.asg.shipping.lineprincipalmaster.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Entity class for SHIP_LINE_MASTER_CHARGE_DTL table
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @IdClass(ShipLineMasterChargeDtlId.class)
-public class ShipLineMasterChargeDtl {
+public class ShipLineMasterChargeDtl extends BaseEntity {
 
     @Id
     @Column(name = "LINE_POID", nullable = false)
@@ -27,8 +28,6 @@ public class ShipLineMasterChargeDtl {
 
     @Id
     @Column(name = "DET_ROW_ID", nullable = false)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "charge_dtl_seq")
-    @SequenceGenerator(name = "charge_dtl_seq", sequenceName = "SHIP_LINE_MASTER_CHARGE_DTL_SEQ", allocationSize = 1)
     private Long detRowId;
 
     @Column(name = "CHARGE_POID")
@@ -55,23 +54,14 @@ public class ShipLineMasterChargeDtl {
     @Column(name = "WKYRPT_INCLUDE_AS")
     private Long wkyrptIncludeAs;
 
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
-
+    @AuditIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "LINE_POID", insertable = false, updatable = false)
     private ShipLineMaster lineMaster;
 
-    @PrePersist
+   /* @PrePersist
     protected void onCreate() {
         if (createdDate == null) {
             createdDate = LocalDateTime.now();
@@ -81,6 +71,6 @@ public class ShipLineMasterChargeDtl {
     @PreUpdate
     protected void onUpdate() {
         lastModifiedDate = LocalDateTime.now();
-    }
+    }*/
 }
 

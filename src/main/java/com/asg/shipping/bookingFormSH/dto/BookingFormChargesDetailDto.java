@@ -28,4 +28,5 @@ public class BookingFormChargesDetailDto {
 	private LovItem paidAtPortPoidDet; // LOV data
 	private BigDecimal buyPercharge;
 	private String currencyCode;
+
 }

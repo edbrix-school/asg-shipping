@@ -1,7 +1,12 @@
 package com.asg.shipping.linepayabletransfetasperreporting.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
+import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingCreateDTO;
+import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingDto;
+import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingDtlDto;
+import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingUpdateDTO;
+import com.asg.shipping.linepayabletransfetasperreporting.dto.LoadDataByDateRangeRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
@@ -35,7 +40,7 @@ public interface LinePayableTransferReportingService {
     /**
      * Delete (soft delete) a Line Payable Transfer As Per Reporting record
      */
-    void deleteLinePayableTransfer(Long transactionPoid);
+    void deleteLinePayableTransfer(Long transactionPoid, DeleteReasonDto deleteReasonDto);
 
     /**
      * Load data by date range using stored procedure

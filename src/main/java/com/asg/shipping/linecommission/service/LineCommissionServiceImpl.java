@@ -4,9 +4,14 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.request.LogRequestDto;
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
@@ -22,22 +27,25 @@ import com.asg.shipping.linecommission.repository.ShipLineCommDtlRepository;
 import com.asg.shipping.linecommission.repository.ShipLineCommHdrRepository;
 import com.asg.shipping.linecommission.repository.ShipLineCommLocalDtlRepository;
 import com.asg.shipping.linecommission.util.LineCommissionMapper;
+import static com.asg.shipping.linecommission.util.Constants.*;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.asg.common.lib.security.util.UserContext;
+import org.apache.commons.lang3.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -60,6 +68,8 @@ public class LineCommissionServiceImpl implements LineCommissionService {
     private final ShipLineMasterTypeRepository lineTypeRepository;
     private final LineCommissionMapper mapper;
     private final EntityManager entityManager;
+    private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
 
 
 
@@ -102,6 +112,9 @@ public class LineCommissionServiceImpl implements LineCommissionService {
 
         LineCommissionResponse response = mapper.toResponse(hdr, cntnr, dtl, local);
         enrich(response, groupPoid);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+
         return response;
     }
 
@@ -137,6 +150,10 @@ public class LineCommissionServiceImpl implements LineCommissionService {
 
         LineCommissionResponse response = mapper.toResponse(saved, savedDetails.containerRates, savedDetails.otherRemunerations, savedDetails.localShares);
         enrich(response, groupPoid);
+
+        String key = saved.getTransactionPoid().toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
+
         return response;
 
     }
@@ -169,15 +186,22 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         ShipLineCommHdrEntity hdr = hdrRepository.findByTransactionPoidAndGroupPoid(transactionPoid, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("LineCommission", "transactionPoid", transactionPoid));
 
+        ShipLineCommHdrEntity oldEntity = new ShipLineCommHdrEntity();
+        BeanUtils.copyProperties(hdr, oldEntity);
+
         mapper.applyUpdateHeader(hdr, request, companyPoid, userId);
 
-        hdrRepository.save(hdr);
+        ShipLineCommHdrEntity saved = hdrRepository.save(hdr);
 
         SavedDetails savedDetails = updateAllDetails(transactionPoid, request, userId);
 
         // Build response without re-querying detail tables
         LineCommissionResponse response = mapper.toResponse(hdr, savedDetails.containerRates, savedDetails.otherRemunerations, savedDetails.localShares);
         enrich(response, groupPoid);
+
+        String key = saved.getTransactionPoid().toString();
+        loggingService.logChanges(oldEntity, saved, ShipLineCommHdrEntity.class, docId, key, LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+
         return response;
     }
 
@@ -195,6 +219,11 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                 throw new ValidationException("Container Type is required in Container & Rates");
             }
 
+            String action = resolveActionType(containerRate.getActionType(), containerRate.getDetRowId());
+            if (ACTION_IS_DELETED.equals(action)) {
+                continue;
+            }
+
             if (!distinctContainerTypePoids.add(containerTypePoid)) {
                 throw new ValidationException("Duplicate container type(s) not allowed in Container & Rates");
             }
@@ -204,15 +233,19 @@ public class LineCommissionServiceImpl implements LineCommissionService {
 
     @Override
     @Transactional
-    public void delete(Long transactionPoid, Long groupPoid, String userId) {
+    public void delete(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
         if (transactionPoid == null) throw new ValidationException("transactionPoid is required");
-        if (groupPoid == null) throw new ValidationException("groupPoid is required");
-        ShipLineCommHdrEntity hdr = hdrRepository.findByTransactionPoidAndGroupPoid(transactionPoid, groupPoid)
+        Long groupPoid = UserContext.getGroupPoid();
+        hdrRepository.findByTransactionPoidAndGroupPoid(transactionPoid, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("LineCommission", "transactionPoid", transactionPoid));
-        hdr.setDeleted("Y");
-        hdr.setLastModifiedBy(userId);
-        hdr.setLastModifiedDate(LocalDateTime.now());
-        hdrRepository.save(hdr);
+        documentDeleteService.deleteDocument(
+                transactionPoid,
+                "SHIP_LINE_COMM_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                LocalDate.now()
+        );
+
     }
 
     @Override
@@ -240,160 +273,333 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         }
     }
 
-    private SavedDetails saveAllDetails(long transactionPoid, LineCommissionRequest request, String userId) {
+    private SavedDetails saveAllDetails(Long transactionPoid, LineCommissionRequest request, String userId) {
         List<ShipLineCommCntnrDtlEntity> containerRates = mapper.toContainerEntities(transactionPoid, request, userId);
         if (!containerRates.isEmpty()) {
-            cntnrRepository.saveAll(containerRates);
+            containerRates = cntnrRepository.saveAll(containerRates);
+            containerRates.forEach(containerRate -> {
+                String logDetail = String.format("Row Created on Container Rate with detRowId: %s", containerRate.getDetRowId());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString() , logDetail);
+            });
         }
 
         List<ShipLineCommDtlEntity> otherRemunerations = mapper.toOtherRemunerationEntities(transactionPoid, request, userId);
         if (!otherRemunerations.isEmpty()) {
-            dtlRepository.saveAll(otherRemunerations);
+            otherRemunerations = dtlRepository.saveAll(otherRemunerations);
+            otherRemunerations.forEach(otherRemuneration -> {
+                String logDetail = String.format("Row Created on Other Remuneration with detRowId: %s", otherRemuneration.getDetRowId());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString() , logDetail);
+            });
         }
 
         List<ShipLineCommLocalDtlEntity> localShares = mapper.toLocalShareEntities(transactionPoid, request, userId);
         if (!localShares.isEmpty()) {
-            localRepository.saveAll(localShares);
+            localShares = localRepository.saveAll(localShares);
+            localShares.forEach(localShare -> {
+                String logDetail = String.format("Row Created on Local Share with detRowId: %s", localShare.getDetRowId());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString() , logDetail);
+            });
         }
 
         return new SavedDetails(containerRates, otherRemunerations, localShares);
     }
 
-    private SavedDetails updateAllDetails(long transactionPoid, LineCommissionRequest request, String userId) {
-        updateContainerRates(transactionPoid, request, userId);
-        updateOtherRemunerations(transactionPoid, request, userId);
-        updateLocalShares(transactionPoid, request, userId);
+    private SavedDetails updateAllDetails(Long transactionPoid, LineCommissionRequest request, String userId) {
+        List<ShipLineCommCntnrDtlEntity> containerRates = updateContainerRates(transactionPoid, request, userId);
+        List<ShipLineCommDtlEntity> otherRemunerations = updateOtherRemunerations(transactionPoid, request, userId);
+        List<ShipLineCommLocalDtlEntity> localShares = updateLocalShares(transactionPoid, request, userId);
 
-        // Re-read for ordered, authoritative state
-        List<ShipLineCommCntnrDtlEntity> containerRates = cntnrRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        List<ShipLineCommDtlEntity> otherRemunerations = dtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        List<ShipLineCommLocalDtlEntity> localShares = localRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
         return new SavedDetails(containerRates, otherRemunerations, localShares);
     }
 
-    private void updateContainerRates(long transactionPoid, LineCommissionRequest request, String userId) {
+    private List<ShipLineCommCntnrDtlEntity> updateContainerRates(Long transactionPoid, LineCommissionRequest request, String userId) {
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
         List<ContainerRateDto> detailDtos =
                 request.getContainerRates() == null ? List.of() : request.getContainerRates();
 
         List<ShipLineCommCntnrDtlEntity> existing = cntnrRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        Map<Long, ShipLineCommCntnrDtlEntity> existingByDetRow = existing.stream()
+                .filter(e -> e.getDetRowId() != null)
+                .collect(Collectors.toMap(ShipLineCommCntnrDtlEntity::getDetRowId, entity -> entity));
 
-        Set<Long> existingDetRowIds = existing.stream()
+        long maxDetRowId = existing.stream()
                 .map(ShipLineCommCntnrDtlEntity::getDetRowId)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .mapToLong(Long::longValue)
+                .max()
+                .orElse(0L);
 
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .filter(Objects::nonNull)
-                .map(ContainerRateDto::getDetRowId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        List<ShipLineCommCntnrDtlEntity> deletions = new ArrayList<>();
+        List<ShipLineCommCntnrDtlEntity> toSave = new ArrayList<>();
+        List<ShipLineCommCntnrDtlEntity> toUpdate = new ArrayList<>();
+        List<LogRequestDto<ShipLineCommCntnrDtlEntity>> logRequests = new ArrayList<>();
 
-        // Delete removed
-        for (Long detRowId : existingDetRowIds) {
-            if (!requestDetRowIds.contains(detRowId)) {
-                cntnrRepository.deleteById(new ShipLineCommCntnrDtlId(transactionPoid, detRowId));
-            }
-        }
-
-        long maxDetRowId = existingDetRowIds.stream().mapToLong(Long::longValue).max().orElse(0L);
-
-        // Update existing / create new
         for (ContainerRateDto dto : detailDtos) {
             if (dto == null) continue;
-            if (dto.getDetRowId() != null) {
-                ShipLineCommCntnrDtlEntity e = cntnrRepository
-                        .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException("ContainerRate", "sn", dto.getDetRowId()));
-                mapper.applyUpdateContainerEntity(e, dto, userId);
-                cntnrRepository.save(e);
-            } else {
-                maxDetRowId++;
-                ShipLineCommCntnrDtlEntity e = mapper.toNewContainerEntity(transactionPoid, maxDetRowId, dto, userId);
-                cntnrRepository.save(e);
+            String action = resolveActionType(dto.getActionType(), dto.getDetRowId());
+            switch (action) {
+                case ACTION_IS_CREATED -> {
+                    Long candidateDetRowId = normalizeDetRowId(dto.getDetRowId());
+                    long detRowId = candidateDetRowId == null ? ++maxDetRowId : candidateDetRowId;
+                    maxDetRowId = Math.max(maxDetRowId, detRowId);
+                    ShipLineCommCntnrDtlEntity containerRate = mapper.toNewContainerEntity(transactionPoid, detRowId, dto, userId);
+                    toSave.add(containerRate);
+                }
+                case ACTION_IS_UPDATED -> {
+                    Long detRowIdToUpdate = normalizeDetRowId(dto.getDetRowId());
+                    if (detRowIdToUpdate == null) {
+                        throw new ValidationException("detRowId is required for updating Container Rate");
+                    }
+                    ShipLineCommCntnrDtlEntity entity = existingByDetRow.get(detRowIdToUpdate);
+                    if (entity == null) {
+                        throw new ResourceNotFoundException("ContainerRate", "detRowId", detRowIdToUpdate);
+                    }
+                    ShipLineCommCntnrDtlEntity oldItem = new ShipLineCommCntnrDtlEntity();
+                    BeanUtils.copyProperties(entity, oldItem);
+                    mapper.applyUpdateContainerEntity(entity, dto, userId);
+                    toUpdate.add(entity);
+                    String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
+                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommCntnrDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                }
+                case ACTION_IS_DELETED -> {
+                    Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
+                    if (detRowIdToDelete == null) {
+                        throw new ValidationException("detRowId is required for deleting Container Rate");
+                    }
+                    ShipLineCommCntnrDtlEntity entityToDelete = existingByDetRow.get(detRowIdToDelete);
+                    if (entityToDelete == null) {
+                        throw new ResourceNotFoundException("ContainerRate", "detRowId", detRowIdToDelete);
+                    }
+                    deletions.add(entityToDelete);
+                }
             }
         }
+
+        if (!deletions.isEmpty()) {
+            cntnrRepository.deleteAll(deletions);
+            deletions.forEach(deleted -> loggingService.logDelete(deleted, docId, docKeyPoid));
+        }
+
+        List<ShipLineCommCntnrDtlEntity> savedItems = List.of();
+        if (!toSave.isEmpty()) {
+            savedItems = cntnrRepository.saveAll(toSave);
+            savedItems.forEach(containerRate -> {
+                String logDetail = String.format("Row Created on Container Rate with detRowId: %s", containerRate.getDetRowId());
+                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
+            });
+        }
+
+        List<ShipLineCommCntnrDtlEntity> updatedItems = List.of();
+        if (!toUpdate.isEmpty()) {
+            updatedItems = cntnrRepository.saveAll(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
+            }
+        }
+
+        List<ShipLineCommCntnrDtlEntity> allItems = new ArrayList<>(savedItems);
+        allItems.addAll(updatedItems);
+        allItems.sort(Comparator.comparing(ShipLineCommCntnrDtlEntity::getDetRowId, Comparator.nullsFirst(Long::compareTo)));
+        return allItems;
     }
 
-    private void updateOtherRemunerations(long transactionPoid, LineCommissionRequest request, String userId) {
+    private List<ShipLineCommDtlEntity> updateOtherRemunerations(Long transactionPoid, LineCommissionRequest request, String userId) {
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
         List<OtherRemunerationDto> detailDtos =
                 request.getOtherRemunerations() == null ? List.of() : request.getOtherRemunerations();
 
         List<ShipLineCommDtlEntity> existing = dtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        Map<Long, ShipLineCommDtlEntity> existingByDetRow = existing.stream()
+                .filter(e -> e.getDetRowId() != null)
+                .collect(Collectors.toMap(ShipLineCommDtlEntity::getDetRowId, entity -> entity));
 
-        Set<Long> existingDetRowIds = existing.stream()
+        long maxDetRowId = existing.stream()
                 .map(ShipLineCommDtlEntity::getDetRowId)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .mapToLong(Long::longValue)
+                .max()
+                .orElse(0L);
 
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .filter(Objects::nonNull)
-                .map(OtherRemunerationDto::getDetRowId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        for (Long detRowId : existingDetRowIds) {
-            if (!requestDetRowIds.contains(detRowId)) {
-                dtlRepository.deleteById(new ShipLineCommDtlId(transactionPoid, detRowId));
-            }
-        }
-
-        long maxDetRowId = existingDetRowIds.stream().mapToLong(Long::longValue).max().orElse(0L);
+        List<ShipLineCommDtlEntity> deletions = new ArrayList<>();
+        List<ShipLineCommDtlEntity> toSave = new ArrayList<>();
+        List<ShipLineCommDtlEntity> toUpdate = new ArrayList<>();
+        List<LogRequestDto<ShipLineCommDtlEntity>> logRequests = new ArrayList<>();
 
         for (OtherRemunerationDto dto : detailDtos) {
             if (dto == null) continue;
-            if (dto.getDetRowId() != null) {
-                ShipLineCommDtlEntity e = dtlRepository
-                        .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException("OtherRemuneration", "sn", dto.getDetRowId()));
-                mapper.applyUpdateOtherRemunerationEntity(e, dto, userId);
-                dtlRepository.save(e);
-            } else {
-                maxDetRowId++;
-                ShipLineCommDtlEntity e = mapper.toNewOtherRemunerationEntity(transactionPoid, maxDetRowId, dto, userId);
-                dtlRepository.save(e);
+            String action = resolveActionType(dto.getActionType(), dto.getDetRowId());
+            switch (action) {
+                case ACTION_IS_CREATED -> {
+                    Long candidateDetRowId = normalizeDetRowId(dto.getDetRowId());
+                    long detRowId = candidateDetRowId == null ? ++maxDetRowId : candidateDetRowId;
+                    maxDetRowId = Math.max(maxDetRowId, detRowId);
+                    ShipLineCommDtlEntity entity = mapper.toNewOtherRemunerationEntity(transactionPoid, detRowId, dto, userId);
+                    toSave.add(entity);
+                }
+                case ACTION_IS_UPDATED -> {
+                    Long detRowIdToUpdate = normalizeDetRowId(dto.getDetRowId());
+                    if (detRowIdToUpdate == null) {
+                        throw new ValidationException("detRowId is required for updating Other Remuneration");
+                    }
+                    ShipLineCommDtlEntity entity = existingByDetRow.get(detRowIdToUpdate);
+                    if (entity == null) {
+                        throw new ResourceNotFoundException("OtherRemuneration", "detRowId", detRowIdToUpdate);
+                    }
+                    ShipLineCommDtlEntity oldItem = new ShipLineCommDtlEntity();
+                    BeanUtils.copyProperties(entity, oldItem);
+                    mapper.applyUpdateOtherRemunerationEntity(entity, dto, userId);
+                    toUpdate.add(entity);
+                    String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
+                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                }
+                case ACTION_IS_DELETED -> {
+                    Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
+                    if (detRowIdToDelete == null) {
+                        throw new ValidationException("detRowId is required for deleting Other Remuneration");
+                    }
+                    ShipLineCommDtlEntity entityToDelete = existingByDetRow.get(detRowIdToDelete);
+                    if (entityToDelete == null) {
+                        throw new ResourceNotFoundException("OtherRemuneration", "detRowId", detRowIdToDelete);
+                    }
+                    deletions.add(entityToDelete);
+                }
             }
         }
+
+        if (!deletions.isEmpty()) {
+            dtlRepository.deleteAll(deletions);
+            deletions.forEach(deleted -> loggingService.logDelete(deleted, docId, docKeyPoid));
+        }
+
+        List<ShipLineCommDtlEntity> savedItems = List.of();
+        if (!toSave.isEmpty()) {
+            savedItems = dtlRepository.saveAll(toSave);
+            savedItems.forEach(otherRemuneration -> {
+                String logDetail = String.format("Row Created on Other Remuneration with detRowId: %s", otherRemuneration.getDetRowId());
+                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
+            });
+        }
+
+        List<ShipLineCommDtlEntity> updatedItems = List.of();
+        if (!toUpdate.isEmpty()) {
+            updatedItems = dtlRepository.saveAll(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
+            }
+        }
+
+        List<ShipLineCommDtlEntity> allItems = new ArrayList<>(savedItems);
+        allItems.addAll(updatedItems);
+        allItems.sort(Comparator.comparing(ShipLineCommDtlEntity::getDetRowId, Comparator.nullsFirst(Long::compareTo)));
+        return allItems;
     }
 
-    private void updateLocalShares(long transactionPoid, LineCommissionRequest request, String userId) {
+    private List<ShipLineCommLocalDtlEntity> updateLocalShares(Long transactionPoid, LineCommissionRequest request, String userId) {
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = transactionPoid.toString();
         List<LocalShareDto> detailDtos =
                 request.getLocalShares() == null ? List.of() : request.getLocalShares();
 
         List<ShipLineCommLocalDtlEntity> existing = localRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        Map<Long, ShipLineCommLocalDtlEntity> existingByDetRow = existing.stream()
+                .filter(e -> e.getDetRowId() != null)
+                .collect(Collectors.toMap(ShipLineCommLocalDtlEntity::getDetRowId, entity -> entity));
 
-        Set<Long> existingDetRowIds = existing.stream()
+        long maxDetRowId = existing.stream()
                 .map(ShipLineCommLocalDtlEntity::getDetRowId)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .mapToLong(Long::longValue)
+                .max()
+                .orElse(0L);
 
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .filter(Objects::nonNull)
-                .map(LocalShareDto::getDetRowId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        for (Long detRowId : existingDetRowIds) {
-            if (!requestDetRowIds.contains(detRowId)) {
-                localRepository.deleteById(new ShipLineCommLocalDtlId(transactionPoid, detRowId));
-            }
-        }
-
-        long maxDetRowId = existingDetRowIds.stream().mapToLong(Long::longValue).max().orElse(0L);
+        List<ShipLineCommLocalDtlEntity> deletions = new ArrayList<>();
+        List<ShipLineCommLocalDtlEntity> toSave = new ArrayList<>();
+        List<ShipLineCommLocalDtlEntity> toUpdate = new ArrayList<>();
+        List<LogRequestDto<ShipLineCommLocalDtlEntity>> logRequests = new ArrayList<>();
 
         for (LocalShareDto dto : detailDtos) {
             if (dto == null) continue;
-            if (dto.getDetRowId() != null) {
-                ShipLineCommLocalDtlEntity e = localRepository
-                        .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException("LocalShare", "sn", dto.getDetRowId()));
-                mapper.applyUpdateLocalShareEntity(e, dto, userId);
-                localRepository.save(e);
-            } else {
-                maxDetRowId++;
-                ShipLineCommLocalDtlEntity e = mapper.toNewLocalShareEntity(transactionPoid, maxDetRowId, dto, userId);
-                localRepository.save(e);
+            String action = resolveActionType(dto.getActionType(), dto.getDetRowId());
+            switch (action) {
+                case ACTION_IS_CREATED -> {
+                    Long candidateDetRowId = normalizeDetRowId(dto.getDetRowId());
+                    long detRowId = candidateDetRowId == null ? ++maxDetRowId : candidateDetRowId;
+                    maxDetRowId = Math.max(maxDetRowId, detRowId);
+                    ShipLineCommLocalDtlEntity entity = mapper.toNewLocalShareEntity(transactionPoid, detRowId, dto, userId);
+                    toSave.add(entity);
+                }
+                case ACTION_IS_UPDATED -> {
+                    Long detRowIdToUpdate = normalizeDetRowId(dto.getDetRowId());
+                    if (detRowIdToUpdate == null) {
+                        throw new ValidationException("detRowId is required for updating Local Share");
+                    }
+                    ShipLineCommLocalDtlEntity entity = existingByDetRow.get(detRowIdToUpdate);
+                    if (entity == null) {
+                        throw new ResourceNotFoundException("LocalShare", "detRowId", detRowIdToUpdate);
+                    }
+                    ShipLineCommLocalDtlEntity oldItem = new ShipLineCommLocalDtlEntity();
+                    BeanUtils.copyProperties(entity, oldItem);
+                    mapper.applyUpdateLocalShareEntity(entity, dto, userId);
+                    toUpdate.add(entity);
+                    String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
+                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommLocalDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                }
+                case ACTION_IS_DELETED -> {
+                    Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
+                    if (detRowIdToDelete == null) {
+                        throw new ValidationException("detRowId is required for deleting Local Share");
+                    }
+                    ShipLineCommLocalDtlEntity entityToDelete = existingByDetRow.get(detRowIdToDelete);
+                    if (entityToDelete == null) {
+                        throw new ResourceNotFoundException("LocalShare", "detRowId", detRowIdToDelete);
+                    }
+                    deletions.add(entityToDelete);
+                }
             }
         }
+
+        if (!deletions.isEmpty()) {
+            localRepository.deleteAll(deletions);
+            deletions.forEach(deleted -> loggingService.logDelete(deleted, docId, docKeyPoid));
+        }
+
+        List<ShipLineCommLocalDtlEntity> savedItems = List.of();
+        if (!toSave.isEmpty()) {
+            savedItems = localRepository.saveAll(toSave);
+            savedItems.forEach(localShare -> {
+                String logDetail = String.format("Row Created on Local Share with detRowId: %s", localShare.getDetRowId());
+                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
+            });
+        }
+
+        List<ShipLineCommLocalDtlEntity> updatedItems = List.of();
+        if (!toUpdate.isEmpty()) {
+            updatedItems = localRepository.saveAll(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
+            }
+        }
+
+        List<ShipLineCommLocalDtlEntity> allItems = new ArrayList<>(savedItems);
+        allItems.addAll(updatedItems);
+        allItems.sort(Comparator.comparing(ShipLineCommLocalDtlEntity::getDetRowId, Comparator.nullsFirst(Long::compareTo)));
+        return allItems;
+    }
+
+    private String resolveActionType(String actionType, Long detRowId) {
+        if (StringUtils.isBlank(actionType)) {
+            return normalizeDetRowId(detRowId) == null ? ACTION_IS_CREATED : ACTION_IS_UPDATED;
+        }
+        return actionType.trim();
+    }
+
+    private Long normalizeDetRowId(Long detRowId) {
+        if (detRowId == null || detRowId == 0L) {
+            return null;
+        }
+        return detRowId;
     }
 
     private record SavedDetails(

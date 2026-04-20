@@ -1,5 +1,15 @@
 package com.asg.shipping.customerinvoicechargemapmaster.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
+import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapDetailDto;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterRequest;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterResponse;
@@ -10,20 +20,26 @@ import com.asg.shipping.customerinvoicechargemapmaster.repository.CustomerInvoic
 import com.asg.shipping.customerinvoicechargemapmaster.repository.CustomerInvoicePrtMasterRepository;
 import com.asg.shipping.customerinvoicechargemapmaster.service.CustomerInvoiceChargeMapMasterService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class CustomerInvoiceChargeMapMasterServiceImpl
         implements CustomerInvoiceChargeMapMasterService {
 
     private final CustomerInvoicePrtMasterRepository masterRepo;
     private final CustomerInvoicePrtDtlRepository detailRepo;
+    private final LoggingService loggingService;
+    private final DocumentSearchService documentService;
+    private final DocumentDeleteService documentDeleteService;
 
     // ========================= GET =========================
 
@@ -33,20 +49,21 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
             Long customerPoid,
             Long groupPoid) {
 
-        CustomerInvoicePrtMasterEntity master =
-                masterRepo.findById(customerPoid)
-                        .filter(m -> !"Y".equals(m.getDeleted()))
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Customer invoice charge mapping not found"
-                                ));
+        log.info("Getting customer invoice charge mapping with customerPoid: {}", customerPoid);
+
+        masterRepo.findById(customerPoid)
+                .filter(m -> !"Y".equals(m.getDeleted()))
+                .orElseThrow(() ->
+                        new com.asg.common.lib.exception.ResourceNotFoundException(
+                                "Customer invoice charge mapping", "customerPoid", customerPoid.toString()
+                        ));
 
         List<CustomerInvoicePrtDtlEntity> details =
                 detailRepo.findByIdCustomerPoid(customerPoid);
 
         if (details.isEmpty()) {
-            throw new RuntimeException(
-                    "Customer invoice charge mapping not found"
+            throw new com.asg.common.lib.exception.ResourceNotFoundException(
+                    "Customer invoice charge mapping", "customerPoid", customerPoid.toString()
             );
         }
 
@@ -59,7 +76,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                         .map(this::mapToDetailDto)
                         .toList()
         );
-
+        log.info("Successfully retrieved customer invoice charge mapping with customerPoid: {}", customerPoid);
         return response;
     }
 
@@ -68,30 +85,35 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     @Override
     public void saveOrUpdate(
             CustomerInvoiceChargeMapMasterRequest request,
-            Long groupPoid,
-            String userId) {
+            Long groupPoid) {
+
+        log.info("Saving/updating customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
 
         if (request.getDetails() == null || request.getDetails().isEmpty()) {
             throw new IllegalArgumentException(
                     "At least one charge mapping detail is required");
         }
 
-        CustomerInvoicePrtMasterEntity master =
-                masterRepo.findById(request.getCustomerPoid())
-                        .orElseGet(() -> createMaster(
-                                request.getCustomerPoid(),
-                                groupPoid,
-                                userId
-                        ));
+        boolean isNewRecord = !masterRepo.existsById(request.getCustomerPoid());
 
-        // Update audit fields on every save
-        master.setLastModifiedBy(userId);
-        master.setLastModifiedDate(LocalDateTime.now());
-        masterRepo.save(master);
+        CustomerInvoicePrtMasterEntity master =
+                masterRepo
+                        .findById(request.getCustomerPoid())
+                        .orElseGet(() -> createMaster(request.getCustomerPoid(), groupPoid));
+        log.debug("Master record ensured for customerPoid: {}", master.getCustomerPoid());
+
+
+        if (isNewRecord) {
+            loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), request.getCustomerPoid().toString());
+        } else {
+            loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), request.getCustomerPoid().toString());
+        }
 
         for (CustomerInvoiceChargeMapDetailDto dto : request.getDetails()) {
             saveOrUpdateDetail(request.getCustomerPoid(), dto);
         }
+
+        log.info("Successfully saved/updated customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
     }
 
     // ========================= DELETE DETAIL =========================
@@ -99,29 +121,49 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     @Override
     public void deleteDetail(
             Long customerPoid,
-            Long detRowId,
-            Long groupPoid,
-            String userId) {
+            DeleteReasonDto deleteReasonDto) {
 
-        CustomerInvoicePrtDtlId id = new CustomerInvoicePrtDtlId();
-        id.setCustomerPoid(customerPoid);
-        id.setDetRowId(detRowId);
+        log.info("Deleting customer invoice charge mapping for customerPoid: {}", customerPoid);
 
-        CustomerInvoicePrtDtlEntity entity =
-                detailRepo.findById(id)
-                        .orElseThrow(() ->
-                                new RuntimeException("Charge detail not found"));
+        masterRepo.findById(customerPoid)
+                .orElseThrow(() -> new com.asg.common.lib.exception.ResourceNotFoundException(
+                        "Customer invoice charge mapping", "customerPoid", customerPoid.toString()));
 
-        // HARD DELETE (as per SRS)
-        detailRepo.delete(entity);
+        documentDeleteService.deleteDocument(
+                customerPoid,
+                "CUSTOMER_INVOICE_PRT_MASTER",
+                "CUSTOMER_POID",
+                deleteReasonDto,
+                null
+        );
+
+        log.info("Successfully deleted customer invoice charge mapping for customerPoid: {}", customerPoid);
+    }
+
+    // ========================= LIST =========================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> list(String docId, FilterRequestDto request, Pageable pageable) {
+        String operator = documentService.resolveOperator(request);
+        String isDeleted = documentService.resolveIsDeleted(request);
+        List<FilterDto> filters = documentService.resolveFilters(request);
+
+        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
+                "CUSTOMER_POID",
+                "CUSTOMER_POID");
+
+        org.springframework.data.domain.Page<Map<String, Object>> page =
+                new org.springframework.data.domain.PageImpl<>(raw.records(), pageable, raw.totalRecords());
+
+        return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
     // ========================= PRIVATE METHODS =========================
 
     private CustomerInvoicePrtMasterEntity createMaster(
             Long customerPoid,
-            Long groupPoid,
-            String userId) {
+            Long groupPoid) {
 
         CustomerInvoicePrtMasterEntity master =
                 new CustomerInvoicePrtMasterEntity();
@@ -130,10 +172,6 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         master.setGroupPoid(groupPoid);
         master.setActive("Y");
         master.setDeleted("N");
-        master.setCreatedBy(userId);
-        master.setCreatedDate(LocalDateTime.now());
-        master.setLastModifiedBy(userId);
-        master.setLastModifiedDate(LocalDateTime.now());
 
         return masterRepo.save(master);
     }
@@ -160,7 +198,6 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         entity.setChargePoid(dto.getChargePoid());
         entity.setLineChargeDescription(dto.getLineChargeDescription());
         entity.setValidUntil(dto.getValidUntil());
-        entity.setLastModifiedDate(LocalDateTime.now());
 
         detailRepo.save(entity);
     }

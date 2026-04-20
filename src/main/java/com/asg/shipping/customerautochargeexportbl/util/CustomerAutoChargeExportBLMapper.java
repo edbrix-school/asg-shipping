@@ -1,17 +1,19 @@
 package com.asg.shipping.customerautochargeexportbl.util;
 
-import com.asg.shipping.customerautochargeexportbl.dto.*;
-import com.asg.shipping.customerautochargeexportbl.entity.*;
+import com.asg.common.lib.utility.DateUtil;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeDetailDto;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLCreateDTO;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLDto;
+import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLUpdateDTO;
+import com.asg.shipping.customerautochargeexportbl.entity.ShipCustomerChargesDtlEntity;
+import com.asg.shipping.customerautochargeexportbl.entity.ShipCustomerChargesHdrEntity;
 import org.springframework.stereotype.Component;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 /**
  * Mapper utility for converting between Entity and DTO
@@ -32,11 +34,10 @@ public class CustomerAutoChargeExportBLMapper {
                 .groupPoid(entity.getGroupPoid())
                 .customerPoid(entity.getCustomerPoid())
                 .docRef(entity.getDocRef())
-                .transactionDate(toLocalDate(entity.getTransactionDate()))
+                .transactionDate(entity.getTransactionDate())
                 .description(entity.getDescription())
                 .periodFrom(toLocalDate(entity.getPeriodFrom()))
                 .periodTo(toLocalDate(entity.getPeriodTo()))
-                .seqno(entity.getSeqNo())
                 .deleted(entity.getDeleted())
                 .createdBy(entity.getCreatedBy())
                 .createdDate(entity.getCreatedDate())
@@ -54,13 +55,8 @@ public class CustomerAutoChargeExportBLMapper {
         entity.setDescription(dto.getDescription());
         entity.setPeriodFrom(java.sql.Date.valueOf(dto.getPeriodFrom()));
         entity.setPeriodTo(java.sql.Date.valueOf(dto.getPeriodTo()));
-        entity.setTransactionDate(dto.getTransactionDate() != null ? java.sql.Date.valueOf(dto.getTransactionDate()) : java.sql.Date.valueOf(java.time.LocalDate.now()));
-        entity.setSeqNo(dto.getSeqno());
+        entity.setTransactionDate(dto.getTransactionDate() == null ? DateUtil.getCurrentDateInUserTimeZone() : dto.getTransactionDate());
         entity.setDocRef(dto.getDocRef());
-        entity.setCreatedBy(getCurrentUser());
-        entity.setCreatedDate(new Timestamp(System.currentTimeMillis()));
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()));
         entity.setDeleted("N");
     }
 
@@ -81,16 +77,11 @@ public class CustomerAutoChargeExportBLMapper {
             entity.setPeriodTo(java.sql.Date.valueOf(dto.getPeriodTo()));
         }
         if (dto.getTransactionDate() != null) {
-            entity.setTransactionDate(java.sql.Date.valueOf(dto.getTransactionDate()));
-        }
-        if (dto.getSeqno() != null) {
-            entity.setSeqNo(dto.getSeqno());
+            entity.setTransactionDate(dto.getTransactionDate());
         }
         if (dto.getDocRef() != null) {
             entity.setDocRef(dto.getDocRef());
         }
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(new Timestamp(System.currentTimeMillis()));
     }
 
     public CustomerAutoChargeDetailDto mapDtlToDto(ShipCustomerChargesDtlEntity entity) {
@@ -137,8 +128,6 @@ public class CustomerAutoChargeExportBLMapper {
                 .amountOtherCost(dto.getAmountOtherCost())
                 .amount53(dto.getAmount53())
                 .amount53Cost(dto.getAmount53Cost())
-                .createdBy(getCurrentUser())
-                .createdDate(new Timestamp(System.currentTimeMillis()))
                 .build();
     }
 
@@ -154,6 +143,25 @@ public class CustomerAutoChargeExportBLMapper {
             return ((java.sql.Date) date).toLocalDate();
         }
         return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    public void updateDtlEntity(CustomerAutoChargeDetailDto dto, ShipCustomerChargesDtlEntity entity) {
+        if (dto.getChargeCodePoid() != null) entity.setChargeCodePoid(dto.getChargeCodePoid());
+        if (dto.getType() != null) entity.setType(dto.getType());
+        if (dto.getChargeApplicable() != null) entity.setChargeApplicable(dto.getChargeApplicable());
+        if (dto.getImcoClassType() != null) entity.setImcoClassType(dto.getImcoClassType());
+        if (dto.getOogType() != null) entity.setOogType(dto.getOogType());
+        if (dto.getOthersType() != null) entity.setOthersType(dto.getOthersType());
+        if (dto.getCurrencyCode() != null) entity.setCurrencyCode(dto.getCurrencyCode());
+        if (dto.getCurrencyExchange() != null) entity.setCurrencyExchange(dto.getCurrencyExchange());
+        if (dto.getAmount20() != null) entity.setAmount20(dto.getAmount20());
+        if (dto.getAmount40() != null) entity.setAmount40(dto.getAmount40());
+        if (dto.getAmountOther() != null) entity.setAmountOther(dto.getAmountOther());
+        if (dto.getAmount20Cost() != null) entity.setAmount20Cost(dto.getAmount20Cost());
+        if (dto.getAmount40Cost() != null) entity.setAmount40Cost(dto.getAmount40Cost());
+        if (dto.getAmountOtherCost() != null) entity.setAmountOtherCost(dto.getAmountOtherCost());
+        if (dto.getAmount53() != null) entity.setAmount53(dto.getAmount53());
+        if (dto.getAmount53Cost() != null) entity.setAmount53Cost(dto.getAmount53Cost());
     }
 
 }

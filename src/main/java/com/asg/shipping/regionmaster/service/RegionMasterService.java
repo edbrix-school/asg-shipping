@@ -1,6 +1,8 @@
 package com.asg.shipping.regionmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.regionmaster.dto.RegionMasterRequest;
 import com.asg.shipping.regionmaster.dto.RegionMasterResponse;
 import org.springframework.data.domain.Pageable;
@@ -35,8 +37,6 @@ public interface RegionMasterService {
             String userId);
 
     void delete(
-            Long regionPoid,
-            Long groupPoid,
-            String userId);
+            Long regionPoid, DeleteReasonDto deleteReasonDto);
 }
 

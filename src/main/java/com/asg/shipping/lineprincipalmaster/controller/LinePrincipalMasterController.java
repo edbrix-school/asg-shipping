@@ -1,7 +1,11 @@
 package com.asg.shipping.lineprincipalmaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.lineprincipalmaster.dto.*;
 import com.asg.shipping.lineprincipalmaster.service.LinePrincipalMasterService;
@@ -36,6 +40,7 @@ import java.util.Map;
 public class LinePrincipalMasterController {
 
     private final LinePrincipalMasterService lineService;
+        private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/list")
@@ -142,6 +147,7 @@ public class LinePrincipalMasterController {
             @PathVariable Long id) {
         log.info("Getting line with id: {}", id);
         LinePrincipalMasterDto line = lineService.getLine(id);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved line with id: {}", id);
         return ApiResponse.success("Line retrieved successfully", line);
     }
@@ -257,7 +263,7 @@ public class LinePrincipalMasterController {
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
-    @PatchMapping("/{id}/activate")
+    @PutMapping("/{id}/activate")
     @Operation(
             summary = "Toggle active status",
             description = "Toggle the active flag of a line between Y and N",
@@ -341,9 +347,10 @@ public class LinePrincipalMasterController {
     })
     public ResponseEntity<?> deleteLine(
             @Parameter(description = "Line POID", required = true, example = "12345")
-            @PathVariable Long id) {
+                        @PathVariable Long id,
+                        @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting line with id: {}", id);
-        lineService.deleteLine(id);
+                lineService.deleteLine(id, deleteReasonDto);
         log.info("Successfully deleted line with id: {}", id);
         return ApiResponse.success("Line deleted successfully");
     }

@@ -1,11 +1,14 @@
 package com.asg.shipping.regionmaster.service.impl;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -37,6 +40,7 @@ public class RegionMasterServiceImpl implements RegionMasterService {
     private final RegionMasterMapper mapper;
     private final DocumentSearchService documentService;
     private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
 
     @Override
     @Transactional(readOnly = true)
@@ -87,6 +91,8 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         
         log.info("Successfully retrieved region master with id: {}", regionPoid);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), regionPoid.toString());
+
         return mapper.toResponse(entity);
     }
 
@@ -125,8 +131,6 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         String key = saved.getRegionPoid().toString();
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
-        loggingService.logChanges(null, saved, ShipRegionMasterEntity.class, docId, key,
-                LogDetailsEnum.CREATED, "REGION_POID");
 
         log.info("Successfully created region master with id: {}", saved.getRegionPoid());
         return mapper.toResponse(saved);
@@ -184,7 +188,6 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         repository.save(entity);
         String key = entity.getRegionPoid().toString();
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, docId, key);
         loggingService.logChanges(oldEntity, entity, ShipRegionMasterEntity.class, docId, key,
                 LogDetailsEnum.MODIFIED, "REGION_POID");
 
@@ -216,28 +219,25 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         String newActive = (currentActive == null || "N".equals(currentActive)) ? "Y" : "N";
         
         entity.setActive(newActive);
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
-        
         repository.save(entity);
-        
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), regionPoid.toString());
+        String logDetail = String.format("KeyId = REGION_POID:%s", regionPoid);
+        String tableName = ShipRegionMasterEntity.class.getAnnotation(jakarta.persistence.Table.class).name();
+        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), regionPoid.toString(), "Active", currentActive, entity.getActive(), logDetail, tableName);
+
         log.info("Successfully toggled active status for region master with id: {} from {} to {}", 
                 regionPoid, currentActive, newActive);
     }
 
     @Override
     @Transactional
-    public void delete(
-            Long regionPoid,
-            Long groupPoid,
-            String userId) {
-        log.info("Deleting region master with id: {}, groupPoid: {}, userId: {}", 
-                regionPoid, groupPoid, userId);
+    public void delete(Long regionPoid, DeleteReasonDto deleteReason) {
+
 
         ShipRegionMasterEntity entity =
-                repository.findByRegionPoidAndGroupPoid(regionPoid, groupPoid)
+                repository.findByRegionPoidAndGroupPoid(regionPoid, UserContext.getGroupPoid())
                         .orElseThrow(() -> {
-                            log.error("Region master not found with id: {}, groupPoid: {}", regionPoid, groupPoid);
                             return new ResourceNotFoundException(
                                     "RegionMaster",
                                     "regionPoid",
@@ -245,20 +245,9 @@ public class RegionMasterServiceImpl implements RegionMasterService {
                             );
                         });
 
-        // Check if already deleted (idempotent operation)
-        if ("Y".equals(entity.getDeleted())) {
-            log.info("Region master with id: {} is already deleted", regionPoid);
-            return;
-        }
 
-        entity.setActive("N");
-        entity.setDeleted("Y");
-        entity.setLastModifiedBy(userId);
-        entity.setLastModifiedDate(LocalDateTime.now());
-        
-        repository.save(entity);
-        
-        log.info("Successfully deleted region master with id: {}", regionPoid);
+        documentDeleteService.deleteDocument(regionPoid,"SHIP_REGION_MASTER",
+                "REGION_POID",deleteReason,null);
     }
 }
 

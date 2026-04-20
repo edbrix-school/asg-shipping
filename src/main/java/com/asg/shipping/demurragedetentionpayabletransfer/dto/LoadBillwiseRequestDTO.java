@@ -32,7 +32,6 @@ public class LoadBillwiseRequestDTO {
         @NotNull(message = "Manifest transaction POID is required")
         private Long mainfestTransactionPoid;
 
-        @NotNull(message = "Container number is required")
         private String containerNo;
 
         private String blNumber;

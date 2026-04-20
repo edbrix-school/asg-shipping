@@ -22,7 +22,7 @@ public class PortChargesTariffUpdateDto {
     private Long portPoid;
 
     @NotBlank(message = "Description is required")
-    @Size(min = 5, max = 100, message = "Description must be between 5 and 100 characters")
+    @Size(max = 100, message = "Description must not exceed 100 characters")
     private String description;
 
     @NotNull(message = "Period from date is required")
@@ -36,7 +36,7 @@ public class PortChargesTariffUpdateDto {
     private Long chargeLinePoid;
 
     @NotBlank(message = "Charge division is required")
-    @Size(min = 5, max = 10, message = "Charge division must be between 1 and 10 characters")
+    @Size(max = 10, message = "Charge division must not exceed 10 characters")
     private String chargeDivision;
 
     @Valid

@@ -7,6 +7,7 @@ import com.asg.common.lib.exception.ResourceAlreadyExistsException;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeCreateDTO;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeDto;
 import com.asg.shipping.vesseltypemaster.dto.VesselTypeUpdateDTO;
@@ -42,6 +43,12 @@ class VesselTypeServiceImplTest {
     @Mock
     private VesselTypeMapper mapper;
 
+    @Mock
+    private LoggingService loggingService;
+
+    @Mock
+    private com.asg.common.lib.service.DocumentDeleteService documentDeleteService;
+
     @InjectMocks
     private VesselTypeServiceImpl vesselTypeService;
 
@@ -60,8 +67,6 @@ class VesselTypeServiceImplTest {
                 .active("Y")
                 .deleted("N")
                 .groupPoid(1L)
-                .createdBy("testuser")
-                .createdDate(LocalDateTime.now())
                 .build();
 
         testDto = VesselTypeDto.builder()
@@ -122,6 +127,8 @@ class VesselTypeServiceImplTest {
     void getVesselType_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            lenient().doNothing().when(loggingService)
+                    .createLogSummaryEntry(any(String.class), any(), any());
 
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
             when(mapper.mapToDto(testEntity)).thenReturn(testDto);
@@ -151,6 +158,8 @@ class VesselTypeServiceImplTest {
         when(vesselTypeRepository.existsByVesselTypeName(createDto.getVesselTypeName())).thenReturn(false);
         when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
         when(mapper.mapToDto(testEntity)).thenReturn(testDto);
+        lenient().doNothing().when(loggingService)
+                .createLogSummaryEntry(any(String.class), any(), any());
 
         VesselTypeDto result = vesselTypeService.createVesselType(createDto, 1L, 1L);
 
@@ -220,6 +229,8 @@ class VesselTypeServiceImplTest {
     void toggleActive_Success_FromYToN() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            lenient().doNothing().when(loggingService)
+                    .createLogSummaryEntry(any(String.class), any(), any());
 
             testEntity.setActive("Y");
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
@@ -235,6 +246,8 @@ class VesselTypeServiceImplTest {
     void toggleActive_Success_FromNToY() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            lenient().doNothing().when(loggingService)
+                    .createLogSummaryEntry(any(String.class), any(), any());
 
             testEntity.setActive("N");
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
@@ -261,12 +274,14 @@ class VesselTypeServiceImplTest {
     void deleteVesselType_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            lenient().doNothing().when(loggingService)
+                    .createLogSummaryEntry(any(String.class), any(), any());
 
             testEntity.setDeleted("N");
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
             when(vesselTypeRepository.save(any(ShipVesselTypeMaster.class))).thenReturn(testEntity);
 
-            vesselTypeService.deleteVesselType(1L);
+            vesselTypeService.deleteVesselType(1L, 1L, 1L, null);
 
             verify(vesselTypeRepository).save(argThat(saved -> 
                 "Y".equals(saved.getDeleted()) && "N".equals(saved.getActive())
@@ -282,7 +297,8 @@ class VesselTypeServiceImplTest {
             testEntity.setDeleted("Y");
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testEntity));
 
-            vesselTypeService.deleteVesselType(1L);
+            assertThrows(com.asg.common.lib.exception.CustomException.class, 
+                () -> vesselTypeService.deleteVesselType(1L, 1L, 1L, null));
 
             verify(vesselTypeRepository, never()).save(any(ShipVesselTypeMaster.class));
         }
@@ -295,7 +311,7 @@ class VesselTypeServiceImplTest {
 
             when(vesselTypeRepository.findByVesselTypePoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> vesselTypeService.deleteVesselType(1L));
+            assertThrows(ResourceNotFoundException.class, () -> vesselTypeService.deleteVesselType(1L, 1L, 1L, null));
         }
     }
 }

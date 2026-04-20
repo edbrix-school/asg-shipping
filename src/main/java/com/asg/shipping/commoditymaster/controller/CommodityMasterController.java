@@ -2,8 +2,10 @@ package com.asg.shipping.commoditymaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.commoditymaster.dto.request.CommodityMasterRequest;
 import com.asg.shipping.commoditymaster.dto.response.CommodityMasterResponse;
 import com.asg.shipping.commoditymaster.service.CommodityMasterService;
@@ -31,6 +33,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.*;
 public class CommodityMasterController {
 
     private final CommodityMasterService commodityMasterService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
@@ -86,6 +89,7 @@ public class CommodityMasterController {
     public ResponseEntity<?> getCommodityById(@PathVariable Long commodityPoid) {
         try {
             CommodityMasterResponse commodity = commodityMasterService.getCommodityById(commodityPoid);
+            loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), commodityPoid.toString());
             return success("Commodity fetched successfully", commodity);
         } catch (Exception e) {
             return internalServerError("Failed to retrieve commodity: " + e.getMessage());
@@ -190,9 +194,11 @@ public class CommodityMasterController {
                     """
     )
     @DeleteMapping("/{commodityPoid}")
-    public ResponseEntity<?> softDeleteCommodity(@PathVariable Long commodityPoid) {
+    public ResponseEntity<?> softDeleteCommodity(
+            @PathVariable Long commodityPoid,
+            @Valid @RequestBody(required = false) com.asg.common.lib.dto.DeleteReasonDto deleteReasonDto) {
         try {
-            commodityMasterService.softDeleteCommodity(commodityPoid);
+            commodityMasterService.softDeleteCommodity(commodityPoid, deleteReasonDto);
             return success("Commodity soft deleted successfully", Map.of("commodityPoid", commodityPoid));
         } catch (Exception e) {
             return internalServerError("Failed to soft delete commodity: " + e.getMessage());

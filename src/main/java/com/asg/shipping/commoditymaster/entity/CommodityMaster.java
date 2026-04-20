@@ -1,5 +1,6 @@
 package com.asg.shipping.commoditymaster.entity;
 
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,14 +9,14 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+
 
 @Entity
 @Table(name = "SHIP_COMODITY_MASTER")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CommodityMaster {
+public class CommodityMaster extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,20 +40,6 @@ public class CommodityMaster {
 
     @Column(name = "SEQNO")
     private Long seqno;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @CreationTimestamp
-    @Column(name = "CREATED_DATE")
-    private Timestamp createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastmodifiedBy;
-
-    @UpdateTimestamp
-    @Column(name = "LASTMODIFIED_DATE")
-    private Timestamp lastmodifiedDate;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;

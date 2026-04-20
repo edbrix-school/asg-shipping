@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT2" language="groovy" pageWidth="570" pageHeight="360" columnWidth="570" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="dd942e33-2433-4f5a-90dd-62aacd8710fd">
+	<property name="ireport.zoom" value="2.357947691000002"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="P_CHRG_TRN_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[SELECT DTL.CHARGE_POID, CHM.CHARGE_NAME, DTL.QUANTITY,
+DTL.PER_QUANTITY_AMOUNT RATE,
+DTL.PER_QUANTITY_AMOUNT*DTL.QUANTITY AMOUNT,
+DTL.TAX_PERCENTAGE VAT_PERCENTAGE,
+(DTL.PER_QUANTITY_AMOUNT*DTL.QUANTITY)*(TAX_PERCENTAGE/100) VAT_AMOUNT,
+(DTL.PER_QUANTITY_AMOUNT*DTL.QUANTITY) + ((DTL.PER_QUANTITY_AMOUNT*DTL.QUANTITY)*(TAX_PERCENTAGE/100)) TOTAL
+FROM SHIP_BL_MANIFEST_CHARGES_DTL DTL
+INNER JOIN SHIP_CHARGE_MASTER CHM ON DTL.CHARGE_POID=CHM.CHARGE_POID
+WHERE DTL.FREIGHT_TYPE='C' and RECEIPT_INVOICE_POID is null  and (DTL.PER_QUANTITY_AMOUNT*DTL.QUANTITY  )>0
+AND DTL.TRANSACTION_POID=$P{P_CHRG_TRN_POID}]]>
+	</queryString>
+	<field name="CHARGE_POID" class="java.math.BigDecimal"/>
+	<field name="CHARGE_NAME" class="java.lang.String"/>
+	<field name="QUANTITY" class="java.math.BigDecimal"/>
+	<field name="RATE" class="java.math.BigDecimal"/>
+	<field name="AMOUNT" class="java.math.BigDecimal"/>
+	<field name="VAT_PERCENTAGE" class="java.math.BigDecimal"/>
+	<field name="VAT_AMOUNT" class="java.math.BigDecimal"/>
+	<field name="TOTAL" class="java.math.BigDecimal"/>
+	<variable name="AMOUNT_1" class="java.math.BigDecimal" resetType="Column" calculation="Sum">
+		<variableExpression><![CDATA[$F{AMOUNT}]]></variableExpression>
+	</variable>
+	<variable name="TOTALAMT" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{TOTAL}]]></variableExpression>
+	</variable>
+	<variable name="TOTAL_BASE_AMOUNT" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{AMOUNT}]]></variableExpression>
+	</variable>
+	<variable name="TOTAL_VAT_AMOUNT" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{VAT_AMOUNT}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="21" splitType="Stretch">
+			<rectangle>
+				<reportElement mode="Opaque" x="5" y="3" width="563" height="16" backcolor="#F0F0F0" uuid="08237e70-f930-4d2f-97e4-63a06eea2640"/>
+				<graphicElement>
+					<pen lineWidth="0.5"/>
+				</graphicElement>
+			</rectangle>
+			<staticText>
+				<reportElement x="7" y="4" width="251" height="12" uuid="a2ab9b28-29de-49e8-95cb-ab771d6683ad"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<text><![CDATA[PARTICULARS]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="492" y="4" width="67" height="12" uuid="39c3b3c0-353d-4eba-9839-b706f61d1c72"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Total"]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="372" y="4" width="41" height="12" uuid="8de3a34f-46d6-4d19-a65d-df18e1b479a9"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[VAT%]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="325" y="4" width="44" height="12" uuid="bad533f8-84f2-4e59-9d17-ce3fea7ef695"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[Amount]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="415" y="4" width="73" height="12" uuid="f043ee6b-01d3-4105-b1b6-8697f2bba9cc"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA["VAT Amount"]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="291" y="4" width="32" height="12" uuid="f6d69b23-0d32-4948-b844-f7d026277533"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[Rate]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="268" y="4" width="21" height="12" uuid="9ec00c73-c029-4b33-a1b5-9296477682d5"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<text><![CDATA[QTY]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="15" splitType="Stretch">
+			<textField>
+				<reportElement x="6" y="0" width="252" height="12" uuid="c413ea8c-e6f0-4740-a5b6-817e599e188e"/>
+				<textElement verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CHARGE_NAME}]]></textFieldExpression>
+			</textField>
+			<textField pattern="###0.000;-###0.000" isBlankWhenNull="true">
+				<reportElement x="415" y="1" width="73" height="12" uuid="b1e3b1ef-9544-48b8-b3ef-3cf35cdc773c"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VAT_AMOUNT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="492" y="0" width="67" height="12" uuid="38ff2a22-146f-45e9-b637-10a90f53040a"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TOTAL}]]></textFieldExpression>
+			</textField>
+			<textField pattern="" isBlankWhenNull="true">
+				<reportElement x="372" y="1" width="41" height="12" uuid="eb75e911-26f5-4718-8a57-faf5820b0652"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{VAT_PERCENTAGE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="325" y="0" width="44" height="12" uuid="8449e03f-9fef-41d7-b853-ecc5d00b1668"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{AMOUNT}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="291" y="1" width="32" height="12" uuid="4d124d11-1c94-4dc5-9912-200aa92b0192"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="" isBlankWhenNull="true">
+				<reportElement x="268" y="1" width="21" height="12" uuid="b9db958b-cf4d-40da-8280-147a2354310e"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{QUANTITY}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

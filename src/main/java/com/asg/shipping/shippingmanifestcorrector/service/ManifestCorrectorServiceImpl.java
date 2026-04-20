@@ -1,11 +1,15 @@
 package com.asg.shipping.shippingmanifestcorrector.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.shippingmanifestcorrector.dto.*;
@@ -52,10 +56,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     private final ShipBlReprintChargeDtlRepository chargeDtlRepository;
     private final ShipBlReprintContainerDtlRepository containerDtlRepository;
     private final DocumentSearchService documentSearchService;
+    private final DocumentDeleteService documentDeleteService;
+    private final LoggingService loggingService;
     private final JdbcTemplate jdbcTemplate;
     private final ManifestCorrectorMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
-//    private final LovDataService lovService;
 
     @Override
     @Transactional(readOnly = true)
@@ -100,7 +105,8 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         dto.setChargesDetails(mapper.mapChargeDtlListToDto(charges));
         dto.setContainerDetails(mapper.mapContainerDtlListToDto(containers));
-//        enrichLovData(dto);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
         log.info("Successfully retrieved Shipping Manifest Corrector with id: {}", transactionPoid);
         return dto;
@@ -129,6 +135,8 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         ManifestCorrectorDto result = mapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
 //        enrichLovData(result);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
 
         log.info("Successfully created Shipping Manifest Corrector with id: {}", saved.getTransactionPoid());
         return result;
@@ -162,23 +170,35 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         loadDetailTables(result, saved.getTransactionPoid());
 //        enrichLovData(result);
 
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+
         log.info("Successfully updated Shipping Manifest Corrector with id: {}", transactionPoid);
         return result;
     }
 
     @Override
     @Transactional
-    public void deleteManifestCorrector(Long transactionPoid) {
+    public void deleteManifestCorrector(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting Shipping Manifest Corrector with id: {}", transactionPoid);
 
         ShipBlReprintHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipping Manifest Corrector", "transactionPoid", transactionPoid.toString()));
+
+        documentDeleteService.deleteDocument(
+                transactionPoid,
+                "SHIP_BL_REPRINT_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                java.time.LocalDate.now()
+        );
 
         entity.setDeleted("Y");
         hdrRepository.saveAndFlush(entity);
 
         chargeDtlRepository.deleteByTransactionPoid(transactionPoid);
         containerDtlRepository.deleteByTransactionPoid(transactionPoid);
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
         log.info("Successfully deleted Shipping Manifest Corrector with id: {}", transactionPoid);
     }
@@ -331,16 +351,6 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         validateMutuallyExclusiveFlags(dto.getDoReprint(), dto.getContainerReprint(),
                 dto.getReturnReprint(), dto.getBlReprint(), dto.getDemRefund());
 
-//      Demurrage Refund functionality has been dropped in the latest development
-//        if ("Y".equals(dto.getDemRefund())) {
-//            if (dto.getDemPayType() == null || dto.getDemPayType().trim().isEmpty()) {
-//                throw new ValidationException("Demurrage payment type is required when demurrage refund is selected");
-//            }
-//            if ((dto.getDemPayType().contains("CUSTOMER") || dto.getDemPayType().contains("BANK_PAYMENT"))
-//                    && dto.getDemCustomerPoid() == null) {
-//                throw new ValidationException("Customer/Bank is required for demurrage refund");
-//            }
-//        }
     }
 
     /**
@@ -359,16 +369,6 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         validateMutuallyExclusiveFlags(dto.getDoReprint(), dto.getContainerReprint(),
                 dto.getReturnReprint(), dto.getBlReprint(), dto.getDemRefund());
 
-//      Demurrage Refund functionality has been dropped in the latest development
-//        if ("Y".equals(dto.getDemRefund())) {
-//            if (dto.getDemPayType() == null || dto.getDemPayType().trim().isEmpty()) {
-//                throw new ValidationException("Demurrage payment type is required when demurrage refund is selected");
-//            }
-//            if ((dto.getDemPayType().contains("CUSTOMER") || dto.getDemPayType().contains("BANK_PAYMENT"))
-//                    && dto.getDemCustomerPoid() == null) {
-//                throw new ValidationException("Customer/Bank is required for demurrage refund");
-//            }
-//        }
     }
 
     /**
@@ -425,11 +425,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             // Load charges for BL reprint (EXPORT)
             loadChargesForBlReprint(entity.getTransactionPoid(), blPoid);
         }
-//      Demurrage Refund functionality has been dropped in the latest development
-//        else if ("Y".equals(entity.getDemRefund())) {
-//            // Demurrage refund charges are loaded via separate API
-//            // Do nothing here, charges will be loaded when user calls loadDemurrageRefundCharges
-//        }
+
     }
 
     /**
@@ -639,7 +635,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorChargeDtlDto chargeDto : dto.getChargesDetails()) {
                 detRowId++;
                 ShipBlReprintChargeDtl chargeDtl = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
-                chargeDtlRepository.saveAndFlush(chargeDtl);
+                ShipBlReprintChargeDtl saved = chargeDtlRepository.saveAndFlush(chargeDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Charge Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
 
@@ -650,7 +650,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorContainerDtlDto containerDto : dto.getContainerDetails()) {
                 detRowId++;
                 ShipBlReprintContainerDtl containerDtl = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
-                containerDtlRepository.saveAndFlush(containerDtl);
+                ShipBlReprintContainerDtl saved = containerDtlRepository.saveAndFlush(containerDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Container Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
     }
@@ -659,6 +663,14 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
      * Update detail tables from DTO
      */
     private void updateDetailTables(ManifestCorrectorUpdateDTO dto, Long transactionPoid) {
+        // Get existing details for logging deletions
+        List<ShipBlReprintChargeDtl> existingCharges = chargeDtlRepository.findByTransactionPoid(transactionPoid);
+        List<ShipBlReprintContainerDtl> existingContainers = containerDtlRepository.findByTransactionPoid(transactionPoid);
+        
+        // Log deletions
+        existingCharges.forEach(deleted -> loggingService.logDelete(deleted, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString()));
+        existingContainers.forEach(deleted -> loggingService.logDelete(deleted, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString()));
+        
         // Delete existing details
         chargeDtlRepository.deleteByTransactionPoid(transactionPoid);
         containerDtlRepository.deleteByTransactionPoid(transactionPoid);
@@ -669,7 +681,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorChargeDtlDto chargeDto : dto.getChargesDetails()) {
                 detRowId++;
                 ShipBlReprintChargeDtl chargeDtl = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
-                chargeDtlRepository.saveAndFlush(chargeDtl);
+                ShipBlReprintChargeDtl saved = chargeDtlRepository.saveAndFlush(chargeDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Charge Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
 
@@ -678,7 +694,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             for (ManifestCorrectorContainerDtlDto containerDto : dto.getContainerDetails()) {
                 detRowId++;
                 ShipBlReprintContainerDtl containerDtl = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
-                containerDtlRepository.saveAndFlush(containerDtl);
+                ShipBlReprintContainerDtl saved = containerDtlRepository.saveAndFlush(containerDtl);
+                
+                // Log child table create
+                String logDetail = String.format("Row Created on Manifest Corrector Container Detail with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
     }
@@ -724,92 +744,6 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         }
     }
 
-    /**
-     * Enrich DTO with LOV data
-     */
-//    private void enrichLovData(ManifestCorrectorDto dto) {
-//
-//        try {
-//
-//            if (dto.getVoyageTransactionPoid() != null) {
-//                String voyageSql = "SELECT VOYAGE_NO FROM SHIP_VOYAGE_HDR WHERE TRANSACTION_POID = ?";
-//                try {
-//                    String voyageNo = jdbcTemplate.queryForObject(voyageSql, String.class, dto.getVoyageTransactionPoid());
-//                    dto.setVoyageNumber(voyageNo);
-//                } catch (Exception e) {
-//                    log.warn("Could not get voyage number for POID: {}", dto.getVoyageTransactionPoid());
-//                }
-//                dto.setVoyageTransactionDet(lovService.getDetailsByPoidAndLovName(dto.getVoyageTransactionPoid(), "VESSAL_VOYAGE"));
-//            }
-//            if (dto.getBlNumber() != null) {
-//                dto.setBlNumberDet(lovService.getDetailsByCodeAndLovName(dto.getBlNumber(), "SHIP_BL_REPRINT"));
-//            }
-//            if (dto.getIssueType() != null) {
-//                dto.setIssueTypeDet(lovService.getDetailsByCodeAndLovName(dto.getIssueType(), "BL_ISSUE_TYPE"));
-//            }
-//            if (dto.getConsigneePoid() != null) {
-//                dto.setConsigneeDet(lovService.getDetailsByPoidAndLovName(dto.getConsigneePoid(), "ADDRESS_MASTER"));
-//            }
-//            if (dto.getNotifyPoid() != null) {
-//                dto.setNotifyDet(lovService.getDetailsByPoidAndLovName(dto.getNotifyPoid(), "ADDRESS_MASTER"));
-//            }
-//            if (dto.getCompanyPoid() != null) {
-//                dto.setCompanyDet(lovService.getDetailsByPoidAndLovName(dto.getCompanyPoid(), "COMPANY"));
-//            }
-//            if (dto.getHoldReason() != null) {
-//                dto.setHoldReasonDet(lovService.getDetailsByCodeAndLovName(dto.getHoldReason(), "SHIP_DO_ANOTICE_HOLD"));
-//            }
-//            if (dto.getPortOfLoadingPoid() != null) {
-//                dto.setPortOfLoadingDet(lovService.getDetailsByPoidAndLovName(dto.getPortOfLoadingPoid(), "PORT_MASTER"));
-//            }
-//            if (dto.getPortOfDischargePoid() != null) {
-//                dto.setPortOfDischargeDet(lovService.getDetailsByPoidAndLovName(dto.getPortOfDischargePoid(), "PORT_MASTER"));
-//            }
-//            if (dto.getPlaceOfDeliveryPoid() != null) {
-//                dto.setPlaceOfDeliveryDet(lovService.getDetailsByPoidAndLovName(dto.getPlaceOfDeliveryPoid(), "PORT_MASTER"));
-//            }
-//            if (dto.getPlaceOfReceiptPoid() != null) {
-//                dto.setPlaceOfReceiptDet(lovService.getDetailsByPoidAndLovName(dto.getPlaceOfReceiptPoid(), "PORT_MASTER"));
-//            }
-//
-//            if (dto.getChargesDetails() != null) {
-//                enrichChargeLovData(dto.getChargesDetails());
-//            }
-//        } catch (Exception e) {
-//            log.error("Exception while Lov Enrichment for manifest corrector with id {} !", dto.getTransactionPoid());
-//        }
-//    }
-//
-//    private void enrichChargeLovData(List<ManifestCorrectorChargeDtlDto> manifestChargesDtlDto){
-//        try {
-//            manifestChargesDtlDto.forEach(dto -> {
-//
-//                if (dto.getChargePoid() != null) {
-//                    dto.setChargeDet(lovService.getDetailsByPoidAndLovName(dto.getChargePoid(), "CHARGE_MASTER"));
-//                }
-//                if (dto.getPaidAtPortPoid() != null) {
-//                    dto.setPaidAtPortDet(lovService.getDetailsByPoidAndLovName(dto.getPaidAtPortPoid(), "PORT_MASTER"));
-//                }
-//                if (dto.getChargeType() != null) {
-//                    dto.setChargeDet(lovService.getDetailsByCodeAndLovName(dto.getChargeType(), "CHARGE_TYPE"));
-//                }
-//                if (dto.getCurrencyCode() != null) {
-//                    dto.setCurrencyDet(lovService.getDetailsByCodeAndLovName(dto.getCurrencyCode(), "CURRENCY"));
-//                }
-//                if (dto.getFreightType() != null) {
-//                    dto.setFreightTypeDet(lovService.getDetailsByCodeAndLovName(dto.getFreightType(), "SHIP_FREIGHT_TYPE"));
-//                }
-//                if (dto.getChargeBasisOn() != null) {
-//                    dto.setChargeBasisOnDet(lovService.getDetailsByCodeAndLovName(dto.getChargeBasisOn(), "CONTAINER_TYPE_MASTER"));
-//                }
-//            });
-//        }
-//        catch (Exception e){
-//            log.error("Exception while Charges Lov Enrichment!");
-//        }
-//    }
-
-    // Utility methods for safe value extraction
     private Long getLongOrNull(ResultSet rs, String columnName) {
         try {
             Object value = rs.getObject(columnName);

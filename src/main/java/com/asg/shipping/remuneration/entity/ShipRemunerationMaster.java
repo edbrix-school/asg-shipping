@@ -1,17 +1,18 @@
 package com.asg.shipping.remuneration.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
+import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
-
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
 @Table(name = "SHIP_REMUNERATION_MASTER")
-public class ShipRemunerationMaster {
+public class ShipRemunerationMaster extends BaseEntity {
+
+    @AuditIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "REMUNERATION_POID", nullable = false)
@@ -31,18 +32,6 @@ public class ShipRemunerationMaster {
 
     @Column(name = "SEQNO", precision = 5)
     private Integer seqNo;
-
-    @Column(name = "CREATED_BY", length = 20)
-    private String createdBy;
-
-    @Column(name = "CREATED_DATE")
-    private LocalDateTime createdDate;
-
-    @Column(name = "LASTMODIFIED_BY", length = 20)
-    private String lastModifiedBy;
-
-    @Column(name = "LASTMODIFIED_DATE")
-    private LocalDateTime lastModifiedDate;
 
     @Column(name = "REMUN_BASED_ON", length = 20)
     private String remunBasedOn;

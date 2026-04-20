@@ -1,4 +1,4 @@
-package com.asg.shipping.portMaster.dto;
+package com.asg.shipping.portmaster.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

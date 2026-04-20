@@ -1,16 +1,9 @@
-package com.asg.shipping.portMaster.entity;
+package com.asg.shipping.portmaster.entity;
 
-import java.time.LocalDateTime;
-
-import org.hibernate.annotations.DynamicUpdate;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.IdClass;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import com.asg.common.lib.entity.BaseEntity;
+import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
 @Table(name = "SHIP_PORT_MASTER", uniqueConstraints = {
@@ -19,7 +12,7 @@ import lombok.Data;
 @IdClass(PortMasterId.class)
 @DynamicUpdate
 @Data
-public class PortMaster {
+public class PortMaster extends BaseEntity {
 
 	@Id
 	@Column(name = "PORT_POID", nullable = false)
@@ -58,17 +51,5 @@ public class PortMaster {
 
 	@Column(name = "DELETED", length = 1)
 	private String deleted;
-
-	@Column(name = "CREATED_BY")
-	private String createdBy;
-
-	@Column(name = "CREATED_DATE")
-	private LocalDateTime createdDate;
-
-	@Column(name = "LASTMODIFIED_BY")
-	private String lastModifiedBy;
-
-	@Column(name = "LASTMODIFIED_DATE")
-	private LocalDateTime lastModifiedDate;
 
 }

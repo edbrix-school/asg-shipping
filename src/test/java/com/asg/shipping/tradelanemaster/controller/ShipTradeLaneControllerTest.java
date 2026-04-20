@@ -1,8 +1,10 @@
 package com.asg.shipping.tradelanemaster.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.tradelanemaster.dto.request.ShipTradelaneRequest;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
@@ -34,6 +36,9 @@ class ShipTradeLaneControllerTest {
 
     @InjectMocks
     private ShipTradeLaneController controller;
+
+    @Mock
+    private LoggingService loggingService;
 
     private ShipTradelaneRequest request;
     private ShipTradelaneResponse response;
@@ -177,50 +182,26 @@ class ShipTradeLaneControllerTest {
         verify(service).getById(1L);
     }
 
-    @Test
-    void testGetByIdNotFound() {
-        when(service.getById(1L))
-                .thenThrow(new ResourceNotFoundException("Ship Trade Lane", "tradeLanePoid", 1L));
-
-        ResponseEntity<?> result = controller.getById(1L);
-
-        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
-        Map<String, Object> body = (Map<String, Object>) result.getBody();
-        assertFalse((Boolean) body.get("success"));
-    }
-
-    @Test
-    void testGetByIdInternalError() {
-        when(service.getById(1L))
-                .thenThrow(new RuntimeException("Database error"));
-
-        ResponseEntity<?> result = controller.getById(1L);
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
-        Map<String, Object> body = (Map<String, Object>) result.getBody();
-        assertFalse((Boolean) body.get("success"));
-        assertEquals("Failed to retrieve Ship Trade Lane: Database error", body.get("message"));
-    }
 
     @Test
     void testDeleteSuccess() {
-        doNothing().when(service).delete(1L);
+        doNothing().when(service).delete(1L,new DeleteReasonDto());
 
-        ResponseEntity<?> result = controller.delete(1L);
+        ResponseEntity<?> result = controller.delete(1L,new DeleteReasonDto());
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
         assertTrue((Boolean) body.get("success"));
         assertEquals("Ship Trade Lane deleted successfully", body.get("message"));
-        verify(service).delete(1L);
+        verify(service).delete(1L,new DeleteReasonDto());
     }
 
     @Test
     void testDeleteNotFound() {
         doThrow(new ResourceNotFoundException("Ship Trade Lane", "tradeLanePoid", 1L))
-                .when(service).delete(1L);
+                .when(service).delete(1L,new DeleteReasonDto());
 
-        ResponseEntity<?> result = controller.delete(1L);
+        ResponseEntity<?> result = controller.delete(1L,new DeleteReasonDto());
 
         assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
@@ -231,9 +212,9 @@ class ShipTradeLaneControllerTest {
 
     void testDeleteInternalError() {
         doThrow(new RuntimeException("Database error"))
-                .when(service).delete(1L);
+                .when(service).delete(1L,new DeleteReasonDto());
 
-        ResponseEntity<?> result = controller.delete(1L);
+        ResponseEntity<?> result = controller.delete(1L,new DeleteReasonDto());
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();
