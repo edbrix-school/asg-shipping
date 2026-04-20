@@ -12,7 +12,7 @@ public interface CustomerInvoiceChargeMapMasterService {
 
     CustomerInvoiceChargeMapMasterResponse getByCustomer(Long customerPoid, Long groupPoid);
 
-    void saveOrUpdate(
+    CustomerInvoiceChargeMapMasterResponse saveOrUpdate(
             CustomerInvoiceChargeMapMasterRequest request,
             Long groupPoid
     );

@@ -83,7 +83,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
     // ========================= SAVE / UPDATE =========================
 
     @Override
-    public void saveOrUpdate(
+    public CustomerInvoiceChargeMapMasterResponse saveOrUpdate(
             CustomerInvoiceChargeMapMasterRequest request,
             Long groupPoid) {
 
@@ -112,9 +112,10 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         for (CustomerInvoiceChargeMapDetailDto dto : request.getDetails()) {
             saveOrUpdateDetail(request.getCustomerPoid(), dto);
         }
-
         log.info("Successfully saved/updated customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
-    }
+        return getByCustomer(request.getCustomerPoid(), groupPoid);
+
+}
 
     // ========================= DELETE DETAIL =========================
 
