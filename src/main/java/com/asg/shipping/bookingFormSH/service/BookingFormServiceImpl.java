@@ -8,6 +8,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.bookingFormSH.dto.*;
@@ -26,6 +27,7 @@ import com.asg.shipping.exceptions.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
+import org.apache.poi.util.StringUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -64,6 +66,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final ShipMateChargesDtlRepository chargesDtlRepository;
     private final ShipMateContainerDtlRepository containerDtlRepository;
     private final BookingFormLovService lovService;
+    private final LovDataService commonLovService;
     private final DocumentSearchService documentService;
     private final JdbcTemplate jdbcTemplate;
     private final PrintService printService;
@@ -99,6 +102,50 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional(readOnly = true)
+    public Map<String, Object> searchContainerInventory(String docId,String searchValue, Pageable pageable) {
+        log.info("Searching container inventory, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+
+        StringBuilder where = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+
+        if (StringUtil.isNotBlank(searchValue)) {
+            List<String> conditions = new ArrayList<>();
+                        conditions.add("(UPPER(BL_NUMBER) LIKE UPPER('%' || ? || '%')" +
+                                " OR UPPER(CONTAINER_NO) LIKE UPPER('%' || ? || '%')" +
+                                " OR UPPER(LINE) LIKE UPPER('%' || ? || '%')" +
+                                " OR UPPER(EQUIPMENT_ISO_TYPE) LIKE UPPER('%' || ? || '%'))");
+                        String val = searchValue.trim();
+                        params.add(val); params.add(val); params.add(val); params.add(val);
+
+            if (!conditions.isEmpty()) {
+                where.append(" WHERE ").append(String.join(" AND ", conditions));
+            }
+        }
+
+        long offset = (long) pageable.getPageNumber() * pageable.getPageSize();
+        long limit = offset + pageable.getPageSize();
+
+        String dataQuery = "SELECT * FROM (SELECT a.*, ROWNUM rn FROM (" +
+                "SELECT * FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where +
+                ") a WHERE ROWNUM <= ?) WHERE rn > ?";
+        String countQuery = "SELECT COUNT(*) FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where;
+
+        List<Object> dataParams = new ArrayList<>(params);
+        dataParams.add(limit);
+        dataParams.add(offset);
+
+        List<Map<String, Object>> records = jdbcTemplate.queryForList(dataQuery, dataParams.toArray());
+        Long total = jdbcTemplate.queryForObject(countQuery, params.toArray(), Long.class);
+        records.forEach(row -> row.remove("RN"));
+
+        long totalCount = total != null ? total : 0L;
+
+        Page<Map<String, Object>> page2 = new PageImpl<>(records, pageable, totalCount);
+        return PaginationUtil.wrapPage(page2,null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public BookingFormDto getBookingForm(Long id) {
         log.info("Getting booking form with id: {}", id);
 
@@ -117,7 +164,20 @@ public class BookingFormServiceImpl implements BookingFormService {
         BookingFormDto dto = BookingFormMapper.mapToDto(entity);
 
         // Map detail tables
-        dto.setCargoDetails(BookingFormMapper.mapCargoDtlListToDto(cargoDetails));
+        List<BookingFormCargoDetailDto> cargoDetailResponse=BookingFormMapper.mapCargoDtlListToDto(cargoDetails).stream().map(val->{
+            val.setEquipmentIsoTypeDet(val.getEquipmentIsoType()!=null?commonLovService.getLovItemByCodeFast(val.getEquipmentIsoType(),"CONTAINER_TYPE_MASTER_MATE"):null);
+            return val;
+        }).toList();
+        dto.setCargoDetails(cargoDetailResponse);
+
+        List<BookingFormContainerDetailDto> containerDetailResponse = BookingFormMapper.mapContainerDtlListToDto(containerDetails).stream().map(val->{
+            val.setEquipmentIsoTypeDet(val.getEquipmentIsoType()!=null?commonLovService.getLovItemByCodeFast(val.getEquipmentIsoType(),"CONTAINER_TYPE_MASTER_MATE"):null);
+            val.setImcoClassTypeDet(val.getImcoClassType()!=null?commonLovService.getLovItemByCodeFast(val.getImcoClassType(), "IMCO_CLASS"):null);
+            val.setOogTypeDet(val.getOogType()!=null?commonLovService.getLovItemByCodeFast(val.getOogType(),"OOG_TYPE"):null);
+            return val;
+
+        }).toList();
+        dto.setContainerDetails(containerDetailResponse);
         dto.setChargesDetails(BookingFormMapper.mapChargesDtlListToDto(chargesDetails));
         dto.setContainerDetails(BookingFormMapper.mapContainerDtlListToDto(containerDetails));
         // Enrich with LOV data

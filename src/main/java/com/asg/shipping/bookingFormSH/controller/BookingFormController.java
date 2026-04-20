@@ -8,11 +8,13 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.salesinvoice.service.SalesInvoiceShippingService;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
 import com.asg.shipping.bookingFormSH.service.BookingFormService;
 import com.asg.shipping.portmaster.dto.PortMasterResponse;
+import com.asg.shipping.salesinvoice.dto.CustomerAddressResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -43,6 +45,7 @@ public class BookingFormController {
     private final BookingFormService bookingFormService;
     private final ExcelExportService excelExportService;
     private final LoggingService loggingService;
+    private final SalesInvoiceShippingService salesInvoiceShippingService;
 
     private static final String FAILEDTOGENERATEPDF = "Failed to generate PDF: ";
     private static final String FAILEDTOGENERATEPDFFORBOOKINGFORM = "Failed to generate PDF for Banking Form SH: {}";
@@ -231,5 +234,52 @@ public class BookingFormController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(summary = "Search Container Inventory Empty In",
+            description = "Fetches paginated records from VW_CONTAINER_INVENTORY_EMPTYIN with filter and search support. " +
+                    "Use 'filters' array for field-level filtering (BL_NUMBER, CONTAINER_NO, LINE, EQUIPMENT_ISO_TYPE) " +
+                    "or 'searchField'/'searchValue' for single field / GLOBALSEARCH.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Records retrieved successfully",
+                            content = @Content(mediaType = "application/json")),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized")
+            },
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @PostMapping("/container-inventory/search")
+    public ResponseEntity<?> searchContainerInventory(
+            @ParameterObject Pageable pageable,
+            @RequestParam(required = false) String searchValue) {
+
+        Map<String, Object> result = bookingFormService.searchContainerInventory(
+                UserContext.getDocumentId(), searchValue, pageable);
+
+        return success("Container inventory records retrieved successfully", result);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Customer Address (DocId: 100-140)",
+            description = "Retrieve customer address details for a specific address type (MAIN, DELIVERY, etc.).",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Customer address retrieved successfully"),
+                    @ApiResponse(responseCode = "404", description = "Address not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            },
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/customer-address/{addressMasterPoid}")
+    public ResponseEntity<?> getCustomerAddress(
+            @Parameter(description = "Address Master POID", required = true, example = "111")
+            @PathVariable Long addressMasterPoid,
+            @Parameter(description = "Address Type (MAIN, DELIVERY, etc.)", required = false, example = "MAIN")
+            @RequestParam(required = false, defaultValue = "MAIN") String addressType) {
+        try {
+            log.info("Get customer address request for addressMasterPoid: {}, addressType: {}", addressMasterPoid, addressType);
+            CustomerAddressResponseDTO result = salesInvoiceShippingService.getCustomerAddress(addressMasterPoid, addressType);
+            return success("Customer address retrieved successfully", result);
+        } catch (Exception e) {
+            return internalServerError("Error fetching customer address: " + e.getMessage());
+        }
+    }
 
 }

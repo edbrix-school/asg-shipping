@@ -62,4 +62,6 @@ public interface BookingFormService {
 	byte[] cntEmptyBookingPrintForm(Long transactionPoid) throws Exception;
 	
 	byte[] cntReturnBookingPrintFormAll(Long transactionPoid, String printStamp) throws Exception;
+
+	Map<String, Object> searchContainerInventory(String docId, String searchValue, Pageable pageable);
 }
