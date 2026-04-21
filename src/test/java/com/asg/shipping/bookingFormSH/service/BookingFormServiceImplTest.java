@@ -17,6 +17,7 @@ import com.asg.shipping.bookingFormSH.repository.ShipMateChargesDtlRepository;
 import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
 import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
 import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
 import net.sf.jasperreports.engine.JasperReport;
@@ -65,6 +66,10 @@ class BookingFormServiceImplTest {
     private ShipMateChargesDtlRepository chargesRepo;
     @Mock
     private ShipMateContainerDtlRepository containerRepo;
+
+    @Mock
+    private GlobalAddressDetailsRepository globalAddressDetailsRepository;
+
     @Mock
     private BookingFormLovService lovService;
 
@@ -91,6 +96,7 @@ class BookingFormServiceImplTest {
         userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
         service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo,
+                globalAddressDetailsRepository,
                 lovService,commonLovService, documentService, jdbcTemplate, printService, dataSource, loggingService);
     }
 

@@ -3,6 +3,7 @@ package com.asg.shipping.bookingFormSH.dto;
 import java.math.BigDecimal;
 
 import com.asg.common.lib.dto.LovGetListDto;
+import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,7 +26,7 @@ public class BookingFormCargoDetailDto {
 	private BigDecimal volume;
 	private BigDecimal weight;
 	private String equipmentIsoType;
-	private LovGetListDto equipmentIsoTypeDet; // LOV data
+	private LovItem equipmentIsoTypeDet; // LOV data
 	private String isImco;
 	private String imo;
 	private String isOog;

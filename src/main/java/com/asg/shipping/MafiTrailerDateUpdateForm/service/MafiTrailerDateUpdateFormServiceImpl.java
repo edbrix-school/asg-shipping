@@ -89,7 +89,7 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
                 || !Objects.equals(headerDto.getRemarks(), headerEntity.getRemarks())) {
 
             mapper.updateShipBlMafiHdr(headerEntity, request, userId);
-            headerRepository.updateByTransactionPoid(headerEntity.getTransactionPoid(),
+            headerRepository.updateByTransactionPoid(headerEntity.getTransactionPoid(),headerEntity.getTransactionDate(),
                     headerEntity.getAgentReference(), headerEntity.getRemarks(), userId);
         }
 

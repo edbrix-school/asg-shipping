@@ -22,6 +22,8 @@ import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
 import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
 import com.asg.shipping.bookingFormSH.util.BookingFormMapper;
 import com.asg.shipping.bookingFormSH.util.TriConsumer;
+import com.asg.shipping.common.entity.GlobalAddressDetails;
+import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +67,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final ShipMateCargoDtlRepository cargoDtlRepository;
     private final ShipMateChargesDtlRepository chargesDtlRepository;
     private final ShipMateContainerDtlRepository containerDtlRepository;
+    private final GlobalAddressDetailsRepository globalAddressDetailsRepository;
     private final BookingFormLovService lovService;
     private final LovDataService commonLovService;
     private final DocumentSearchService documentService;
@@ -80,6 +83,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     private static final String ALLOCATESPLITBOOKING = "ALLOCATESPLITBOOKING";
     private static final String TRANSACTIONPOID = "transactionPoid";
     private static final String BOOKINGFORM = "Booking Form";
+
 
     @Override
     @Transactional(readOnly = true)
@@ -102,24 +106,30 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchContainerInventory(String docId,String searchValue, Pageable pageable) {
+    public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, String line, Pageable pageable) {
         log.info("Searching container inventory, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
 
         StringBuilder where = new StringBuilder();
         List<Object> params = new ArrayList<>();
+        List<String> conditions = new ArrayList<>();
 
-        if (StringUtil.isNotBlank(searchValue)) {
-            List<String> conditions = new ArrayList<>();
-                        conditions.add("(UPPER(BL_NUMBER) LIKE UPPER('%' || ? || '%')" +
-                                " OR UPPER(CONTAINER_NO) LIKE UPPER('%' || ? || '%')" +
-                                " OR UPPER(LINE) LIKE UPPER('%' || ? || '%')" +
-                                " OR UPPER(EQUIPMENT_ISO_TYPE) LIKE UPPER('%' || ? || '%'))");
-                        String val = searchValue.trim();
-                        params.add(val); params.add(val); params.add(val); params.add(val);
+        if (StringUtil.isNotBlank(containerNo)) {
+            conditions.add("UPPER(CONTAINER_NO) LIKE UPPER(?)");
+            params.add("%" + containerNo.trim() + "%");
+        }
 
-            if (!conditions.isEmpty()) {
-                where.append(" WHERE ").append(String.join(" AND ", conditions));
-            }
+        if (StringUtil.isNotBlank(equipmentIsoType)) {
+            conditions.add("UPPER(EQUIPMENT_ISO_TYPE) LIKE UPPER(?)");
+            params.add("%" + equipmentIsoType.trim() + "%");
+        }
+
+        if (StringUtil.isNotBlank(line)) {
+            conditions.add("UPPER(LINE) LIKE UPPER(?)");
+            params.add("%" + line.trim() + "%");
+        }
+
+        if (!conditions.isEmpty()) {
+            where.append(" WHERE ").append(String.join(" AND ", conditions));
         }
 
         long offset = (long) pageable.getPageNumber() * pageable.getPageSize();
@@ -164,20 +174,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         BookingFormDto dto = BookingFormMapper.mapToDto(entity);
 
         // Map detail tables
-        List<BookingFormCargoDetailDto> cargoDetailResponse=BookingFormMapper.mapCargoDtlListToDto(cargoDetails).stream().map(val->{
-            val.setEquipmentIsoTypeDet(val.getEquipmentIsoType()!=null?commonLovService.getLovItemByCodeFast(val.getEquipmentIsoType(),"CONTAINER_TYPE_MASTER_MATE"):null);
-            return val;
-        }).toList();
-        dto.setCargoDetails(cargoDetailResponse);
-
-        List<BookingFormContainerDetailDto> containerDetailResponse = BookingFormMapper.mapContainerDtlListToDto(containerDetails).stream().map(val->{
-            val.setEquipmentIsoTypeDet(val.getEquipmentIsoType()!=null?commonLovService.getLovItemByCodeFast(val.getEquipmentIsoType(),"CONTAINER_TYPE_MASTER_MATE"):null);
-            val.setImcoClassTypeDet(val.getImcoClassType()!=null?commonLovService.getLovItemByCodeFast(val.getImcoClassType(), "IMCO_CLASS"):null);
-            val.setOogTypeDet(val.getOogType()!=null?commonLovService.getLovItemByCodeFast(val.getOogType(),"OOG_TYPE"):null);
-            return val;
-
-        }).toList();
-        dto.setContainerDetails(containerDetailResponse);
+        dto.setCargoDetails(BookingFormMapper.mapCargoDtlListToDto(cargoDetails));
         dto.setChargesDetails(BookingFormMapper.mapChargesDtlListToDto(chargesDetails));
         dto.setContainerDetails(BookingFormMapper.mapContainerDtlListToDto(containerDetails));
         // Enrich with LOV data
@@ -827,6 +824,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         setLov(dto.getMateLoadVoyagePoid(), lovService::getVoyageMasterLov, dto::setMateLoadVoyagePoidDet);
 
+        enrichCargoDetails(dto);
         enrichChargeDetails(dto);
         enrichContainerDetails(dto);
     }
@@ -853,12 +851,38 @@ public class BookingFormServiceImpl implements BookingFormService {
         });
     }
 
+    private void enrichCargoDetails(BookingFormDto dto) {
+        if (dto.getChargesDetails() == null) return;
+
+        dto.getCargoDetails().forEach(cargo -> {
+            if(cargo.getEquipmentIsoType()!=null){
+                lovService.getEquipmentIsoTypeLov(cargo.getEquipmentIsoType()).stream().findFirst().ifPresent(cargo::setEquipmentIsoTypeDet);
+            }
+        });
+    }
+
     private void enrichContainerDetails(BookingFormDto dto) {
         if (dto.getContainerDetails() == null) return;
 
         dto.getContainerDetails().forEach(container -> {
             setLov(container.getComodityPoid(), lovService::getCommodityMasterLov, container::setComodityPoidDet);
             setLov(container.getDestinationPortPoid(), lovService::getPortMasterLov, container::setDestinationPortPoidDet);
+            if (container.getEquipmentIsoType() != null && !container.getEquipmentIsoType().isBlank())
+                lovService.getEquipmentIsoTypeLov(container.getEquipmentIsoType()).stream().findFirst().ifPresent(container::setEquipmentIsoTypeDet);
+            if (container.getImcoClassType() != null && !container.getImcoClassType().isBlank()) {
+                com.asg.shipping.common.dto.LovItem lov = new com.asg.shipping.common.dto.LovItem();
+                lov.setCode(container.getImcoClassType());
+                lov.setLabel(container.getImcoClassType());
+                lov.setDescription(container.getImcoClassType());
+                container.setImcoClassTypeDet(lov);
+            }
+            if (container.getOogType() != null && !container.getOogType().isBlank()) {
+                com.asg.shipping.common.dto.LovItem lov = new com.asg.shipping.common.dto.LovItem();
+                lov.setCode(container.getOogType());
+                lov.setLabel(container.getOogType());
+                lov.setDescription(container.getOogType());
+                container.setOogTypeDet(lov);
+            }
         });
     }
 
@@ -890,6 +914,38 @@ public class BookingFormServiceImpl implements BookingFormService {
         params.put("PRINT_STAMP", printStamp);
         params.put("ASG_STAMP", getClass().getClassLoader().getResource("jasper/Shipping/jpg/ASG_STAMP.jpg"));
         return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] cntReturnBookingPrintForm(Long transactionPoid, String printStamp, String containerNo) throws Exception {
+        String docId = UserContext.getDocumentId();
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
+        JasperReport mainReport = printService.load("Shipping/SH/Container_Return.jrxml");
+        params.put("CONTAINER_RETURN_SUBREPORT_1", printService.load("Shipping/SH/Container_Return_subreport1.jrxml"));
+        params.put("PRINT_STAMP", printStamp);
+        params.put("P_CONTAINERNO",containerNo);
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] cntReturnBookingPrintFormIndividual(Long transactionPoid, String printStamp, String containerNo) throws Exception {
+        String docId = UserContext.getDocumentId();
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
+        JasperReport mainReport = printService.load("Shipping/SH/Container_Return.jrxml");
+        params.put("CONTAINER_RETURN_SUBREPORT_1", printService.load("Shipping/SH/Container_Return_subreport1.jrxml"));
+        params.put("PRINT_STAMP", printStamp);
+        params.put("P_CONTAINERNO",containerNo);
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public BookingFormAddressMasterDto getCustomerAddress(Long addressMasterPoid, String addressType) {
+        GlobalAddressDetails entity= globalAddressDetailsRepository
+                .findByAddressMasterPoidAndAddressType(addressMasterPoid, addressType)
+                .orElseThrow(() -> new RuntimeException(
+                        "Address not found for poid: " + addressMasterPoid + " and type: " + addressType
+                ));
+        return BookingFormMapper.mapAddressList(entity);
     }
 
 }
