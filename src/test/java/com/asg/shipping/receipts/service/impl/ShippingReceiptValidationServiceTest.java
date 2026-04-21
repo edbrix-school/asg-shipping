@@ -68,7 +68,7 @@ public class ShippingReceiptValidationServiceTest {
                                 .blPoid(1001L)
                                 .token(12345L)
                                 .companyPoid(100L)
-                                .transactionDate(LocalDateTime.now())
+                                .transactionDate(LocalDate.now())
                                 .charges(Collections.singletonList(ReceiptCharges.builder()
                                                 .amount(new BigDecimal("100.00"))
                                                 .amountSelect("Y")

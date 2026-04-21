@@ -6,8 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
+import java.time.LocalDate;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -17,11 +16,11 @@ public class ReceiptAutoPopulateContainerDto {
 	private Long blPoid;
 	private String equipmentShipperOwn;
 	private String containerNo;
-	private LocalDateTime fromDate;
-	private LocalDateTime toDate;
+	private LocalDate fromDate;
+	private LocalDate toDate;
 	private Long days;
 	private BigDecimal demAmount;
 	private String equipmentIsoType;
 	private Long freeDays;
-	private LocalDateTime emptyIn;
+	private LocalDate emptyIn;
 }
