@@ -780,7 +780,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Long> loadContainerTypes(Long transactionPoid, String type) {
+    public List<com.asg.common.lib.dto.LovGetListDto> loadContainerTypes(Long transactionPoid, String type) {
         log.info("Loading container types for transactionPoid: {}, type: {}", transactionPoid, type);
 
         ShipLineTariffHdr hdr = tariffHdrRepository.findById(transactionPoid)
@@ -794,7 +794,21 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         List<Long> excluded = usedPoids.isEmpty() ? List.of(-1L) : usedPoids;
 
-        return lineMasterTypeRepository.findAvailableContainerTypePoids(hdr.getLinePoid(), excluded);
+        List<Long> availablePoids = lineMasterTypeRepository.findAvailableContainerTypePoids(hdr.getLinePoid(), excluded);
+
+        if (availablePoids.isEmpty()) return List.of();
+
+        return containerTypeRepository.findAllById(availablePoids).stream()
+                .map(ct -> {
+                    com.asg.common.lib.dto.LovGetListDto lov = new com.asg.common.lib.dto.LovGetListDto();
+                    lov.setPoid(ct.getContainerTypePoid());
+                    lov.setCode(ct.getContainerTypeCode());
+                    lov.setLabel(ct.getContainerTypeName());
+                    lov.setValue(ct.getContainerTypePoid());
+                    return lov;
+                })
+                .sorted(java.util.Comparator.comparing(com.asg.common.lib.dto.LovGetListDto::getCode))
+                .toList();
     }
 
     private Map<Long, ShipContainerTypeMaster> buildContainerTypeMap(

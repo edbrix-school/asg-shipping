@@ -1,5 +1,6 @@
 package com.asg.shipping.linetariffs.service;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -429,14 +430,20 @@ class LineTariffsServiceImplTest {
         ShipLineTariffImpDtl used = new ShipLineTariffImpDtl();
         used.setContainerTypePoid(22L);
 
+        ShipContainerTypeMaster ct = ShipContainerTypeMaster.builder()
+                .containerTypePoid(42L).containerTypeCode("2250").containerTypeName("20' Open Top").build();
+
         when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(used));
-        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), anyList()))
-                .thenReturn(List.of(42L, 49L));
+        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), anyList())).thenReturn(List.of(42L));
+        when(containerTypeRepository.findAllById(List.of(42L))).thenReturn(List.of(ct));
 
-        List<Long> result = service.loadContainerTypes(1L, "IMP");
+        List<LovGetListDto> result = service.loadContainerTypes(1L, "IMP");
 
-        assertEquals(List.of(42L, 49L), result);
+        assertEquals(1, result.size());
+        assertEquals(42L, result.get(0).getPoid());
+        assertEquals("2250", result.get(0).getCode());
+        assertEquals("20' Open Top", result.get(0).getLabel());
         verify(lineMasterTypeRepository).findAvailableContainerTypePoids(eq(10L), argThat(list -> list.contains(22L)));
     }
 
@@ -445,27 +452,34 @@ class LineTariffsServiceImplTest {
         ShipLineTariffExpDtl used = new ShipLineTariffExpDtl();
         used.setContainerTypePoid(66L);
 
+        ShipContainerTypeMaster ct = ShipContainerTypeMaster.builder()
+                .containerTypePoid(75L).containerTypeCode("4400").containerTypeName("40' DRY VAN").build();
+
         when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
         when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(used));
-        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), anyList()))
-                .thenReturn(List.of(75L, 96L));
+        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), anyList())).thenReturn(List.of(75L));
+        when(containerTypeRepository.findAllById(List.of(75L))).thenReturn(List.of(ct));
 
-        List<Long> result = service.loadContainerTypes(1L, "EXP");
+        List<LovGetListDto> result = service.loadContainerTypes(1L, "EXP");
 
-        assertEquals(List.of(75L, 96L), result);
+        assertEquals(1, result.size());
+        assertEquals(75L, result.get(0).getPoid());
         verify(lineMasterTypeRepository).findAvailableContainerTypePoids(eq(10L), argThat(list -> list.contains(66L)));
     }
 
     @Test
     void loadContainerTypes_NoExistingDetails_UsesMinusOneFallback() {
+        ShipContainerTypeMaster ct = ShipContainerTypeMaster.builder()
+                .containerTypePoid(22L).containerTypeCode("2200").containerTypeName("20' DRY VAN").build();
+
         when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), eq(List.of(-1L))))
-                .thenReturn(List.of(22L, 42L, 49L));
+        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), eq(List.of(-1L)))).thenReturn(List.of(22L));
+        when(containerTypeRepository.findAllById(List.of(22L))).thenReturn(List.of(ct));
 
-        List<Long> result = service.loadContainerTypes(1L, "IMP");
+        List<LovGetListDto> result = service.loadContainerTypes(1L, "IMP");
 
-        assertEquals(3, result.size());
+        assertEquals(1, result.size());
         verify(lineMasterTypeRepository).findAvailableContainerTypePoids(10L, List.of(-1L));
     }
 

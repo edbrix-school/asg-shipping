@@ -92,6 +92,6 @@ public interface LineTariffsService {
      * @param type            "IMP" for Import Demurrage, "EXP" for Export Detention
      * @return List of available containerTypePoid values
      */
-    List<Long> loadContainerTypes(Long transactionPoid, String type);
+    List<com.asg.common.lib.dto.LovGetListDto> loadContainerTypes(Long transactionPoid, String type);
 }
 
