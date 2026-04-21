@@ -68,9 +68,7 @@ public interface BookingFormService {
 
 	byte[] cntReturnBookingPrintForm(Long transactionPoid, String printStamp, String containerNo) throws Exception;
 
-	byte[] cntReturnBookingPrintFormIndividual(Long transactionPoid, String printStamp, String containerNo) throws Exception;
-
-	Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, String line, Pageable pageable);
+	Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable);
 
 	BookingFormAddressMasterDto getCustomerAddress(Long poid, String type);
 

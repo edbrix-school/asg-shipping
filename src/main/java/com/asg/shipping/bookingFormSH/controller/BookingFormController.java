@@ -14,6 +14,7 @@ import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
 import com.asg.shipping.bookingFormSH.service.BookingFormService;
+import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.portmaster.dto.PortMasterResponse;
 import com.asg.shipping.salesinvoice.dto.CustomerAddressResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.util.StringUtil;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
@@ -237,10 +239,9 @@ public class BookingFormController {
     @GetMapping("/container/{transactionPoid}")
     public ResponseEntity<?> cntReturnBookingPrintForm(
             @Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid,
-            @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp,
-        @Parameter(description = "Container Number", example = "Y") @RequestParam String containerNo) {
+            @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp) {
         try {
-            byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, containerNo);
+            byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, null);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=container-" + transactionPoid + ".pdf")
@@ -256,9 +257,10 @@ public class BookingFormController {
     public ResponseEntity<?> cntReturnBookingPrintFormIndividual(
             @Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid,
             @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp,
-            @Parameter(description = "Container Number", example = "Y") @RequestParam String containerNo) {
+            @Parameter(description = "Container Number") @RequestParam(required = true) String containerNo) {
         try {
-            byte[] pdf = bookingFormService.cntReturnBookingPrintFormIndividual(transactionPoid, printStamp, containerNo);
+            if(StringUtil.isBlank(containerNo)) throw new ValidationException("Container number is required");
+            byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, containerNo);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=container-individual" + transactionPoid + ".pdf")
@@ -285,10 +287,10 @@ public class BookingFormController {
             @ParameterObject Pageable pageable,
             @RequestParam(required = false) String containerNo,
             @RequestParam(required = false) String isoType,
-            @RequestParam(required = false) String line) {
+            @RequestParam(required = true) Long linePoid) {
 
         Map<String, Object> result = bookingFormService.searchContainerInventory(
-                UserContext.getDocumentId(), containerNo, isoType, line, pageable);
+                UserContext.getDocumentId(), containerNo, isoType, linePoid, pageable);
 
         return success("Container inventory records retrieved successfully", result);
     }
