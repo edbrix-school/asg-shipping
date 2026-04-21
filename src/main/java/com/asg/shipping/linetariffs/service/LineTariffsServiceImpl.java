@@ -109,6 +109,10 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         LineTariffDto dto = mapper.mapToDto(tariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
 
+        // Legacy DocumentAfterView: disable period-from when only 1 tariff exists for this line
+        long tariffCountForLine = tariffHdrRepository.findLatestByLinePoidAndGroupPoid(tariff.getLinePoid(), groupPoid).size();
+        dto.setPeriodFromEditable(tariffCountForLine != 1);
+
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
         log.info("Successfully retrieved line tariff with id: {}", id);
@@ -259,6 +263,12 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 .filter(t -> !t.getTransactionPoid().equals(id))
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, "new copy"));
+
+        // Apply caller-supplied period/description overrides (legacy UI allowed overriding after copy)
+        if (request.getPeriodFrom() != null) newTariff.setPeriodFrom(request.getPeriodFrom());
+        if (request.getPeriodTo() != null) newTariff.setPeriodTo(request.getPeriodTo());
+        if (request.getDescription() != null) newTariff.setDescription(request.getDescription());
+        tariffHdrRepository.save(newTariff);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), newTariff.getTransactionPoid().toString());
 

@@ -76,6 +76,8 @@ public class LineTariffCreateDTO {
 
     private Integer seqno;
 
+    private String extraTariff;
+
     @Valid
     private List<TariffDetailCreateDTO> importDemurrageCollectable;
 

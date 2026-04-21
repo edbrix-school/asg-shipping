@@ -44,11 +44,15 @@ public class LineTariffDto {
     private String docRef;
     private Long companyPoid;
     private Integer seqno;
+    private String extraTariff;
     private String createdBy;
     private LocalDateTime createdDate;
     private String lastModifiedBy;
     private LocalDateTime lastModifiedDate;
     private String deleted;
+
+    // UI hint: disable period-from editing when only one tariff exists for this line
+    private Boolean periodFromEditable;
 
     // Detail records
     private List<TariffDetailDto> importDemurrageCollectable;
