@@ -2,11 +2,13 @@ package com.asg.shipping.linetariffs.repository;
 
 import com.asg.shipping.linetariffs.entity.ShipLineTariffHdr;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -53,5 +55,12 @@ public interface ShipLineTariffHdrRepository extends JpaRepository<ShipLineTarif
             @Param("periodTo") LocalDate periodTo,
             @Param("excludeTransactionPoid") Long excludeTransactionPoid
     );
+
+    @Modifying
+    @Query(value = "BEGIN COPY_LINE_TARIFF(:transactionPoid); END;", nativeQuery = true)
+    void callCopyLineTariff(@Param("transactionPoid") Long transactionPoid);
+
+    @Query("SELECT t FROM ShipLineTariffHdr t WHERE t.linePoid = :linePoid AND t.groupPoid = :groupPoid AND t.deleted = 'N' ORDER BY t.transactionPoid DESC")
+    List<ShipLineTariffHdr> findLatestByLinePoidAndGroupPoid(@Param("linePoid") Long linePoid, @Param("groupPoid") Long groupPoid);
 }
 

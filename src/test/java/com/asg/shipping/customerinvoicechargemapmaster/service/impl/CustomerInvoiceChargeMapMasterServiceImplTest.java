@@ -127,18 +127,30 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         request.setDetails(List.of(detailDto));
 
         when(masterRepo.existsById(1L)).thenReturn(false);
-        when(masterRepo.findById(1L)).thenReturn(Optional.empty());
 
         CustomerInvoicePrtMasterEntity created = new CustomerInvoicePrtMasterEntity();
         created.setCustomerPoid(1L);
         created.setGroupPoid(2L);
         created.setDeleted("N");
+        // first call: Optional.empty() triggers orElseGet -> createMaster
+        // second call (inside getByCustomer): returns the created entity
+        when(masterRepo.findById(1L)).thenReturn(Optional.empty(), Optional.of(created));
         when(masterRepo.save(any(CustomerInvoicePrtMasterEntity.class))).thenReturn(created);
 
         when(detailRepo.findMaxDetRowId(1L)).thenReturn(null); // => detRowId should become 1
 
         when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.empty());
         when(detailRepo.save(any(CustomerInvoicePrtDtlEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CustomerInvoicePrtDtlEntity savedDetail = new CustomerInvoicePrtDtlEntity();
+        CustomerInvoicePrtDtlId savedId = new CustomerInvoicePrtDtlId();
+        savedId.setCustomerPoid(1L);
+        savedId.setDetRowId(1L);
+        savedDetail.setId(savedId);
+        savedDetail.setChargePoid(100L);
+        savedDetail.setLineChargeDescription("Charge");
+        savedDetail.setValidUntil(LocalDate.of(2026, 12, 31));
+        when(detailRepo.findByIdCustomerPoid(1L)).thenReturn(List.of(savedDetail));
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
@@ -175,6 +187,16 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class)))
                 .thenReturn(Optional.of(new CustomerInvoicePrtDtlEntity()));
         when(detailRepo.save(any(CustomerInvoicePrtDtlEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CustomerInvoicePrtDtlEntity savedDetail = new CustomerInvoicePrtDtlEntity();
+        CustomerInvoicePrtDtlId savedId = new CustomerInvoicePrtDtlId();
+        savedId.setCustomerPoid(1L);
+        savedId.setDetRowId(5L);
+        savedDetail.setId(savedId);
+        savedDetail.setChargePoid(100L);
+        savedDetail.setLineChargeDescription("Charge");
+        savedDetail.setValidUntil(LocalDate.of(2026, 12, 31));
+        when(detailRepo.findByIdCustomerPoid(1L)).thenReturn(List.of(savedDetail));
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");

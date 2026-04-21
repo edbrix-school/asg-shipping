@@ -92,6 +92,9 @@ public class ShipLineTariffHdr extends BaseEntity {
     @Column(name = "SEQNO")
     private Integer seqno;
 
+    @Column(name = "EXTRA_TARIFF", length = 1)
+    private String extraTariff;
+
     @PrePersist
     protected void onCreate() {
 

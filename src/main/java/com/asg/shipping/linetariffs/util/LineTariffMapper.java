@@ -71,6 +71,7 @@ public class LineTariffMapper {
                 .docRef(entity.getDocRef())
                 .companyPoid(entity.getCompanyPoid())
                 .seqno(entity.getSeqno())
+                .extraTariff(entity.getExtraTariff())
                 .createdBy(entity.getCreatedBy())
                 .createdDate(entity.getCreatedDate())
                 .lastModifiedBy(entity.getLastModifiedBy())
@@ -243,6 +244,7 @@ public class LineTariffMapper {
         entity.setDocRef(dto.getDocRef());
         entity.setCompanyPoid(dto.getCompanyPoid());
         entity.setSeqno(dto.getSeqno());
+        entity.setExtraTariff(dto.getExtraTariff() != null ? dto.getExtraTariff() : "N");
 
         // Set deleted flag
         entity.setDeleted("N");
@@ -271,6 +273,7 @@ public class LineTariffMapper {
         setIfNotNull(dto.getDocRef(), entity::setDocRef);
         setIfNotNull(dto.getCompanyPoid(), entity::setCompanyPoid);
         setIfNotNull(dto.getSeqno(), entity::setSeqno);
+        setIfNotNull(dto.getExtraTariff(), entity::setExtraTariff);
 
         // Update audit fields
         entity.setLastModifiedBy(getCurrentUser());

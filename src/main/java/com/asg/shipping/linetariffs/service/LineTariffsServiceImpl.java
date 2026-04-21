@@ -13,10 +13,12 @@ import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.*;
 import com.asg.shipping.linetariffs.entity.*;
+import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,6 +62,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
     private final ShipContainerTypeMasterRepository containerTypeRepository;
+    private final ShipLineMasterTypeRepository lineMasterTypeRepository;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -105,6 +110,10 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
         LineTariffDto dto = mapper.mapToDto(tariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
+
+        // Legacy DocumentAfterView: disable period-from when only 1 tariff exists for this line
+        long tariffCountForLine = tariffHdrRepository.findLatestByLinePoidAndGroupPoid(tariff.getLinePoid(), groupPoid).size();
+        dto.setPeriodFromEditable(tariffCountForLine != 1);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
 
@@ -161,7 +170,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     }
 
     @Override
-    @Transactional
+    @Transactional(timeout = 120)
     public LineTariffDto updateLineTariff(Long id, LineTariffUpdateDTO dto, Long groupPoid, Long userPoid) {
         log.info("Updating line tariff with id: {}", id);
 
@@ -241,80 +250,57 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     public LineTariffDto copyLineTariff(Long id, CopyTariffRequestDTO request, Long groupPoid, Long userPoid) {
         log.info("Copying line tariff with id: {} to new period: {} to {}", id, request.getPeriodFrom(), request.getPeriodTo());
 
-        // Find source tariff
-        ShipLineTariffHdr sourceTariff = tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
+        // Validate source exists
+        tariffHdrRepository.findByTransactionPoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, id.toString()));
 
-        // Validate period dates first
-        if (request.getPeriodFrom().isAfter(request.getPeriodTo())) {
-            throw new ValidationException("Period from date must be less than or equal to period to date");
+        // Call stored procedure — handles sequence, header + all 4 detail table copies atomically
+        // Proc uses PRAGMA AUTONOMOUS_TRANSACTION + COMMIT, so clear JPA cache to see the new row
+        tariffHdrRepository.callCopyLineTariff(id);
+        entityManager.flush();
+        entityManager.clear();
+
+        // Fetch the newly created tariff (max transaction_poid for same line)
+        ShipLineTariffHdr sourceTariff = tariffHdrRepository.findById(id).get();
+        List<ShipLineTariffHdr> latest = tariffHdrRepository.findLatestByLinePoidAndGroupPoid(
+                sourceTariff.getLinePoid(), groupPoid);
+        ShipLineTariffHdr newTariff = latest.stream()
+                .filter(t -> !t.getTransactionPoid().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, "new copy"));
+
+        // Apply caller-supplied period/description overrides (legacy UI allowed overriding after copy)
+        if (request.getDescription() != null) newTariff.setDescription(request.getDescription());
+        if (request.getPeriodFrom() != null || request.getPeriodTo() != null) {
+            LocalDate newFrom = request.getPeriodFrom() != null ? request.getPeriodFrom() : newTariff.getPeriodFrom();
+            LocalDate newTo = request.getPeriodTo() != null ? request.getPeriodTo() : newTariff.getPeriodTo();
+            // Validate the override period doesn't overlap with any existing tariff (excluding the new copy itself)
+            if (newFrom != null && newTo != null) {
+                if (newFrom.isAfter(newTo)) {
+                    throw new ValidationException("Period from date must be less than or equal to period to date");
+                }
+                Long companyPoid = UserContext.getCompanyPoid();
+                if (tariffHdrRepository.existsOverlappingPeriod(
+                        newTariff.getLinePoid(), groupPoid, companyPoid,
+                        newFrom, newTo, newTariff.getTransactionPoid())) {
+                    throw new ValidationException("Period overlaps with an existing tariff for the same line");
+                }
+            }
+            newTariff.setPeriodFrom(newFrom);
+            newTariff.setPeriodTo(newTo);
         }
+        tariffHdrRepository.save(newTariff);
 
-        // Validate new period does not overlap
-        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
-        if (tariffHdrRepository.existsOverlappingPeriod(
-                sourceTariff.getLinePoid(),
-                groupPoid,
-                companyPoid,
-                request.getPeriodFrom(),
-                request.getPeriodTo(),
-                null)) {
-            throw new ValidationException("New period overlaps with an existing tariff for the same line");
-        }
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), newTariff.getTransactionPoid().toString());
 
-        // Update source tariff PERIOD_TO to new PERIOD_FROM - 1 day
-        LocalDate newPeriodTo = request.getPeriodFrom().minusDays(1);
-        if (!newPeriodTo.isAfter(sourceTariff.getPeriodFrom()) && !newPeriodTo.isEqual(sourceTariff.getPeriodFrom())) {
-            throw new ValidationException("New period from date would invalidate the source tariff period");
-        }
-        sourceTariff.setPeriodTo(newPeriodTo);
-        sourceTariff.setLastModifiedBy(getCurrentUser());
-        sourceTariff.setLastModifiedDate(LocalDateTime.now());
-        tariffHdrRepository.save(sourceTariff);
+        List<ShipLineTariffImpDtl> impDtlList = impDtlRepository.findByTransactionPoidOrderByDetRowId(newTariff.getTransactionPoid());
+        List<ShipLineTariffImpPayDtl> impPayDtlList = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(newTariff.getTransactionPoid());
+        List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(newTariff.getTransactionPoid());
+        List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(newTariff.getTransactionPoid());
 
-        // Create new tariff header
-        ShipLineTariffHdr newTariff = new ShipLineTariffHdr();
-        newTariff.setGroupPoid(sourceTariff.getGroupPoid());
-        newTariff.setLinePoid(sourceTariff.getLinePoid());
-        newTariff.setDescription(request.getDescription() != null ? request.getDescription() : sourceTariff.getDescription());
-        newTariff.setPeriodFrom(request.getPeriodFrom());
-        newTariff.setPeriodTo(request.getPeriodTo());
-        newTariff.setDmgFromSameday(sourceTariff.getDmgFromSameday());
-        newTariff.setDmgFromNextday(sourceTariff.getDmgFromNextday());
-        newTariff.setDmgSkipHolidays(sourceTariff.getDmgSkipHolidays());
-        newTariff.setDmgSkipWeekends(sourceTariff.getDmgSkipWeekends());
-        newTariff.setDmgBaseslabAfterFree(sourceTariff.getDmgBaseslabAfterFree());
-        newTariff.setDtnFromSameday(sourceTariff.getDtnFromSameday());
-        newTariff.setDtnFromNextday(sourceTariff.getDtnFromNextday());
-        newTariff.setDtnSkipHolidays(sourceTariff.getDtnSkipHolidays());
-        newTariff.setDtnSkipWeekends(sourceTariff.getDtnSkipWeekends());
-        newTariff.setDtnBaseslabAfterFree(sourceTariff.getDtnBaseslabAfterFree());
-        newTariff.setPayableCurrency(sourceTariff.getPayableCurrency());
-        newTariff.setReceivableCurrency(sourceTariff.getReceivableCurrency());
-        newTariff.setDocRef(null); // Clear DOC_REF for new tariff
-        newTariff.setCompanyPoid(sourceTariff.getCompanyPoid());
-        newTariff.setSeqno(sourceTariff.getSeqno());
-        newTariff.setCreatedBy(getCurrentUser());
-        newTariff.setCreatedDate(LocalDateTime.now());
-        newTariff.setLastModifiedBy(getCurrentUser());
-        newTariff.setLastModifiedDate(LocalDateTime.now());
-        newTariff.setDeleted("N");
-
-        ShipLineTariffHdr savedNewTariff = tariffHdrRepository.save(newTariff);
-
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), savedNewTariff.getTransactionPoid().toString());
-
-        // Copy all detail records
-        copyDetailRecords(id, savedNewTariff.getTransactionPoid());
-
-        // Fetch all detail records for response
-        List<ShipLineTariffImpDtl> impDtlList = impDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
-        List<ShipLineTariffImpPayDtl> impPayDtlList = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
-        List<ShipLineTariffExpDtl> expDtlList = expDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
-        List<ShipLineTariffExpPayDtl> expPayDtlList = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(savedNewTariff.getTransactionPoid());
-
-        LineTariffDto result = mapper.mapToDto(savedNewTariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList, buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
-        log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, savedNewTariff.getTransactionPoid());
+        LineTariffDto result = mapper.mapToDto(newTariff, impDtlList, impPayDtlList, expDtlList, expPayDtlList,
+                buildContainerTypeMap(impDtlList, impPayDtlList, expDtlList, expPayDtlList));
+        log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, newTariff.getTransactionPoid());
         return result;
     }
 
@@ -371,16 +357,34 @@ public class LineTariffsServiceImpl implements LineTariffsService {
      * Update detail records for all four detail tables
      */
     private void updateDetailRecords(Long transactionPoid, LineTariffUpdateDTO dto) {
-        // Update Import Demurrage Collectable
+        // Collect deleted detRowIds from collectable tables to cascade to payable
+        Set<Long> deletedImpDetRowIds = dto.getImportDemurrageCollectable() == null ? Set.of() :
+                dto.getImportDemurrageCollectable().stream()
+                        .filter(d -> "isDeleted".equalsIgnoreCase(d.getActionType()) && d.getDetRowId() != null)
+                        .map(TariffDetailUpdateDTO::getDetRowId)
+                        .collect(Collectors.toSet());
+
+        Set<Long> deletedExpDetRowIds = dto.getExportDetentionCollectable() == null ? Set.of() :
+                dto.getExportDetentionCollectable().stream()
+                        .filter(d -> "isDeleted".equalsIgnoreCase(d.getActionType()) && d.getDetRowId() != null)
+                        .map(TariffDetailUpdateDTO::getDetRowId)
+                        .collect(Collectors.toSet());
+
+        // Cascade deletes to payable lists
+        if (!deletedImpDetRowIds.isEmpty() && dto.getImportDemurragePayable() != null) {
+            dto.getImportDemurragePayable().stream()
+                    .filter(d -> deletedImpDetRowIds.contains(d.getDetRowId()))
+                    .forEach(d -> d.setActionType("isDeleted"));
+        }
+        if (!deletedExpDetRowIds.isEmpty() && dto.getExportDetentionPayable() != null) {
+            dto.getExportDetentionPayable().stream()
+                    .filter(d -> deletedExpDetRowIds.contains(d.getDetRowId()))
+                    .forEach(d -> d.setActionType("isDeleted"));
+        }
+
         updateDetailRecordsImpDtl(transactionPoid, dto.getImportDemurrageCollectable());
-
-        // Update Import Demurrage Payable
         updateDetailRecordsImpPayDtl(transactionPoid, dto.getImportDemurragePayable());
-
-        // Update Export Detention Collectable
         updateDetailRecordsExpDtl(transactionPoid, dto.getExportDetentionCollectable());
-
-        // Update Export Detention Payable
         updateDetailRecordsExpPayDtl(transactionPoid, dto.getExportDetentionPayable());
     }
 
@@ -388,172 +392,100 @@ public class LineTariffsServiceImpl implements LineTariffsService {
      * Update Import Demurrage Collectable detail records
      */
     private void updateDetailRecordsImpDtl(Long transactionPoid, List<TariffDetailUpdateDTO> detailDtos) {
-        if (detailDtos == null) {
-            detailDtos = java.util.Collections.emptyList();
-        }
-
-        List<ShipLineTariffImpDtl> existingDetails = impDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        Set<Long> existingDetRowIds = existingDetails.stream()
-                .map(ShipLineTariffImpDtl::getDetRowId)
-                .collect(Collectors.toSet());
-
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .map(TariffDetailUpdateDTO::getDetRowId)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        // Delete details not in request
-        List<Long> toDelete = existingDetRowIds.stream()
-                .filter(id -> !requestDetRowIds.contains(id))
-                .toList();
-        for (Long detRowId : toDelete) {
-            impDtlRepository.deleteById(new ShipLineTariffImpDtlId(transactionPoid, detRowId));
-        }
-
-        // Update or create details
-        Long maxDetRowId = impDtlRepository.getMaxDetRowId(transactionPoid);
-        for (TariffDetailUpdateDTO detailDto : detailDtos) {
-            validateContainerTypeExists(detailDto.getContainerTypePoid());
-            if (detailDto.getDetRowId() != null) {
-                ShipLineTariffImpDtl existing = impDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-                mapper.updateImpDtlFromDTO(detailDto, existing);
-                impDtlRepository.save(existing);
-            } else {
-                maxDetRowId++;
-                ShipLineTariffImpDtl newDetail = mapper.mapImpDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
-                impDtlRepository.save(newDetail);
+        if (detailDtos == null) detailDtos = java.util.Collections.emptyList();
+        Map<Long, ShipLineTariffImpDtl> existingMap = impDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)
+                .stream().collect(Collectors.toMap(ShipLineTariffImpDtl::getDetRowId, e -> e));
+        List<ShipLineTariffImpDtl> toDelete = new ArrayList<>();
+        List<ShipLineTariffImpDtl> toSave = new ArrayList<>();
+        long maxDetRowId = existingMap.keySet().stream().mapToLong(Long::longValue).max().orElse(0L);
+        for (TariffDetailUpdateDTO dto : detailDtos) {
+            String action = dto.getActionType() != null ? dto.getActionType().toLowerCase() : "";
+            switch (action) {
+                case "isdeleted" -> { if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) toDelete.add(existingMap.get(dto.getDetRowId())); }
+                case "iscreated", "isupdated", "" -> {
+                    if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) {
+                        ShipLineTariffImpDtl e = existingMap.get(dto.getDetRowId()); mapper.updateImpDtlFromDTO(dto, e); toSave.add(e);
+                    } else { toSave.add(mapper.mapImpDtlUpdateDTOToEntity(dto, transactionPoid, ++maxDetRowId)); }
+                }
             }
         }
+        if (!toDelete.isEmpty()) impDtlRepository.deleteAllInBatch(toDelete);
+        if (!toSave.isEmpty()) impDtlRepository.saveAll(toSave);
     }
 
     /**
      * Update Import Demurrage Payable detail records
      */
     private void updateDetailRecordsImpPayDtl(Long transactionPoid, List<TariffDetailUpdateDTO> detailDtos) {
-        if (detailDtos == null) {
-            detailDtos = java.util.Collections.emptyList();
-        }
-
-        List<ShipLineTariffImpPayDtl> existingDetails = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        Set<Long> existingDetRowIds = existingDetails.stream()
-                .map(ShipLineTariffImpPayDtl::getDetRowId)
-                .collect(Collectors.toSet());
-
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .map(TariffDetailUpdateDTO::getDetRowId)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        // Delete details not in request
-        List<Long> toDelete = existingDetRowIds.stream()
-                .filter(id -> !requestDetRowIds.contains(id))
-                .toList();
-        for (Long detRowId : toDelete) {
-            impPayDtlRepository.deleteById(new ShipLineTariffImpPayDtlId(transactionPoid, detRowId));
-        }
-
-        // Update or create details
-        Long maxDetRowId = impPayDtlRepository.getMaxDetRowId(transactionPoid);
-        for (TariffDetailUpdateDTO detailDto : detailDtos) {
-            validateContainerTypeExists(detailDto.getContainerTypePoid());
-            if (detailDto.getDetRowId() != null) {
-                ShipLineTariffImpPayDtl existing = impPayDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-                mapper.updateImpPayDtlFromDTO(detailDto, existing);
-                impPayDtlRepository.save(existing);
-            } else {
-                maxDetRowId++;
-                ShipLineTariffImpPayDtl newDetail = mapper.mapImpPayDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
-                impPayDtlRepository.save(newDetail);
+        if (detailDtos == null) detailDtos = java.util.Collections.emptyList();
+        Map<Long, ShipLineTariffImpPayDtl> existingMap = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)
+                .stream().collect(Collectors.toMap(ShipLineTariffImpPayDtl::getDetRowId, e -> e));
+        List<ShipLineTariffImpPayDtl> toDelete = new ArrayList<>();
+        List<ShipLineTariffImpPayDtl> toSave = new ArrayList<>();
+        long maxDetRowId = existingMap.keySet().stream().mapToLong(Long::longValue).max().orElse(0L);
+        for (TariffDetailUpdateDTO dto : detailDtos) {
+            String action = dto.getActionType() != null ? dto.getActionType().toLowerCase() : "";
+            switch (action) {
+                case "isdeleted" -> { if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) toDelete.add(existingMap.get(dto.getDetRowId())); }
+                case "iscreated", "isupdated", "" -> {
+                    if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) {
+                        ShipLineTariffImpPayDtl e = existingMap.get(dto.getDetRowId()); mapper.updateImpPayDtlFromDTO(dto, e); toSave.add(e);
+                    } else { toSave.add(mapper.mapImpPayDtlUpdateDTOToEntity(dto, transactionPoid, ++maxDetRowId)); }
+                }
             }
         }
+        if (!toDelete.isEmpty()) impPayDtlRepository.deleteAllInBatch(toDelete);
+        if (!toSave.isEmpty()) impPayDtlRepository.saveAll(toSave);
     }
 
     /**
      * Update Export Detention Collectable detail records
      */
     private void updateDetailRecordsExpDtl(Long transactionPoid, List<TariffDetailUpdateDTO> detailDtos) {
-        if (detailDtos == null) {
-            detailDtos = java.util.Collections.emptyList();
-        }
-
-        List<ShipLineTariffExpDtl> existingDetails = expDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        Set<Long> existingDetRowIds = existingDetails.stream()
-                .map(ShipLineTariffExpDtl::getDetRowId)
-                .collect(Collectors.toSet());
-
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .map(TariffDetailUpdateDTO::getDetRowId)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        // Delete details not in request
-        List<Long> toDelete = existingDetRowIds.stream()
-                .filter(id -> !requestDetRowIds.contains(id))
-                .toList();
-        for (Long detRowId : toDelete) {
-            expDtlRepository.deleteById(new ShipLineTariffExpDtlId(transactionPoid, detRowId));
-        }
-
-        // Update or create details
-        Long maxDetRowId = expDtlRepository.getMaxDetRowId(transactionPoid);
-        for (TariffDetailUpdateDTO detailDto : detailDtos) {
-            validateContainerTypeExists(detailDto.getContainerTypePoid());
-            if (detailDto.getDetRowId() != null) {
-                ShipLineTariffExpDtl existing = expDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-                mapper.updateExpDtlFromDTO(detailDto, existing);
-                expDtlRepository.save(existing);
-            } else {
-                maxDetRowId++;
-                ShipLineTariffExpDtl newDetail = mapper.mapExpDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
-                expDtlRepository.save(newDetail);
+        if (detailDtos == null) detailDtos = java.util.Collections.emptyList();
+        Map<Long, ShipLineTariffExpDtl> existingMap = expDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)
+                .stream().collect(Collectors.toMap(ShipLineTariffExpDtl::getDetRowId, e -> e));
+        List<ShipLineTariffExpDtl> toDelete = new ArrayList<>();
+        List<ShipLineTariffExpDtl> toSave = new ArrayList<>();
+        long maxDetRowId = existingMap.keySet().stream().mapToLong(Long::longValue).max().orElse(0L);
+        for (TariffDetailUpdateDTO dto : detailDtos) {
+            String action = dto.getActionType() != null ? dto.getActionType().toLowerCase() : "";
+            switch (action) {
+                case "isdeleted" -> { if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) toDelete.add(existingMap.get(dto.getDetRowId())); }
+                case "iscreated", "isupdated", "" -> {
+                    if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) {
+                        ShipLineTariffExpDtl e = existingMap.get(dto.getDetRowId()); mapper.updateExpDtlFromDTO(dto, e); toSave.add(e);
+                    } else { toSave.add(mapper.mapExpDtlUpdateDTOToEntity(dto, transactionPoid, ++maxDetRowId)); }
+                }
             }
         }
+        if (!toDelete.isEmpty()) expDtlRepository.deleteAllInBatch(toDelete);
+        if (!toSave.isEmpty()) expDtlRepository.saveAll(toSave);
     }
 
     /**
      * Update Export Detention Payable detail records
      */
     private void updateDetailRecordsExpPayDtl(Long transactionPoid, List<TariffDetailUpdateDTO> detailDtos) {
-        if (detailDtos == null) {
-            detailDtos = java.util.Collections.emptyList();
-        }
-
-        List<ShipLineTariffExpPayDtl> existingDetails = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        Set<Long> existingDetRowIds = existingDetails.stream()
-                .map(ShipLineTariffExpPayDtl::getDetRowId)
-                .collect(Collectors.toSet());
-
-        Set<Long> requestDetRowIds = detailDtos.stream()
-                .map(TariffDetailUpdateDTO::getDetRowId)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        // Delete details not in request
-        List<Long> toDelete = existingDetRowIds.stream()
-                .filter(id -> !requestDetRowIds.contains(id))
-                .toList();
-        for (Long detRowId : toDelete) {
-            expPayDtlRepository.deleteById(new ShipLineTariffExpPayDtlId(transactionPoid, detRowId));
-        }
-
-        // Update or create details
-        Long maxDetRowId = expPayDtlRepository.getMaxDetRowId(transactionPoid);
-        for (TariffDetailUpdateDTO detailDto : detailDtos) {
-            validateContainerTypeExists(detailDto.getContainerTypePoid());
-            if (detailDto.getDetRowId() != null) {
-                ShipLineTariffExpPayDtl existing = expPayDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
-                        .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, detailDto.getDetRowId().toString()));
-                mapper.updateExpPayDtlFromDTO(detailDto, existing);
-                expPayDtlRepository.save(existing);
-            } else {
-                maxDetRowId++;
-                ShipLineTariffExpPayDtl newDetail = mapper.mapExpPayDtlUpdateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
-                expPayDtlRepository.save(newDetail);
+        if (detailDtos == null) detailDtos = java.util.Collections.emptyList();
+        Map<Long, ShipLineTariffExpPayDtl> existingMap = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)
+                .stream().collect(Collectors.toMap(ShipLineTariffExpPayDtl::getDetRowId, e -> e));
+        List<ShipLineTariffExpPayDtl> toDelete = new ArrayList<>();
+        List<ShipLineTariffExpPayDtl> toSave = new ArrayList<>();
+        long maxDetRowId = existingMap.keySet().stream().mapToLong(Long::longValue).max().orElse(0L);
+        for (TariffDetailUpdateDTO dto : detailDtos) {
+            String action = dto.getActionType() != null ? dto.getActionType().toLowerCase() : "";
+            switch (action) {
+                case "isdeleted" -> { if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) toDelete.add(existingMap.get(dto.getDetRowId())); }
+                case "iscreated", "isupdated", "" -> {
+                    if (dto.getDetRowId() != null && existingMap.containsKey(dto.getDetRowId())) {
+                        ShipLineTariffExpPayDtl e = existingMap.get(dto.getDetRowId()); mapper.updateExpPayDtlFromDTO(dto, e); toSave.add(e);
+                    } else { toSave.add(mapper.mapExpPayDtlUpdateDTOToEntity(dto, transactionPoid, ++maxDetRowId)); }
+                }
             }
         }
+        if (!toDelete.isEmpty()) expPayDtlRepository.deleteAllInBatch(toDelete);
+        if (!toSave.isEmpty()) expPayDtlRepository.saveAll(toSave);
     }
 
     /**
@@ -773,6 +705,23 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             if (tariffHdrRepository.existsByDocRef(trimmedDocRef)) {
                 throw new ValidationException("Document Reference " + trimmedDocRef + " already exists. Please use a different reference.");
             }
+        }
+    }
+
+    @Override
+    @Transactional(timeout = 120)
+    public void loadContainerTypes(Long transactionPoid, String type) {
+        log.info("Loading container types for transactionPoid: {}, type: {}", transactionPoid, type);
+
+        ShipLineTariffHdr hdr = tariffHdrRepository.findById(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, transactionPoid.toString()));
+
+        if ("IMP".equalsIgnoreCase(type)) {
+            impDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
+            impPayDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
+        } else {
+            expDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
+            expPayDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
         }
     }
 
