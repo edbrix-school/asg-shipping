@@ -86,12 +86,14 @@ public interface LineTariffsService {
     void copySlabsToPayable(Long id, String type);
 
     /**
-     * Load available container types for a tariff line, excluding already-used ones.
+     * Load container types into both collectable and payable detail tables.
+     * IMP: inserts into SHIP_LINE_TARIFF_IMP_DTL and SHIP_LINE_TARIFF_IMP_PAY_DTL
+     * EXP: inserts into SHIP_LINE_TARIFF_EXP_DTL and SHIP_LINE_TARIFF_EXP_PAY_DTL
      *
      * @param transactionPoid TRANSACTION_POID of the tariff header
      * @param type            "IMP" for Import Demurrage, "EXP" for Export Detention
-     * @return List of available containerTypePoid values
+     * @return Updated LineTariffDto
      */
-    List<com.asg.common.lib.dto.LovGetListDto> loadContainerTypes(Long transactionPoid, String type);
+    void loadContainerTypes(Long transactionPoid, String type);
 }
 

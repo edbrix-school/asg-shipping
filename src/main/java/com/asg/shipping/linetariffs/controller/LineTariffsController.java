@@ -342,8 +342,8 @@ public class LineTariffsController {
             @Parameter(description = "IMP for Import Demurrage, EXP for Export Detention", required = true)
             @RequestParam String type) {
         log.info("Loading container types for id: {}, type: {}", id, type);
-        List<com.asg.common.lib.dto.LovGetListDto> result = lineTariffsService.loadContainerTypes(id, type);
-        return ApiResponse.success("Container types loaded successfully", result);
+        lineTariffsService.loadContainerTypes(id, type);
+        return ApiResponse.success("Container types loaded successfully");
     }
 
     /**

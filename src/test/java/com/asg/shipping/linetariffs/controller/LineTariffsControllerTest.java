@@ -1,6 +1,5 @@
 package com.asg.shipping.linetariffs.controller;
 
-import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
@@ -270,9 +269,7 @@ class LineTariffsControllerTest {
 
     @Test
     void loadContainerTypes_IMP_Success() {
-        LovGetListDto lov = new LovGetListDto();
-        lov.setPoid(22L); lov.setCode("2200"); lov.setLabel("20' DRY VAN"); lov.setValue(22L);
-        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(List.of(lov));
+        doNothing().when(lineTariffsService).loadContainerTypes(1L, "IMP");
 
         ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
 
@@ -283,9 +280,7 @@ class LineTariffsControllerTest {
 
     @Test
     void loadContainerTypes_EXP_Success() {
-        LovGetListDto lov = new LovGetListDto();
-        lov.setPoid(66L); lov.setCode("4400"); lov.setLabel("40' DRY VAN"); lov.setValue(66L);
-        when(lineTariffsService.loadContainerTypes(1L, "EXP")).thenReturn(List.of(lov));
+        doNothing().when(lineTariffsService).loadContainerTypes(1L, "EXP");
 
         ResponseEntity<?> response = controller.loadContainerTypes(1L, "EXP");
 
@@ -296,7 +291,7 @@ class LineTariffsControllerTest {
 
     @Test
     void loadContainerTypes_ReturnsEmptyList_WhenAllUsed() {
-        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(List.of());
+        doNothing().when(lineTariffsService).loadContainerTypes(1L, "IMP");
 
         ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
 
