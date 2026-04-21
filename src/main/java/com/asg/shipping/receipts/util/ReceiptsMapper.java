@@ -203,6 +203,7 @@ public class ReceiptsMapper {
 				.container(mapContainerDtlListToDto(containers))
 				.charges(mapChargesDtlListToDto(charges))
 				.paymentDetail(mapPaymentDtlListToDto(payments))
+				.amount(entity.getRcptAmount() != null ? entity.getRcptAmount().longValue() : null)
 				.build();
 	}
 
@@ -223,7 +224,7 @@ public class ReceiptsMapper {
 				.paymentRef(dto.getPaymentReference())
 				.remarks(dto.getRemarks())
 				.tokenNumber(dto.getToken())
-				.rcptAmount(BigDecimal.valueOf(dto.getAmount()))
+				.rcptAmount(dto.getAmount() != null ? BigDecimal.valueOf(dto.getAmount()) : null)
 				.build();
 	}
 }
