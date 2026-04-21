@@ -1,6 +1,5 @@
 package com.asg.shipping.contractsandagreements.entity;
 
-
 import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -8,15 +7,14 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(
-        name = "ADMIN_CONTRACTS_AGREEMENT_HDR"
-)
+@Table(name = "ADMIN_CONTRACTS_AGREEMENT_HDR")
 public class AdminContractsAgreementHdr extends BaseEntity {
 
     @Id
@@ -24,7 +22,6 @@ public class AdminContractsAgreementHdr extends BaseEntity {
     @Column(name = "TRANSACTION_POID", nullable = false)
     @AuditIgnore
     private Long transactionPoid;
-
 
     @Column(name = "GROUP_POID", nullable = false)
     @AuditIgnore
@@ -62,7 +59,6 @@ public class AdminContractsAgreementHdr extends BaseEntity {
     @Column(name = "AGREEMENT_SOURCE", length = 20)
     private String agreementSource;
 
-
     @Column(name = "AGREEMENT_COMPANY_POID")
     private Long agreementCompanyPoid;
 
@@ -92,7 +88,6 @@ public class AdminContractsAgreementHdr extends BaseEntity {
 
     @Column(name = "PARTY_ADDRESS", length = 1000)
     private String partyAddress;
-
 
     @Column(name = "REFERENCE_DATE")
     private LocalDate referenceDate;

@@ -3,6 +3,8 @@ package com.asg.shipping.contractsandagreements.service;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementHdrDto;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalRequest;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 
@@ -18,4 +20,6 @@ public interface ContractsAndAgreementsService {
     Map<String, Object> list(FilterRequestDto filters, Pageable pageable);
 
     AdminContractsAgreementHdrDto updateContractsAndAgreements(Long id, @Valid AdminContractsAgreementHdrDto updateDTO);
+
+    ContractRenewalResponse renewContractsAndAgreements(@Valid ContractRenewalRequest renewalRequest);
 }

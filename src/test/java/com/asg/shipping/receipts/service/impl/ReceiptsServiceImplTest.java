@@ -235,8 +235,8 @@ public class ReceiptsServiceImplTest {
                 .blPoid(1001L)
                 .containerNo("CONT123")
                 .containerIsoType("20")
-                .fromDate(LocalDateTime.now())
-                .toDate(LocalDateTime.now().plusDays(5))
+                .fromDate(LocalDate.now())
+                .toDate(LocalDate.now().plusDays(5))
                 .build();
 
         TaxConfig taxConfig = TaxConfig.builder()
@@ -274,8 +274,8 @@ public class ReceiptsServiceImplTest {
     @Test
     void calculateDemurrage_InvalidDates() {
         ReceiptCalculateDemurrageRequestDto requestDto = ReceiptCalculateDemurrageRequestDto.builder()
-                .fromDate(LocalDateTime.now())
-                .toDate(LocalDateTime.now().minusDays(1))
+                .fromDate(LocalDate.now())
+                .toDate(LocalDate.now().minusDays(1))
                 .build();
 
         assertThrows(com.asg.common.lib.exception.ValidationException.class,
@@ -300,8 +300,8 @@ public class ReceiptsServiceImplTest {
                 .blPoid(1001L)
                 .containerNo("CONT123")
                 .containerIsoType("20")
-                .fromDate(LocalDateTime.now())
-                .toDate(LocalDateTime.now().plusDays(5))
+                .fromDate(LocalDate.now())
+                .toDate(LocalDate.now().plusDays(5))
                 .build();
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -233,8 +234,8 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
 
                             .containerNo((String) r[2])
 
-                            .fromDate(((LocalDateTime) r[3]))
-                            .toDate(((LocalDateTime) r[4]))
+                            .fromDate(((LocalDate) r[3]))
+                            .toDate(((LocalDate) r[4]))
 
                             .days(((Number) r[5]).longValue())
 
@@ -245,7 +246,7 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
                             .freeDays(((Number) r[8]).longValue())
 
                             .emptyIn(r[9] != null
-                                    ? ((LocalDateTime) r[9])
+                                    ? ((LocalDate) r[9])
                                     : null)
 
                             .build())
