@@ -106,7 +106,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable) {
+ 
     public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable) {
         log.info("Searching container inventory, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
 
