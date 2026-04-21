@@ -20,7 +20,8 @@ public interface ShipLineTariffExpPayDtlRepository extends JpaRepository<ShipLin
     /**
      * Find all detail records for a transaction, ordered by DET_ROW_ID
      */
-    List<ShipLineTariffExpPayDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
+    @Query("SELECT d FROM ShipLineTariffExpPayDtl d WHERE d.transactionPoid = :transactionPoid ORDER BY d.detRowId")
+    List<ShipLineTariffExpPayDtl> findByTransactionPoidOrderByDetRowId(@Param("transactionPoid") Long transactionPoid);
 
     /**
      * Find detail record by transaction and det row id
@@ -53,5 +54,8 @@ public interface ShipLineTariffExpPayDtlRepository extends JpaRepository<ShipLin
               )
             """, nativeQuery = true)
     void bulkInsertFromLine(@Param("transactionPoid") Long transactionPoid, @Param("linePoid") Long linePoid);
-}
 
+    @Modifying
+    @Query(value = "DELETE FROM PRODUCTION.SHIP_LINE_TARIFF_EXP_PAY_DTL WHERE TRANSACTION_POID = :transactionPoid AND DET_ROW_ID IN (:detRowIds)", nativeQuery = true)
+    void deleteByTransactionPoidAndDetRowIds(@Param("transactionPoid") Long transactionPoid, @Param("detRowIds") List<Long> detRowIds);
+}
