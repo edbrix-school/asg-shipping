@@ -13,6 +13,7 @@ import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.*;
 import com.asg.shipping.linetariffs.entity.*;
+import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.linetariffs.repository.*;
@@ -59,6 +60,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
     private final ShipContainerTypeMasterRepository containerTypeRepository;
+    private final ShipLineMasterTypeRepository lineMasterTypeRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -774,6 +776,25 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 throw new ValidationException("Document Reference " + trimmedDocRef + " already exists. Please use a different reference.");
             }
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> loadContainerTypes(Long transactionPoid, String type) {
+        log.info("Loading container types for transactionPoid: {}, type: {}", transactionPoid, type);
+
+        ShipLineTariffHdr hdr = tariffHdrRepository.findById(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, transactionPoid.toString()));
+
+        List<Long> usedPoids = "IMP".equalsIgnoreCase(type)
+                ? impDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)
+                        .stream().map(ShipLineTariffImpDtl::getContainerTypePoid).filter(java.util.Objects::nonNull).toList()
+                : expDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid)
+                        .stream().map(ShipLineTariffExpDtl::getContainerTypePoid).filter(java.util.Objects::nonNull).toList();
+
+        List<Long> excluded = usedPoids.isEmpty() ? List.of(-1L) : usedPoids;
+
+        return lineMasterTypeRepository.findAvailableContainerTypePoids(hdr.getLinePoid(), excluded);
     }
 
     private Map<Long, ShipContainerTypeMaster> buildContainerTypeMap(

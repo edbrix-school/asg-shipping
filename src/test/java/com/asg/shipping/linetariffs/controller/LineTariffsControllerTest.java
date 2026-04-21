@@ -20,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -264,5 +265,37 @@ class LineTariffsControllerTest {
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
         verify(lineTariffsService).copySlabsToPayable(1L, "DTN");
+    }
+
+    @Test
+    void loadContainerTypes_IMP_Success() {
+        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(List.of(22L, 42L, 49L));
+
+        ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        verify(lineTariffsService).loadContainerTypes(1L, "IMP");
+    }
+
+    @Test
+    void loadContainerTypes_EXP_Success() {
+        when(lineTariffsService.loadContainerTypes(1L, "EXP")).thenReturn(List.of(66L, 75L));
+
+        ResponseEntity<?> response = controller.loadContainerTypes(1L, "EXP");
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
+        verify(lineTariffsService).loadContainerTypes(1L, "EXP");
+    }
+
+    @Test
+    void loadContainerTypes_ReturnsEmptyList_WhenAllUsed() {
+        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(List.of());
+
+        ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
+
+        assertNotNull(response);
+        assertEquals(200, response.getStatusCode().value());
     }
 }

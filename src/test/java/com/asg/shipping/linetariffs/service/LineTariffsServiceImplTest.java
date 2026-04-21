@@ -8,6 +8,8 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.common.entity.ShipLineMasterType;
+import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -54,6 +56,7 @@ class LineTariffsServiceImplTest {
     @Mock private LoggingService loggingService;
     @Mock private DocumentDeleteService documentDeleteService;
     @Mock private ShipContainerTypeMasterRepository containerTypeRepository;
+    @Mock private ShipLineMasterTypeRepository lineMasterTypeRepository;
 
     @InjectMocks
     private LineTariffsServiceImpl service;
@@ -419,5 +422,56 @@ class LineTariffsServiceImplTest {
     @Test
     void copySlabsToPayable_InvalidType_ThrowsValidationException() {
         assertThrows(ValidationException.class, () -> service.copySlabsToPayable(1L, "INVALID"));
+    }
+
+    @Test
+    void loadContainerTypes_IMP_ExcludesUsedPoids() {
+        ShipLineTariffImpDtl used = new ShipLineTariffImpDtl();
+        used.setContainerTypePoid(22L);
+
+        when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+        when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(used));
+        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), anyList()))
+                .thenReturn(List.of(42L, 49L));
+
+        List<Long> result = service.loadContainerTypes(1L, "IMP");
+
+        assertEquals(List.of(42L, 49L), result);
+        verify(lineMasterTypeRepository).findAvailableContainerTypePoids(eq(10L), argThat(list -> list.contains(22L)));
+    }
+
+    @Test
+    void loadContainerTypes_EXP_ExcludesUsedPoids() {
+        ShipLineTariffExpDtl used = new ShipLineTariffExpDtl();
+        used.setContainerTypePoid(66L);
+
+        when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+        when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(used));
+        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), anyList()))
+                .thenReturn(List.of(75L, 96L));
+
+        List<Long> result = service.loadContainerTypes(1L, "EXP");
+
+        assertEquals(List.of(75L, 96L), result);
+        verify(lineMasterTypeRepository).findAvailableContainerTypePoids(eq(10L), argThat(list -> list.contains(66L)));
+    }
+
+    @Test
+    void loadContainerTypes_NoExistingDetails_UsesMinusOneFallback() {
+        when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+        when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+        when(lineMasterTypeRepository.findAvailableContainerTypePoids(eq(10L), eq(List.of(-1L))))
+                .thenReturn(List.of(22L, 42L, 49L));
+
+        List<Long> result = service.loadContainerTypes(1L, "IMP");
+
+        assertEquals(3, result.size());
+        verify(lineMasterTypeRepository).findAvailableContainerTypePoids(10L, List.of(-1L));
+    }
+
+    @Test
+    void loadContainerTypes_TariffNotFound_ThrowsResourceNotFoundException() {
+        when(tariffHdrRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> service.loadContainerTypes(1L, "IMP"));
     }
 }

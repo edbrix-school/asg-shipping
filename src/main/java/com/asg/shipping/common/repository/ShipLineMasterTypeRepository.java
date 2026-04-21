@@ -48,4 +48,21 @@ public interface ShipLineMasterTypeRepository extends JpaRepository<ShipLineMast
      */
     @Query("select case when count(d) > 0 then true else false end from ShipLineMasterType d where d.linePoid = :linePoid and d.containerTypePoid = :containerTypePoid and d.detRowId != :detRowId")
     boolean existsByLinePoidAndContainerTypePoidExcluding(@Param("linePoid") Long linePoid, @Param("containerTypePoid") Long containerTypePoid, @Param("detRowId") Long detRowId);
+
+    /**
+     * Load container types for a line excluding already-used poids, active only (VALID_UNTIL is null or >= today)
+     */
+    @Query("""
+            select distinct d.containerTypePoid
+            from ShipLineMasterType d
+            where d.linePoid = :linePoid
+              and d.containerTypePoid is not null
+              and d.containerTypePoid not in :excludedPoids
+              and (d.validUntil is null or d.validUntil >= current_date)
+            order by d.containerTypePoid
+            """)
+    List<Long> findAvailableContainerTypePoids(
+            @Param("linePoid") Long linePoid,
+            @Param("excludedPoids") List<Long> excludedPoids
+    );
 }
