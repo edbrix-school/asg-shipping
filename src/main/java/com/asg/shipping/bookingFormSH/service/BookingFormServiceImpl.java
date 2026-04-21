@@ -106,7 +106,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, String line, Pageable pageable) {
+    public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable) {
         log.info("Searching container inventory, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
 
         StringBuilder where = new StringBuilder();
@@ -123,9 +123,9 @@ public class BookingFormServiceImpl implements BookingFormService {
             params.add("%" + equipmentIsoType.trim() + "%");
         }
 
-        if (StringUtil.isNotBlank(line)) {
-            conditions.add("UPPER(LINE) LIKE UPPER(?)");
-            params.add("%" + line.trim() + "%");
+        if (linePoid!=null) {
+            conditions.add("UPPER(LINE_POID) LIKE UPPER(?)");
+            params.add("%" + linePoid + "%");
         }
 
         if (!conditions.isEmpty()) {
@@ -806,6 +806,10 @@ public class BookingFormServiceImpl implements BookingFormService {
         entity.setVgmDate(dto.getVgmDate());
         entity.setVgmEdi(dto.getVgmEdi());
 
+        entity.setRefferHum(dto.getRefferHum());
+        entity.setRefferTemp(dto.getRefferTemp());
+        entity.setRefferVent(dto.getRefferVent());
+
         return entity;
     }
 
@@ -916,17 +920,6 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     public byte[] cntReturnBookingPrintForm(Long transactionPoid, String printStamp, String containerNo) throws Exception {
-        String docId = UserContext.getDocumentId();
-        Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
-        JasperReport mainReport = printService.load("Shipping/SH/Container_Return.jrxml");
-        params.put("CONTAINER_RETURN_SUBREPORT_1", printService.load("Shipping/SH/Container_Return_subreport1.jrxml"));
-        params.put("PRINT_STAMP", printStamp);
-        params.put("P_CONTAINERNO",containerNo);
-        return printService.fillReportToPdf(mainReport, params, dataSource);
-    }
-
-    @Override
-    public byte[] cntReturnBookingPrintFormIndividual(Long transactionPoid, String printStamp, String containerNo) throws Exception {
         String docId = UserContext.getDocumentId();
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
         JasperReport mainReport = printService.load("Shipping/SH/Container_Return.jrxml");
