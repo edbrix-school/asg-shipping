@@ -6,6 +6,7 @@ import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
 import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtl;
 import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
 import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
+import com.asg.shipping.common.entity.GlobalAddressDetails;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -319,5 +320,15 @@ public class BookingFormMapper {
         if (entities == null)
             return null;
         return entities.stream().map(BookingFormMapper::mapContainerDtlToDto).collect(Collectors.toList());
+    }
+
+    public static BookingFormAddressMasterDto mapAddressList(GlobalAddressDetails entity) {
+        return BookingFormAddressMasterDto.builder()
+                .contactPerson(entity.getContactPerson())
+                .email1(entity.getEmail1()!=null?entity.getEmail1():entity.getEmail2())
+                .mobile(entity.getMobile())
+                .poBox(entity.getPoBox())
+                .telephone(entity.getOffTel1()!=null?entity.getOffTel1():entity.getOffTel2())
+                .build();
     }
 }

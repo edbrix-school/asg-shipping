@@ -8,7 +8,8 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.shipping.salesinvoice.service.SalesInvoiceShippingService;
+import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
+import com.asg.shipping.common.entity.GlobalAddressDetails;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
@@ -45,8 +46,6 @@ public class BookingFormController {
     private final BookingFormService bookingFormService;
     private final ExcelExportService excelExportService;
     private final LoggingService loggingService;
-    private final SalesInvoiceShippingService salesInvoiceShippingService;
-
     private static final String FAILEDTOGENERATEPDF = "Failed to generate PDF: ";
     private static final String FAILEDTOGENERATEPDFFORBOOKINGFORM = "Failed to generate PDF for Banking Form SH: {}";
 
@@ -234,6 +233,42 @@ public class BookingFormController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/container/{transactionPoid}")
+    public ResponseEntity<?> cntReturnBookingPrintForm(
+            @Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid,
+            @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp,
+        @Parameter(description = "Container Number", example = "Y") @RequestParam String containerNo) {
+        try {
+            byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, containerNo);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=container-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF).body(pdf);
+        } catch (Exception e) {
+            log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
+            return error(FAILEDTOGENERATEPDF + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/container-individual/{transactionPoid}")
+    public ResponseEntity<?> cntReturnBookingPrintFormIndividual(
+            @Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid,
+            @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp,
+            @Parameter(description = "Container Number", example = "Y") @RequestParam String containerNo) {
+        try {
+            byte[] pdf = bookingFormService.cntReturnBookingPrintFormIndividual(transactionPoid, printStamp, containerNo);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=container-individual" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF).body(pdf);
+        } catch (Exception e) {
+            log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
+            return error(FAILEDTOGENERATEPDF + e.getMessage(), 500);
+        }
+    }
+
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Search Container Inventory Empty In",
             description = "Fetches paginated records from VW_CONTAINER_INVENTORY_EMPTYIN with filter and search support. " +
@@ -248,10 +283,12 @@ public class BookingFormController {
     @PostMapping("/container-inventory/search")
     public ResponseEntity<?> searchContainerInventory(
             @ParameterObject Pageable pageable,
-            @RequestParam(required = false) String searchValue) {
+            @RequestParam(required = false) String containerNo,
+            @RequestParam(required = false) String isoType,
+            @RequestParam(required = false) String line) {
 
         Map<String, Object> result = bookingFormService.searchContainerInventory(
-                UserContext.getDocumentId(), searchValue, pageable);
+                UserContext.getDocumentId(), containerNo, isoType, line, pageable);
 
         return success("Container inventory records retrieved successfully", result);
     }
@@ -275,7 +312,7 @@ public class BookingFormController {
             @RequestParam(required = false, defaultValue = "MAIN") String addressType) {
         try {
             log.info("Get customer address request for addressMasterPoid: {}, addressType: {}", addressMasterPoid, addressType);
-            CustomerAddressResponseDTO result = salesInvoiceShippingService.getCustomerAddress(addressMasterPoid, addressType);
+            BookingFormAddressMasterDto result=bookingFormService.getCustomerAddress(addressMasterPoid,addressType);
             return success("Customer address retrieved successfully", result);
         } catch (Exception e) {
             return internalServerError("Error fetching customer address: " + e.getMessage());

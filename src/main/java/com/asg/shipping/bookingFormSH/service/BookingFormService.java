@@ -3,6 +3,9 @@ package com.asg.shipping.bookingFormSH.service;
 import java.time.LocalDate;
 import java.util.Map;
 
+import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
+import com.asg.shipping.common.entity.GlobalAddressDetails;
+import com.asg.shipping.salesinvoice.dto.CustomerAddressResponseDTO;
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -63,5 +66,12 @@ public interface BookingFormService {
 	
 	byte[] cntReturnBookingPrintFormAll(Long transactionPoid, String printStamp) throws Exception;
 
-	Map<String, Object> searchContainerInventory(String docId, String searchValue, Pageable pageable);
+	byte[] cntReturnBookingPrintForm(Long transactionPoid, String printStamp, String containerNo) throws Exception;
+
+	byte[] cntReturnBookingPrintFormIndividual(Long transactionPoid, String printStamp, String containerNo) throws Exception;
+
+	Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, String line, Pageable pageable);
+
+	BookingFormAddressMasterDto getCustomerAddress(Long poid, String type);
+
 }

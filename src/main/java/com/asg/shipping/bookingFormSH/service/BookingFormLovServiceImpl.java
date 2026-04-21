@@ -267,4 +267,63 @@ public class BookingFormLovServiceImpl implements BookingFormLovService {
 		return result;
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public List<LovItem> getEquipmentIsoTypeLov(String code) {
+		log.info("Fetching EQUIPMENT_ISO_TYPE LOV for code: {}", code);
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT CONTAINER_TYPE_POID AS POID, ");
+		sql.append("       CONTAINER_TYPE_CODE AS CODE, ");
+		sql.append("       CONTAINER_TYPE_NAME AS DESCRIPTION ");
+		sql.append("FROM SHIP_CONTAINER_TYPE_MASTER ");
+		sql.append("WHERE ACTIVE = 'Y' ");
+		sql.append("AND CONTAINER_TYPE_CODE = ? ");
+		List<Object> params = new ArrayList<>();
+		params.add(code);
+		List<LovItem> result = params.isEmpty()
+				? jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER)
+				: jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER, params.toArray());
+		log.info("Fetched {} EQUIPMENT_ISO_TYPE LOV items", result.size());
+		return result;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<LovItem> getImcoClassTypeLov(String code) {
+		log.info("Fetching IMCO_CLASS_TYPE LOV for code: {}", code);
+		StringBuilder sql = new StringBuilder();
+		sql.append("SELECT IMCO_CLASS_TYPE_POID AS POID, ");
+		sql.append("       IMCO_CLASS_TYPE_CODE AS CODE, ");
+		sql.append("       IMCO_CLASS_TYPE_NAME AS DESCRIPTION ");
+		sql.append("FROM SHIP_IMCO_CLASS_TYPE_MASTER ");
+		sql.append("WHERE ACTIVE = 'Y' ");
+		sql.append("AND IMCO_CLASS_TYPE_CODE = ? ");
+		List<Object> params = new ArrayList<>();
+		params.add(code);
+		List<LovItem> result = params.isEmpty()
+				? jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER)
+				: jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER, params.toArray());
+		log.info("Fetched {} IMCO_CLASS_TYPE LOV items", result.size());
+		return result;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<LovItem> getOogTypeLov(String code) {
+		log.info("Fetching OOG_TYPE LOV for code: {}", code);
+		String sql = "SELECT OOG_TYPE_POID AS POID, " +
+				"       OOG_TYPE_CODE AS CODE, " +
+				"       OOG_TYPE_NAME AS DESCRIPTION " +
+				"FROM SHIP_OOG_TYPE_MASTER " +
+				"WHERE ACTIVE = 'Y' " +
+				"AND OOG_TYPE_CODE = ?";
+		List<LovItem> result = jdbcTemplate.query(
+				sql,
+				LOV_ITEM_ROW_MAPPER,
+				code
+		);
+		log.info("Fetched {} OOG_TYPE LOV items", result.size());
+		return result;
+	}
+
 }

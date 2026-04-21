@@ -1,0 +1,648 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="Container_Return_subreport1" language="groovy" pageWidth="930" pageHeight="555" orientation="Landscape" columnWidth="930" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" uuid="2163e634-6360-4059-a312-748b8c222e34">
+    <property name="ireport.zoom" value="1.0"/>
+    <property name="ireport.x" value="73"/>
+    <property name="ireport.y" value="0"/>
+    <parameter name="P_TRAN_POID" class="java.math.BigDecimal" isForPrompting="false">
+        <defaultValueExpression><![CDATA[]]></defaultValueExpression>
+    </parameter>
+    <parameter name="p_trans_container" class="java.lang.String">
+        <defaultValueExpression><![CDATA[]]></defaultValueExpression>
+    </parameter>
+    <parameter name="PRINT_STAMP" class="java.lang.String" isForPrompting="false">
+        <defaultValueExpression><![CDATA["N"]]></defaultValueExpression>
+    </parameter>
+    <queryString>
+        <![CDATA[select DTL.TRANSACTION_POID,BOOKING_ISSUE_NO,DTL.CONTAINER_NO,DTL.EQUIPMENT_SEAL_NO,DTL.EQUIPMENT_ISO_TYPE,DTL.EQUIPMENT_TYPE,DTL.EQUIPMENT_SIZE,GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'SIZE'  ) CSIZE,GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'TYPE_ISO_NAME'  ) CTYPE,GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'APMT_TYPE'  ) APMT_CODE,DTL.QUANTITY,
+GET_PORT_CODE(PORT_OF_LOADING_POID) POL, GET_PORT_CODE(PORT_OF_DISCHARGE_POID) POD, FINAL_DESTINATION "F.DEST", DTL.GRS_VOLUME,DTL.GRS_WEIGHT,DTL.NET_VOLUME,DTL.NET_WEIGHT,DTL.NO_OF_PACKS,DTL.PACK_UNIT,DTL.DESTINATION_PORT_POID,
+DTL.IMO,DTL.OOG_L,DTL.OOG_B,DTL.OOG_H,DTL.REFFER_TEMP,DTL.REFFER_HUM,DTL.REFFER_VENT,DTL.EQUIPMENT_SHIPPER_OWN,
+OOG_L_W, OOG_R_W, OOG_F, OOG_A,
+RTN_GLOBAL_PARAMETER(1, 'GLOBAL_COMPANY_STAMP', 'STAMP', SMHDR.COMPANY_POID, NULL) STAMP_DISPLAY
+from SHIP_MATE_hdr SMHDR ,SHIP_MATE_CONTAINER_DTL DTL
+where  SMHDR.transaction_poid=dtl.transaction_poid
+AND DTL.TRANSACTION_POID=$P{P_TRAN_POID}
+and DTL.container_no=$P{p_trans_container}
+
+union all
+
+select DTL.TRANSACTION_POID,BOOKING_ISSUE_NO,DTL.CONTAINER_NO,DTL.EQUIPMENT_SEAL_NO,DTL.EQUIPMENT_ISO_TYPE,DTL.EQUIPMENT_TYPE,DTL.EQUIPMENT_SIZE,GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'SIZE'  ) CSIZE,GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'TYPE_ISO_NAME'  ) CTYPE,GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE ,'APMT_TYPE'  ) APMT_CODE,DTL.QUANTITY,
+GET_PORT_CODE(PORT_OF_LOADING_POID) POL, GET_PORT_CODE(PORT_OF_DISCHARGE_POID) POD, FINAL_DESTINATION "F.DEST", DTL.GRS_VOLUME,DTL.GRS_WEIGHT,DTL.NET_VOLUME,DTL.NET_WEIGHT,DTL.NO_OF_PACKS,DTL.PACK_UNIT,DTL.DESTINATION_PORT_POID,
+DTL.IMO,DTL.OOG_L,DTL.OOG_B,DTL.OOG_H,DTL.REFFER_TEMP,DTL.REFFER_HUM,DTL.REFFER_VENT,DTL.EQUIPMENT_SHIPPER_OWN,
+OOG_L_W, OOG_R_W, OOG_F, OOG_A,
+RTN_GLOBAL_PARAMETER(1, 'GLOBAL_COMPANY_STAMP', 'STAMP', SMHDR.COMPANY_POID, NULL) STAMP_DISPLAY
+from SHIP_MATE_hdr SMHDR ,SHIP_MATE_CONTAINER_DTL DTL
+where  SMHDR.transaction_poid=dtl.transaction_poid
+AND DTL.TRANSACTION_POID=$P{P_TRAN_POID}
+and DTL.container_no is null and $P{p_trans_container} is null]]>
+    </queryString>
+    <field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+    <field name="BOOKING_ISSUE_NO" class="java.lang.String"/>
+    <field name="CONTAINER_NO" class="java.lang.String"/>
+    <field name="EQUIPMENT_SEAL_NO" class="java.lang.String"/>
+    <field name="EQUIPMENT_ISO_TYPE" class="java.lang.String"/>
+    <field name="EQUIPMENT_TYPE" class="java.lang.String"/>
+    <field name="EQUIPMENT_SIZE" class="java.lang.String"/>
+    <field name="CSIZE" class="java.lang.String"/>
+    <field name="CTYPE" class="java.lang.String"/>
+    <field name="APMT_CODE" class="java.lang.String"/>
+    <field name="QUANTITY" class="java.math.BigDecimal"/>
+    <field name="POL" class="java.lang.String"/>
+    <field name="POD" class="java.lang.String"/>
+    <field name="F.DEST" class="java.lang.String"/>
+    <field name="GRS_VOLUME" class="java.math.BigDecimal"/>
+    <field name="GRS_WEIGHT" class="java.math.BigDecimal"/>
+    <field name="NET_VOLUME" class="java.math.BigDecimal"/>
+    <field name="NET_WEIGHT" class="java.math.BigDecimal"/>
+    <field name="NO_OF_PACKS" class="java.math.BigDecimal"/>
+    <field name="PACK_UNIT" class="java.lang.String"/>
+    <field name="DESTINATION_PORT_POID" class="java.math.BigDecimal"/>
+    <field name="IMO" class="java.lang.String"/>
+    <field name="OOG_L" class="java.lang.String"/>
+    <field name="OOG_B" class="java.lang.String"/>
+    <field name="OOG_H" class="java.lang.String"/>
+    <field name="REFFER_TEMP" class="java.lang.String"/>
+    <field name="REFFER_HUM" class="java.lang.String"/>
+    <field name="REFFER_VENT" class="java.lang.String"/>
+    <field name="EQUIPMENT_SHIPPER_OWN" class="java.lang.String"/>
+    <field name="OOG_L_W" class="java.lang.String"/>
+    <field name="OOG_R_W" class="java.lang.String"/>
+    <field name="OOG_F" class="java.lang.String"/>
+    <field name="OOG_A" class="java.lang.String"/>
+    <field name="STAMP_DISPLAY" class="java.lang.String"/>
+    <background>
+        <band splitType="Stretch"/>
+    </background>
+    <columnHeader>
+        <band height="46" splitType="Stretch">
+            <staticText>
+                <reportElement x="114" y="7" width="152" height="31" uuid="d4562666-2ace-4bc6-b350-4635912f5bfe"/>
+                <box>
+                    <pen lineWidth="0.25"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[Container No]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="4" y="7" width="24" height="31" uuid="11612ae7-6a60-45fd-8987-f5ace738f884"/>
+                <box>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[Sr. No]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="267" y="7" width="32" height="31" uuid="741ec4a7-6277-4c34-ae7f-eee71c0fd0de"/>
+                <box>
+                    <topPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[Size]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="299" y="7" width="35" height="31" uuid="23f8d44b-f8fc-4483-93d0-da47919499b8"/>
+                <box>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[Type]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="335" y="7" width="82" height="31" uuid="ff9d7a28-ae8a-416b-b4c6-849d59a99f50"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[Weight]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="626" y="7" width="39" height="31" uuid="9ab15932-056e-473c-b1c4-934d96cae93b"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[IMO]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="665" y="21" width="36" height="17" uuid="ecac9f68-2c21-4f43-a9c9-7f45f48b8696"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[L]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="701" y="21" width="37" height="17" uuid="8c511de1-954d-4ade-bded-45d4141b1c0b"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[B]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="738" y="21" width="37" height="17" uuid="233deb4d-e595-4783-ac72-e6d3bd16e838"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[H]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="835" y="21" width="38" height="17" uuid="14c3d0e2-63db-4f10-aab7-2b794f24924c"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[TEMP]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="873" y="21" width="28" height="17" uuid="b6f51d2c-d099-4700-b1ef-4cd12be0c896"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[HUM]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="901" y="21" width="26" height="17" uuid="5ba77eaf-2578-45e4-80d6-b22698073008"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[VENT]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="665" y="7" width="170" height="14" uuid="c21d9af5-8065-4b37-bc72-674a0f3a7407"/>
+                <box>
+                    <topPen lineWidth="0.75"/>
+                    <leftPen lineWidth="0.75"/>
+                    <bottomPen lineWidth="0.75"/>
+                    <rightPen lineWidth="0.75"/>
+                </box>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[OOG]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="835" y="7" width="92" height="14" uuid="dbafb274-49d3-455e-8f84-956f04140a96"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center"/>
+                <text><![CDATA[REEFER]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="29" y="7" width="85" height="31" uuid="fffc000a-757f-45cd-9bb5-9694803d4b81"/>
+                <box>
+                    <pen lineWidth="0.25"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[Booking#]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="531" y="7" width="45" height="31" uuid="a55ab273-b270-408a-a9c7-3c08a66ec811"/>
+                <box>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[POD]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="486" y="7" width="45" height="31" uuid="8eab40a6-b4d5-471d-85de-6bb32442bf9f"/>
+                <box>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[POL]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="418" y="7" width="68" height="31" uuid="5575fc73-9b33-4a4b-93d3-b8b7f73946aa"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" size="7" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[Seal#]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="576" y="7" width="50" height="31" uuid="999f3f81-f0cb-4f54-a3d8-7de933475a03"/>
+                <box>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[FND]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="776" y="22" width="32" height="17" uuid="f0bf1ac5-ff16-4212-96fc-2f9ff91f22b9"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[LW]]></text>
+            </staticText>
+            <staticText>
+                <reportElement x="808" y="22" width="27" height="17" uuid="34894ee1-062c-40ce-a1da-882e1397e966"/>
+                <box>
+                    <pen lineWidth="0.5"/>
+                    <topPen lineWidth="0.5"/>
+                    <leftPen lineWidth="0.5"/>
+                    <bottomPen lineWidth="0.5"/>
+                    <rightPen lineWidth="0.5"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" isBold="true" pdfFontName="Helvetica-Bold"/>
+                </textElement>
+                <text><![CDATA[RW]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+    <detail>
+        <band height="159" splitType="Stretch">
+            <textField isBlankWhenNull="true">
+                <reportElement x="114" y="2" width="152" height="24" uuid="56c86d92-a29a-454c-b2d3-7629993a55a8"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="false">
+                <reportElement x="3" y="2" width="25" height="24" uuid="4a3559a1-f47d-495f-a1c5-0f1cc5862d87"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$V{REPORT_COUNT}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="267" y="2" width="32" height="24" uuid="a50b693a-52fb-4e9e-a8bf-430a7e625017"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{CSIZE}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="299" y="2" width="35" height="24" uuid="80e820fd-5a82-4b5c-926d-c6d193dcaf0f"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{CTYPE}]]></textFieldExpression>
+            </textField>
+            <textField pattern="#,##0.000" isBlankWhenNull="true">
+                <reportElement x="335" y="2" width="81" height="24" uuid="c21b5489-206a-4782-bf1f-41dda670df9d"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{NET_WEIGHT}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="624" y="2" width="41" height="24" uuid="54b2f27a-4941-4d7d-a2a7-f9883bca5afb"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial" size="7"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{IMO}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="665" y="2" width="36" height="24" uuid="abc3bb4f-273c-4041-87eb-699d9d95f15d"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{OOG_L}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="701" y="2" width="37" height="24" uuid="70c86dc3-9c53-4cd5-8937-8d7bad29cd88"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{OOG_B}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="738" y="2" width="37" height="24" uuid="e413f849-9eab-43f4-a8d6-1bf8b5673f72"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{OOG_H}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="835" y="2" width="38" height="24" uuid="e5140465-1c39-444c-806a-bbcdc2c0fcdd"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{REFFER_TEMP}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="873" y="2" width="28" height="24" uuid="3085a22d-7171-4a1a-a2b7-8359b07d8395"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{REFFER_HUM}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="901" y="2" width="26" height="24" uuid="fd9f11fc-aedd-4136-9493-5de70c19d5f1"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{REFFER_VENT}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="28" y="2" width="86" height="24" uuid="ba8e9778-6edd-40bb-9b4e-c0c93d53de36"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{BOOKING_ISSUE_NO}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="529" y="2" width="45" height="24" uuid="2e8b2ab8-dcd7-49a9-a67e-ff9026cdb944"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{POD}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="484" y="2" width="45" height="24" uuid="31dde5bc-4a42-4898-8254-336819fca067"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{POL}]]></textFieldExpression>
+            </textField>
+            <textField pattern="#,##0.000" isBlankWhenNull="true">
+                <reportElement x="416" y="2" width="68" height="24" uuid="98d07772-086e-41a7-9a95-f1fcd1494f17"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Right" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{EQUIPMENT_SEAL_NO}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="574" y="2" width="50" height="24" uuid="1c11abb5-4419-4c57-b0d1-73ccf568a081"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{F.DEST}]]></textFieldExpression>
+            </textField>
+            <image>
+                <reportElement x="114" y="36" width="249" height="97" uuid="6a7bf555-9df4-43cc-986e-4e3861ae826c">
+                    <printWhenExpression><![CDATA[$P{PRINT_STAMP}.equals( "Y" )]]></printWhenExpression>
+                </reportElement>
+                <imageExpression><![CDATA[$F{STAMP_DISPLAY}]]></imageExpression>
+            </image>
+            <image>
+                <reportElement x="391" y="36" width="249" height="97" uuid="e062b604-af6c-4923-9343-150f47359f73">
+                    <printWhenExpression><![CDATA[$P{PRINT_STAMP}.equals( "Y" )]]></printWhenExpression>
+                </reportElement>
+                <imageExpression><![CDATA[$F{STAMP_DISPLAY}]]></imageExpression>
+            </image>
+            <image>
+                <reportElement x="685" y="36" width="182" height="97" uuid="ae663418-bde5-4563-9bb9-45870d4a1168">
+                    <printWhenExpression><![CDATA[$P{PRINT_STAMP}.equals( "Y" )]]></printWhenExpression>
+                </reportElement>
+                <imageExpression><![CDATA[$F{STAMP_DISPLAY}]]></imageExpression>
+            </image>
+            <textField isBlankWhenNull="true">
+                <reportElement x="776" y="2" width="32" height="24" uuid="411b83d3-635f-4254-aca6-2a0f9dc532d3"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{OOG_L_W}]]></textFieldExpression>
+            </textField>
+            <textField isBlankWhenNull="true">
+                <reportElement x="808" y="2" width="27" height="24" uuid="eaffdf87-734a-49e1-ac0a-2e1e58590695"/>
+                <box>
+                    <pen lineWidth="0.5" lineStyle="Dotted"/>
+                    <topPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <leftPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <bottomPen lineWidth="0.5" lineStyle="Dotted"/>
+                    <rightPen lineWidth="0.5" lineStyle="Dotted"/>
+                </box>
+                <textElement textAlignment="Center" verticalAlignment="Middle">
+                    <font fontName="Arial"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{OOG_R_W}]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+</jasperReport>
