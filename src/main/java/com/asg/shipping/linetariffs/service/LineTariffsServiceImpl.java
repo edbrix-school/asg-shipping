@@ -164,7 +164,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     }
 
     @Override
-    @Transactional
+    @Transactional(timeout = 120)
     public LineTariffDto updateLineTariff(Long id, LineTariffUpdateDTO dto, Long groupPoid, Long userPoid) {
         log.info("Updating line tariff with id: {}", id);
 
@@ -326,16 +326,34 @@ public class LineTariffsServiceImpl implements LineTariffsService {
      * Update detail records for all four detail tables
      */
     private void updateDetailRecords(Long transactionPoid, LineTariffUpdateDTO dto) {
-        // Update Import Demurrage Collectable
+        // Collect deleted detRowIds from collectable tables to cascade to payable
+        Set<Long> deletedImpDetRowIds = dto.getImportDemurrageCollectable() == null ? Set.of() :
+                dto.getImportDemurrageCollectable().stream()
+                        .filter(d -> "isDeleted".equalsIgnoreCase(d.getActionType()) && d.getDetRowId() != null)
+                        .map(TariffDetailUpdateDTO::getDetRowId)
+                        .collect(Collectors.toSet());
+
+        Set<Long> deletedExpDetRowIds = dto.getExportDetentionCollectable() == null ? Set.of() :
+                dto.getExportDetentionCollectable().stream()
+                        .filter(d -> "isDeleted".equalsIgnoreCase(d.getActionType()) && d.getDetRowId() != null)
+                        .map(TariffDetailUpdateDTO::getDetRowId)
+                        .collect(Collectors.toSet());
+
+        // Cascade deletes to payable lists
+        if (!deletedImpDetRowIds.isEmpty() && dto.getImportDemurragePayable() != null) {
+            dto.getImportDemurragePayable().stream()
+                    .filter(d -> deletedImpDetRowIds.contains(d.getDetRowId()))
+                    .forEach(d -> d.setActionType("isDeleted"));
+        }
+        if (!deletedExpDetRowIds.isEmpty() && dto.getExportDetentionPayable() != null) {
+            dto.getExportDetentionPayable().stream()
+                    .filter(d -> deletedExpDetRowIds.contains(d.getDetRowId()))
+                    .forEach(d -> d.setActionType("isDeleted"));
+        }
+
         updateDetailRecordsImpDtl(transactionPoid, dto.getImportDemurrageCollectable());
-
-        // Update Import Demurrage Payable
         updateDetailRecordsImpPayDtl(transactionPoid, dto.getImportDemurragePayable());
-
-        // Update Export Detention Collectable
         updateDetailRecordsExpDtl(transactionPoid, dto.getExportDetentionCollectable());
-
-        // Update Export Detention Payable
         updateDetailRecordsExpPayDtl(transactionPoid, dto.getExportDetentionPayable());
     }
 

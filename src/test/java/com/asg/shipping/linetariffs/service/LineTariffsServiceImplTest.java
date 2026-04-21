@@ -220,10 +220,6 @@ class LineTariffsServiceImplTest {
             when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(impDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
-            when(impPayDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
-            when(expDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
-            when(expPayDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
             when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
 
             LineTariffDto result = service.updateLineTariff(1L, updateDTO, 1L, 2L);
@@ -401,6 +397,10 @@ class LineTariffsServiceImplTest {
 
             updateDTO.setImportDemurrageCollectable(List.of(keepRow, deleteRow));
 
+            ShipLineTariffImpDtl deleteExisting = new ShipLineTariffImpDtl();
+            deleteExisting.setDetRowId(3L);
+            deleteExisting.setContainerTypePoid(149L);
+
             ShipLineTariffImpDtl keepExisting = new ShipLineTariffImpDtl();
             keepExisting.setDetRowId(1L);
             keepExisting.setContainerTypePoid(147L);
@@ -410,13 +410,9 @@ class LineTariffsServiceImplTest {
             when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), eq(1L))).thenReturn(false);
             when(tariffHdrRepository.save(any())).thenReturn(hdr);
             doNothing().when(tariffHdrRepository).flush();
-            when(containerTypeRepository.existsById(147L)).thenReturn(true);
-            when(impDtlRepository.findByTransactionPoidAndDetRowId(1L, 1L)).thenReturn(Optional.of(keepExisting));
-            when(impDtlRepository.getMaxDetRowId(1L)).thenReturn(3L);
-            when(impPayDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
-            when(expDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
-            when(expPayDtlRepository.getMaxDetRowId(1L)).thenReturn(0L);
-            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            // bulk fetch returns both rows for the map
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
+                    .thenReturn(List.of(keepExisting, deleteExisting));
             when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
             when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
@@ -424,8 +420,12 @@ class LineTariffsServiceImplTest {
 
             service.updateLineTariff(1L, updateDTO, 1L, 2L);
 
-            verify(impDtlRepository).deleteById(new ShipLineTariffImpDtlId(1L, 3L));
-            verify(impDtlRepository).save(any(ShipLineTariffImpDtl.class));
+            // deleteAllInBatch called with the isDeleted row
+            verify(impDtlRepository).deleteAllInBatch(argThat(list ->
+                    ((List<?>) list).size() == 1));
+            // saveAll called with the keep row
+            verify(impDtlRepository).saveAll(argThat(list ->
+                    ((List<?>) list).size() == 1));
         }
     }
 
