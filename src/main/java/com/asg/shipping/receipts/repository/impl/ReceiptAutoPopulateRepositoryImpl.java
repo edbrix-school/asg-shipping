@@ -234,8 +234,8 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
 
                             .containerNo((String) r[2])
 
-                            .fromDate(((LocalDate) r[3]))
-                            .toDate(((LocalDate) r[4]))
+                            .fromDate(convertToLocalDate(r[3]))
+                            .toDate(convertToLocalDate(r[4]))
 
                             .days(((Number) r[5]).longValue())
 
@@ -245,9 +245,7 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
 
                             .freeDays(((Number) r[8]).longValue())
 
-                            .emptyIn(r[9] != null
-                                    ? ((LocalDate) r[9])
-                                    : null)
+                            .emptyIn(convertToLocalDate(r[9]))
 
                             .build())
                     .toList();
@@ -274,5 +272,12 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
         }
     }
 
+    private LocalDate convertToLocalDate(Object date) {
+        if (date == null) return null;
+        if (date instanceof LocalDate) return (LocalDate) date;
+        if (date instanceof LocalDateTime) return ((LocalDateTime) date).toLocalDate();
+        if (date instanceof java.util.Date) return ((java.util.Date) date).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        return null;
+    }
 
 }
