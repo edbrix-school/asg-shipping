@@ -870,18 +870,16 @@ public class BookingFormServiceImpl implements BookingFormService {
             if (container.getEquipmentIsoType() != null && !container.getEquipmentIsoType().isBlank())
                 lovService.getEquipmentIsoTypeLov(container.getEquipmentIsoType()).stream().findFirst().ifPresent(container::setEquipmentIsoTypeDet);
             if (container.getImcoClassType() != null && !container.getImcoClassType().isBlank()) {
-                com.asg.shipping.common.dto.LovItem lov = new com.asg.shipping.common.dto.LovItem();
-                lov.setCode(container.getImcoClassType());
-                lov.setLabel(container.getImcoClassType());
-                lov.setDescription(container.getImcoClassType());
-                container.setImcoClassTypeDet(lov);
+                lovService.getImcoClassTypeLov(container.getImcoClassType())
+                        .stream()
+                        .findFirst()
+                        .ifPresent(container::setImcoClassTypeDet);
             }
             if (container.getOogType() != null && !container.getOogType().isBlank()) {
-                com.asg.shipping.common.dto.LovItem lov = new com.asg.shipping.common.dto.LovItem();
-                lov.setCode(container.getOogType());
-                lov.setLabel(container.getOogType());
-                lov.setDescription(container.getOogType());
-                container.setOogTypeDet(lov);
+                lovService.getOogTypeLov(container.getOogType())
+                        .stream()
+                        .findFirst()
+                        .ifPresent(container::setOogTypeDet);
             }
         });
     }

@@ -309,21 +309,19 @@ public class BookingFormLovServiceImpl implements BookingFormLovService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<LovItem>getOogTypeLov(String code) {
+	public List<LovItem> getOogTypeLov(String code) {
 		log.info("Fetching OOG_TYPE LOV for code: {}", code);
-		StringBuilder sql = new StringBuilder();
-		sql.append("SELECT OOG_TYPE_POID AS POID, ");
-		sql.append("       OOG_TYPE_CODE AS CODE, ");
-		sql.append("       OOG_TYPE_NAME AS DESCRIPTION ");
-		sql.append("FROM SHIP_OOG_TYPE_MASTER ");
-		sql.append("WHERE ACTIVE = 'Y' ");
-		sql.append("AND OOG_TYPE_POID = ? ");
-		List<Object> params = new ArrayList<>();
-		params.add(code);
-
-		List<LovItem> result = params.isEmpty()
-				? jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER)
-				: jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER, params.toArray());
+		String sql = "SELECT OOG_TYPE_POID AS POID, " +
+				"       OOG_TYPE_CODE AS CODE, " +
+				"       OOG_TYPE_NAME AS DESCRIPTION " +
+				"FROM SHIP_OOG_TYPE_MASTER " +
+				"WHERE ACTIVE = 'Y' " +
+				"AND OOG_TYPE_CODE = ?";
+		List<LovItem> result = jdbcTemplate.query(
+				sql,
+				LOV_ITEM_ROW_MAPPER,
+				code
+		);
 		log.info("Fetched {} OOG_TYPE LOV items", result.size());
 		return result;
 	}
