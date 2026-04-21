@@ -107,6 +107,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable) {
+    public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable) {
         log.info("Searching container inventory, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
 
         StringBuilder where = new StringBuilder();
@@ -124,8 +125,8 @@ public class BookingFormServiceImpl implements BookingFormService {
         }
 
         if (linePoid!=null) {
-            conditions.add("UPPER(LINE_POID) LIKE UPPER(?)");
-            params.add("%" + linePoid + "%");
+            conditions.add("LINE_POID = ?");
+            params.add(linePoid);
         }
 
         if (!conditions.isEmpty()) {
