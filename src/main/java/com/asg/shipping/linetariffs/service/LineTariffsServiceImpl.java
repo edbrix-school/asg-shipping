@@ -18,6 +18,7 @@ import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -62,6 +63,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private final DocumentDeleteService documentDeleteService;
     private final ShipContainerTypeMasterRepository containerTypeRepository;
     private final ShipLineMasterTypeRepository lineMasterTypeRepository;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -253,7 +255,10 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, id.toString()));
 
         // Call stored procedure — handles sequence, header + all 4 detail table copies atomically
+        // Proc uses PRAGMA AUTONOMOUS_TRANSACTION + COMMIT, so clear JPA cache to see the new row
         tariffHdrRepository.callCopyLineTariff(id);
+        entityManager.flush();
+        entityManager.clear();
 
         // Fetch the newly created tariff (max transaction_poid for same line)
         ShipLineTariffHdr sourceTariff = tariffHdrRepository.findById(id).get();
@@ -265,9 +270,25 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, "new copy"));
 
         // Apply caller-supplied period/description overrides (legacy UI allowed overriding after copy)
-        if (request.getPeriodFrom() != null) newTariff.setPeriodFrom(request.getPeriodFrom());
-        if (request.getPeriodTo() != null) newTariff.setPeriodTo(request.getPeriodTo());
         if (request.getDescription() != null) newTariff.setDescription(request.getDescription());
+        if (request.getPeriodFrom() != null || request.getPeriodTo() != null) {
+            LocalDate newFrom = request.getPeriodFrom() != null ? request.getPeriodFrom() : newTariff.getPeriodFrom();
+            LocalDate newTo = request.getPeriodTo() != null ? request.getPeriodTo() : newTariff.getPeriodTo();
+            // Validate the override period doesn't overlap with any existing tariff (excluding the new copy itself)
+            if (newFrom != null && newTo != null) {
+                if (newFrom.isAfter(newTo)) {
+                    throw new ValidationException("Period from date must be less than or equal to period to date");
+                }
+                Long companyPoid = UserContext.getCompanyPoid();
+                if (tariffHdrRepository.existsOverlappingPeriod(
+                        newTariff.getLinePoid(), groupPoid, companyPoid,
+                        newFrom, newTo, newTariff.getTransactionPoid())) {
+                    throw new ValidationException("Period overlaps with an existing tariff for the same line");
+                }
+            }
+            newTariff.setPeriodFrom(newFrom);
+            newTariff.setPeriodTo(newTo);
+        }
         tariffHdrRepository.save(newTariff);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), newTariff.getTransactionPoid().toString());
