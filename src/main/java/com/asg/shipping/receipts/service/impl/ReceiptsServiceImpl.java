@@ -166,6 +166,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 						.paymentReference(updateDto.getPaymentReference())
 						.remarks(updateDto.getRemarks())
 						.token(updateDto.getToken())
+						.amount(updateDto.getAmount())
 						.build()
 		);
 		updated.setTransactionPoid(transactionPoid);

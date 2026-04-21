@@ -60,6 +60,9 @@
 	</style>
 	<subDataset name="Bill_details" uuid="8e5e9981-e064-4747-86e3-9cb131930845">
 		<parameter name="P_TRANSACTION_POID" class="java.lang.String"/>
+		<parameter name="SUB_FOOTER_ISO" class="net.sf.jasperreports.engine.JasperReport"/>
+		<parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
+
 		<queryString>
 			<![CDATA[SELECT BHDR.BL_number,HDR.doc_ref SPLIT_RECEIPT,LMAST.LINE_code,VESSEL_name||'/'||VOYAGE_NO voy_VESSEL_INFO,
 (SELECT SUM(AMOUNT) FROM  AR_SH_RECEIPT_CHARGES_DTL CHGDTL WHERE CHGDTL.TRANSACTION_POID=ARBDTL.SPLIT_TRANSACTION_POID AND CHGDTL.BL_POID=HDR.BL_POID) TOTAL_CHARGE_AMOUNT
@@ -100,6 +103,8 @@ WHERE ARPAYDTL.TRANSACTION_POID = $P{P_TRANSACTION_POID} AND( NVL(AMOUNT,0) > 0)
 		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
 	</parameter>
 	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="SUB_FOOTER_ISO" class="net.sf.jasperreports.engine.JasperReport"/>
 	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
 		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
 	</parameter>
@@ -131,7 +136,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 					<subreportParameterExpression><![CDATA[$F{COMPANY_POID}]]></subreportParameterExpression>
 				</subreportParameter>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "Templates/DocHeaderSubReport.jasper"]]></subreportExpression>
+				<subreportExpression><![CDATA[$P{SUB_HEADER}]]></subreportExpression>
 			</subreport>
 		</band>
 	</title>
@@ -370,7 +375,7 @@ WHERE HDR.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 					<subreportParameterExpression><![CDATA[$F{COMPANY_POID}]]></subreportParameterExpression>
 				</subreportParameter>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
-				<subreportExpression><![CDATA[$P{SUBREPORT_DIR} + "Templates/DocFooterSubReport-ISO.jasper"]]></subreportExpression>
+				<subreportExpression><![CDATA[$P{SUB_FOOTER_ISO}]]></subreportExpression>
 			</subreport>
 		</band>
 	</pageFooter>
