@@ -148,7 +148,7 @@ public class DemurrageDetentionPayableTransferMapper {
                 .totalPayableAmount(dto.getTotalPayableAmount())
                 .totalIncomeAmount(dto.getTotalIncomeAmount())
                 .netIncomeAmt(dto.getNetIncomeAmt())
-                .isSelect(dto.getIsSelect() != null ? dto.getIsSelect() : "n")
+                .isSelect(dto.getIsSelect() != null ? dto.getIsSelect() : "N")
                 .build();
     }
 

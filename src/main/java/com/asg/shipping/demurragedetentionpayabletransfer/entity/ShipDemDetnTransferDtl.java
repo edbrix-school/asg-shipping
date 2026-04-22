@@ -106,7 +106,7 @@ public class ShipDemDetnTransferDtl extends BaseEntity {
     @PrePersist
     protected void onCreate() {
         if (isSelect == null) {
-            isSelect = "n";
+            isSelect = "N";
         }
     }
 }
