@@ -27,6 +27,7 @@ public class DemurrageDetentionPayableTransferDto {
     private Long linePoid;
     private LovGetListDto linePoidDet; // LOV data
     private String blType;
+    private LovGetListDto blTypeDet; // LOV data (CODE-based lookup via BL_TYPE)
     private LocalDate emptyFromDate;
     private LocalDate emptyToDate;
     private Long payableGlPoid;

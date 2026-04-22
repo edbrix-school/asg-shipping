@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -20,6 +21,9 @@ public class LoadBillwiseRequestDTO {
 
     @NotEmpty(message = "At least one container must be selected")
     private List<SelectedContainer> selectedContainers;
+
+    // Required for pre-create flow (loadBillwiseDataBeforeCreate) to determine GL_CODE
+    private String blType;
 
     @Data
     @NoArgsConstructor
@@ -35,5 +39,9 @@ public class LoadBillwiseRequestDTO {
         private String containerNo;
 
         private String blNumber;
+
+        // Required for pre-create flow to compute DrAmt/CrAmt
+        private BigDecimal totalPayableAmount;
+        private BigDecimal totalIncomeAmount;
     }
 }
