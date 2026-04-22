@@ -17,6 +17,7 @@ import com.asg.shipping.linetariffs.dto.*;
 import com.asg.shipping.linetariffs.entity.*;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +54,7 @@ class LineTariffsServiceImplTest {
     @Mock private DocumentDeleteService documentDeleteService;
     @Mock private ShipContainerTypeMasterRepository containerTypeRepository;
     @Mock private ShipLineMasterTypeRepository lineMasterTypeRepository;
+    @Mock private EntityManager entityManager;
 
     @InjectMocks
     private LineTariffsServiceImpl service;
@@ -293,6 +295,8 @@ class LineTariffsServiceImplTest {
 
             assertNotNull(result);
             verify(tariffHdrRepository).callCopyLineTariff(5L);
+            verify(entityManager).flush();
+            verify(entityManager).clear();
             verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("100-050"), eq("99"));
         }
     }
