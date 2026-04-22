@@ -188,7 +188,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), String.format("%s %s", LogDetailsEnum.CREATED, saved.getDocRef()));
+
+        loggingService.createLogSummaryEntry("400-110", saved.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED, saved.getDocRef()));
 
         log.info("Successfully created demurrage/detention payable transfer with id: {}", saved.getTransactionPoid());
         return result;
