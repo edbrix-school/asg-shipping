@@ -16,7 +16,6 @@ import com.asg.shipping.MafiTrailerDateUpdateForm.util.MafiTrailerDateUpdateForm
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,7 +36,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@Disabled
 class MafiTrailerDateUpdateFormServiceImplTest {
 
     @Mock
@@ -223,7 +221,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
         service.update(1L, request);
 
         verify(mapper).updateShipBlMafiHdr(any(ShipBlMafiHdr.class), eq(request), eq("admin"));
-        verify(headerRepository).updateByTransactionPoid(eq(1L), any(LocalDate.class),anyString(), anyString(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), isNull(), anyString(), anyString(), eq("admin"));
         verify(detailRepository).save(any(ShipBlMafiDtl.class));
         verify(loggingService).createLogBatch(anyList());
         verify(loggingService).logChanges(any(), any(), eq(ShipBlMafiHdr.class), eq("DOC123"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
@@ -248,7 +246,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         service.update(1L, request);
 
-        verify(headerRepository).updateByTransactionPoid(eq(1L), any(LocalDate.class),anyString(), anyString(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), isNull(), anyString(), anyString(), eq("admin"));
         verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
         verify(loggingService).logChanges(any(), any(), eq(ShipBlMafiHdr.class), eq("DOC123"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
     }
@@ -314,7 +312,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         service.update(1L, request);
 
-        verify(headerRepository).updateByTransactionPoid(eq(1L),any(LocalDate.class), anyString(), anyString(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), isNull(), anyString(), anyString(), eq("admin"));
         verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
     }
 
@@ -344,7 +342,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         service.update(1L, request);
 
-        verify(headerRepository).updateByTransactionPoid(eq(1L),any(LocalDate.class), anyString(), anyString(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), isNull(), anyString(), anyString(), eq("admin"));
     }
 
     @Test
@@ -373,7 +371,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         service.update(1L, request);
 
-        verify(headerRepository).updateByTransactionPoid(eq(1L),any(LocalDate.class), anyString(), anyString(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), isNull(), anyString(), anyString(), eq("admin"));
     }
 
     @Test
@@ -572,7 +570,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         service.update(1L, request);
 
-        verify(headerRepository).updateByTransactionPoid(eq(1L),any(LocalDate.class), anyString(), anyString(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), isNull(), anyString(), anyString(), eq("admin"));
         verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
     }
 
@@ -595,7 +593,7 @@ class MafiTrailerDateUpdateFormServiceImplTest {
 
         service.update(1L, request);
 
-        verify(headerRepository).updateByTransactionPoid(eq(1L),any(LocalDate.class), anyString(), anyString(), eq("admin"));
+        verify(headerRepository).updateByTransactionPoid(eq(1L), isNull(), anyString(), anyString(), eq("admin"));
         verify(detailRepository, never()).save(any(ShipBlMafiDtl.class));
     }
 }
