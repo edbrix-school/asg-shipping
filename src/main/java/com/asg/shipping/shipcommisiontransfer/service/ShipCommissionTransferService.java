@@ -63,4 +63,6 @@ public interface ShipCommissionTransferService {
     List<PdaFdaDtlResponseDTO> getPdaFdaDetails(Long transactionPoid);
 
     List<Object[]> getCommissionByVoyage(Long voyageTransactionPoid, Long transactionPoid);
+
+    List<Object[]> getCommissionPending(Long companyPoid, Long voyageTransactionPoid, CommissionPendingRequestDTO request);
 }

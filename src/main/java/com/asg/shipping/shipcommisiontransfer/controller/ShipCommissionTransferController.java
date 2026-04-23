@@ -4,6 +4,7 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.shipping.shipcommisiontransfer.dto.CommissionPendingRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
@@ -193,6 +194,22 @@ public class ShipCommissionTransferController {
         try {
             List<Object[]>  result = commissionTransferService.getCommissionByVoyage(voyageId, transactionId);
             return success("Data fetched successfully", result);
+        } catch (Exception e) {
+            return internalServerError("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/pending/{voyageTransactionPoid}")
+    @AllowedAction(UserRolesRightsEnum.CREATE)
+    @Operation(summary = "Get pending commission BLs for a voyage", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> getCommissionPending(
+            @PathVariable @NotNull @Positive Long voyageTransactionPoid,
+            @RequestBody(required = false) CommissionPendingRequestDTO request) {
+        try {
+            Long companyPoid = UserContext.getCompanyPoid();
+            if (request == null) request = new CommissionPendingRequestDTO();
+            List<Object[]> result = commissionTransferService.getCommissionPending(companyPoid, voyageTransactionPoid, request);
+            return success("Commission pending data fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Error: " + e.getMessage());
         }
