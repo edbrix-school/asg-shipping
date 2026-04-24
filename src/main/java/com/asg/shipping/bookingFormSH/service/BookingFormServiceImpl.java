@@ -405,6 +405,37 @@ public class BookingFormServiceImpl implements BookingFormService {
         }
     }
 
+
+    public Long transferBooking(Long oldTransactionPoid) {
+        try {
+            String sql = "{call PROC_MATE_BOOKING_SPLIT(?, ?)}";
+            return jdbcTemplate.execute((ConnectionCallback<Long>) connection -> {
+                CallableStatement cs = connection.prepareCall(sql);
+                cs.setLong(1, oldTransactionPoid);
+                cs.registerOutParameter(2, Types.NUMERIC);
+                cs.execute();
+                Long newSplitPoid = cs.getLong(2);
+                cs.close();
+                return newSplitPoid;
+            });
+        } catch (Exception e) {
+            log.error("Error calling PROC_MATE_BOOKING_SPLIT for poid: {}", oldTransactionPoid, e);
+            throw new ValidationException("Error in split booking: " + e.getMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> transferBookingWithContainers(Long oldTransactionPoid) {
+
+            Long newPoid = transferBooking(oldTransactionPoid);
+            BookingFormDto newBooking = getBookingForm(newPoid);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("bookingDetails", newBooking);
+            return response;
+    }
+
     public String generateCoprarFile(Long bookingTransactionPoid, Long loginUserPoid) {
         try {
 
