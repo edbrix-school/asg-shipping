@@ -1,9 +1,6 @@
 package com.asg.shipping.receipts.service.impl;
 
-import com.asg.common.lib.dto.DeleteReasonDto;
-import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.FilterRequestDto;
-import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.*;
 import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
@@ -29,7 +26,6 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperReport;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -40,10 +36,10 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @Slf4j
@@ -69,6 +65,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private final DataSource dataSource;
 	private final DocumentDeleteService documentDeleteService;
 	private final LoggingService loggingService;
+	private final com.asg.common.lib.service.LovDataService lovService;
 
 	@Override
 	public ReceiptsBlDetailsDto getReceipt(Long transactionPoid) {
@@ -80,11 +77,28 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		List<ArShReceiptChargesDtl> charges = chargesRepository.findByIdTransactionPoid(transactionPoid);
 		List<ArShReceiptPymtDetails> payments = paymentRepository.findByIdTransactionPoid(transactionPoid);
 
-		return mapper.mapBlDetailsEntityToDto(hdr, containers, charges, payments);
+		ReceiptsBlDetailsDto dto = mapper.mapBlDetailsEntityToDto(hdr, containers, charges, payments);
+		Map<Long, LovGetListDto> blLovCache = new java.util.HashMap<>();
+		Map<Long, LovGetListDto> chargeLovCache = new java.util.HashMap<>();
+		
+		dto.setBlDet(getBlDetails(dto.getBlPoid(), blLovCache));
+		dto.setCompanyDet(fetchLovByPoid(dto.getCompanyPoid(), "COMPANY"));
+		dto.setPrintDoCustomerDet(fetchLovByPoid(dto.getPrintDoCustomerPoid(), "IMPORT_RECEIPT_CUSTOMER_PRINT"));
+		dto.setChequeCompanyDet(fetchLovByPoid(dto.getChequeCompany(), "SHIP_DIVISION_PRINT"));
+		enrichContainers(dto.getContainer(), blLovCache);
+		enrichCharges(dto.getCharges(), blLovCache, chargeLovCache);
+		if (dto.getPaymentDetail() != null) {
+			for (ReceiptPaymentDetailDto payment : dto.getPaymentDetail()) {
+				payment.setBankDet(fetchLovByPoid(payment.getBankPoid(), "ARCUSTBANKRCPT"));
+				payment.setTtBankDet(fetchLovByPoid(payment.getTtBankPoid(), "SHIP_REC_BANK_MASTER_ALL_COMPANY"));
+			}
+		}
+
+		return dto;
 	}
 
 	@Override
-	public ReceiptsBlDetailsDto createReceipt(ReceiptsCreateDto createDto) {
+	public ReceiptSaveResponseDto createReceipt(ReceiptsCreateDto createDto) {
 		log.info("Creating receipt with docRef: {}", createDto.getDocRef());
 
 		LocalDate transactionDate = createDto.getTransactionDate() != null 
@@ -113,6 +127,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 						.token(createDto.getToken())
 						.build()
 		);
+		hdr.setPrintStatus("N");
+		hdr.setRcptAmount(createDto.getAmount() != null ? BigDecimal.valueOf(createDto.getAmount()) : BigDecimal.ZERO);
 		hdr = hdrRepository.save(hdr);
 		log.info("Receipt created with id: {}", hdr.getTransactionPoid());
 
@@ -130,13 +146,20 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		procRepository.receiptValidate(hdr.getTransactionPoid(), hdr.getCompanyPoid(), null);
 
 		// Call GL ledger posting and invoice creation procedure
-		procRepository.glLedgerPostShRcpInv(hdr.getGroupPoid(), hdr.getCompanyPoid(), 1L, "300-103", hdr.getTransactionPoid(), createDto.getDocRef());
+		String glStatus = procRepository.glLedgerPostShRcpInv(hdr.getGroupPoid(), hdr.getCompanyPoid(), 1L, "300-102", hdr.getTransactionPoid(), createDto.getDocRef());
+        if (glStatus != null && glStatus.toUpperCase().contains("ERROR")) {
+            throw new ValidationException(glStatus);
+        }
 
-		return getReceipt(hdr.getTransactionPoid());
+		return ReceiptSaveResponseDto.builder()
+				.docRef(hdr.getDocRef())
+				.transactionPoid(hdr.getTransactionPoid())
+				.message("Receipt Created Successfully")
+				.build();
 	}
 
 	@Override
-	public ReceiptsBlDetailsDto updateReceipt(Long transactionPoid, ReceiptsUpdateDto updateDto) {
+	public ReceiptSaveResponseDto updateReceipt(Long transactionPoid, ReceiptsUpdateDto updateDto) {
 		log.info("Updating receipt with id: {}", transactionPoid);
 
 		ArShReceiptHdr existingReceipt = getReceiptHdr(transactionPoid);
@@ -170,6 +193,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 						.build()
 		);
 		updated.setTransactionPoid(transactionPoid);
+		updated.setPrintStatus("N");
+		updated.setRcptAmount(updateDto.getAmount() != null ? BigDecimal.valueOf(updateDto.getAmount()) : BigDecimal.ZERO);
 		hdrRepository.save(updated);
 
 		updateDetailRecords(transactionPoid, updateDto);
@@ -182,9 +207,16 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 		procRepository.receiptValidate(transactionPoid, updated.getCompanyPoid(), null);
 
-		procRepository.glLedgerPostShRcpInv(updated.getGroupPoid(), updated.getCompanyPoid(), 1L, "300-103", transactionPoid, updateDto.getDocRef());
+		String glStatus = procRepository.glLedgerPostShRcpInv(updated.getGroupPoid(), updated.getCompanyPoid(), 1L, "300-102", transactionPoid, updateDto.getDocRef());
+        if (glStatus != null && glStatus.toUpperCase().contains("ERROR")) {
+            throw new ValidationException(glStatus);
+        }
 
-		return getReceipt(transactionPoid);
+		return ReceiptSaveResponseDto.builder()
+				.docRef(updated.getDocRef())
+				.transactionPoid(transactionPoid)
+				.message("Receipt Updated Successfully")
+				.build();
 	}
 
 	@Override
@@ -233,96 +265,160 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	@Override
 	public ReceiptAutoPopulateDto autoPopulateFields(Long blPoid, Long transactionPoid) {
 		ReceiptBlAutoPopulateDto blAutoPopulateDto = procRepository.autoPopulateFields(blPoid);
+        if (blAutoPopulateDto == null) {
+            throw new ResourceNotFoundException("BL", "transactionPoid", blPoid);
+        }
+
 		List<ReceiptAutoPopulateContainerDto> containerAutoPopulateDto = autoPopulateRepository.findAvailableContainersForBl(blPoid, transactionPoid);
 
-		List<ReceiptAutoPopulateChargeDto> chargeAutoPopulateDto = autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid);
+		List<ReceiptAutoPopulateChargeDto> manifestCharges = autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid);
+
+        
+        java.util.ArrayList<ReceiptAutoPopulateChargeDto> allCharges = new java.util.ArrayList<>(manifestCharges);
+		
+		Map<Long,LovGetListDto> blLovCache = new java.util.HashMap<>();
+		Map<Long, LovGetListDto> chargeLovCache = new java.util.HashMap<>();
+
+		if (blAutoPopulateDto != null) {
+			blAutoPopulateDto.setBlDet(getBlDetails(blAutoPopulateDto.getBlPoid(), blLovCache));
+			blAutoPopulateDto.setCompanyDet(fetchLovByPoid(blAutoPopulateDto.getCompanyPoid(), "COMPANY"));
+			blAutoPopulateDto.setPrintCustomerDet(fetchLovByPoid(blAutoPopulateDto.getPrintCustomerPoid() != null ? blAutoPopulateDto.getPrintCustomerPoid().longValue() : null, "IMPORT_RECEIPT_CUSTOMER_PRINT"));
+			blAutoPopulateDto.setChequeCompanyDet(fetchLovByPoid(blAutoPopulateDto.getChequeCompanyPoid() != null ? blAutoPopulateDto.getChequeCompanyPoid().longValue() : null, "SHIP_DIVISION_PRINT"));
+		}
+
+		// Since auto-populate is for a specific BL, all containers and charges will likely share the same BL POID
+		if (containerAutoPopulateDto != null) {
+			for (ReceiptAutoPopulateContainerDto container : containerAutoPopulateDto) {
+				container.setBlDet(getBlDetails(container.getBlPoid(), blLovCache));
+			}
+		}
+
+		if (allCharges != null) {
+			for (ReceiptAutoPopulateChargeDto charge : allCharges) {
+				charge.setBlDet(getBlDetails(charge.getBlPoid(), blLovCache));
+				charge.setChargeDet(getChargeDetails(charge.getChargePoid(), chargeLovCache));
+				if (charge.getTaxPoid() != null) {
+					charge.setTaxDet(lovService.getDetailsByPoidAndLovName(charge.getTaxPoid(), "TAX_MASTER"));
+				}
+			}
+		}
 
 		return ReceiptAutoPopulateDto.builder()
 				.blDetails(blAutoPopulateDto)
 				.container(containerAutoPopulateDto)
-				.charges(chargeAutoPopulateDto)
+				.charges(allCharges)
 				.build();
 	}
 
 	@Override
 	public ReceiptCalculateDemurrageResponseDto calculateDemurrage(ReceiptCalculateDemurrageRequestDto requestDto) {
-		log.info("Calculating demurrage for BL: {}, Container: {}", requestDto.getBlPoid(), requestDto.getContainerNo());
+		log.info("Calculating demurrage for BL: {}, total containers: {}", requestDto.getBlPoid(), requestDto.getContainers().size());
 
-		if (requestDto.getToDate().isBefore(requestDto.getFromDate())) {
-			throw new ValidationException("To Date cannot be before From Date");
+		List<ReceiptCalculateDemurrageResponseDto.ContainerResult> containerResults = new ArrayList<>();
+		BigDecimal totalDemAmount = BigDecimal.ZERO;
+		Long companyPoid = UserContext.getCompanyPoid();
+
+		// 1. Calculate individual container demurrage and summary sum
+		for (ReceiptCalculateDemurrageRequestDto.ContainerRequest container : requestDto.getContainers()) {
+			if (container.getToDate() != null && container.getFromDate() != null &&
+					container.getToDate().isBefore(container.getFromDate())) {
+				throw new ValidationException("To Date cannot be before From Date for container " + container.getContainerNo());
+			}
+
+			BigDecimal containerDemurrage = BigDecimal.ZERO;
+			Long days = 0L;
+
+			if (container.getToDate() != null) {
+				// Legacy logic: fetch Arrival Date for the stored procedure
+				LocalDate arrivalDate = autoPopulateRepository.findArrivalDate(requestDto.getBlPoid(), container.getContainerNo());
+				BigDecimal linePoid = autoPopulateRepository.findLinePoidByBlPoid(requestDto.getBlPoid());
+
+				containerDemurrage = procRepository.calculateDemurrageAmount(
+						requestDto.getTransactionPoid(),
+						requestDto.getBlPoid(),
+						container.getContainerNo(),
+						container.getEquipmentIsoType(),
+						linePoid != null ? linePoid.longValue() : null,
+						arrivalDate, 
+						container.getToDate(),
+						container.getExtraFreeDays()
+				);
+
+				if (container.getFromDate() != null) {
+					days = java.time.temporal.ChronoUnit.DAYS.between(container.getFromDate(), container.getToDate()) + 1;
+				}
+			}
+
+			totalDemAmount = totalDemAmount.add(containerDemurrage != null ? containerDemurrage : BigDecimal.ZERO);
+
+			containerResults.add(ReceiptCalculateDemurrageResponseDto.ContainerResult.builder()
+					.containerNo(container.getContainerNo())
+					.demurrageAmount(containerDemurrage != null ? containerDemurrage : BigDecimal.ZERO)
+					.demurrageDays(days != null ? days : 0L)
+					.build());
 		}
 
-		BigDecimal linePoid = autoPopulateRepository.findLinePoidByBlPoid(requestDto.getBlPoid());
-		BigDecimal demurrageAmount = procRepository.calculateDemurrageAmount(
-				requestDto.getTransactionPoid(),
-				requestDto.getBlPoid(),
-				requestDto.getContainerNo(),
-				requestDto.getContainerIsoType(),
-				linePoid.longValue(),
-				LocalDate.from(requestDto.getFromDate()),
-				LocalDate.from(requestDto.getToDate()),
-				requestDto.getExtraFreeDays()
-		);
-
-		BigDecimal demurrageTaxAmount = BigDecimal.ZERO;
-		Long demurrageTaxPoid = null;
-		BigDecimal demurrageTaxPercentage = null;
-
-		TaxConfig taxConfig = procRepository.getDemurrageTaxInfo(UserContext.getCompanyPoid());
-		if (taxConfig == null) {
-			taxConfig = TaxConfig.builder()
-					.taxApplicable("N")
-					.percentage(BigDecimal.ZERO)
-					.build();
-		}
-		if ("Y".equalsIgnoreCase(taxConfig.getTaxApplicable()) && demurrageAmount.compareTo(BigDecimal.ZERO) > 0) {
-			demurrageTaxPoid = taxConfig.getTaxPoid();
-			demurrageTaxPercentage = taxConfig.getPercentage();
-			demurrageTaxAmount = demurrageAmount
-					.multiply(demurrageTaxPercentage)
-					.divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+		// 2. Fetch Demurrage Tax and update container rows
+		TaxConfig demTaxInfo = procRepository.getDemurrageTaxInfo(companyPoid);
+		BigDecimal totalDemTaxAmount = BigDecimal.ZERO;
+		if (demTaxInfo != null && "Y".equals(demTaxInfo.getTaxApplicable()) && demTaxInfo.getPercentage() != null) {
+			totalDemTaxAmount = totalDemAmount.multiply(demTaxInfo.getPercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
 		}
 
-		String containerSize = procRepository.getContainerSize(requestDto.getContainerIsoType());
-		List<ReceiptCalculateDemurrageResponseDto.ChargeDetail> lateCollectionCharges = new ArrayList<>();
-		List<ReceiptCalculateDemurrageResponseDto.ChargeDetail> revalidationCharges = new ArrayList<>();
-
-		List<ChargeDto> allCharges = procRepository.getCombinedCharges(requestDto.getBlPoid(), UserContext.getCompanyPoid());
-		if (allCharges == null) {
-			allCharges = new ArrayList<>();
+		for (ReceiptCalculateDemurrageResponseDto.ContainerResult result : containerResults) {
+			BigDecimal containerTax = BigDecimal.ZERO;
+			if (demTaxInfo != null && demTaxInfo.getPercentage() != null) {
+				containerTax = (result.getDemurrageAmount() != null) ?
+						result.getDemurrageAmount().multiply(demTaxInfo.getPercentage()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+				result.setTaxPoid(demTaxInfo.getTaxPoid());
+				result.setTaxPercentage(demTaxInfo.getPercentage());
+			}
+			result.setTaxAmount(containerTax);
 		}
 
-		for (ChargeDto charge : allCharges) {
-			ReceiptCalculateDemurrageResponseDto.ChargeDetail detail = processCharge(charge, containerSize);
+		List<ReceiptCalculateDemurrageResponseDto.ChargeDetail> charges = new ArrayList<>();
+		
+		charges.add(ReceiptCalculateDemurrageResponseDto.ChargeDetail.builder()
+				.chargeType("SHDEMURRAGE")
+				.chargePoid(demTaxInfo != null && demTaxInfo.getParameterValue() != null ? Long.parseLong(demTaxInfo.getParameterValue()) : null)
+				.amount(totalDemAmount)
+				.taxPoid(demTaxInfo != null ? demTaxInfo.getTaxPoid() : null)
+				.taxPercentage(demTaxInfo != null ? demTaxInfo.getPercentage() : null)
+				.taxAmount(totalDemTaxAmount)
+				.build());
 
-			if (detail.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-				if (charge.getChargeTypeApplicable() != null && charge.getChargeTypeApplicable().contains("LATECOLLECTION")) {
-					lateCollectionCharges.add(detail);
-				} else if (charge.getChargeTypeApplicable() != null && charge.getChargeTypeApplicable().contains("REVALIDATE")) {
-					revalidationCharges.add(detail);
+		List<ChargeDto> allCombinedCharges = procRepository.getCombinedCharges(requestDto.getBlPoid(), companyPoid);
+		if (allCombinedCharges != null) {
+			for (ChargeDto charge : allCombinedCharges) {
+				// Standard charges logic using representative container context or per-BL logic
+				ReceiptCalculateDemurrageResponseDto.ChargeDetail detail = processLateCharge(charge, requestDto.getContainers().size());
+				if (detail.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+					charges.add(detail);
 				}
 			}
 		}
 
-		BigDecimal totalAmount = demurrageAmount.add(demurrageTaxAmount);
-		for (ReceiptCalculateDemurrageResponseDto.ChargeDetail charge : lateCollectionCharges) {
-			totalAmount = totalAmount.add(charge.getAmount()).add(charge.getTaxAmount());
+		// 4. Final Grand Total and LOV enrichment
+		BigDecimal grandTotal = totalDemAmount.add(totalDemTaxAmount);
+		Map<Long, com.asg.common.lib.dto.LovGetListDto> chargeLovCache = new java.util.HashMap<>();
+		
+		for (ReceiptCalculateDemurrageResponseDto.ChargeDetail detail : charges) {
+			detail.setChargeDet(getChargeDetails(detail.getChargePoid(), chargeLovCache));
+			detail.setTaxDet(fetchLovByPoid(detail.getTaxPoid(), "TAX_MASTER"));
 		}
-		for (ReceiptCalculateDemurrageResponseDto.ChargeDetail charge : revalidationCharges) {
-			totalAmount = totalAmount.add(charge.getAmount()).add(charge.getTaxAmount());
+		
+		for (ReceiptCalculateDemurrageResponseDto.ContainerResult row : containerResults) {
+			row.setTaxDet(fetchLovByPoid(row.getTaxPoid(), "TAX_MASTER"));
 		}
 
-		log.info("Demurrage calculated - BL: {}, Demurrage: {}, Tax: {}, Total: {}",
-			requestDto.getBlPoid(), demurrageAmount, demurrageTaxAmount, totalAmount);
+		for (int i = 1; i < charges.size(); i++) {
+			grandTotal = grandTotal.add(charges.get(i).getAmount()).add(charges.get(i).getTaxAmount());
+		}
 
 		return ReceiptCalculateDemurrageResponseDto.builder()
-				.demurrageAmount(demurrageAmount)
-				.demurrageTaxAmount(demurrageTaxAmount)
-				.demurrageTaxPoid(demurrageTaxPoid)
-				.demurrageTaxPercentage(demurrageTaxPercentage)
-				.lateCollectionCharges(lateCollectionCharges)
-				.revalidationCharges(revalidationCharges)
-				.totalAmount(totalAmount)
+				.containerResults(containerResults)
+				.charges(charges)
+				.totalAmount(grandTotal)
 				.build();
 	}
 
@@ -342,14 +438,15 @@ public class ReceiptsServiceImpl implements ReceiptsService {
     }
 
 
-	private ReceiptCalculateDemurrageResponseDto.ChargeDetail processCharge(ChargeDto charge, String containerSize) {
+	private ReceiptCalculateDemurrageResponseDto.ChargeDetail processLateCharge(ChargeDto charge, int containerCount) {
 		String chargeApplicable = charge.getChargeApplicable();
 		BigDecimal amount = BigDecimal.ZERO;
 
 		if ("PERBL".equals(chargeApplicable)) {
 			amount = charge.getAmountOther();
 		} else if ("PERQUENTITY".equals(chargeApplicable)) {
-			amount = "20".equals(containerSize) ? charge.getAmount20() : charge.getAmount40();
+			// Using base 20 calculation as default sum if no specific mix is provided
+			amount = charge.getAmount20().multiply(BigDecimal.valueOf(containerCount));
 		}
 
 		BigDecimal taxAmount = BigDecimal.ZERO;
@@ -551,6 +648,37 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private ArShReceiptHdr getReceiptHdr(Long transactionPoid) {
 		return hdrRepository.findById(transactionPoid)
 				.orElseThrow(() -> new ResourceNotFoundException("Receipt", "transactionPoid", transactionPoid.toString()));
+	}
+	private void enrichContainers(List<ReceiptContainerDto> containers, Map<Long, LovGetListDto> blCache) {
+		if (containers == null) return;
+		for (ReceiptContainerDto container : containers) {
+			container.setBlDet(getBlDetails(container.getBlPoid(), blCache));
+			container.setTaxDet(fetchLovByPoid(container.getCntTaxPoid(), "TAX_MASTER"));
+		}
+	}
+
+	private void enrichCharges(List<ReceiptCharges> charges, Map<Long, LovGetListDto> blCache, Map<Long, LovGetListDto> chargeCache) {
+		if (charges == null) return;
+		for (ReceiptCharges charge : charges) {
+			charge.setBlDet(getBlDetails(charge.getBlPoid(), blCache));
+			charge.setChargeDet(getChargeDetails(charge.getChargePoid(), chargeCache));
+			charge.setTaxDet(fetchLovByPoid(charge.getTaxPoid(), "TAX_MASTER"));
+		}
+	}
+
+	private LovGetListDto fetchLovByPoid(Long poid, String lovName) {
+		if (poid == null) return null;
+		return lovService.getDetailsByPoidAndLovName(poid, lovName);
+	}
+
+	private LovGetListDto getBlDetails(Long blPoid, Map<Long, LovGetListDto> cache) {
+		if (blPoid == null) return null;
+		return cache.computeIfAbsent(blPoid, id -> lovService.getDetailsByPoidAndLovName(id, "IMPORTBLNUMBER"));
+	}
+
+	private LovGetListDto getChargeDetails(Long chargePoid, Map<Long, LovGetListDto> cache) {
+		if (chargePoid == null) return null;
+		return cache.computeIfAbsent(chargePoid, id -> lovService.getDetailsByPoidAndLovName(id, "CHARGE_MASTER"));
 	}
 
 }

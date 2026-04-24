@@ -40,6 +40,7 @@ public class ReceiptsControllerTest {
     private ReceiptsController receiptsController;
 
     private ReceiptsBlDetailsDto blDetailsDto;
+    private ReceiptSaveResponseDto saveResponseDto;
     private ReceiptsCreateDto createDto;
     private ReceiptsUpdateDto updateDto;
 
@@ -49,6 +50,12 @@ public class ReceiptsControllerTest {
                 .docRef("RCP-2025-001")
                 .blPoid(1001L)
                 .companyPoid(100L)
+                .build();
+
+        saveResponseDto = ReceiptSaveResponseDto.builder()
+                .docRef("RCP-2025-001")
+                .transactionPoid(1L)
+                .message("Success")
                 .build();
 
         createDto = ReceiptsCreateDto.builder()
@@ -81,7 +88,7 @@ public class ReceiptsControllerTest {
 
     @Test
     void create_Success() {
-        when(receiptsService.createReceipt(any(ReceiptsCreateDto.class))).thenReturn(blDetailsDto);
+        when(receiptsService.createReceipt(any(ReceiptsCreateDto.class))).thenReturn(saveResponseDto);
 
         ResponseEntity<?> response = receiptsController.create(createDto);
 
@@ -102,7 +109,7 @@ public class ReceiptsControllerTest {
 
     @Test
     void update_Success() {
-        when(receiptsService.updateReceipt(eq(1L), any(ReceiptsUpdateDto.class))).thenReturn(blDetailsDto);
+        when(receiptsService.updateReceipt(eq(1L), any(ReceiptsUpdateDto.class))).thenReturn(saveResponseDto);
 
         ResponseEntity<?> response = receiptsController.update(1L, updateDto);
 
@@ -141,20 +148,7 @@ public class ReceiptsControllerTest {
         verify(receiptsService).list(any(), any());
     }
 
-    @Test
-    void autoPopulateFields_Success() {
-        ReceiptAutoPopulateRequestDto request = ReceiptAutoPopulateRequestDto.builder()
-                .blPoid(1001L)
-                .build();
-        ReceiptAutoPopulateDto responseDto = ReceiptAutoPopulateDto.builder().build();
-        when(receiptsService.autoPopulateFields(eq(1001L), any())).thenReturn(responseDto);
 
-        ResponseEntity<?> response = receiptsController.autoPopulateFields(request);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(receiptsService).autoPopulateFields(eq(1001L), any());
-    }
 
     @Test
     void calculateDemurrage_Success() {

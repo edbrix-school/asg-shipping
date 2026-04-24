@@ -40,4 +40,14 @@ public interface ShipReceiptProcRepository {
 	String getContainerSize(String containerIsoType);
 
 	java.util.List<ChargeDto> getCombinedCharges(Long blPoid, Long companyPoid);
+
+    String validateDuplicateBlReceipt(Long blPoid, String remarks);
+
+    String validateChequeDate(LocalDate chequeDate, String type);
+
+    String validatePdcDateAgainstInvoice(Long blPoid, LocalDate chequeDate);
+
+    Long getBankCompany(Long bankPoid);
+
+    String getGlobalParameter(String paramName, String paramKeyIdType, Long companyPoid, String defaultValue);
 }

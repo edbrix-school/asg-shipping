@@ -3,10 +3,10 @@ package com.asg.shipping.receipts.util;
 public class ValidationMessages {
 	
 	// UPDATE-specific messages
-	public static final String RECEIPT_PRINTED = "Receipt has been printed and cannot be modified. Please contact administrator if changes are required.";
+	public static final String RECEIPT_PRINTED = "Receipt has been printed and cannot be modified..";
 	
 	// Release Type messages
-	public static final String RELEASE_TYPE_MISMATCH = "Release Type does not match the original release type. Please verify and correct.";
+	public static final String RELEASE_TYPE_MISMATCH = "Release Type does not match the original release type.";
 
 	// DO Release Customer messages
 
