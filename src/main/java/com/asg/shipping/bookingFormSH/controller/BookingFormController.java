@@ -9,14 +9,12 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
-import com.asg.shipping.common.entity.GlobalAddressDetails;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
 import com.asg.shipping.bookingFormSH.service.BookingFormService;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.portmaster.dto.PortMasterResponse;
-import com.asg.shipping.salesinvoice.dto.CustomerAddressResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -319,6 +317,27 @@ public class BookingFormController {
         } catch (Exception e) {
             return internalServerError("Error fetching customer address: " + e.getMessage());
         }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Customer Address (DocId: 100-140)",
+            description = "Retrieve Datas From the Container Based on the Split Values",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Transfer Datas retrieved successfully"),
+                    @ApiResponse(responseCode = "404", description = "Transfer Data Not FOund not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            },
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PostMapping("/transfer/{transactionPoid}")
+    public ResponseEntity<?> transferBooking(
+            @PathVariable Long transactionPoid) {
+        log.info("Transfer poid: " + transactionPoid);
+        Map<String, Object> result =
+                bookingFormService.transferBookingWithContainers(transactionPoid);
+
+        return success("Booking Form retrieved successfully.", result);
     }
 
 }
