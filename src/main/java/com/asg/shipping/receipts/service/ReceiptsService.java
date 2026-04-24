@@ -13,9 +13,9 @@ public interface ReceiptsService {
 
 	ReceiptsBlDetailsDto getReceipt(Long transactionPoid);
 
-	ReceiptsBlDetailsDto createReceipt(ReceiptsCreateDto createDto);
+	ReceiptSaveResponseDto createReceipt(ReceiptsCreateDto createDto);
 
-	ReceiptsBlDetailsDto updateReceipt(Long transactionPoid, ReceiptsUpdateDto updateDto);
+	ReceiptSaveResponseDto updateReceipt(Long transactionPoid, ReceiptsUpdateDto updateDto);
 
 	void deleteReceipt(Long transactionPoid, DeleteReasonDto deleteReasonDto);
 

@@ -92,10 +92,6 @@ public class ShippingReceiptValidationServiceTest {
                 try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
                         mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
                         when(manifestHdrRepository.existsById(1001L)).thenReturn(true);
-                        when(procRepository.validateFinancialYear(anyLong(), any(LocalDate.class))).thenReturn("TRUE");
-                        when(procRepository.validateTransactionPeriod(anyLong(), any(LocalDate.class)))
-                                        .thenReturn("TRUE");
-
                         assertDoesNotThrow(() -> validationService.validateReceiptCreation(createDto));
                 }
         }
@@ -184,12 +180,9 @@ public class ShippingReceiptValidationServiceTest {
                                 .amountSelect("Y")
                                 .build()));
 
-                createDto.setPaymentDetail(Collections.singletonList(ReceiptPaymentDetailDto.builder()
-                                .pymtType("CASH")
-                                .amount(new BigDecimal("100.00"))
-                                .build()));
-
                 when(manifestHdrRepository.existsById(anyLong())).thenReturn(true);
+                when(procRepository.validateBlacklistedCustomer(eq("ACC123"), eq(1L))).thenReturn("Y");
+                
                 assertThrows(ValidationException.class, () -> validationService.validateReceiptCreation(createDto));
         }
 
@@ -212,12 +205,6 @@ public class ShippingReceiptValidationServiceTest {
         }
 
         @Test
-        void validateMandatoryField_MissingToken() {
-                createDto.setToken(null);
-                assertThrows(ValidationException.class, () -> validationService.validateReceiptCreation(createDto));
-        }
-
-        @Test
         void validatePrintCustomer_Required() {
                 createDto.setPrintDoCustomerPoid(null);
                 Mockito.lenient().when(procRepository.getReceiptType(anyLong())).thenReturn("NORMAL");
@@ -225,34 +212,6 @@ public class ShippingReceiptValidationServiceTest {
                 assertThrows(ValidationException.class, () -> validationService.validateReceiptCreation(createDto));
         }
 
-        @Test
-        void validateFinancialYear_Invalid() {
-                try (MockedStatic<UserContext> mockedUserContext = Mockito.mockStatic(UserContext.class)) {
-                        mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
-                        Mockito.lenient().when(manifestHdrRepository.existsById(anyLong())).thenReturn(true);
-                        Mockito.lenient().when(procRepository.validateFinancialYear(anyLong(), any(LocalDate.class)))
-                                        .thenReturn("FALSE");
-
-                        assertThrows(ValidationException.class,
-                                        () -> validationService.validateReceiptCreation(createDto));
-                }
-        }
-
-        @Test
-        void validateTransactionPeriod_Invalid() {
-                try (MockedStatic<UserContext> mockedUserContext = Mockito.mockStatic(UserContext.class)) {
-                        mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
-                        Mockito.lenient().when(manifestHdrRepository.existsById(anyLong())).thenReturn(true);
-                        Mockito.lenient().when(procRepository.validateFinancialYear(anyLong(), any(LocalDate.class)))
-                                        .thenReturn("TRUE");
-                        Mockito.lenient()
-                                        .when(procRepository.validateTransactionPeriod(anyLong(), any(LocalDate.class)))
-                                        .thenReturn("FALSE");
-
-                        assertThrows(ValidationException.class,
-                                        () -> validationService.validateReceiptCreation(createDto));
-                }
-        }
 
         @Test
         void validateReceiptAmount_Zero() {
@@ -346,21 +305,6 @@ public class ShippingReceiptValidationServiceTest {
                 createDto.setPaymentDetail(Collections.singletonList(ReceiptPaymentDetailDto.builder()
                                 .pymtType("CASH")
                                 .amount(new BigDecimal("-10.00"))
-                                .build()));
-                Mockito.lenient().when(manifestHdrRepository.existsById(anyLong())).thenReturn(true);
-                assertThrows(ValidationException.class, () -> validationService.validateReceiptCreation(createDto));
-        }
-
-        @Test
-        void validateCharges_NegativeTax() {
-                createDto.setCharges(Collections.singletonList(ReceiptCharges.builder()
-                                .amount(new BigDecimal("100.00"))
-                                .taxAmount(new BigDecimal("-5.00"))
-                                .amountSelect("Y")
-                                .build()));
-                createDto.setPaymentDetail(Collections.singletonList(ReceiptPaymentDetailDto.builder()
-                                .pymtType("CASH")
-                                .amount(new BigDecimal("100.00"))
                                 .build()));
                 Mockito.lenient().when(manifestHdrRepository.existsById(anyLong())).thenReturn(true);
                 assertThrows(ValidationException.class, () -> validationService.validateReceiptCreation(createDto));

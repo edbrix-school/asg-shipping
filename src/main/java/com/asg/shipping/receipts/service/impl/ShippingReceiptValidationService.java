@@ -37,13 +37,12 @@ public class ShippingReceiptValidationService {
 		validateBlPoid(createDto.getBlPoid());
 		validatePrintCustomer(createDto.getPrintDoCustomerPoid(), createDto.getBlPoid());
 		validateAmount(createDto.getCharges(),createDto.getPaymentDetail());
-		validateFinancialYearAndPeriod(createDto.getCompanyPoid(), LocalDate.from(createDto.getTransactionDate()));
 		validateReceiptAmount(createDto.getPaymentDetail(), createDto.getCharges(), createDto.getContainer());
-		validatePaymentMethods(createDto.getPaymentDetail());
+		validatePaymentMethods(createDto.getPaymentDetail(), createDto.getBlPoid(), createDto.getCompanyPoid());
 		validateBlacklistedCustomers(createDto.getPaymentDetail());
 		validateCashPayments(createDto.getPaymentDetail());
 		validateDemurrageAmounts(createDto.getBlPoid(), createDto.getCharges(), createDto.getContainer());
-		validateCharges(createDto.getCharges());
+        validateDuplicateBlReceipt(createDto.getBlPoid(), createDto.getRemarks());
 
 		log.info("Receipt creation validation completed successfully");
 	}
@@ -86,11 +85,7 @@ public class ShippingReceiptValidationService {
 			log.error("Mandatory field blPoid is missing");
 			throw new ValidationException("BL POID is required");
 		}
-		if (token == null) {
-			log.error("Mandatory token  is missing");
-			throw new ValidationException("Token is required");
-		}
-		}
+	}
 
 
 	public void validateReceiptUpdate(ReceiptsUpdateDto updateDto, ArShReceiptHdr existingReceipt) {
@@ -104,26 +99,19 @@ public class ShippingReceiptValidationService {
 
 		validateReleaseTypeMatching(existingReceipt);
 
-		validateFinancialYearAndPeriod(updateDto.getCompanyPoid(), LocalDate.from(existingReceipt.getTransactionDate()));
-		validateFinancialYearAndPeriod(updateDto.getCompanyPoid(), LocalDate.from(updateDto.getTransactionDate()));
-
 		validateReceiptAmount(updateDto.getPaymentDetail(), updateDto.getCharges(), updateDto.getContainer());
-		validatePaymentMethods(updateDto.getPaymentDetail());
+		validatePaymentMethods(updateDto.getPaymentDetail(), updateDto.getBlPoid(), updateDto.getCompanyPoid());
 		validateBlacklistedCustomers(updateDto.getPaymentDetail());
 		validateCashPayments(updateDto.getPaymentDetail());
 		validateDemurrageAmounts(updateDto.getBlPoid(), updateDto.getCharges(), updateDto.getContainer());
-		validateCharges(updateDto.getCharges());
+        validateDuplicateBlReceipt(updateDto.getBlPoid(), updateDto.getRemarks());
 
 		log.info("Receipt update validation completed successfully");
 	}
 
 	private void validatePrintCustomer(Long printDoCustomerPoid, Long blPoid) {
 		if (printDoCustomerPoid == null && blPoid != null) {
-			String rcptType = procRepository.getReceiptType(blPoid);
-			if (rcptType == null || !rcptType.equalsIgnoreCase("FINALSPLITSRECEIPT")) {
-				throw new ValidationException(
-					"Print DO Customer is required for receipt type " + rcptType);
-			}
+			throw new ValidationException("Print DO Customer is required");
 		}
 	}
 
@@ -134,25 +122,6 @@ public class ShippingReceiptValidationService {
 		}
 	}
 
-	private void validateFinancialYearAndPeriod(Long companyPoid, LocalDate transactionDate) {
-		if (companyPoid == null || transactionDate == null) {
-			return;
-		}
-
-		// Validate financial year
-		String fyResult = procRepository.validateFinancialYear(UserContext.getCompanyPoid(), transactionDate);
-		if (fyResult == null || !fyResult.equalsIgnoreCase("TRUE")) {
-			throw new ValidationException(
-				"Financial year is not valid for transaction date " + transactionDate);
-		}
-
-		// Validate transaction period
-		String tpResult = procRepository.validateTransactionPeriod(companyPoid, transactionDate);
-		if (tpResult == null || !tpResult.equalsIgnoreCase("TRUE")) {
-			throw new ValidationException(
-				"Transaction period is not valid for transaction date " + transactionDate);
-		}
-	}
 
 	private void validateReceiptAmount(List<ReceiptPaymentDetailDto> payments, 
 										   List<ReceiptCharges> charges, 
@@ -197,7 +166,7 @@ public class ShippingReceiptValidationService {
 		}
 	}
 
-	private void validatePaymentMethods(List<ReceiptPaymentDetailDto> payments) {
+	private void validatePaymentMethods(List<ReceiptPaymentDetailDto> payments, Long blPoid, Long companyPoid) {
 		if (payments == null || payments.isEmpty()) {
 			return;
 		}
@@ -209,16 +178,16 @@ public class ShippingReceiptValidationService {
 
 			String pymtType = payment.getPymtType().toUpperCase();
 			if (pymtType.contains("CHEQUE")) {
-				validateChequePayment(payment);
+				validateChequePayment(payment, blPoid);
 			} else if (pymtType.contains("TT")) {
-				validateTTPayment(payment);
+				validateTTPayment(payment, companyPoid);
 			} else if (pymtType.contains("ROUNDOFF")) {
-				validateRoundoffPayment(payment);
+				validateRoundoffPayment(payment, companyPoid);
 			}
 		}
 	}
 
-	private void validateChequePayment(ReceiptPaymentDetailDto payment) {
+	private void validateChequePayment(ReceiptPaymentDetailDto payment, Long blPoid) {
 		if (payment.getAmount() == null && payment.getBankPoid() == null) {
 			return;
 		}
@@ -230,20 +199,45 @@ public class ShippingReceiptValidationService {
 			payment.getChqDate() == null) {
 			throw new ValidationException(ValidationMessages.CHEQUE_FIELDS_MISSING);
 		}
+
+        // Legacy: PDC Date against Invoice check
+        String pdcResult = procRepository.validatePdcDateAgainstInvoice(blPoid, payment.getChqDate());
+        if ("1".equals(pdcResult)) {
+            throw new ValidationException("Check Post dated cheque date for chqno=" + payment.getChqCardno() + ", " + payment.getChqDate());
+        }
+
+        // Legacy: PDC range check (SHPOSTCHQ)
+        String postChqResult = procRepository.validateChequeDate(payment.getChqDate(), "SHPOSTCHQ");
+        if ("-1".equals(postChqResult)) {
+            throw new ValidationException("Check Post dated cheque date for chqno=" + payment.getChqCardno() + ", " + payment.getChqDate());
+        }
+
+        // Legacy: Pre-dated range check (SHPRECHQ)
+        String preChqResult = procRepository.validateChequeDate(payment.getChqDate(), "SHPRECHQ");
+        if ("1".equals(preChqResult)) {
+            throw new ValidationException("Check Pre dated cheque date for chqno=" + payment.getChqCardno() + ", " + payment.getChqDate());
+        }
 	}
 
-	private void validateTTPayment(ReceiptPaymentDetailDto payment) {
+	private void validateTTPayment(ReceiptPaymentDetailDto payment, Long companyPoid) {
 		if (payment.getAmount() == null || payment.getTtBankPoid() == null) {
 			throw new ValidationException(ValidationMessages.TT_FIELDS_MISSING);
 		}
+
+        // Legacy: TT Bank company matching
+        Long bankCompany = procRepository.getBankCompany(payment.getTtBankPoid());
+        if (bankCompany != null && !bankCompany.equals(companyPoid)) {
+            throw new ValidationException("TT Bank company not matching with selected BL company");
+        }
 	}
 
-	private void validateRoundoffPayment(ReceiptPaymentDetailDto payment) {
+	private void validateRoundoffPayment(ReceiptPaymentDetailDto payment, Long companyPoid) {
 		if (payment.getAmount() == null) {
 			return;
 		}
 
-		BigDecimal roundLimitValue = new BigDecimal("100");
+		String roundLimitStr = procRepository.getGlobalParameter("ROUNDING_LIMIT", "GROUP", companyPoid, "0");
+        BigDecimal roundLimitValue = new BigDecimal(roundLimitStr != null ? roundLimitStr : "0");
 		if (payment.getAmount().doubleValue() > roundLimitValue.doubleValue()) {
 			throw new ValidationException(
 				ValidationMessages.ROUNDOFF_LIMIT_EXCEEDED.replace("{0}", roundLimitValue.toString())
@@ -290,13 +284,9 @@ public class ShippingReceiptValidationService {
 	private void validateCashRounding(ReceiptPaymentDetailDto payment) {
 		if (payment.getAmount() != null) {
 			BigDecimal cashAmount = payment.getAmount();
-			double cashAmountDouble = cashAmount.doubleValue();
-
-			int intAmount = (int) cashAmountDouble;
-			double fraction = cashAmountDouble - intAmount;
-			int cents = (int) ((fraction * 1000));
-
-			if ((cents % 5) != 0) {
+			// Convert to cents (hundredths) and check if divisible by 5
+			BigDecimal cents = cashAmount.multiply(new BigDecimal("100")).setScale(0, java.math.RoundingMode.HALF_UP);
+			if (cents.remainder(new BigDecimal("5")).compareTo(BigDecimal.ZERO) != 0) {
 				throw new ValidationException(
 					ValidationMessages.CASH_ROUNDING_INVALID.replace("{0}", cashAmount.toString())
 				);
@@ -305,17 +295,15 @@ public class ShippingReceiptValidationService {
 	}
 
 	private void validateSplitPayments(List<ReceiptPaymentDetailDto> payments) {
-		int nonCashPaymentCount = 0;
+		int paymentCount = 0;
 
 		for (ReceiptPaymentDetailDto payment : payments) {
-			if (payment.getPymtType() != null && !payment.getPymtType().equalsIgnoreCase("CASH")) {
-				if (payment.getAmount() != null && payment.getAmount().doubleValue() > 0) {
-					nonCashPaymentCount++;
-				}
+			if (payment.getAmount() != null && payment.getAmount().doubleValue() > 0) {
+				paymentCount++;
 			}
 		}
 
-		if (nonCashPaymentCount > 1) {
+		if (paymentCount > 1) {
 			throw new ValidationException(ValidationMessages.SPLIT_PAYMENT_NOT_ALLOWED);
 		}
 	}
@@ -366,27 +354,6 @@ public class ShippingReceiptValidationService {
 		}
 	}
 
-	private void validateCharges(List<ReceiptCharges> charges) {
-		if (charges == null || charges.isEmpty()) {
-			return;
-		}
-
-		for (int i = 0; i < charges.size(); i++) {
-			ReceiptCharges charge = charges.get(i);
-			
-			if (charge.getAmount() != null && charge.getAmount().compareTo(BigDecimal.ZERO) < 0) {
-				throw new ValidationException(
-					ValidationMessages.CHARGE_AMOUNT_NEGATIVE.replace("{0}", String.valueOf(i + 1))
-				);
-			}
-
-			if (charge.getTaxAmount() != null && charge.getTaxAmount().compareTo(BigDecimal.ZERO) < 0) {
-				throw new ValidationException(
-					ValidationMessages.CHARGE_TAX_NEGATIVE.replace("{0}", String.valueOf(i + 1))
-				);
-			}
-		}
-	}
 
 	private void validateBlPoid(Long blPoid) {
 
@@ -400,6 +367,14 @@ public class ShippingReceiptValidationService {
 			);
 		}
 	}
+
+    private void validateDuplicateBlReceipt(Long blPoid, String remarks) {
+        if (blPoid == null) return;
+        String result = procRepository.validateDuplicateBlReceipt(blPoid, remarks);
+        if ("TRUE".equalsIgnoreCase(result)) {
+            throw new ValidationException("BL already invoiced with remarks (" + remarks + ") reference, please check remarks...");
+        }
+    }
 
 
 	}

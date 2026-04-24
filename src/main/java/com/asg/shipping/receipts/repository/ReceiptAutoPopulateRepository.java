@@ -5,6 +5,7 @@ import com.asg.shipping.receipts.dto.ReceiptAutoPopulateContainerDto;
 import com.asg.shipping.receipts.dto.TaxConfig;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public interface ReceiptAutoPopulateRepository {
@@ -19,6 +20,10 @@ public interface ReceiptAutoPopulateRepository {
             Long currentReceiptId
     );
 
+    ReceiptAutoPopulateChargeDto findDemurrageChargeRow(Long blPoid, Long companyPoid, BigDecimal totalDemAmount);
+
     BigDecimal findLinePoidByBlPoid(Long blPoid);
+
+    LocalDate findArrivalDate(Long blPoid, String containerNo);
 
 }

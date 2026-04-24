@@ -1,5 +1,6 @@
 package com.asg.shipping.receipts.dto;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 public class ReceiptAutoPopulateContainerDto {
 
 	private Long blPoid;
+	private LovGetListDto blDet;
 	private String equipmentShipperOwn;
 	private String containerNo;
 	private LocalDate fromDate;

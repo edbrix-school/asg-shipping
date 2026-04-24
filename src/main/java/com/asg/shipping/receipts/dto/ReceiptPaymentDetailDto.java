@@ -1,5 +1,6 @@
 package com.asg.shipping.receipts.dto;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,9 +22,11 @@ public class ReceiptPaymentDetailDto {
 	private String pymtType;
 	private BigDecimal amount;
 	private Long ttBankPoid;
+	private LovGetListDto ttBankDet;
 	private String chqCardno;
 	private LocalDate chqDate;
 	private String accountName;
 	private String accountNo;
 	private Long bankPoid;
+	private LovGetListDto bankDet;
 }
