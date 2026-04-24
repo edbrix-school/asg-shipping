@@ -326,7 +326,6 @@ public class ReceiptsController {
 			return success("Receipt list retrieved successfully", response);
 	}
 
-	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@GetMapping("/autopopulate")
 	@Operation(
 			summary = "Auto Populate Receipt Fields",
@@ -354,7 +353,6 @@ public class ReceiptsController {
 
 	}
 
-	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@PostMapping("/calculate-demurrage")
 	@Operation(
 			summary = "Calculate Demurrage Amount with Charges and Tax",

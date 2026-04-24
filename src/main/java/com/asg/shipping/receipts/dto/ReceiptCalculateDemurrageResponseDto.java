@@ -29,7 +29,7 @@ public class ReceiptCalculateDemurrageResponseDto {
         private Long demurrageDays;
         private BigDecimal taxAmount;
         private Long taxPoid;
-        private com.asg.common.lib.dto.LovGetListDto taxDet;
+        private LovGetListDto taxDet;
         private BigDecimal taxPercentage;
     }
 
