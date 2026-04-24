@@ -35,5 +35,8 @@ public class CollectionHandoverDetailCreateDTO {
 
     @PositiveOrZero(message = "Cash amount must be positive or zero")
     private BigDecimal cashAmount;
+
+    /** ISCREATED | ISUPDATED | ISDELETED */
+    private String action;
 }
 

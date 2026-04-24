@@ -10,7 +10,12 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * Entity class for AR_SH_DAY_END_CLOSE_DTL table
+ * Entity for AR_SH_DAY_END_CLOSE_DTL.
+ *
+ * PK: (TRANSACTION_POID, DET_ROW_ID) — composite, no sequence.
+ * CURRENCY_AMOUNT / CASH_AMOUNT — plain NUMBER in DB, no precision/scale.
+ * NO_OF_TRAN — plain NUMBER, mapped as Integer.
+ * Audit columns — LASTMODIFIED_BY / LASTMODIFIED_DATE (no extra _).
  */
 @Entity(name = "CollectionHandoverDtl")
 @Table(name = "AR_SH_DAY_END_CLOSE_DTL")
@@ -29,7 +34,7 @@ public class ArShDayEndCloseDtl extends BaseEntity {
     @Column(name = "DET_ROW_ID", nullable = false)
     private Long detRowId;
 
-    @Column(name = "CURRENCY_AMOUNT", precision = 18, scale = 2)
+    @Column(name = "CURRENCY_AMOUNT")
     private BigDecimal currencyAmount;
 
     @Column(name = "CURRENCY_TYPE", length = 20)
@@ -38,7 +43,7 @@ public class ArShDayEndCloseDtl extends BaseEntity {
     @Column(name = "NO_OF_TRAN")
     private Integer noOfTran;
 
-    @Column(name = "CASH_AMOUNT", precision = 18, scale = 2)
+    @Column(name = "CASH_AMOUNT")
     private BigDecimal cashAmount;
 
     @ManyToOne(fetch = FetchType.LAZY)

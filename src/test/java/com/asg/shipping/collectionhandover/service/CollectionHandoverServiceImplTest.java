@@ -20,7 +20,11 @@ import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverDtlRepository;
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverHdrRepository;
 import com.asg.shipping.collectionhandover.util.CollectionHandoverMapper;
+import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
+import com.asg.shipping.daycloseshiping.repository.ArShReceiptHdrRepository;
+import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,6 +71,18 @@ class CollectionHandoverServiceImplTest {
 
     @Mock
     private DataSource dataSource;
+
+    @Mock
+    private JdbcTemplate jdbcTemplate;
+
+    @Mock
+    private GlobalCurrencyDenominationRepository denomRepo;
+
+    @Mock
+    private ArShReceiptHdrRepository receiptHdrRepository;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private CollectionHandoverServiceImpl service;
@@ -157,11 +173,13 @@ class CollectionHandoverServiceImplTest {
     }
 
     @Test
-    void createCollectionHandover_docRefExists_throwsValidation() {
+    void createCollectionHandover_duplicateTransactionDate_throwsValidation() {
         CollectionHandoverCreateDTO dto = new CollectionHandoverCreateDTO();
-        dto.setDocRef("DOC_DUP");
+        dto.setTransactionDate(LocalDate.of(2026, 1, 1));
+        dto.setCompanyPoid(100L);
 
-        when(headerRepository.existsByDocRef("DOC_DUP")).thenReturn(true);
+        when(headerRepository.countByTransactionDateAndGroupPoidAndCompanyPoid(
+                dto.getTransactionDate(), 1L, 100L)).thenReturn(1L);
 
         assertThrows(ValidationException.class,
                 () -> service.createCollectionHandover(dto, 1L, 2L));
@@ -170,7 +188,6 @@ class CollectionHandoverServiceImplTest {
     @Test
     void createCollectionHandover_success_createsDetailsAndLogs() {
         CollectionHandoverCreateDTO dto = new CollectionHandoverCreateDTO();
-        dto.setDocRef(null);
         dto.setTransactionDate(LocalDate.of(2026, 1, 1));
         dto.setCompanyPoid(100L);
         dto.setDetails(List.of(CollectionHandoverDetailCreateDTO.builder()
@@ -188,7 +205,11 @@ class CollectionHandoverServiceImplTest {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
             when(headerRepository.save(any(ArShDayEndCloseHdr.class))).thenReturn(saved);
+            doNothing().when(entityManager).flush();
+            doNothing().when(entityManager).refresh(saved);
+            when(jdbcTemplate.execute(any(org.springframework.jdbc.core.ConnectionCallback.class))).thenReturn(null);
             when(detailRepository.saveAll(anyList())).thenReturn(Collections.emptyList());
+            when(detailRepository.getMaxDetRowId(10L)).thenReturn(0L);
 
             CollectionHandoverDto mapped = new CollectionHandoverDto();
             when(mapper.mapToDto(eq(saved), anyList())).thenReturn(mapped);
@@ -346,7 +367,7 @@ class CollectionHandoverServiceImplTest {
 
     @Test
     void print_success_buildsParamsAndFillsReport() throws Exception {
-        when(printService.buildBaseParams(10L, "300-114")).thenReturn(new java.util.HashMap<>());
+        when(printService.buildBaseParams(10L, "300-106")).thenReturn(new java.util.HashMap<>());
         when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
         when(printService.fillReportToPdf(any(JasperReport.class), anyMap(), eq(dataSource)))
                 .thenReturn(new byte[] {1, 2});
