@@ -363,6 +363,8 @@ class BookingFormServiceImplTest {
     @Test
     void createBookingForm_withStuffingCreate() {
         BookingFormCreateDTO dto = new BookingFormCreateDTO();
+        dto.setLinePoid(10L);
+        dto.setTransactionDate(java.time.LocalDate.now());
 
         BookingFormStuffingLoadDetailDtoRequest stuffing = new BookingFormStuffingLoadDetailDtoRequest();
         stuffing.setActionType("ISCREATED");
@@ -372,9 +374,14 @@ class BookingFormServiceImplTest {
         ShipMateHdr savedEntity = savedHdr();
 
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.findByTransactionPoid(TX_POID))
+                .thenReturn(Optional.of(savedEntity));
         when(stuffingRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
         when(stuffingRepo.saveAll(anyList())).thenReturn(List.of(new ShipMateStuffingDtl()));
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
         mockJdbcCall("Ok");
 

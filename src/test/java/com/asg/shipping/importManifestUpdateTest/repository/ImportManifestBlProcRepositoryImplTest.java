@@ -58,7 +58,7 @@ class ImportManifestBlProcRepositoryImplTest {
         when(entityManager.createStoredProcedureQuery("PROD_RESEND_CAN"))
                 .thenReturn(storedProcedureQuery);
 
-        ResendCanResponseDto response = repository.resendCan(100L, 1L);
+        ResendCanResponseDto response = repository.resendCan(100L, 1L, "Y");
 
         assertNotNull(response);
         assertEquals("SUCCESS", response.getStatus());
