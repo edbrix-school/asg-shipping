@@ -12,9 +12,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestupdate.service.ImportManifestBlService;
-import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
-import com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -268,7 +266,7 @@ public class ImportManifestBlController {
             @Valid @RequestBody ResendCanRequestDto request
     ) {
         try {
-            ResendCanResponseDto response = service.resendCan(request.getTransactionPoId());
+            ResendCanResponseDto response = service.resendCan(request.getTransactionPoId(), request.getUpdateDemurrage());
             return success("CAN resent successfully", response);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());
@@ -279,26 +277,26 @@ public class ImportManifestBlController {
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(
-            summary = "Send EDI Emails",
-            description = "Send EDI emails for Import Manifest BL."
+            summary = "Get EDI Emails",
+            description = "Get EDI emails for Import Manifest BL."
     )
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "EDI emails sent successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "EDI emails retrieved successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error@Put")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/send-edi-emails")
+    @GetMapping("/{id}/send-edi-emails")
     public ResponseEntity<?> sendEdiEmails(
-            @Valid @RequestBody SendEdiEmailsRequestDto request
+            @PathVariable Long id
     ) {
         try {
-            SendEdiEmailsResponseDto response = service.sendEdiEmails(request.getTransactionPoId());
-            return success("EDI emails sent successfully", response);
+            SendEdiEmailsResponseDto response = service.sendEdiEmails(id);
+            return success("EDI emails retrieved successfully", response);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());
         } catch (Exception e) {
-            return internalServerError("Failed to send EDI emails: " + e.getMessage());
+            return internalServerError("Failed to retrieve EDI emails: " + e.getMessage());
         }
     }
 
@@ -313,12 +311,13 @@ public class ImportManifestBlController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/load-email-fax")
+    @GetMapping("/load-email-fax")
     public ResponseEntity<?> loadEmailFax(
-            @Valid @RequestBody LoadEmailFaxRequestDto request
+            @RequestParam Long addressMasterPoid,
+            @RequestParam String addressType
     ) {
         try {
-            LoadEmailFaxResponseDto response = service.loadEmailFax(request.getTransactionPoId(), null);
+            LoadEmailFaxResponseDto response = service.loadEmailFax(addressMasterPoid, addressType);
             return success("Email/Fax data loaded successfully", response);
         } catch (ResourceNotFoundException e) {
             return notFound(e.getMessage());

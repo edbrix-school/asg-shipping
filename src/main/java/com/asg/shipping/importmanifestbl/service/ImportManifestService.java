@@ -21,11 +21,11 @@ public interface ImportManifestService {
 
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
 
-    ResendCanResponseDto resendCan(Long transactionPoId);
+    ResendCanResponseDto resendCan(Long transactionPoId, String updateDemurrage);
 
     SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId);
 
-    LoadEmailFaxResponseDto loadEmailFax(Long transactionPoId, LoadEmailFaxRequestDto request);
+    LoadEmailFaxResponseDto loadEmailFax(Long addressMasterPoid, String addressType);
 
     BlStatusResponseDto getBlStatus(Long transactionPoId);
 

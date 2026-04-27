@@ -11,4 +11,5 @@ import lombok.NoArgsConstructor;
 public class ResendCanRequestDto {
     @NotNull(message = "Transaction POID is required")
     private Long transactionPoId;
+    private String updateDemurrage; // "Y", "N", or "C"
 }

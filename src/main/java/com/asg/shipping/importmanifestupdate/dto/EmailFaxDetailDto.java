@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class EmailFaxDetailDto {
-    private Long addressPoid;
+    private String addressPoid;
     private String email1;
     private String email2;
     private String fax;

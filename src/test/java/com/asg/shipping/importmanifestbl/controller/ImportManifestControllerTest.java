@@ -6,7 +6,6 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
-import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -156,9 +155,10 @@ class ImportManifestControllerTest {
     void testResendCan() throws Exception {
         ResendCanRequestDto request = new ResendCanRequestDto();
         request.setTransactionPoId(1L);
+        request.setUpdateDemurrage("Y");
         ResendCanResponseDto response = new ResendCanResponseDto();
 
-        when(service.resendCan(1L)).thenReturn(response);
+        when(service.resendCan(eq(1L), eq("Y"))).thenReturn(response);
 
         mockMvc.perform(post("/v1/import-manifest-bl/resend-can")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -199,15 +199,13 @@ class ImportManifestControllerTest {
 
     @Test
     void testLoadEmailFax() throws Exception {
-        LoadEmailFaxRequestDto request = new LoadEmailFaxRequestDto();
-        request.setTransactionPoId(1L);
         LoadEmailFaxResponseDto response = LoadEmailFaxResponseDto.builder().build();
 
-        when(service.loadEmailFax(eq(1L), any())).thenReturn(response);
+        when(service.loadEmailFax(eq(1L), eq("CONSIGNEE"))).thenReturn(response);
 
-        mockMvc.perform(post("/v1/import-manifest-bl/load-email-fax")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(get("/v1/import-manifest-bl/load-email-fax")
+                        .param("addressMasterPoid", "1")
+                        .param("addressType", "CONSIGNEE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Email/Fax data loaded successfully"));
@@ -254,17 +252,14 @@ class ImportManifestControllerTest {
 
     @Test
     void testSendEdiEmails() throws Exception {
-        SendEdiEmailsRequestDto request = new SendEdiEmailsRequestDto();
-        request.setTransactionPoId(1L);
         SendEdiEmailsResponseDto response = new SendEdiEmailsResponseDto();
 
         when(service.sendEdiEmails(anyLong())).thenReturn(response);
 
-        mockMvc.perform(post("/v1/import-manifest-bl/send-edi-emails")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(get("/v1/import-manifest-bl/1/get-edi-emails"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("EDI emails retrieved successfully"));
     }
 
     @Test
