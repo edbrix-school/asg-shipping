@@ -60,4 +60,5 @@ public class BookingFormUpdateDTO {
 	private List<BookingFormCargoDetailDtoRequest> cargoDetails;
 	private List<BookingFormChargesDetailDtoRequest> chargesDetails;
 	private List<BookingFormContainerDetailDtoRequest> containerDetails;
+	private List<BookingFormStuffingLoadDetailDtoRequest> stuffingDetails;
 }
