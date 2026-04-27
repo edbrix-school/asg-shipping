@@ -130,7 +130,7 @@ public class BookingFormController {
     @Operation(summary = "Generate COPRAR Booking Form", description = "Generate COPRAR Booking Form", responses = {
             @ApiResponse(responseCode = "200", description = "Generate COPRAR Booking Form successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
-    @PostMapping("/{id}/generate-coprar")
+    @PostMapping("/{id}/generate-copran")
     public ResponseEntity<?> generateCoprarBooking(
             @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
         log.info("Generate COPRAR booking file request for transaction: {}", id);
@@ -146,7 +146,7 @@ public class BookingFormController {
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/empty-shipper")
     public ResponseEntity<?> getEmptyShipper() {
-        Long companyPoid=UserContext.getCompanyPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
         log.info("Get empty shipper request for company: {}", companyPoid);
         String shipperPoid = bookingFormService.getEmptyShipper(companyPoid);
         return success("Empty shipper retrieved successfully", shipperPoid);
@@ -257,7 +257,7 @@ public class BookingFormController {
             @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp,
             @Parameter(description = "Container Number") @RequestParam(required = true) String containerNo) {
         try {
-            if(StringUtil.isBlank(containerNo)) throw new ValidationException("Container number is required");
+            if (StringUtil.isBlank(containerNo)) throw new ValidationException("Container number is required");
             byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, containerNo);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
@@ -312,7 +312,7 @@ public class BookingFormController {
             @RequestParam(required = false, defaultValue = "MAIN") String addressType) {
         try {
             log.info("Get customer address request for addressMasterPoid: {}, addressType: {}", addressMasterPoid, addressType);
-            BookingFormAddressMasterDto result=bookingFormService.getCustomerAddress(addressMasterPoid,addressType);
+            BookingFormAddressMasterDto result = bookingFormService.getCustomerAddress(addressMasterPoid, addressType);
             return success("Customer address retrieved successfully", result);
         } catch (Exception e) {
             return internalServerError("Error fetching customer address: " + e.getMessage());

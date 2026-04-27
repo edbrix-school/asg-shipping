@@ -12,14 +12,8 @@ import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.bookingFormSH.dto.*;
-import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
-import com.asg.shipping.bookingFormSH.repository.ShipMateCargoDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateChargesDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
+import com.asg.shipping.bookingFormSH.entity.*;
+import com.asg.shipping.bookingFormSH.repository.*;
 import com.asg.shipping.bookingFormSH.util.BookingFormMapper;
 import com.asg.shipping.bookingFormSH.util.TriConsumer;
 import com.asg.shipping.common.entity.GlobalAddressDetails;
@@ -67,6 +61,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final ShipMateCargoDtlRepository cargoDtlRepository;
     private final ShipMateChargesDtlRepository chargesDtlRepository;
     private final ShipMateContainerDtlRepository containerDtlRepository;
+    private final ShipMateStuffingDtlRepository stuffingDtlRepository;
     private final GlobalAddressDetailsRepository globalAddressDetailsRepository;
     private final BookingFormLovService lovService;
     private final LovDataService commonLovService;
@@ -88,12 +83,13 @@ public class BookingFormServiceImpl implements BookingFormService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> searchBookingForm(String docId, FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
+        log.info("startdate", startDate, endDate);
         log.info("Searching booking form records with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(),
                 pageable.getPageSize());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveDateFilters(request,"TRANSACTION_DATE", startDate,
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate,
                 endDate);
 
         RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted, "DOC_REF",
@@ -106,7 +102,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional(readOnly = true)
- 
+
     public Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable) {
         log.info("Searching container inventory, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
 
@@ -124,7 +120,7 @@ public class BookingFormServiceImpl implements BookingFormService {
             params.add("%" + equipmentIsoType.trim() + "%");
         }
 
-        if (linePoid!=null) {
+        if (linePoid != null) {
             conditions.add("LINE_POID = ?");
             params.add(linePoid);
         }
@@ -152,7 +148,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         long totalCount = total != null ? total : 0L;
 
         Page<Map<String, Object>> page2 = new PageImpl<>(records, pageable, totalCount);
-        return PaginationUtil.wrapPage(page2,null);
+        return PaginationUtil.wrapPage(page2, null);
     }
 
     @Override
@@ -172,12 +168,14 @@ public class BookingFormServiceImpl implements BookingFormService {
         List<ShipMateCargoDtl> cargoDetails = cargoDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipMateChargesDtl> chargesDetails = chargesDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipMateContainerDtl> containerDetails = containerDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+        List<ShipMateStuffingDtl> stuffingDetails = stuffingDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         BookingFormDto dto = BookingFormMapper.mapToDto(entity);
 
         // Map detail tables
         dto.setCargoDetails(BookingFormMapper.mapCargoDtlListToDto(cargoDetails));
         dto.setChargesDetails(BookingFormMapper.mapChargesDtlListToDto(chargesDetails));
         dto.setContainerDetails(BookingFormMapper.mapContainerDtlListToDto(containerDetails));
+        dto.setStuffingDetails(BookingFormMapper.mapStuffingDtlListToDto(stuffingDetails));
         // Enrich with LOV data
         enrichLovDetails(dto);
         return dto;
@@ -209,7 +207,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         // Save detail tables
         saveDetailTables(entity.getTransactionPoid(), createDTO.getCargoDetails(), createDTO.getChargesDetails(),
-                createDTO.getContainerDetails());
+                createDTO.getContainerDetails(), createDTO.getStuffingDetails());
 
         // Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save (for split booking allocation)
         Long userPoid = UserContext.getUserPoid();
@@ -272,7 +270,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         // Save updated detail tables
         saveDetailTables(id, updateDTO.getCargoDetails(), updateDTO.getChargesDetails(),
-                updateDTO.getContainerDetails());
+                updateDTO.getContainerDetails(), updateDTO.getStuffingDetails());
         headerRepository.save(entity);
 
         // Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save
@@ -428,12 +426,12 @@ public class BookingFormServiceImpl implements BookingFormService {
     @Transactional
     public Map<String, Object> transferBookingWithContainers(Long oldTransactionPoid) {
 
-            Long newPoid = transferBooking(oldTransactionPoid);
-            BookingFormDto newBooking = getBookingForm(newPoid);
+        Long newPoid = transferBooking(oldTransactionPoid);
+        BookingFormDto newBooking = getBookingForm(newPoid);
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("bookingDetails", newBooking);
-            return response;
+        Map<String, Object> response = new HashMap<>();
+        response.put("bookingDetails", newBooking);
+        return response;
     }
 
     public String generateCoprarFile(Long bookingTransactionPoid, Long loginUserPoid) {
@@ -614,7 +612,8 @@ public class BookingFormServiceImpl implements BookingFormService {
                     loggingService.logDelete(dto, docId, docKey);
                 }
 
-                case NOCHANGES -> {}
+                case NOCHANGES -> {
+                }
 
                 default -> throw new ValidationException("Invalid action: " + action);
             }
@@ -644,7 +643,8 @@ public class BookingFormServiceImpl implements BookingFormService {
             Long transactionPoid,
             List<BookingFormCargoDetailDtoRequest> cargoDetails,
             List<BookingFormChargesDetailDtoRequest> chargesDetails,
-            List<BookingFormContainerDetailDtoRequest> containerDetails) {
+            List<BookingFormContainerDetailDtoRequest> containerDetails,
+            List<BookingFormStuffingLoadDetailDtoRequest> stuffingDetails) {
 
         /* -------------------- CARGO -------------------- */
         processDetails(
@@ -693,6 +693,24 @@ public class BookingFormServiceImpl implements BookingFormService {
                 ShipMateContainerDtl::getDetRowId,
                 "container"
         );
+
+        /* -------------------- STUFFING  -------------------- */
+
+        processDetails(
+                transactionPoid,
+                stuffingDetails,
+                stuffingDtlRepository.getMaxDetRowId(transactionPoid),
+                BookingFormStuffingLoadDetailDtoRequest::getActionType,
+                BookingFormStuffingLoadDetailDtoRequest::getDetRowId,
+                BookingFormMapper::mapStuffingDtlFromDto,
+                this::mapStuffingDtlFromDto,
+                stuffingDtlRepository::findByTransactionPoidAndDetRowId,
+                stuffingDtlRepository::saveAll,
+                stuffingDtlRepository::deleteByTransactionPoidAndDetRowIdIn,
+                ShipMateStuffingDtl::getDetRowId,
+                "stuffing"
+        );
+
     }
 
     private <E> E cloneEntity(E source) {
@@ -845,6 +863,29 @@ public class BookingFormServiceImpl implements BookingFormService {
         return entity;
     }
 
+    private ShipMateStuffingDtl mapStuffingDtlFromDto(
+            BookingFormStuffingLoadDetailDto dto,
+            ShipMateStuffingDtl entity,
+            Long transactionPoid) {
+
+        if (entity == null) {
+            entity = new ShipMateStuffingDtl();
+        }
+
+        entity.setTransactionPoid(transactionPoid);
+
+        entity.setDetRowId(dto.getDetRowId());
+        entity.setContainerNo(dto.getContainerNo());
+        entity.setEquipmentSealNo(dto.getEquipmentSealNo());
+        entity.setEquipmentIsoType(dto.getEquipmentIsoType());
+        entity.setMarks(dto.getMarks());
+        entity.setColourCode(dto.getColourCode());
+        entity.setWeightTonnes(dto.getWeightTonnes());
+        entity.setQtyOfBundles(dto.getQtyOfBundles());
+
+        return entity;
+    }
+
     private void enrichLovDetails(BookingFormDto dto) {
 
         setLov(dto.getQuotationTransactionPoid(), lovService::getQuotaionLov, dto::setQuotationTransactionPoidDet);
@@ -891,7 +932,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         if (dto.getChargesDetails() == null) return;
 
         dto.getCargoDetails().forEach(cargo -> {
-            if(cargo.getEquipmentIsoType()!=null){
+            if (cargo.getEquipmentIsoType() != null) {
                 lovService.getEquipmentIsoTypeLov(cargo.getEquipmentIsoType()).stream().findFirst().ifPresent(cargo::setEquipmentIsoTypeDet);
             }
         });
@@ -957,13 +998,13 @@ public class BookingFormServiceImpl implements BookingFormService {
         JasperReport mainReport = printService.load("Shipping/SH/Container_Return.jrxml");
         params.put("CONTAINER_RETURN_SUBREPORT_1", printService.load("Shipping/SH/Container_Return_subreport1.jrxml"));
         params.put("PRINT_STAMP", printStamp);
-        params.put("P_CONTAINERNO",containerNo);
+        params.put("P_CONTAINERNO", containerNo);
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
     @Override
     public BookingFormAddressMasterDto getCustomerAddress(Long addressMasterPoid, String addressType) {
-        GlobalAddressDetails entity= globalAddressDetailsRepository
+        GlobalAddressDetails entity = globalAddressDetailsRepository
                 .findByAddressMasterPoidAndAddressType(addressMasterPoid, addressType)
                 .orElseThrow(() -> new RuntimeException(
                         "Address not found for poid: " + addressMasterPoid + " and type: " + addressType

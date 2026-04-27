@@ -2,10 +2,7 @@ package com.asg.shipping.bookingFormSH.util;
 
 import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.bookingFormSH.dto.*;
-import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
+import com.asg.shipping.bookingFormSH.entity.*;
 import com.asg.shipping.common.entity.GlobalAddressDetails;
 
 import java.util.List;
@@ -308,6 +305,45 @@ public class BookingFormMapper {
         if (entities == null)
             return null;
         return entities.stream().map(BookingFormMapper::mapCargoDtlToDto).collect(Collectors.toList());
+    }
+
+    private static BookingFormStuffingLoadDetailDto mapStuffingDtlToDto(ShipMateStuffingDtl entity) {
+        if (entity == null) return null;
+        return BookingFormStuffingLoadDetailDto.builder()
+                .detRowId(entity.getDetRowId())
+                .containerNo(entity.getContainerNo())
+                .equipmentSealNo(entity.getEquipmentSealNo())
+                .equipmentIsoType(entity.getEquipmentIsoType())
+                .marks(entity.getMarks())
+                .colourCode(entity.getColourCode())
+                .weightTonnes(entity.getWeightTonnes())
+                .qtyOfBundles(entity.getQtyOfBundles())
+                .build();
+    }
+
+    public static ShipMateStuffingDtl mapStuffingDtlFromDto(
+            BookingFormStuffingLoadDetailDto dto,
+            Long transactionPoid) {
+
+        if (dto == null) return null;
+
+        return ShipMateStuffingDtl.builder()
+                .transactionPoid(transactionPoid)
+                .detRowId(dto.getDetRowId())
+                .containerNo(dto.getContainerNo())
+                .equipmentSealNo(dto.getEquipmentSealNo())
+                .equipmentIsoType(dto.getEquipmentIsoType())
+                .marks(dto.getMarks())
+                .colourCode(dto.getColourCode())
+                .weightTonnes(dto.getWeightTonnes())
+                .qtyOfBundles(dto.getQtyOfBundles())
+                .build();
+    }
+
+    public static List<BookingFormStuffingLoadDetailDto> mapStuffingDtlListToDto(List<ShipMateStuffingDtl> entities) {
+
+        if (entities == null) return null;
+        return entities.stream().map(BookingFormMapper::mapStuffingDtlToDto).collect(Collectors.toList());
     }
 
     public static List<BookingFormChargesDetailDto> mapChargesDtlListToDto(List<ShipMateChargesDtl> entities) {

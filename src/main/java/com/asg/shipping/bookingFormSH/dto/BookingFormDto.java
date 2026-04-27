@@ -85,4 +85,5 @@ public class BookingFormDto {
 	private List<BookingFormCargoDetailDto> cargoDetails;
 	private List<BookingFormChargesDetailDto> chargesDetails;
 	private List<BookingFormContainerDetailDto> containerDetails;
+	private List<BookingFormStuffingLoadDetailDto> stuffingDetails;
 }
