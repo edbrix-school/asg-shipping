@@ -98,16 +98,6 @@ public class ReceiptsControllerTest {
     }
 
     @Test
-    void create_InternalServerError() {
-        when(receiptsService.createReceipt(any(ReceiptsCreateDto.class))).thenThrow(new RuntimeException("Error"));
-
-        ResponseEntity<?> response = receiptsController.create(createDto);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-    }
-
-    @Test
     void update_Success() {
         when(receiptsService.updateReceipt(eq(1L), any(ReceiptsUpdateDto.class))).thenReturn(saveResponseDto);
 

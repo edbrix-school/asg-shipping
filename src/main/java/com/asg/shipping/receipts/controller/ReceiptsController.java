@@ -158,12 +158,8 @@ public class ReceiptsController {
 	public ResponseEntity<?> create(
 			@Valid @RequestBody ReceiptsCreateDto createDto
 	) {
-		try {
-			ReceiptSaveResponseDto response = receiptsService.createReceipt(createDto);
-			return success("Receipt created successfully", response);
-		} catch (Exception e) {
-			return internalServerError("Failed to create Receipt: " + e.getMessage());
-		}
+		ReceiptSaveResponseDto response = receiptsService.createReceipt(createDto);
+		return success("Receipt created successfully", response);
 	}
 
 	@AllowedAction(UserRolesRightsEnum.EDIT)

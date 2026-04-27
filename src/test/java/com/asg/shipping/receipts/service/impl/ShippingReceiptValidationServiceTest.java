@@ -22,7 +22,6 @@ import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,7 +30,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ShippingReceiptValidationServiceTest {
+ class ShippingReceiptValidationServiceTest {
 
         @Mock
         private ShipReceiptProcRepository procRepository;
@@ -118,9 +117,6 @@ public class ShippingReceiptValidationServiceTest {
                 try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
                         mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
                         when(manifestHdrRepository.existsById(1001L)).thenReturn(true);
-                        when(procRepository.validateFinancialYear(anyLong(), any(LocalDate.class))).thenReturn("TRUE");
-                        when(procRepository.validateTransactionPeriod(anyLong(), any(LocalDate.class)))
-                                        .thenReturn("TRUE");
 
                         assertDoesNotThrow(() -> validationService.validateReceiptUpdate(updateDto, existingReceipt));
                 }
@@ -152,12 +148,13 @@ public class ShippingReceiptValidationServiceTest {
 
         @Test
         void validateCashRounding_Invalid() {
+                // In 3nd decimal system (0.005 rounding), 100.033 is invalid (100033 % 5 != 0)
                 createDto.setPaymentDetail(Collections.singletonList(ReceiptPaymentDetailDto.builder()
                                 .pymtType("CASH")
-                                .amount(new BigDecimal("100.03"))
+                                .amount(new BigDecimal("100.033"))
                                 .build()));
                 createDto.setCharges(Collections.singletonList(ReceiptCharges.builder()
-                                .amount(new BigDecimal("100.03"))
+                                .amount(new BigDecimal("100.033"))
                                 .amountSelect("Y")
                                 .build()));
 
