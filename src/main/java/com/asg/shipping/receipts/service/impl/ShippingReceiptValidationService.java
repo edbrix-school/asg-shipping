@@ -284,9 +284,8 @@ public class ShippingReceiptValidationService {
 	private void validateCashRounding(ReceiptPaymentDetailDto payment) {
 		if (payment.getAmount() != null) {
 			BigDecimal cashAmount = payment.getAmount();
-			// Convert to cents (hundredths) and check if divisible by 5
-			BigDecimal cents = cashAmount.multiply(new BigDecimal("100")).setScale(0, java.math.RoundingMode.HALF_UP);
-			if (cents.remainder(new BigDecimal("5")).compareTo(BigDecimal.ZERO) != 0) {
+			BigDecimal fils = cashAmount.multiply(new BigDecimal("1000")).setScale(0, java.math.RoundingMode.HALF_UP);
+			if (fils.remainder(new BigDecimal("5")).compareTo(BigDecimal.ZERO) != 0) {
 				throw new ValidationException(
 					ValidationMessages.CASH_ROUNDING_INVALID.replace("{0}", cashAmount.toString())
 				);
