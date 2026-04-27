@@ -18,6 +18,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.LocalDate;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -28,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CimuControllerTest {
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Mock
     private CimuService cimuService;
@@ -141,7 +143,7 @@ class CimuControllerTest {
         DemurrageCalculateRequest request = new DemurrageCalculateRequest();
         request.setContainerNo("CONT001");
         request.setTransactionPoid(1L);
-        request.setDemDt("2024-01-01");
+        request.setDemDt(LocalDate.now().plusDays(1));
 
         when(cimuService.calculateDemurrage(any()))
                 .thenReturn(new DemurrageCalculateResponse());

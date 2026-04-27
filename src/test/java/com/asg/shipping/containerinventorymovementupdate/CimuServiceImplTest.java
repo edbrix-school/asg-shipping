@@ -266,7 +266,7 @@ class CimuServiceImplTest {
         DemurrageCalculateRequest request = new DemurrageCalculateRequest();
         request.setTransactionPoid(100L);
         request.setContainerNo("CONT001");
-        request.setDemDt(LocalDate.now().plusDays(1).toString());
+        request.setDemDt(LocalDate.now().plusDays(1));
 
         when(demurrageRepository.calculateDemurrage(any(), any(), any()))
                 .thenReturn(BigDecimal.TEN);
@@ -282,11 +282,11 @@ class CimuServiceImplTest {
     }
 
     @Test
-    void calculateDemurrage_invalidDateFormat() {
+    void calculateDemurrage_missingDate() {
         DemurrageCalculateRequest request = new DemurrageCalculateRequest();
         request.setTransactionPoid(100L);
         request.setContainerNo("CONT001");
-        request.setDemDt("invalid");
+        request.setDemDt(null);
 
         assertThrows(ValidationException.class, () -> service.calculateDemurrage(request));
     }
@@ -296,7 +296,7 @@ class CimuServiceImplTest {
         DemurrageCalculateRequest request = new DemurrageCalculateRequest();
         request.setTransactionPoid(100L);
         request.setContainerNo("CONT001");
-        request.setDemDt(LocalDate.now().minusDays(1).toString());
+        request.setDemDt(LocalDate.now().minusDays(1));
 
         assertThrows(ValidationException.class, () -> service.calculateDemurrage(request));
     }
