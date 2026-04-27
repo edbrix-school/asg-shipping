@@ -57,7 +57,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
     }
 
     @Override
-    public ResendCanResponseDto resendCan(Long voyageTransactionPoId, Long transactionPoId) {
+    public ResendCanResponseDto resendCan(Long voyageTransactionPoId, Long transactionPoId, String updateDemurrage) {
         StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROD_RESEND_CAN");
 
         query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, ParameterMode.IN);
@@ -66,10 +66,10 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
 
         query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoId);
         query.setParameter("P_TRANSACTION_POID", transactionPoId);
-        query.setParameter("P_UPDATE_DEMURRAGE", "C");
+        query.setParameter("P_UPDATE_DEMURRAGE", updateDemurrage != null ? updateDemurrage : "C");
 
         query.execute();
-        log.info("CAN resent successfully for transactionPoId: {}", transactionPoId);
+        log.info("CAN resent successfully for transactionPoId: {} with flag: {}", transactionPoId, updateDemurrage);
 
         return ResendCanResponseDto.builder().status("SUCCESS").build();
     }

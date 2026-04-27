@@ -6,7 +6,7 @@ import com.asg.shipping.importmanifestupdate.dto.*;
 
 public interface ImportManifestBlProcRepository {
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
-    ResendCanResponseDto resendCan(Long voyageTransactionPoId, Long transactionPoId);
+    ResendCanResponseDto resendCan(Long voyageTransactionPoId, Long transactionPoId, String updateDemurrage);
     SendEdiEmailsResponseDto getEdiEmails(Long transactionPoId);
     BlStatusResponseDto getBlStatus(Long transactionPoId);
     void processBlSaveAfter(Long transactionPoid, Long groupPoid, Long companyPoid, String processType);

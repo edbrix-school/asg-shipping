@@ -10,7 +10,6 @@ import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.importmanifestupdate.dto.*;
-import com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestupdate.entity.*;
 import com.asg.shipping.importmanifestupdate.event.BlManifestSaveEvent;
 import com.asg.shipping.importmanifestupdate.respository.*;
@@ -154,10 +153,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
     @Override
     @Transactional
-    public ResendCanResponseDto resendCan(Long transactionPoId) {
+    public ResendCanResponseDto resendCan(Long transactionPoId, String updateDemurrage) {
         try {
             ShipBlManifestHdr entity = findEntityById(transactionPoId);
-            return procRepository.resendCan(entity.getVoyageTransactionPoid(), transactionPoId);
+            return procRepository.resendCan(entity.getVoyageTransactionPoid(), transactionPoId, updateDemurrage);
         } catch (ResourceNotFoundException e) {
             log.error("Failed to resend CAN: Entity not found for transactionPoId: {}", transactionPoId);
             throw e;
@@ -184,28 +183,23 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
     @Override
     @Transactional
-    public LoadEmailFaxResponseDto loadEmailFax(Long transactionPoId, LoadEmailFaxRequestDto request) {
+    public LoadEmailFaxResponseDto loadEmailFax(Long addressMasterPoid, String addressType) {
         try {
-            findEntityById(transactionPoId);
             var addressDetails = addressDetailsRepository.findByAddressMasterPoidAndAddressType(
-                    request.getAddressMasterPoid(), "CAN");
+                    addressMasterPoid, "CAN");
             var emailFaxDetails = addressDetails.stream()
                     .map(ad -> EmailFaxDetailDto.builder()
-                            .addressPoid(Long.valueOf(ad.getAddressPoid()))
+                            .addressPoid(ad.getAddressPoid())
                             .email1(ad.getEmail())
                             .email2(ad.getEmail2())
                             .fax(ad.getFax())
-                            .addressType(request.getAddressType())
+                            .addressType(addressType)
                             .build())
                     .toList();
-            log.info("Loaded email/fax data for transactionPoId: {}, count: {}", transactionPoId,
-                    emailFaxDetails.size());
+            log.info("Loaded email/fax data for addressMasterPoid: {}, count: {}", addressMasterPoid, emailFaxDetails.size());
             return LoadEmailFaxResponseDto.builder().emailFaxDetails(emailFaxDetails).build();
-        } catch (ResourceNotFoundException e) {
-            log.error("Failed to load email/fax: Entity not found for transactionPoId: {}", transactionPoId);
-            throw e;
         } catch (Exception e) {
-            log.error("Error loading email/fax data for transactionPoId: {}", transactionPoId, e);
+            log.error("Error loading email/fax data for addressMasterPoid: {}", addressMasterPoid, e);
             throw e;
         }
     }

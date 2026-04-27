@@ -245,29 +245,30 @@ public class ImportManifestBlControllerTest {
 
     @Test
     void resendCan_Success() {
-        var request = new com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto(1L);
+        var request = new com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto();
+        request.setTransactionPoId(1L);
+        request.setUpdateDemurrage("Y");
         var response = com.asg.shipping.importmanifestupdate.dto.ResendCanResponseDto.builder()
                 .status("SUCCESS")
                 .build();
 
-        when(service.resendCan(1L)).thenReturn(response);
+        when(service.resendCan(1L, "Y")).thenReturn(response);
 
         ResponseEntity<?> result = controller.resendCan(request);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(service).resendCan(1L);
+        verify(service).resendCan(1L, "Y");
     }
 
     @Test
     void sendEdiEmails_Success() {
-        var request = new com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto(1L);
         var response = com.asg.shipping.importmanifestupdate.dto.SendEdiEmailsResponseDto.builder()
                 .emailsSent(2)
                 .build();
 
         when(service.sendEdiEmails(1L)).thenReturn(response);
 
-        ResponseEntity<?> result = controller.sendEdiEmails(request);
+        ResponseEntity<?> result = controller.sendEdiEmails(1L);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
         verify(service).sendEdiEmails(1L);
@@ -289,30 +290,27 @@ public class ImportManifestBlControllerTest {
 
     @Test
     void loadEmailFax_Success() {
-        var request = new com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto(1L);
         var response = com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxResponseDto.builder()
                 .emailFaxDetails(java.util.List.of())
                 .build();
 
-        when(service.loadEmailFax(1L, null)).thenReturn(response);
+        when(service.loadEmailFax(1L, "CONSIGNEE")).thenReturn(response);
 
-        ResponseEntity<?> result = controller.loadEmailFax(request);
+        ResponseEntity<?> result = controller.loadEmailFax(1L, "CONSIGNEE");
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(service).loadEmailFax(1L, null);
+        verify(service).loadEmailFax(1L, "CONSIGNEE");
     }
 
     @Test
     void loadEmailFax_NotFound() {
-        var request = new com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto(999L);
-
-        when(service.loadEmailFax(999L, null))
+        when(service.loadEmailFax(999L, "CONSIGNEE"))
                 .thenThrow(new com.asg.common.lib.exception.ResourceNotFoundException("Import Manifest BL", "id", 999L));
 
-        ResponseEntity<?> result = controller.loadEmailFax(request);
+        ResponseEntity<?> result = controller.loadEmailFax(999L, "CONSIGNEE");
 
         assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
-        verify(service).loadEmailFax(999L, null);
+        verify(service).loadEmailFax(999L, "CONSIGNEE");
     }
 
     @Test
@@ -333,25 +331,25 @@ public class ImportManifestBlControllerTest {
 
     @Test
     void resendCan_NotFound() {
-        var request = new com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto(999L);
+        var request = new com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto();
+        request.setTransactionPoId(999L);
+        request.setUpdateDemurrage("N");
 
-        when(service.resendCan(999L))
+        when(service.resendCan(999L, "N"))
                 .thenThrow(new com.asg.common.lib.exception.ResourceNotFoundException("Import Manifest BL", "id", 999L));
 
         ResponseEntity<?> result = controller.resendCan(request);
 
         assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
-        verify(service).resendCan(999L);
+        verify(service).resendCan(999L, "N");
     }
 
     @Test
     void sendEdiEmails_NotFound() {
-        var request = new com.asg.shipping.importmanifestbl.dto.SendEdiEmailsRequestDto(999L);
-
         when(service.sendEdiEmails(999L))
                 .thenThrow(new com.asg.common.lib.exception.ResourceNotFoundException("Import Manifest BL", "id", 999L));
 
-        ResponseEntity<?> result = controller.sendEdiEmails(request);
+        ResponseEntity<?> result = controller.sendEdiEmails(999L);
 
         assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
         verify(service).sendEdiEmails(999L);
