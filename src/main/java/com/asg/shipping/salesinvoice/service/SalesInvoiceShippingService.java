@@ -1,8 +1,8 @@
 package com.asg.shipping.salesinvoice.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.salesinvoice.dto.*;
-import net.sf.jasperreports.engine.JRException;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
@@ -21,7 +21,7 @@ public interface SalesInvoiceShippingService {
 
     SalesInvoiceShippingDto updateSalesInvoice(Long id, SalesInvoiceShippingUpdateDTO updateDTO);
 
-    void deleteSalesInvoice(Long id);
+    void deleteSalesInvoice(Long id, DeleteReasonDto deleteReasonDto);
 
     LoadContainerDemurrageResponseDTO loadContainerDemurrageData(Long id, LoadContainerDemurrageRequestDTO request);
 
