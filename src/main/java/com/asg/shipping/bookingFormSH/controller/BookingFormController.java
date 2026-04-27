@@ -130,7 +130,7 @@ public class BookingFormController {
     @Operation(summary = "Generate COPRAR Booking Form", description = "Generate COPRAR Booking Form", responses = {
             @ApiResponse(responseCode = "200", description = "Generate COPRAR Booking Form successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
-    @PostMapping("/{id}/generate-copran")
+    @PostMapping("/{id}/generate-coprar")
     public ResponseEntity<?> generateCoprarBooking(
             @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
         log.info("Generate COPRAR booking file request for transaction: {}", id);
