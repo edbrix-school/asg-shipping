@@ -160,7 +160,7 @@ class BookingFormControllerTest {
     void generateCoprarBooking_Success() throws Exception {
         when(bookingFormService.generateCoprarBooking(1L)).thenReturn("COPRAR generated successfully");
 
-        mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/booking-form-sh/1/generate-copran")).andExpect(status().isOk());
 
         verify(bookingFormService).generateCoprarBooking(1L);
     }
@@ -169,7 +169,7 @@ class BookingFormControllerTest {
     void generateCoprarBooking_Error() throws Exception {
         when(bookingFormService.generateCoprarBooking(1L)).thenReturn("ERROR: COPRAR failed");
 
-        mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isBadRequest());
+        mockMvc.perform(post("/v1/booking-form-sh/1/generate-copran")).andExpect(status().isBadRequest());
 
         verify(bookingFormService).generateCoprarBooking(1L);
     }
@@ -178,7 +178,7 @@ class BookingFormControllerTest {
     void generateCoprarBooking_ErrorLowerCase() throws Exception {
         when(bookingFormService.generateCoprarBooking(1L)).thenReturn("error: coprar failed");
 
-        mockMvc.perform(post("/v1/booking-form-sh/1/generate-coprar")).andExpect(status().isBadRequest());
+        mockMvc.perform(post("/v1/booking-form-sh/1/generate-copran")).andExpect(status().isBadRequest());
 
         verify(bookingFormService).generateCoprarBooking(1L);
     }
