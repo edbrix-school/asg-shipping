@@ -374,8 +374,10 @@ class BookingFormServiceImplTest {
         ShipMateHdr savedEntity = savedHdr();
 
         when(headerRepository.save(any())).thenReturn(savedEntity);
-        when(headerRepository.findByTransactionPoid(TX_POID))
-                .thenReturn(Optional.of(savedEntity));
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(savedEntity));
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(stuffingRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
         when(stuffingRepo.saveAll(anyList())).thenReturn(List.of(new ShipMateStuffingDtl()));
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
