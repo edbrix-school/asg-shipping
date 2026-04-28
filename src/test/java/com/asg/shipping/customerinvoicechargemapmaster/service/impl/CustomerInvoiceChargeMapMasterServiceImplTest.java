@@ -166,7 +166,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
     }
 
     @Test
-    void saveOrUpdate_existingRecord_callsModifiedLog() {
+    void saveOrUpdate_existingRecord_callsLogChangesForMaster() {
         CustomerInvoiceChargeMapMasterRequest request = new CustomerInvoiceChargeMapMasterRequest();
         request.setCustomerPoid(1L);
 
@@ -184,15 +184,17 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         when(masterRepo.existsById(1L)).thenReturn(true);
         when(masterRepo.findById(1L)).thenReturn(Optional.of(master));
 
-        when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class)))
-                .thenReturn(Optional.of(new CustomerInvoicePrtDtlEntity()));
+        CustomerInvoicePrtDtlEntity existingDetail = new CustomerInvoicePrtDtlEntity();
+        CustomerInvoicePrtDtlId existingId = new CustomerInvoicePrtDtlId();
+        existingId.setCustomerPoid(1L);
+        existingId.setDetRowId(5L);
+        existingDetail.setId(existingId);
+        existingDetail.setChargePoid(99L);
+        when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.of(existingDetail));
         when(detailRepo.save(any(CustomerInvoicePrtDtlEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
         CustomerInvoicePrtDtlEntity savedDetail = new CustomerInvoicePrtDtlEntity();
-        CustomerInvoicePrtDtlId savedId = new CustomerInvoicePrtDtlId();
-        savedId.setCustomerPoid(1L);
-        savedId.setDetRowId(5L);
-        savedDetail.setId(savedId);
+        savedDetail.setId(existingId);
         savedDetail.setChargePoid(100L);
         savedDetail.setLineChargeDescription("Charge");
         savedDetail.setValidUntil(LocalDate.of(2026, 12, 31));
@@ -203,7 +205,102 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
             service.saveOrUpdate(request, 2L);
         }
 
-        verify(loggingService).createLogSummaryEntry(LogDetailsEnum.MODIFIED, "DOC123", "1");
+        // update path must call logChanges, NOT createLogSummaryEntry
+        verify(loggingService).logChanges(
+                any(CustomerInvoicePrtMasterEntity.class),
+                any(CustomerInvoicePrtMasterEntity.class),
+                eq(CustomerInvoicePrtMasterEntity.class),
+                eq("DOC123"), eq("1"),
+                eq(LogDetailsEnum.MODIFIED),
+                eq("CUSTOMER_POID")
+        );
+        verify(loggingService, never()).createLogSummaryEntry(eq(LogDetailsEnum.MODIFIED), any(), any());
+    }
+
+    @Test
+    void saveOrUpdate_existingDetail_callsLogChangesForDetail() {
+        CustomerInvoiceChargeMapMasterRequest request = new CustomerInvoiceChargeMapMasterRequest();
+        request.setCustomerPoid(1L);
+
+        CustomerInvoiceChargeMapDetailDto detailDto = new CustomerInvoiceChargeMapDetailDto();
+        detailDto.setDetRowId(5L);
+        detailDto.setChargePoid(200L);
+        detailDto.setLineChargeDescription("Updated Charge");
+        detailDto.setValidUntil(LocalDate.of(2027, 6, 30));
+        request.setDetails(List.of(detailDto));
+
+        CustomerInvoicePrtMasterEntity master = new CustomerInvoicePrtMasterEntity();
+        master.setCustomerPoid(1L);
+        master.setDeleted("N");
+
+        when(masterRepo.existsById(1L)).thenReturn(true);
+        when(masterRepo.findById(1L)).thenReturn(Optional.of(master));
+
+        CustomerInvoicePrtDtlEntity existingDetail = new CustomerInvoicePrtDtlEntity();
+        CustomerInvoicePrtDtlId existingId = new CustomerInvoicePrtDtlId();
+        existingId.setCustomerPoid(1L);
+        existingId.setDetRowId(5L);
+        existingDetail.setId(existingId);
+        existingDetail.setChargePoid(100L); // old value
+        when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.of(existingDetail));
+        when(detailRepo.save(any(CustomerInvoicePrtDtlEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(detailRepo.findByIdCustomerPoid(1L)).thenReturn(List.of(existingDetail));
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            service.saveOrUpdate(request, 2L);
+        }
+
+        verify(loggingService).logChanges(
+                any(CustomerInvoicePrtDtlEntity.class),
+                any(CustomerInvoicePrtDtlEntity.class),
+                eq(CustomerInvoicePrtDtlEntity.class),
+                eq("DOC123"), eq("1"),
+                eq(LogDetailsEnum.MODIFIED),
+                eq("CUSTOMER_POID")
+        );
+    }
+
+    @Test
+    void saveOrUpdate_newDetail_doesNotCallLogChangesForDetail() {
+        CustomerInvoiceChargeMapMasterRequest request = new CustomerInvoiceChargeMapMasterRequest();
+        request.setCustomerPoid(1L);
+
+        CustomerInvoiceChargeMapDetailDto detailDto = new CustomerInvoiceChargeMapDetailDto();
+        detailDto.setDetRowId(null); // new detail — no detRowId
+        detailDto.setChargePoid(100L);
+        request.setDetails(List.of(detailDto));
+
+        CustomerInvoicePrtMasterEntity master = new CustomerInvoicePrtMasterEntity();
+        master.setCustomerPoid(1L);
+        master.setDeleted("N");
+
+        when(masterRepo.existsById(1L)).thenReturn(true);
+        when(masterRepo.findById(1L)).thenReturn(Optional.of(master));
+        when(detailRepo.findMaxDetRowId(1L)).thenReturn(3L);
+        when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.empty()); // new detail
+        when(detailRepo.save(any(CustomerInvoicePrtDtlEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CustomerInvoicePrtDtlEntity savedDetail = new CustomerInvoicePrtDtlEntity();
+        CustomerInvoicePrtDtlId savedId = new CustomerInvoicePrtDtlId();
+        savedId.setCustomerPoid(1L);
+        savedId.setDetRowId(4L);
+        savedDetail.setId(savedId);
+        savedDetail.setChargePoid(100L);
+        when(detailRepo.findByIdCustomerPoid(1L)).thenReturn(List.of(savedDetail));
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            service.saveOrUpdate(request, 2L);
+        }
+
+        // new detail rows should NOT trigger logChanges
+        verify(loggingService, never()).logChanges(
+                any(CustomerInvoicePrtDtlEntity.class),
+                any(CustomerInvoicePrtDtlEntity.class),
+                eq(CustomerInvoicePrtDtlEntity.class),
+                any(), any(), any(), any()
+        );
     }
 
     @Test
