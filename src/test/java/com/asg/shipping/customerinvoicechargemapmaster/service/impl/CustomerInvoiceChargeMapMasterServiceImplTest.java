@@ -205,7 +205,6 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
             service.saveOrUpdate(request, 2L);
         }
 
-        // update path must call logChanges, NOT createLogSummaryEntry
         verify(loggingService).logChanges(
                 any(CustomerInvoicePrtMasterEntity.class),
                 any(CustomerInvoicePrtMasterEntity.class),
