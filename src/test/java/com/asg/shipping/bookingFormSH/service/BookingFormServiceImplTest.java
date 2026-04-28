@@ -381,6 +381,9 @@ class BookingFormServiceImplTest {
         when(stuffingRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
         when(stuffingRepo.saveAll(anyList())).thenReturn(List.of(new ShipMateStuffingDtl()));
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
         mockJdbcCall("Ok");
 
