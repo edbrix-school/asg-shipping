@@ -28,6 +28,8 @@ public class BookingFormMapper {
                 .consigneePoid(entity.getConsigneePoid()).consigneeAddressPoid(entity.getConsigneeAddressPoid())
                 .notifyPoid1(entity.getNotifyPoid1()).notifyAddressPoid1(entity.getNotifyAddressPoid1())
                 .notifyPoid2(entity.getNotifyPoid2()).notifyAddressPoid2(entity.getNotifyAddressPoid2())
+                .createdBy(entity.getCreatedBy()).createdDate(entity.getCreatedDate())
+                .lastModifiedBy(entity.getLastModifiedBy()).lastModifiedDate(entity.getLastModifiedDate())
                 .quotationTransactionPoid(entity.getQuotationTransactionPoid()).vesselPoid(entity.getVesselPoid())
                 .vesselEtaDate(entity.getVesselEtaDate()).linePoid(entity.getLinePoid())
                 .salesmanPoid(entity.getSalesmanPoid()).comodityPoid(entity.getComodityPoid())
