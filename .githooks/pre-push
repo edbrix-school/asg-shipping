@@ -4,7 +4,7 @@ echo "Running Maven build before push..."
 
 cd "$(git rev-parse --show-toplevel)"
 
-./mvnw package -q
+sh mvnw package -q
 
 if [ $? -ne 0 ]; then
     echo ""
