@@ -12,10 +12,10 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.utility.DateUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementHdrDto;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementPicDtlDto;
-import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementRenewalDto;
 import com.asg.shipping.contractsandagreements.dto.ContractRenewalRequest;
 import com.asg.shipping.contractsandagreements.dto.ContractRenewalResponse;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementHdr;
@@ -61,6 +61,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         private static final String ACTION_ISCREATED = "ISCREATED";
         private static final String ACTION_ISUPDATED = "ISUPDATED";
         private static final String ACTION_ISDELETED = "ISDELETED";
+        private static final String TRANSACTION_POID_STR = "TRANSACTION_POID";
 
         @Override
         @Transactional
@@ -72,11 +73,8 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 }
 
                 validationService.partyValidation(dto.getPartyType(), dto.getPartyPoid());
+                validationService.expiryDateValidation(dto.getExpiryDate(), dto.getEffectiveDate(),dto.getTerminationDate());
 
-                validationService.expiryDateValidation(
-                                dto.getExpiryDate(),
-                                dto.getEffectiveDate(),
-                                dto.getTerminationDate());
                 AdminContractsAgreementHdr entity = new AdminContractsAgreementHdr();
                 ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
 
@@ -84,8 +82,6 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 log.info("Created new Contracts and Agreements with ID: {}", saved.getTransactionPoid());
 
                 saveAgreementContentDetails(dto.getAgreementContentDetails(), saved.getTransactionPoid());
-                saveAgreementRenewalDetails(dto.getRenewalDetails(), saved.getTransactionPoid());
-
                 loggingService.createLogSummaryEntry(
                                 LogDetailsEnum.CREATED,
                                 UserContext.getDocumentId(),
@@ -98,11 +94,8 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         public AdminContractsAgreementHdrDto getContractsAndAgreementsById(Long transactionPoid) {
 
                 AdminContractsAgreementHdr hdr = findByHeaderId(transactionPoid);
-
                 List<AdminContractsAgreementPicDtl> picDtls = picDtlRepository.findByIdTransactionPoid(transactionPoid);
-
-                List<AdminContractsAgreementRenewalEntity> renewalDtls = renewalDtlRepository
-                                .findByIdTransactionPoid(transactionPoid);
+                List<AdminContractsAgreementRenewalEntity> renewalDtls = renewalDtlRepository.findByIdTransactionPoid(transactionPoid);
 
                 return ContractsAndAgreementsMapper.mapToExportDto(
                                 hdr,
@@ -121,33 +114,24 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 AdminContractsAgreementHdr oldEntity = new AdminContractsAgreementHdr();
                 BeanUtils.copyProperties(entity, oldEntity);
 
-                if (!entity.getAgreementName().equals(dto.getAgreementName())) {
-                        if (validationService.checkForDuplicateAgreementName(
-                                        dto.getAgreementName(),
-                                        transactionPoid)) {
-                                throw new ValidationException(
-                                                "Agreement Name with " + dto.getAgreementName() + " already exists");
-                        }
+                if (!entity.getAgreementName().equals(dto.getAgreementName()) &&
+                                validationService.checkForDuplicateAgreementName(dto.getAgreementName(), transactionPoid)) {
+                        throw new ValidationException(
+                                        "Agreement Name with " + dto.getAgreementName() + " already exists");
                 }
 
                 validationService.partyValidation(dto.getPartyType(), dto.getPartyPoid());
-
-                validationService.expiryDateValidation(
-                                dto.getExpiryDate(),
-                                dto.getEffectiveDate(),
-                                dto.getTerminationDate());
+                validationService.expiryDateValidation(dto.getExpiryDate(), dto.getEffectiveDate(), dto.getTerminationDate());
 
                 ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
 
                 headerRepo.save(entity);
 
-                loggingService.logChanges(oldEntity, entity, AdminContractsAgreementHdr.class,
-                                UserContext.getDocumentId(), transactionPoid.toString(), LogDetailsEnum.MODIFIED,
-                                "TRANSACTION_POID");
+                loggingService.logChanges(oldEntity, entity, AdminContractsAgreementHdr.class, UserContext.getDocumentId(),
+                        transactionPoid.toString(), LogDetailsEnum.MODIFIED,
+                                TRANSACTION_POID_STR);
 
                 updateAgreementContentDetails(dto.getAgreementContentDetails(), transactionPoid);
-                updateAgreementRenewalDetails(dto.getRenewalDetails(), transactionPoid);
-
                 return getContractsAndAgreementsById(transactionPoid);
         }
 
@@ -164,7 +148,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 documentDeleteService.deleteDocument(
                                 id,
                                 "ADMIN_CONTRACTS_AGREEMENT_HDR",
-                                "TRANSACTION_POID",
+                                TRANSACTION_POID_STR,
                                 deleteReasonDto,
                                 createdDate);
         }
@@ -183,48 +167,20 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                                 pageable,
                                 isDeleted,
                                 "DESCRIPTION",
-                                "TRANSACTION_POID");
+                                TRANSACTION_POID_STR);
 
                 Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
 
                 return PaginationUtil.wrapPage(page, raw.displayFields());
         }
 
-        private void saveAgreementRenewalDetails(
-                        List<AdminContractsAgreementRenewalDto> dtos,
-                        Long transactionPoid) {
-
-                if (dtos == null || dtos.isEmpty())
-                        return;
-
-                long nextDetRowId = renewalDtlRepository.findMaxDetRowId(transactionPoid) + 1;
-
-                for (AdminContractsAgreementRenewalDto dto : dtos) {
-
-                        AdminContractsAgreementRenewalEntity entity = ContractsAndAgreementsMapper
-                                        .mapRenewalDtlDto(dto);
-
-                        entity.setId(new AdminContractsAgreementDtlId(
-                                        transactionPoid,
-                                        nextDetRowId));
-
-                        renewalDtlRepository.save(entity);
-
-                        loggingService.createLogSummaryEntry(
-                                        UserContext.getDocumentId(),
-                                        transactionPoid.toString(),
-                                        "Row Created on Agreement Renewal Detail with DetRowId: " + nextDetRowId);
-
-                        nextDetRowId++;
-                }
-        }
-
         private void saveAgreementContentDetails(
                         List<AdminContractsAgreementPicDtlDto> dtos,
                         Long transactionPoid) {
 
-                if (dtos == null || dtos.isEmpty())
+                if (dtos == null || dtos.isEmpty()) {
                         return;
+                }
 
                 long nextDetRowId = picDtlRepository.findMaxDetRowId(transactionPoid) + 1;
 
@@ -245,71 +201,13 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 }
         }
 
-        private void updateAgreementRenewalDetails(
-                        List<AdminContractsAgreementRenewalDto> dtos,
-                        Long transactionPoid) {
-
-                if (dtos == null || dtos.isEmpty())
-                        return;
-
-                List<AdminContractsAgreementRenewalEntity> toUpdate = new ArrayList<>();
-                List<LogRequestDto<AdminContractsAgreementRenewalEntity>> logs = new ArrayList<>();
-
-                for (AdminContractsAgreementRenewalDto dto : dtos) {
-
-                        switch (resolveAction(dto.getActionType())) {
-
-                                case ACTION_ISDELETED -> {
-                                        renewalDtlRepository.deleteByIdTransactionPoidAndIdDetRowId(
-                                                        transactionPoid,
-                                                        dto.getDetRowId());
-                                        loggingService.createLogSummaryEntry(
-                                                        UserContext.getDocumentId(),
-                                                        transactionPoid.toString(),
-                                                        "Row Deleted on Agreement Renewal Detail with DetRowId: "
-                                                                        + dto.getDetRowId());
-                                }
-
-                                case ACTION_ISCREATED -> saveAgreementRenewalDetails(List.of(dto), transactionPoid);
-
-                                case ACTION_ISUPDATED -> {
-                                        AdminContractsAgreementRenewalEntity entity = renewalDtlRepository
-                                                        .findByIdTransactionPoidAndIdDetRowId(
-                                                                        transactionPoid,
-                                                                        dto.getDetRowId())
-                                                        .orElseThrow(() -> new ResourceNotFoundException(
-                                                                        "Agreement Renewal Detail",
-                                                                        "DetRowId",
-                                                                        dto.getDetRowId()));
-
-                                        AdminContractsAgreementRenewalEntity old = new AdminContractsAgreementRenewalEntity();
-                                        BeanUtils.copyProperties(entity, old);
-
-                                        ContractsAndAgreementsMapper.updateRenewalDtlEntity(dto, entity);
-                                        toUpdate.add(entity);
-
-                                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s",
-                                                        transactionPoid, dto.getDetRowId());
-                                        logs.add(new LogRequestDto<>(old, entity,
-                                                        AdminContractsAgreementRenewalEntity.class,
-                                                        UserContext.getDocumentId(), transactionPoid.toString(),
-                                                        logDetail));
-                                }
-                        }
-                }
-
-                if (!toUpdate.isEmpty()) {
-                        renewalDtlRepository.saveAll(toUpdate);
-                        loggingService.createLogBatch(logs);
-                }
-        }
-
         private void updateAgreementContentDetails(
                         List<AdminContractsAgreementPicDtlDto> dtos,
                         Long transactionPoid) {
 
-                if (dtos == null || dtos.isEmpty())
+                if (dtos == null || dtos.isEmpty()) {
                         return;
+                }
 
                 List<AdminContractsAgreementPicDtl> toUpdate = new ArrayList<>();
                 List<LogRequestDto<AdminContractsAgreementPicDtl>> logs = new ArrayList<>();
@@ -354,6 +252,10 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                                                         UserContext.getDocumentId(), transactionPoid.toString(),
                                                         logDetail));
                                 }
+
+                                default -> {
+                                        // No changes needed
+                                }
                         }
                 }
 
@@ -368,18 +270,25 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         public ContractRenewalResponse renewContractsAndAgreements(ContractRenewalRequest renewalRequest) {
                 AdminContractsAgreementHdr hdr = findByHeaderId(renewalRequest.getTransactionPoid());
 
-                if (hdr.getLastRenewalDate() != null && renewalRequest.getLastRenewalDate() != null &&
-                    !hdr.getLastRenewalDate().equals(renewalRequest.getLastRenewalDate())) {
-                        throw new ValidationException("Last renewal date mismatch. Please refresh and try again.");
-                }
-
                 validationService.expiryDateValidation(
                                 renewalRequest.getExpiryDate(),
                                 renewalRequest.getEffectiveDate(),
                                 null);
 
-                hdr.setExpiryDate(renewalRequest.getExpiryDate());
-                hdr.setEffectiveDate(renewalRequest.getEffectiveDate());
+                List<AdminContractsAgreementRenewalEntity> existingRenewals = renewalDtlRepository
+                                .findByIdTransactionPoid(renewalRequest.getTransactionPoid());
+
+                boolean isDuplicate = existingRenewals.stream()
+                                .anyMatch(r -> r.getEffectiveStartDate() != null
+                                                && r.getEffectiveStartDate().equals(renewalRequest.getEffectiveDate())
+                                                && r.getExpiryDate() != null
+                                                && r.getExpiryDate().equals(renewalRequest.getExpiryDate()));
+
+                if (isDuplicate) {
+                        throw new ValidationException("Record is already Renewed.");
+                }
+
+                hdr.setLastRenewalDate(DateUtil.getCurrentDateInUserTimeZone());
                 headerRepo.saveAndFlush(hdr);
 
                 long nextDetRowId = renewalDtlRepository.findMaxDetRowId(renewalRequest.getTransactionPoid()) + 1;
@@ -387,39 +296,17 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                                 .id(new AdminContractsAgreementDtlId(renewalRequest.getTransactionPoid(), nextDetRowId))
                                 .effectiveStartDate(renewalRequest.getEffectiveDate())
                                 .expiryDate(renewalRequest.getExpiryDate())
-                                .renewalDate(renewalRequest.getLastRenewalDate())
+                                .renewalDate(DateUtil.getCurrentDateInUserTimeZone())
                                 .deleted("N")
                                 .build();
 
                 AdminContractsAgreementRenewalEntity saved = renewalDtlRepository.saveAndFlush(renewalEntity);
-
-                loggingService.createLogSummaryEntry(
-                                LogDetailsEnum.MODIFIED,
-                                UserContext.getDocumentId(),
-                                renewalRequest.getTransactionPoid().toString());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), renewalRequest.getTransactionPoid().toString(),
+                        "Row Created on Renewal History with DetRowId: " + nextDetRowId);
+                String logDetails = String.format("Record is renewed for Doc Ref %s by user %s", hdr.getDocRef(), UserContext.getUserName());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), renewalRequest.getTransactionPoid().toString(), logDetails);
 
                 return ContractsAndAgreementsMapper.mapToContractRenewalResponse(saved);
-        }
-
-        private String incrementVersion(String currentVersion, boolean isMajor) {
-                if (currentVersion == null || !currentVersion.startsWith("v")) {
-                        return "v1.0";
-                }
-                try {
-                        String versionValue = currentVersion.substring(1);
-                        String[] parts = versionValue.split("\\.");
-                        int major = Integer.parseInt(parts[0]);
-                        int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
-                        if (isMajor) {
-                                major++;
-                                minor = 0;
-                        } else {
-                                minor++;
-                        }
-                        return "v" + major + "." + minor;
-                } catch (Exception e) {
-                        return "v1.0";
-                }
         }
 
         private AdminContractsAgreementHdr findByHeaderId(Long transactionPoid) {
@@ -433,9 +320,9 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         private String resolveAction(String rawAction) {
                 String action = rawAction == null ? ACTION_NOCHANGES : rawAction.trim().toUpperCase();
                 return switch (action) {
-                        case "ISCREATED", "CREATED", "NEW" -> ACTION_ISCREATED;
-                        case "ISUPDATED", "UPDATED" -> ACTION_ISUPDATED;
-                        case "ISDELETED", "DELETED" -> ACTION_ISDELETED;
+                        case ACTION_ISCREATED, "CREATED", "NEW" -> ACTION_ISCREATED;
+                        case ACTION_ISUPDATED, "UPDATED" -> ACTION_ISUPDATED;
+                        case ACTION_ISDELETED, "DELETED" -> ACTION_ISDELETED;
                         default -> ACTION_NOCHANGES;
                 };
         }
