@@ -293,7 +293,6 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
             service.saveOrUpdate(request, 2L);
         }
 
-        // new detail rows should NOT trigger logChanges
         verify(loggingService, never()).logChanges(
                 any(CustomerInvoicePrtDtlEntity.class),
                 any(CustomerInvoicePrtDtlEntity.class),
