@@ -22,8 +22,8 @@ import com.asg.shipping.containerinventorymovementupdate.repository.jdbc.CimuQue
 import com.asg.shipping.containerinventorymovementupdate.repository.jdbc.CimuRightsRepository;
 import com.asg.shipping.containerinventorymovementupdate.repository.jdbc.CimuUpdateRepository;
 import com.asg.shipping.containerinventorymovementupdate.service.CimuService;
-import com.asg.shipping.containerinventorymovementupdate.util.DateTimeUtil;
 import com.asg.shipping.containerinventorymovementupdate.util.ExcelInspectionParser;
+import com.asg.shipping.containerinventorymovementupdate.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,6 +41,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class CimuServiceImpl implements CimuService {
+    private static final DateTimeFormatter DEMURRAGE_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("dd-MM-yyyy");
 
     private final CimuLovSuggestionRepository suggestionRepository;
     private final CimuQueryRepository queryRepository;
@@ -182,17 +185,9 @@ public class CimuServiceImpl implements CimuService {
 
         String containerNo = normalize(request.getContainerNo());
 
-        String demDtStr = request.getDemDt() != null ? request.getDemDt().trim() : null;
-        if (demDtStr == null || demDtStr.isBlank()) {
+        LocalDate demDt = request.getDemDt();
+        if (demDt == null) {
             throw new ValidationException("demDt is required");
-        }
-
-        // Parse flexible date format (supports ISO and UI format)
-        LocalDate demDt;
-        try {
-            demDt = DateTimeUtil.parseFlexibleDate(demDtStr);
-        } catch (IllegalArgumentException e) {
-            throw new ValidationException("Invalid date format for demDt: " + demDtStr + ". " + e.getMessage());
         }
 
         // SRS: cannot be previous date
@@ -200,12 +195,8 @@ public class CimuServiceImpl implements CimuService {
             throw new ValidationException("Dem DT cannot be previous date");
         }
 
-        // Convert to yyyy-MM-dd string for DB function
-        // FUNC_SHIP_CNT_DEM_RTN takes first 10 chars only (SUBSTR(..., 1, 10))
-        // - YYYY-MM-DD format is 10 chars → works ✓
-        // - DD-MON-YYYY format is 11 chars → truncated to "16-Jun-202" → fails ✗
-        // Therefore, we MUST use YYYY-MM-DD format (10 chars) - DDL line 2314-2327
-        demDtStr = demDt.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
+        // Match legacy Container Inventory Movement Update behavior.
+        String demDtStr = demDt.format(DEMURRAGE_DATE_FORMAT);
 
         BigDecimal dem = demurrageRepository.calculateDemurrage(request.getTransactionPoid(), containerNo, demDtStr);
 

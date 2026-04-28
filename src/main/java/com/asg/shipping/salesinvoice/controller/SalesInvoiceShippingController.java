@@ -1,6 +1,7 @@
 package com.asg.shipping.salesinvoice.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
@@ -285,10 +286,11 @@ public class SalesInvoiceShippingController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteSalesInvoice(
             @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         try {
             log.info("Delete request for Sales Invoice with id: {}", id);
-            service.deleteSalesInvoice(id);
+            service.deleteSalesInvoice(id, deleteReasonDto);
             return success("Sales Invoice deleted successfully", null);
         } catch (Exception e) {
             return internalServerError("Error deleting Sales Invoice: " + e.getMessage());

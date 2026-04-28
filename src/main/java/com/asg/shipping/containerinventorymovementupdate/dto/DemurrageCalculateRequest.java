@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,12 +20,8 @@ public class DemurrageCalculateRequest {
     @Size(max = 50, message = "containerNo must be <= 50 chars")
     private String containerNo;
 
-    /**
-     * Date or datetime string. SRS rule: cannot be previous date.
-     * DB function expects first 10 chars to be date.
-     */
-    @NotBlank(message = "demDt is required")
-    private String demDt;
+    @NotNull(message = "demDt is required")
+    private LocalDate demDt;
 }
 
 

@@ -3,8 +3,10 @@ package com.asg.shipping.salesinvoice.service;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -60,6 +62,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final JdbcTemplate jdbcTemplate;
     private final DataSource dataSource;
     private final PrintService printService;
+    private final DocumentDeleteService documentDeleteService;
 
     @Override
     @Transactional(readOnly = true)
@@ -183,7 +186,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
     @Override
     @Transactional
-    public void deleteSalesInvoice(Long id) {
+    public void deleteSalesInvoice(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting Sales Invoice with id: {}", id);
 
         ArShSalesInvoiceHdr entity = hdrRepository.findActiveByTransactionPoid(id)
@@ -194,13 +197,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             return;
         }
 
-        entity.setDeleted("Y");
-        chargDtlRepository.deleteByTransactionPoid(id);
-        contnrDtlRepository.deleteByTransactionPoid(id);
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-
-        hdrRepository.saveAndFlush(entity);
+        documentDeleteService.deleteDocument(
+                id,
+                "AR_SH_SALES_INVOICE_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                LocalDate.now()
+        );
 
         log.info("Successfully deleted Sales Invoice with id: {}", id);
     }
