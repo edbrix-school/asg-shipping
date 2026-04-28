@@ -12,6 +12,8 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementHdrDto;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementPicDtlDto;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementRenewalDto;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalRequest;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalResponse;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementHdr;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementPicDtl;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementRenewalEntity;
@@ -67,6 +69,7 @@ class ContractsAndAgreementsServiceImplTest {
         userContextMockedStatic.when(UserContext::getDocumentId).thenReturn("1001");
         userContextMockedStatic.when(UserContext::getCompanyPoid).thenReturn(1L);
         userContextMockedStatic.when(UserContext::getGroupPoid).thenReturn(2L);
+        userContextMockedStatic.when(UserContext::getUserName).thenReturn("testUser");
     }
 
     @AfterEach
@@ -103,14 +106,12 @@ class ContractsAndAgreementsServiceImplTest {
         when(headerRepo.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepo.findById(10L)).thenReturn(Optional.of(savedEntity));
         when(picDtlRepository.findMaxDetRowId(10L)).thenReturn(0L);
-        when(renewalDtlRepository.findMaxDetRowId(10L)).thenReturn(0L);
 
         AdminContractsAgreementHdrDto result = service.createContractsAndAgreements(dto);
 
         assertNotNull(result);
         verify(headerRepo).saveAndFlush(any());
         verify(picDtlRepository).save(any());
-        verify(renewalDtlRepository).save(any());
     }
 
     @Test
@@ -172,17 +173,12 @@ class ContractsAndAgreementsServiceImplTest {
         AdminContractsAgreementPicDtl picEnt = new AdminContractsAgreementPicDtl();
         when(picDtlRepository.findByIdTransactionPoidAndIdDetRowId(10L, 2L)).thenReturn(Optional.of(picEnt));
 
-        AdminContractsAgreementRenewalEntity renEnt = new AdminContractsAgreementRenewalEntity();
-        when(renewalDtlRepository.findByIdTransactionPoidAndIdDetRowId(10L, 2L)).thenReturn(Optional.of(renEnt));
-
         AdminContractsAgreementHdrDto result = service.updateContractsAndAgreements(10L, updateDto);
         
         assertNotNull(result);
         verify(headerRepo).save(any());
         verify(picDtlRepository).deleteByIdTransactionPoidAndIdDetRowId(10L, 1L);
         verify(picDtlRepository).saveAll(anyList());
-        verify(renewalDtlRepository).deleteByIdTransactionPoidAndIdDetRowId(10L, 1L);
-        verify(renewalDtlRepository).saveAll(anyList());
     }
     
     @Test
@@ -249,26 +245,7 @@ class ContractsAndAgreementsServiceImplTest {
         assertThrows(ResourceNotFoundException.class, () -> service.updateContractsAndAgreements(10L, updateDto));
     }
     
-    @Test
-    void testUpdateRenewalDtl_ResourceNotFound() {
-        AdminContractsAgreementHdr existing = new AdminContractsAgreementHdr();
-        existing.setTransactionPoid(10L);
-        existing.setAgreementName("OldName");
 
-        AdminContractsAgreementHdrDto updateDto = new AdminContractsAgreementHdrDto();
-        updateDto.setAgreementName("OldName");
-        
-        AdminContractsAgreementRenewalDto renUpDto = new AdminContractsAgreementRenewalDto();
-        renUpDto.setDetRowId(2L);
-        renUpDto.setActionType("ISUPDATED");
-
-        updateDto.setRenewalDetails(List.of(renUpDto));
-
-        when(headerRepo.findById(10L)).thenReturn(Optional.of(existing));
-        when(renewalDtlRepository.findByIdTransactionPoidAndIdDetRowId(10L, 2L)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> service.updateContractsAndAgreements(10L, updateDto));
-    }
 
     @Test
     void testCreate_NullLists() {
@@ -306,5 +283,74 @@ class ContractsAndAgreementsServiceImplTest {
 
         AdminContractsAgreementHdrDto result = service.updateContractsAndAgreements(10L, updateDto);
         assertNotNull(result);
+    }
+
+    @Test
+    void testRenew_HeaderNotFound() {
+        ContractRenewalRequest req = new ContractRenewalRequest();
+        req.setTransactionPoid(10L);
+        when(headerRepo.findById(10L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.renewContractsAndAgreements(req));
+    }
+
+    @Test
+    void testRenew_DuplicateFound() {
+        ContractRenewalRequest req = new ContractRenewalRequest();
+        req.setTransactionPoid(10L);
+        req.setEffectiveDate(java.time.LocalDate.of(2025, 1, 1));
+        req.setExpiryDate(java.time.LocalDate.of(2025, 12, 31));
+
+        AdminContractsAgreementHdr hdr = new AdminContractsAgreementHdr();
+        hdr.setTransactionPoid(10L);
+
+        when(headerRepo.findById(10L)).thenReturn(Optional.of(hdr));
+
+        AdminContractsAgreementRenewalEntity existing = new AdminContractsAgreementRenewalEntity();
+        existing.setEffectiveStartDate(java.time.LocalDate.of(2025, 1, 1));
+        existing.setExpiryDate(java.time.LocalDate.of(2025, 12, 31));
+
+        when(renewalDtlRepository.findByIdTransactionPoid(10L)).thenReturn(List.of(existing));
+
+        assertThrows(ValidationException.class, () -> service.renewContractsAndAgreements(req));
+        
+        verify(validationService).expiryDateValidation(req.getExpiryDate(), req.getEffectiveDate(), null);
+    }
+
+    @Test
+    void testRenew_Success() {
+        ContractRenewalRequest req = new ContractRenewalRequest();
+        req.setTransactionPoid(10L);
+        req.setEffectiveDate(java.time.LocalDate.of(2025, 1, 1));
+        req.setExpiryDate(java.time.LocalDate.of(2025, 12, 31));
+
+        AdminContractsAgreementHdr hdr = new AdminContractsAgreementHdr();
+        hdr.setTransactionPoid(10L);
+        hdr.setDocRef("REF-123");
+
+        when(headerRepo.findById(10L)).thenReturn(Optional.of(hdr));
+        when(renewalDtlRepository.findByIdTransactionPoid(10L)).thenReturn(Collections.emptyList());
+        when(renewalDtlRepository.findMaxDetRowId(10L)).thenReturn(5L);
+
+        try (MockedStatic<com.asg.common.lib.utility.DateUtil> dateUtilMock = mockStatic(com.asg.common.lib.utility.DateUtil.class)) {
+            java.time.LocalDate mockNow = java.time.LocalDate.now();
+            dateUtilMock.when(com.asg.common.lib.utility.DateUtil::getCurrentDateInUserTimeZone).thenReturn(mockNow);
+
+            AdminContractsAgreementRenewalEntity savedRenewal = new AdminContractsAgreementRenewalEntity();
+            savedRenewal.setEffectiveStartDate(req.getEffectiveDate());
+            savedRenewal.setExpiryDate(req.getExpiryDate());
+
+            when(renewalDtlRepository.saveAndFlush(any())).thenReturn(savedRenewal);
+
+            ContractRenewalResponse res = service.renewContractsAndAgreements(req);
+
+            assertNotNull(res);
+            assertEquals(req.getEffectiveDate(), res.getEffectiveStartDate());
+            assertEquals(req.getExpiryDate(), res.getExpiryDate());
+
+            verify(headerRepo).saveAndFlush(hdr);
+            verify(renewalDtlRepository).saveAndFlush(any());
+            verify(loggingService, times(2)).createLogSummaryEntry(anyString(), anyString(), anyString());
+        }
     }
 }

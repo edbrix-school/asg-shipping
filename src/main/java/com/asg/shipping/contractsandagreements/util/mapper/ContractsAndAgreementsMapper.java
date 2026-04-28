@@ -9,10 +9,12 @@ import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementHdr
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementPicDtl;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementRenewalEntity;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 public class ContractsAndAgreementsMapper {
+    private ContractsAndAgreementsMapper() {
+    }
+
 
     public static AdminContractsAgreementHdrDto mapToExportDto(
             AdminContractsAgreementHdr hdr,
@@ -134,6 +136,7 @@ public class ContractsAndAgreementsMapper {
         entity.setNewPartyName(dto.getNewPartyName());
         entity.setLinePoid(dto.getLinePoid());
         entity.setDeleted("N");
+        entity.setTransactionDate(dto.getTransactionDate());
         entity.setPartyContactPerson(dto.getPartyContactPerson());
         entity.setPartyContactEmail(dto.getPartyContactEmail());
         entity.setPartyContactPhone(dto.getPartyContactPhone());
@@ -209,10 +212,6 @@ public class ContractsAndAgreementsMapper {
         updatePicDtlEntity(dto, entity);
 
         return entity;
-    }
-
-    public static AdminContractsAgreementRenewalDto mapToRenewalDto(AdminContractsAgreementRenewalEntity entity) {
-        return mapRenewalDtlToDto(entity);
     }
 
     public static ContractRenewalResponse mapToContractRenewalResponse(AdminContractsAgreementRenewalEntity entity) {
