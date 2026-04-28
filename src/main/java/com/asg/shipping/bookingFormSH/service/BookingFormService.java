@@ -4,14 +4,13 @@ import java.time.LocalDate;
 import java.util.Map;
 
 import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
-import com.asg.shipping.common.entity.GlobalAddressDetails;
-import com.asg.shipping.salesinvoice.dto.CustomerAddressResponseDTO;
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Service interface for Booking Form operations
@@ -74,4 +73,5 @@ public interface BookingFormService {
 
 	Map<String, Object> transferBookingWithContainers(Long oldTransactionPoid);
 
+    String importFileWithTransaction(MultipartFile file, Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid);
 }

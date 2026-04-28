@@ -1,4 +1,4 @@
-package com.asg.shipping.portmaster.entity;
+package com.asg.shipping.portMaster.entity;
 
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
