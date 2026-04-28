@@ -67,8 +67,6 @@ public interface DemurrageDetentionPayableTransferService {
 /**
      * Update free days for selected containers (AFTER create - deprecated)
      */
-    @Deprecated
-    void updateFreeDays(Long id, UpdateFreeDaysRequestDTO request);
 
     /**
      * Get auto-populated GL accounts when Line and BL Type are provided
