@@ -268,6 +268,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         @Override
         @Transactional
         public ContractRenewalResponse renewContractsAndAgreements(ContractRenewalRequest renewalRequest) {
+                validationService.expiryDateValidationForRenew(renewalRequest.getExpiryDate(), renewalRequest.getEffectiveDate());
                 AdminContractsAgreementHdr hdr = findByHeaderId(renewalRequest.getTransactionPoid());
 
                 validationService.expiryDateValidation(

@@ -1,5 +1,6 @@
 package com.asg.shipping.portstoragetariffsmaster.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -26,9 +27,11 @@ public class ShipPortTariffHdr extends BaseEntity {
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @AuditIgnore
     private Long transactionPoid;
 
     @Column(name = "GROUP_POID")
+    @AuditIgnore
     private Long groupPoid;
 
     @Column(name = "PORT_POID", nullable = false)
@@ -53,19 +56,12 @@ public class ShipPortTariffHdr extends BaseEntity {
     private String docRef;
 
     @Column(name = "COMPANY_POID")
+    @AuditIgnore
     private Long companyPoid;
 
     @Column(name = "DELETED", length = 1)
+    @AuditIgnore
     private String deleted;
 
-    @PrePersist
-    protected void onCreate() {
-        if (deleted == null) {
-            deleted = "N";
-        }
-        if (transactionDate == null) {
-            transactionDate = LocalDate.now();
-        }
-    }
 
 }
