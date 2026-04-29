@@ -496,7 +496,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 cs.execute();
 
                 ResultSet rs = (ResultSet) cs.getObject(3);
-                if (!rs.next()) {
+                if (rs == null || !rs.next()) {
                     log.info("No custom print data found for customer POID: {}", request.getCustomerPoid());
                     return new ArrayList<>();
                 }
@@ -504,7 +504,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 log.info("Result Set : {}", rs);
                 List<InvoicePrintDetailDto> details = new ArrayList<>();
                 int detRowId = 0;
-                while (rs.next()) {
+                do {
                     detRowId++;
                     InvoicePrintDetailDto detail = InvoicePrintDetailDto.builder()
                             .detRowId((long) detRowId)
@@ -521,7 +521,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                             .build();
                     log.info("Detail : {}", detail);
                     details.add(detail);
-                }
+                } while (rs.next());
                 rs.close();
                 log.info("Details : {}", details);
                 return details;

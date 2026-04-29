@@ -203,7 +203,14 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
             service.saveOrUpdate(request, 2L);
         }
 
-        verify(loggingService).createLogSummaryEntry(LogDetailsEnum.MODIFIED, "DOC123", "1");
+        verify(loggingService).logChanges(
+                any(CustomerInvoicePrtMasterEntity.class),
+                any(CustomerInvoicePrtMasterEntity.class),
+                eq(CustomerInvoicePrtMasterEntity.class),
+                eq("DOC123"),
+                eq("1"),
+                eq(LogDetailsEnum.MODIFIED),
+                eq("CUSTOMER_POID"));
     }
 
     @Test

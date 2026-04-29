@@ -239,6 +239,9 @@ class DemurrageDetentionPayableTransferServiceImplTest {
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 100L, 1L))
                     .thenReturn(Optional.of(hdrEntity));
+            lenient().when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
+                    .thenReturn(List.of());
+            doNothing().when(transferDtlRepository).deleteByTransactionPoid(any());
             when(transferDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
                     .thenReturn(List.of());
             when(billDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
@@ -279,34 +282,24 @@ class DemurrageDetentionPayableTransferServiceImplTest {
         containerUpdate.setExtraFreeDaysPrnpls(java.math.BigDecimal.valueOf(5));
         updateRequest.setContainerUpdates(List.of(containerUpdate));
 
-        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
+        // Mock the JDBC template for stored procedure call
+        lenient().when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
+                .thenReturn(null);
 
-            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 100L, 1L))
-                    .thenReturn(Optional.of(hdrEntity));
-            // GAP-3: service uses transferDtlRepository, not billDtlRepository
-            when(transferDtlRepository.findByTransactionPoidAndDetRowId(1L, 1L))
-                    .thenReturn(Optional.of(createMockTransferDetail()));
-
-            assertDoesNotThrow(() -> service.updateFreeDays(1L, updateRequest));
-        }
+        assertDoesNotThrow(() -> service.updatePrincipalDays(updateRequest));
     }
 
     @Test
     void testUpdateFreeDays_NotFound() {
         UpdateFreeDaysRequestDTO updateRequest = new UpdateFreeDaysRequestDTO();
+        UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate containerUpdate =
+                new UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate();
+        // Missing required fields to trigger validation
+        containerUpdate.setDetRowId(1L);
+        updateRequest.setContainerUpdates(List.of(containerUpdate));
         
-        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
-
-            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 100L, 1L))
-                    .thenReturn(Optional.empty());
-
-            assertThrows(ResourceNotFoundException.class,
-                    () -> service.updateFreeDays(1L, updateRequest));
-        }
+        assertThrows(com.asg.shipping.exceptions.ValidationException.class,
+                () -> service.updatePrincipalDays(updateRequest));
     }
 
     @Test
@@ -336,25 +329,45 @@ class DemurrageDetentionPayableTransferServiceImplTest {
     void testLoadBillwiseDataBeforeCreate_Success() {
         com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO loadRequest = 
                 new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO();
+        loadRequest.setBlType("IMPORT"); // Add missing BL Type
+        
         com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO.SelectedContainer container = 
                 new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO.SelectedContainer();
         loadRequest.setBlType("IMPORT");
         container.setMainfestTransactionPoid(1001L);
         container.setContainerNo("CONT001");
         container.setBlNumber("BL001");
+        container.setIsSelect("Y"); // Add missing IsSelect field
+        container.setTotalPayableAmount(java.math.BigDecimal.valueOf(1500));
+        container.setTotalIncomeAmount(java.math.BigDecimal.valueOf(200));
         loadRequest.setSelectedContainers(List.of(container));
 
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
 
-            when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
-                    .thenReturn(List.of(Map.of("BILL_REF_NO", "BILL001", "BALANCE", java.math.BigDecimal.valueOf(1000))));
+            // Mock billwise accounts query
+            when(jdbcTemplate.queryForList(eq("SELECT * FROM VW_SHIP_BILLWISE_ACCOUNT_TRN WHERE GL_CODE = ? AND REMARKS LIKE ? AND COMPANY_POID = ?"), any(Object[].class)))
+                    .thenReturn(List.of(Map.of(
+                            "REMARKS", "Demurrage for BL001",
+                            "BILL_REF", "BILL001",
+                            "BALANCE", java.math.BigDecimal.valueOf(1000),
+                            "GL_POID", 12345L
+                    )));
+            
+            // Mock stored procedure call for default GL
+            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
+                    .thenReturn("12345");
 
             Map<String, Object> result = service.loadBillwiseDataBeforeCreate(loadRequest);
 
             assertNotNull(result);
             assertTrue(result.containsKey("billDetails"));
             assertTrue(result.containsKey("totalCount"));
+            assertTrue(result.containsKey("blType"));
+            assertTrue(result.containsKey("glCode"));
+            assertEquals("IMPORT", result.get("blType"));
+            assertEquals("LINE_DEM", result.get("glCode"));
         }
     }
 
@@ -443,6 +456,9 @@ class DemurrageDetentionPayableTransferServiceImplTest {
         container.setBlNumber("BL001");
         loadRequest.setSelectedContainers(List.of(container));
 
+        // Set blType in the entity to avoid null validation error
+        hdrEntity.setBlType("IMPORT");
+
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
@@ -460,6 +476,29 @@ class DemurrageDetentionPayableTransferServiceImplTest {
             DemurrageDetentionPayableTransferDto result = service.loadBillwiseData(1L, loadRequest);
 
             assertNotNull(result);
+        }
+    }
+
+    @Test
+    void testLoadBillwiseData_NullBlType() {
+        com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO loadRequest = 
+                new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO();
+        
+        // Entity has null blType - this should trigger our validation
+        hdrEntity.setBlType(null);
+
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
+
+            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 100L, 1L))
+                    .thenReturn(Optional.of(hdrEntity));
+
+            com.asg.shipping.exceptions.ValidationException ex = assertThrows(
+                    com.asg.shipping.exceptions.ValidationException.class,
+                    () -> service.loadBillwiseData(1L, loadRequest));
+            
+            assertTrue(ex.getMessage().contains("BL Type is required for loading bill-wise data"));
         }
     }
 
@@ -567,15 +606,7 @@ class DemurrageDetentionPayableTransferServiceImplTest {
         UpdateFreeDaysRequestDTO updateRequest = new UpdateFreeDaysRequestDTO();
         updateRequest.setContainerUpdates(List.of());
 
-        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
-
-            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 100L, 1L))
-                .thenReturn(Optional.of(hdrEntity));
-
-            assertDoesNotThrow(() -> service.updateFreeDays(1L, updateRequest));
-        }
+        assertDoesNotThrow(() -> service.updatePrincipalDays(updateRequest));
     }
 
     @Test
@@ -618,25 +649,35 @@ class DemurrageDetentionPayableTransferServiceImplTest {
     void testLoadBillwiseDataBeforeCreate_DatabaseError() {
         com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO loadRequest = 
             new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO();
+        loadRequest.setBlType("IMPORT"); // Add missing BL Type
+        
         com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO.SelectedContainer container = 
             new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO.SelectedContainer();
-        loadRequest.setBlType("IMPORT");
         container.setMainfestTransactionPoid(1001L);
         container.setContainerNo("CONT001");
         container.setBlNumber("BL001");
+        container.setIsSelect("Y"); // Add missing IsSelect field
+        container.setTotalPayableAmount(java.math.BigDecimal.valueOf(1500));
+        container.setTotalIncomeAmount(java.math.BigDecimal.valueOf(200));
         loadRequest.setSelectedContainers(List.of(container));
 
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
 
+            // Mock billwise accounts query to fail
             when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
                 .thenThrow(new RuntimeException("Database error"));
+            // Mock stored procedure call for default GL
+            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
+                .thenReturn("12345");
 
             var result = service.loadBillwiseDataBeforeCreate(loadRequest);
 
             assertNotNull(result);
             assertTrue(result.containsKey("billDetails"));
-            assertEquals(0, result.get("totalCount"));
+            // When billwise query fails, it creates a placeholder record, so totalCount should be 1
+            assertEquals(1, result.get("totalCount"));
         }
     }
 

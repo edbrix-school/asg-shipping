@@ -25,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.beans.BeanUtils;
+
 import java.util.List;
 import java.util.Map;
 
@@ -102,15 +104,20 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                         .orElseGet(() -> createMaster(request.getCustomerPoid(), groupPoid));
         log.debug("Master record ensured for customerPoid: {}", master.getCustomerPoid());
 
+        String docId = UserContext.getDocumentId();
+        String key = request.getCustomerPoid().toString();
 
         if (isNewRecord) {
-            loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), request.getCustomerPoid().toString());
+            loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
         } else {
-            loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), request.getCustomerPoid().toString());
+            CustomerInvoicePrtMasterEntity oldMaster = new CustomerInvoicePrtMasterEntity();
+            BeanUtils.copyProperties(master, oldMaster);
+            loggingService.logChanges(oldMaster, master, CustomerInvoicePrtMasterEntity.class, docId, key,
+                    LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
         }
 
         for (CustomerInvoiceChargeMapDetailDto dto : request.getDetails()) {
-            saveOrUpdateDetail(request.getCustomerPoid(), dto);
+            saveOrUpdateDetail(request.getCustomerPoid(), dto, docId, key);
         }
         log.info("Successfully saved/updated customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
         return getByCustomer(request.getCustomerPoid(), groupPoid);
@@ -179,7 +186,9 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
 
     private void saveOrUpdateDetail(
             Long customerPoid,
-            CustomerInvoiceChargeMapDetailDto dto) {
+            CustomerInvoiceChargeMapDetailDto dto,
+            String docId,
+            String key) {
 
         Long detRowId = dto.getDetRowId();
         if (detRowId == null) {
@@ -191,9 +200,15 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         id.setCustomerPoid(customerPoid);
         id.setDetRowId(detRowId);
 
-        CustomerInvoicePrtDtlEntity entity =
-                detailRepo.findById(id)
-                        .orElse(new CustomerInvoicePrtDtlEntity());
+        CustomerInvoicePrtDtlEntity existing = detailRepo.findById(id).orElse(null);
+        boolean isNewDetail = existing == null;
+
+        CustomerInvoicePrtDtlEntity entity = isNewDetail ? new CustomerInvoicePrtDtlEntity() : existing;
+
+        CustomerInvoicePrtDtlEntity oldDetail = new CustomerInvoicePrtDtlEntity();
+        if (!isNewDetail) {
+            BeanUtils.copyProperties(existing, oldDetail);
+        }
 
         entity.setId(id);
         entity.setChargePoid(dto.getChargePoid());
@@ -201,6 +216,11 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         entity.setValidUntil(dto.getValidUntil());
 
         detailRepo.save(entity);
+
+        if (!isNewDetail) {
+            loggingService.logChanges(oldDetail, entity, CustomerInvoicePrtDtlEntity.class, docId, key,
+                    LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
+        }
     }
 
     private CustomerInvoiceChargeMapDetailDto mapToDetailDto(

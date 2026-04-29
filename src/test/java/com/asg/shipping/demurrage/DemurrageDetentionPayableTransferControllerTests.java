@@ -216,6 +216,7 @@ class DemurrageDetentionPayableTransferControllerTests {
     void testLoadBillwiseData() throws Exception {
         com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO loadRequest =
                 new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO();
+        loadRequest.setBlType("IMPORT");
         com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO.SelectedContainer container = 
                 new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO.SelectedContainer();
         container.setMainfestTransactionPoid(1001L);
@@ -258,7 +259,7 @@ class DemurrageDetentionPayableTransferControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Principal extra days updated successfully"));
+                .andExpect(jsonPath("$.message").value("Updatation Completed, Requery for check..."));
     }
 
     @Test
@@ -421,6 +422,7 @@ class DemurrageDetentionPayableTransferControllerTests {
     void testLoadBillwiseData_EmptyContainers() throws Exception {
         com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO loadRequest =
                 new com.asg.shipping.demurragedetentionpayabletransfer.dto.LoadBillwiseRequestDTO();
+        loadRequest.setBlType("IMPORT");
         loadRequest.setSelectedContainers(List.of());
 
         // This will fail validation due to @NotEmpty annotation

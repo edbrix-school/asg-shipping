@@ -1,12 +1,12 @@
-package com.asg.shipping.portmaster.repository;
+package com.asg.shipping.portMaster.repository;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.asg.shipping.portmaster.entity.PortMaster;
-import com.asg.shipping.portmaster.entity.PortMasterId;
+import com.asg.shipping.portMaster.entity.PortMaster;
+import com.asg.shipping.portMaster.entity.PortMasterId;
 
 public interface PortMasterRepository extends JpaRepository<PortMaster, PortMasterId> {
 

@@ -1,4 +1,4 @@
-package com.asg.shipping.portmaster.service;
+package com.asg.shipping.portMaster.service;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -11,11 +11,11 @@ import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
 import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.portmaster.dto.PortMasterRequest;
-import com.asg.shipping.portmaster.dto.PortMasterResponse;
-import com.asg.shipping.portmaster.entity.PortMaster;
-import com.asg.shipping.portmaster.entity.PortMasterId;
-import com.asg.shipping.portmaster.repository.PortMasterRepository;
+import com.asg.shipping.portMaster.dto.PortMasterRequest;
+import com.asg.shipping.portMaster.dto.PortMasterResponse;
+import com.asg.shipping.portMaster.entity.PortMaster;
+import com.asg.shipping.portMaster.entity.PortMasterId;
+import com.asg.shipping.portMaster.repository.PortMasterRepository;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
 import lombok.RequiredArgsConstructor;
@@ -80,11 +80,11 @@ public class PortMasterServiceImpl implements PortMasterService {
 	public PortMasterResponse updatePort( Long portPoid, PortMasterRequest request) {
 
         Long groupPoid = UserContext.getGroupPoid();
-		PortMaster existingData = repository.findById(new PortMasterId(groupPoid, portPoid))
+		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
 				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
-		
-		PortMaster entity =new PortMaster();
-		BeanUtils.copyProperties(existingData, entity);
+
+        PortMaster oldData = new PortMaster();
+        BeanUtils.copyProperties(entity, oldData);
 
 		if (!Objects.equals(entity.getPortCode(), request.getPortCode())) {
 
@@ -117,7 +117,8 @@ public class PortMasterServiceImpl implements PortMasterService {
 		repository.save(entity);
 		String key = entity.getPortPoid().toString();
 		String docId = UserContext.getDocumentId();
-		loggingService.logChanges(existingData, entity, PortMaster.class, docId, key, LogDetailsEnum.MODIFIED, "PORT_POID");
+        System.err.println("--->"+oldData.toString()+"/n"+entity.toString());
+		loggingService.logChanges(oldData, entity, PortMaster.class, docId, key, LogDetailsEnum.MODIFIED, "PORT_POID");
 		return getPortById(portPoid);
 	}
 

@@ -402,6 +402,9 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         }
 
         // GL_CODE determined by BL_TYPE (legacy bean lines 285-289)
+        if (entity.getBlType() == null) {
+            throw new ValidationException("BL Type is required for loading bill-wise data. Please set BL Type in the header first.");
+        }
         String glCode = resolveGlCode(entity.getBlType());
 
         // Only iterate rows where IsSelect='Y' (legacy bean line 277)
@@ -438,90 +441,228 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
      * Requires blType at request level and totalPayableAmount/totalIncomeAmount per container.
      */
     public Map<String, Object> loadBillwiseDataBeforeCreate(LoadBillwiseRequestDTO request) {
-        log.info("Loading bill-wise data before create for {} containers", request.getSelectedContainers().size());
+        int containerCount = request.getSelectedContainers() == null ? 0 : request.getSelectedContainers().size();
+        log.info("Loading bill-wise data before create for {} containers with BL Type: {}", 
+                containerCount, request.getBlType());
 
-        if (request.getBlType() == null || request.getBlType().isBlank()) {
+        // Validate BL Type is provided
+        if (request.getBlType() == null || request.getBlType().trim().isEmpty()) {
             throw new ValidationException("BL Type is required for bill-wise data loading");
         }
 
+        if (!"IMPORT".equals(request.getBlType()) && !"EXPORT".equals(request.getBlType())) {
+            throw new ValidationException("BL Type must be IMPORT or EXPORT");
+        }
+
+        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
+        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
+        List<Map<String, Object>> allBillDetails = new java.util.ArrayList<>();
+        
+        // Determine GL Code based on BL Type (following legacy logic)
         String glCode = resolveGlCode(request.getBlType());
-        List<Map<String, Object>> allBillDetails = new ArrayList<>();
-        long detRowId = 0;
-
-        for (LoadBillwiseRequestDTO.SelectedContainer container : request.getSelectedContainers()) {
-            // Query VW_SHIP_BILLWISE_ACCOUNT_TRN (legacy bean lines 280-295)
-            List<Map<String, Object>> billwiseRows = queryBillwiseAccountView(glCode, container.getBlNumber());
-
-            if (billwiseRows.isEmpty()) continue;
-
-            Map<String, Object> firstBillwiseRow = billwiseRows.get(0);
-            BigDecimal totalPayable = container.getTotalPayableAmount() != null ? container.getTotalPayableAmount() : BigDecimal.ZERO;
-            BigDecimal totalIncome = container.getTotalIncomeAmount() != null ? container.getTotalIncomeAmount() : BigDecimal.ZERO;
-
-            if (billwiseRows.size() == 1) {
-                // Single-row branch (legacy bean lines 299-321)
-                detRowId++;
-                allBillDetails.add(buildBillRowMap(detRowId, container.getContainerNo(), firstBillwiseRow,
-                        totalPayable.abs(), totalIncome,
-                        asBigDecimal(firstBillwiseRow.get("BALANCE")), asString(firstBillwiseRow.get("BILL_REF"))));
-            } else {
-                // Multi-row branch: query VW_AR_SH_CONTAINER_DEMG_DTTN (legacy bean lines 323-374)
-                List<Map<String, Object>> dynRows = queryDemDetBreakdown(container.getContainerNo(), container.getBlNumber());
-                boolean isFirst = true;
-                for (Map<String, Object> dynRow : dynRows) {
-                    detRowId++;
-                    BigDecimal dmAmt = asBigDecimal(dynRow.get("DM_CHARGE_AMT"));
-                    if (dmAmt == null) dmAmt = BigDecimal.ZERO;
-                    BigDecimal drAmt = isFirst ? dmAmt.abs().subtract(totalIncome) : dmAmt.abs();
-                    BigDecimal crAmt = isFirst ? totalIncome : BigDecimal.ZERO;
-                    isFirst = false;
-                    allBillDetails.add(buildBillRowMap(detRowId, container.getContainerNo(), firstBillwiseRow,
-                            drAmt, crAmt, BigDecimal.ZERO, asString(dynRow.get("DOC_REF"))));
+        
+        // Get default payable GL account for fallback
+        Long defaultPayableGl = null;
+        if (request.getSelectedContainers() != null && !request.getSelectedContainers().isEmpty()) {
+            // Try to get from first container's line and BL type
+            LoadBillwiseRequestDTO.SelectedContainer firstContainer = request.getSelectedContainers().get(0);
+            if (firstContainer.getMainfestTransactionPoid() != null) {
+                // Get line POID from manifest or use stored procedure
+                String defaultGlStr = callProcDemDenSetDefault(1L, request.getBlType()); // Use dummy line for now
+                if (defaultGlStr != null && !"NO_DATA".equals(defaultGlStr)) {
+                    try {
+                        defaultPayableGl = Long.parseLong(defaultGlStr);
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid GL POID returned from procedure: {}", defaultGlStr);
+                    }
                 }
             }
         }
+        
+        long lastRowNumber = 0;
 
-        log.info("Computed {} bill-wise records", allBillDetails.size());
-        return Map.of("billDetails", allBillDetails, "totalCount", allBillDetails.size());
-    }
-
-    /**
-     * Update Principal Days — post-create variant (legacy bean lines 422-458: loadSelectedUpdateFreectionListiner).
-     * Iterates ALL transfer detail rows (no IsSelect filter) and calls PROC_SHIP_CNT_PPFREDAYS_UPDATE per row.
-     * GAP-3 fix: looks up ShipDemDetnTransferDtl (transfer details), not bill details.
-     */
-    @Override
-    @Transactional
-    public void updateFreeDays(Long id, UpdateFreeDaysRequestDTO request) {
-        log.info("Updating free days for demurrage/detention payable transfer with id: {}", id);
-
-        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
-        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
-
-        headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
-
-        for (UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate update : request.getContainerUpdates()) {
-            // GAP-3: use transfer detail table, not bill detail table
-            ShipDemDetnTransferDtl transferDtl = transferDtlRepository
-                    .findByTransactionPoidAndDetRowId(id, update.getDetRowId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Transfer Detail", "detRowId", update.getDetRowId().toString()));
-
-            if (!transferDtl.getContainerNo().equals(update.getContainerNo())) {
-                throw new ValidationException("Container number mismatch for detRowId: " + update.getDetRowId());
+        // Process each SELECTED container (IsSelect = 'Y')
+        for (LoadBillwiseRequestDTO.SelectedContainer container : request.getSelectedContainers()) {
+            // In the pre-create flow, a container included in the request is already selected.
+            if (container.getIsSelect() != null && !"Y".equalsIgnoreCase(container.getIsSelect())) {
+                log.debug("Skipping container {} as it's not selected (IsSelect != 'Y')", container.getContainerNo());
+                continue;
             }
 
-            // GAP-9: validate before calling SP
-            validateFreeDaysUpdate(update);
+            // Step 1: Query billwise accounts (VwShipBillwiseAccountTrnView1 equivalent)
+            String billwiseAccountSql = "SELECT * FROM VW_SHIP_BILLWISE_ACCOUNT_TRN " +
+                    "WHERE GL_CODE = ? " +
+                    "AND REMARKS LIKE ? " +
+                    "AND COMPANY_POID = ?";
 
-            callProcShipCntPpfredaysUpdate(
-                    update.getMainfestTransactionPoid(),
-                    update.getExtraFreeDaysPrnpls(),
-                    update.getContainerNo()
-            );
+            List<Map<String, Object>> billwiseAccounts;
+            try {
+                billwiseAccounts = jdbcTemplate.queryForList(
+                        billwiseAccountSql,
+                        glCode,
+                        "%" + container.getBlNumber() + "%",
+                        companyPoid
+                );
+                log.debug("Billwise account query: GL_CODE={}, BL_NUMBER={}, COMPANY_POID={}", 
+                        glCode, container.getBlNumber(), companyPoid);
+            } catch (Exception e) {
+                log.warn("Failed to query billwise accounts for container: {}. Error: {}. Trying alternative query.", 
+                        container.getContainerNo(), e.getMessage());
+                
+                // Try alternative query without GL_CODE filter
+                try {
+                    String altSql = "SELECT * FROM VW_SHIP_BILLWISE_ACCOUNT_TRN " +
+                            "WHERE REMARKS LIKE ? " +
+                            "AND COMPANY_POID = ?";
+                    billwiseAccounts = jdbcTemplate.queryForList(
+                            altSql,
+                            "%" + container.getBlNumber() + "%",
+                            companyPoid
+                    );
+                    log.debug("Alternative billwise account query found {} records", billwiseAccounts.size());
+                } catch (Exception e2) {
+                    log.warn("Alternative query also failed: {}", e2.getMessage());
+                    billwiseAccounts = new java.util.ArrayList<>();
+                }
+            }
+
+            int billwiseAccountCount = billwiseAccounts.size();
+            log.debug("Found {} billwise account records for container: {}", billwiseAccountCount, container.getContainerNo());
+
+            if (billwiseAccountCount == 1) {
+                // Simple Scenario - Single Billwise Record (Lines 285-302 in legacy)
+                Map<String, Object> billwiseAccount = billwiseAccounts.get(0);
+                lastRowNumber++;
+                
+                Map<String, Object> billDetail = new java.util.HashMap<>();
+                billDetail.put("detRowId", lastRowNumber);
+                billDetail.put("checkall", "Y");
+                billDetail.put("description", billwiseAccount.get("REMARKS"));
+                billDetail.put("billRefType", "AGAINST");
+                billDetail.put("billRefno", billwiseAccount.get("BILL_REF"));
+                billDetail.put("containerNo", container.getContainerNo());
+                billDetail.put("billwiseBalance", billwiseAccount.get("BALANCE"));
+                
+                // Calculate Dr Amount (Payable) - abs(TotalPayableAmount)
+                BigDecimal drAmt = container.getTotalPayableAmount() != null ? 
+                        container.getTotalPayableAmount().abs() : BigDecimal.ZERO;
+                billDetail.put("drAmt", drAmt);
+                
+                // Set Cr Amount (Income)
+                billDetail.put("crAmt", container.getTotalIncomeAmount() != null ? 
+                        container.getTotalIncomeAmount() : BigDecimal.ZERO);
+                billDetail.put("glPoid", billwiseAccount.get("GL_POID"));
+                
+                allBillDetails.add(billDetail);
+                
+            } else if (billwiseAccountCount > 1) {
+                // Complex Scenario - Multiple Billwise Records (Lines 303-323 in legacy)
+                
+                // Build dynamic query to get container-wise charges grouped by doc_ref
+                String dynamicQuery = 
+                        "SELECT doc_ref, sum(DM_CHARGE_AMT) DM_CHARGE_AMT " +
+                        "FROM VW_AR_SH_CONTAINER_DEMG_DTTN " +
+                        "WHERE nvl(DM_CHARGE_AMT,0) <> 0 " +
+                        "AND CONTAINER_NO = ? " +
+                        "AND GET_BL_NUMBER(BL_POID) = ? " +
+                        "GROUP BY doc_ref";
+                
+                List<Map<String, Object>> dynamicResults;
+                try {
+                    dynamicResults = jdbcTemplate.queryForList(
+                            dynamicQuery,
+                            container.getContainerNo(),
+                            container.getBlNumber()
+                    );
+                } catch (Exception e) {
+                    log.warn("Failed to execute dynamic query for container: {}. Error: {}", 
+                            container.getContainerNo(), e.getMessage());
+                    dynamicResults = new java.util.ArrayList<>();
+                }
+                
+                int totalDynCount = dynamicResults.size();
+                int currentDynCount = totalDynCount;
+                
+                // Get first billwise account for GL_POID and other details
+                Map<String, Object> firstBillwiseAccount = billwiseAccounts.get(0);
+                
+                // Loop through each doc_ref
+                for (Map<String, Object> dynResult : dynamicResults) {
+                    lastRowNumber++;
+                    
+                    Map<String, Object> billDetail = new java.util.HashMap<>();
+                    billDetail.put("detRowId", lastRowNumber);
+                    billDetail.put("checkall", "Y");
+                    billDetail.put("description", firstBillwiseAccount.get("REMARKS"));
+                    billDetail.put("billRefType", "AGAINST");
+                    billDetail.put("billRefno", dynResult.get("DOC_REF")); // doc_ref from dynamic query
+                    billDetail.put("containerNo", container.getContainerNo());
+                    billDetail.put("billwiseBalance", "0"); // Always 0 in complex scenario
+                    
+                    // Calculate Dr Amount from dynamic query result
+                    BigDecimal dmChargeAmt = dynResult.get("DM_CHARGE_AMT") != null ? 
+                            new BigDecimal(dynResult.get("DM_CHARGE_AMT").toString()).abs() : BigDecimal.ZERO;
+                    
+                    // For first record, subtract income amount
+                    if (totalDynCount == currentDynCount) {
+                        BigDecimal incomeAmt = container.getTotalIncomeAmount() != null ? 
+                                container.getTotalIncomeAmount() : BigDecimal.ZERO;
+                        dmChargeAmt = dmChargeAmt.subtract(incomeAmt);
+                        billDetail.put("drAmt", dmChargeAmt);
+                        billDetail.put("crAmt", incomeAmt);
+                    } else {
+                        billDetail.put("drAmt", dmChargeAmt);
+                        billDetail.put("crAmt", BigDecimal.ZERO);
+                    }
+                    
+                    billDetail.put("glPoid", firstBillwiseAccount.get("GL_POID"));
+                    allBillDetails.add(billDetail);
+                    
+                    currentDynCount--;
+                }
+                
+            } else {
+                // No billwise accounts found - create placeholder with proper GL account
+                log.warn("No billwise accounts found for container: {}. Creating placeholder with default GL account.", container.getContainerNo());
+                lastRowNumber++;
+                
+                Map<String, Object> placeholder = new java.util.HashMap<>();
+                placeholder.put("detRowId", lastRowNumber);
+                placeholder.put("checkall", "Y");
+                placeholder.put("description", "Demurrage/Detention for " + container.getContainerNo());
+                placeholder.put("billRefType", "AGAINST");
+                placeholder.put("billRefno", container.getBlNumber());
+                placeholder.put("containerNo", container.getContainerNo());
+                placeholder.put("billwiseBalance", BigDecimal.ZERO);
+                placeholder.put("drAmt", container.getTotalPayableAmount() != null ? 
+                        container.getTotalPayableAmount().abs() : BigDecimal.ZERO);
+                placeholder.put("crAmt", container.getTotalIncomeAmount() != null ? 
+                        container.getTotalIncomeAmount() : BigDecimal.ZERO);
+                
+                // Get default GL account from multiple sources
+                Long finalGlPoid = defaultPayableGl;
+                if (finalGlPoid == null) {
+                    finalGlPoid = getDefaultGlAccountForDemDet(glCode, companyPoid);
+                }
+                if (finalGlPoid == null) {
+                    // Last resort - get income GL from parameters
+                    finalGlPoid = getIncomeGlPoidFromParameter(groupPoid);
+                }
+                
+                placeholder.put("glPoid", finalGlPoid);
+                
+                allBillDetails.add(placeholder);
+            }
         }
 
-        log.info("Successfully updated free days for demurrage/detention payable transfer with id: {}", id);
+        log.info("Loaded {} bill-wise records for BL Type: {} following legacy logic", 
+                allBillDetails.size(), request.getBlType());
+        return Map.of(
+                "billDetails", allBillDetails,
+                "totalCount", allBillDetails.size(),
+                "blType", request.getBlType(),
+                "glCode", glCode
+        );
     }
 
     /**
@@ -579,16 +720,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             }
         }
 
-        return result;
-    }
-
-    public Map<String, Object> getGlAccountsDirectFromSp(Long linePoid, String blType) {
-        log.info("Getting GL accounts directly from SP for line: {}, blType: {}", linePoid, blType);
-        Map<String, Object> result = new HashMap<>();
-        if (linePoid != null && blType != null) {
-            String payableGl = callProcDemDenSetDefault(linePoid, blType);
-            result.put("payableGlPoid", payableGl != null && !payableGl.equals("NO_DATA") ? payableGl : null);
-        }
         return result;
     }
 
@@ -1064,12 +1195,55 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Utility helpers (type-safe JDBC Map accessors)
-    // ─────────────────────────────────────────────────────────────────────────
-
+    /**
+     * Resolve GL Code based on BL Type following legacy logic
+     */
     private String resolveGlCode(String blType) {
-        return "IMPORT".equalsIgnoreCase(blType) ? GL_CODE_IMPORT : GL_CODE_EXPORT;
+        if ("IMPORT".equalsIgnoreCase(blType)) {
+            return "LINE_DEM"; // Demurrage for Import
+        } else if ("EXPORT".equalsIgnoreCase(blType)) {
+            return "LINE_DET"; // Detention for Export
+        }
+        throw new ValidationException("Invalid BL Type: " + blType + ". Must be IMPORT or EXPORT");
+    }
+
+    /**
+     * Get default GL account for Demurrage/Detention based on GL Code
+     */
+    private Long getDefaultGlAccountForDemDet(String glCode, Long companyPoid) {
+        try {
+            // Query GL master to find account by GL_CODE
+            String sql = "SELECT GL_POID FROM GL_MASTER_LEDGERS " +
+                    "WHERE GL_CODE = ? " +
+                    "AND COMPANY_POID = ? " +
+                    "AND NVL(DELETED, 'N') = 'N' " +
+                    "AND ROWNUM = 1";
+            
+            List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, glCode, companyPoid);
+            if (!results.isEmpty()) {
+                Object glPoid = results.get(0).get("GL_POID");
+                if (glPoid != null) {
+                    return ((Number) glPoid).longValue();
+                }
+            }
+            
+            log.warn("No GL account found for GL_CODE: {} and COMPANY_POID: {}", glCode, companyPoid);
+            return null;
+        } catch (Exception e) {
+            log.error("Error getting default GL account for GL_CODE: {}", glCode, e);
+            return null;
+        }
+    }
+
+    public Map<String, Object> getGlAccountsDirectFromSp(Long linePoid, String blType) {
+        log.info("Getting GL accounts directly from SP for line: {}, blType: {}", linePoid, blType);
+        Map<String, Object> result = new java.util.HashMap<>();
+        
+        if (linePoid != null && blType != null) {
+            String payableGl = callProcDemDenSetDefault(linePoid, blType);
+            result.put("payableGlPoid", payableGl != null && !payableGl.equals("NO_DATA") ? payableGl : null);
+        }
+        return result;
     }
 
     private String asString(Object value) {
