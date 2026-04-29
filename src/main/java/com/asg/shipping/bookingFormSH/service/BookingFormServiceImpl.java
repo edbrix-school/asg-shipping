@@ -16,6 +16,7 @@ import com.asg.shipping.bookingFormSH.entity.*;
 import com.asg.shipping.bookingFormSH.repository.*;
 import com.asg.shipping.bookingFormSH.util.BookingFormMapper;
 import com.asg.shipping.bookingFormSH.util.TriConsumer;
+import com.asg.shipping.common.dto.ValidationError;
 import com.asg.shipping.common.entity.GlobalAddressDetails;
 import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -30,6 +31,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlOutParameter;
+import org.springframework.jdbc.core.SqlParameter;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -1010,6 +1014,216 @@ public class BookingFormServiceImpl implements BookingFormService {
                         "Address not found for poid: " + addressMasterPoid + " and type: " + addressType
                 ));
         return BookingFormMapper.mapAddressList(entity);
+    }
+
+    @Override
+    @Transactional(timeout = 600)
+    public String importFileWithTransaction(org.springframework.web.multipart.MultipartFile file, Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid) {
+        if (file.isEmpty()) {
+            throw new ValidationException(
+                    "Ship Mate container file is empty",
+                    List.of(new ValidationError("file", "Please select a valid Excel file"))
+            );
+        }
+
+        String result = uploadDetailsFromExcel(transactionPoid, groupPoid, companyPoid, userPoid, file, false);
+
+        // Log TDR file import action
+        String logDetail = String.format("Ship Mate container file imported: %s", file.getOriginalFilename());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+
+        return result;
+    }
+
+    // Inner class for Excel configuration
+    private static class ExcelConfig {
+        int startRowNumber;
+        int startColNumber;
+        int endColNumber;
+        String tempTableName;
+        String excelSheetName;
+    }
+
+    @Transactional(timeout = 600)
+    public String uploadDetailsFromExcel(Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid, org.springframework.web.multipart.MultipartFile file, boolean callStoredProcedure) {
+        if (file.isEmpty()) {
+            throw new ValidationException(
+                    "File is empty",
+                    List.of(new ValidationError("file", "Please select a valid Excel file"))
+            );
+        }
+
+        String docId = "110-160_2";
+        ExcelConfig config = getExcelConfig(docId);
+        log.info("Excel config - startRowNumber: {}, startColNumber: {}, endColNumber: {}, tempTable: {}",
+                config.startRowNumber, config.startColNumber, config.endColNumber, config.tempTableName);
+
+        jdbcTemplate.update("DELETE FROM " + config.tempTableName);
+
+        List<List<Object>> rowsCollection = new ArrayList<>();
+
+        try (org.apache.poi.ss.usermodel.Workbook workbook = org.apache.poi.ss.usermodel.WorkbookFactory.create(file.getInputStream())) {
+            if (workbook == null) {
+                throw new ValidationException(
+                        "Excel Workbook not able to open...",
+                        List.of(new ValidationError("file", "Excel Workbook not able to open..."))
+                );
+            }
+
+            org.apache.poi.ss.usermodel.Sheet sheet = config.excelSheetName != null
+                    ? workbook.getSheet(config.excelSheetName)
+                    : workbook.getSheetAt(0);
+
+            if (sheet == null) {
+                String sheetName = config.excelSheetName != null ? config.excelSheetName : "at index 0";
+                throw new ValidationException(
+                        "Excel sheet " + sheetName + " not able to open...",
+                        List.of(new ValidationError("file", "Excel sheet " + sheetName + " not able to open..."))
+                );
+            }
+
+            for (org.apache.poi.ss.usermodel.Row row : sheet) {
+                List<Object> colCollection = new ArrayList<>();
+                for (int cn = config.startColNumber - 1; cn <= config.endColNumber - 1; cn++) {
+                    org.apache.poi.ss.usermodel.Cell cell = row.getCell(cn, org.apache.poi.ss.usermodel.Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                    switch (cell.getCellType()) {
+                        case NUMERIC -> colCollection.add(cell.getNumericCellValue());
+                        case STRING -> colCollection.add(cell.getStringCellValue());
+                        case BOOLEAN -> colCollection.add(cell.getBooleanCellValue());
+                        default -> colCollection.add("");
+                    }
+                }
+                rowsCollection.add(colCollection);
+            }
+        } catch (Exception e) {
+            throw new ValidationException(
+                    "Error processing Excel file",
+                    List.of(new ValidationError("file", "Failed to read Excel file: " + e.getMessage()))
+            );
+        }
+
+        log.info("Total rows read from Excel: {}, Rows to be inserted (after startRowNumber {}): {}",
+                rowsCollection.size(), config.startRowNumber, Math.max(0, rowsCollection.size() - config.startRowNumber + 1));
+
+        saveImportedDataAsync(config.startRowNumber, rowsCollection, config.tempTableName);
+
+        // Verify data was inserted
+        Integer insertedCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM " + config.tempTableName, Integer.class);
+        log.info("Rows inserted into temp table {}: {}", config.tempTableName, insertedCount);
+
+        if (callStoredProcedure) {
+            String result = callImportTdrDetail(groupPoid, userPoid, companyPoid, transactionPoid);
+            if (result != null && result.startsWith("ERROR")) {
+                throw new ValidationException(
+                        "Failed to upload TDR details from Excel",
+                        List.of(new ValidationError("file", result))
+                );
+            }
+            return result != null ? result : "TDR details uploaded successfully from Excel";
+        } else {
+            return String.format("Successfully imported %d rows to temp table. Click 'Empty Container load' to process.", insertedCount);
+        }
+    }
+
+    private ExcelConfig getExcelConfig(String docId) {
+        SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+                .withProcedureName("PROC_GLOB_EXCEL_IMPORT_SHEETS")
+                .declareParameters(
+                        new SqlParameter("P_COMPANY_POID", Types.NUMERIC),
+                        new SqlParameter("P_DOC_ID", Types.VARCHAR),
+                        new SqlOutParameter("OUTDATA", oracle.jdbc.internal.OracleTypes.CURSOR),
+                        new SqlOutParameter("P_STATUS", Types.VARCHAR)
+                );
+
+        Map<String, Object> result = jdbcCall.execute(
+                Map.of(
+                        "P_COMPANY_POID", UserContext.getCompanyPoid(),
+                        "P_DOC_ID", docId
+                )
+        );
+
+        List<Map<String, Object>> configs = (List<Map<String, Object>>) result.get("OUTDATA");
+        if (configs == null || configs.isEmpty()) {
+            throw new ValidationException(
+                    "Excel configuration not found",
+                    List.of(new ValidationError("file", "No Excel configuration found for DOC_ID: " + docId))
+            );
+        }
+
+        Map<String, Object> configRow = configs.get(0);
+        ExcelConfig config = new ExcelConfig();
+        config.startRowNumber = ((Number) configRow.get("START_ROW_NUMBER")).intValue();
+        config.startColNumber = ((Number) configRow.get("START_COL_NUMBER")).intValue();
+        config.endColNumber = ((Number) configRow.get("END_COL_NUMBER")).intValue();
+        config.tempTableName = (String) configRow.get("TEMP_TABLE_NAME");
+        config.excelSheetName = (String) configRow.get("EXCEL_SHEET_NAME");
+        return config;
+    }
+
+    protected void saveImportedDataAsync(int startRowNumber, List<List<Object>> rowsCollection, String tempTableName) {
+        List<String> batchQueries = new ArrayList<>();
+        int rowNum = 0;
+
+        for (List<Object> cols : rowsCollection) {
+            rowNum++;
+            if (startRowNumber <= rowNum) {
+                StringBuilder insertQuery = new StringBuilder("INSERT INTO " + tempTableName + " VALUES (");
+                for (Object col : cols) {
+                    if (col == null) {
+                        insertQuery.append("NULL,");
+                    } else {
+                        insertQuery.append("'").append(col.toString().replace("'", "''")).append("',");
+                    }
+                }
+                insertQuery.setLength(insertQuery.length() - 1);
+                insertQuery.append(")");
+
+                jdbcTemplate.update(insertQuery.toString());
+            }
+        }
+
+//        // Execute in batches of 50
+//        int batchSize = 50;
+//        for (int i = 0; i < batchQueries.size(); i += batchSize) {
+//            int endIndex = Math.min(i + batchSize, batchQueries.size());
+//            List<String> batch = batchQueries.subList(i, endIndex);
+//            jdbcTemplate.batchUpdate(batch.toArray(new String[0]));
+//        }
+    }
+
+    public String callImportTdrDetail(Long groupPoid, Long userPoid, Long companyPoid, Long transactionPoid) {
+        try {
+            log.info("[SP-3] PROC_PDA_IMPORT_TDR_DETAIL2 - transactionPoid: {}", transactionPoid);
+
+            SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+                    .withProcedureName("PROC_PDA_IMPORT_TDR_DETAIL2")
+                    .withoutProcedureColumnMetaDataAccess()
+                    .declareParameters(
+                            new SqlParameter("P_LOGIN_GROUP_POID", Types.NUMERIC),
+                            new SqlParameter("P_LOGIN_USER_POID", Types.NUMERIC),
+                            new SqlParameter("P_LOGIN_COMPANY_POID", Types.NUMERIC),
+                            new SqlParameter("P_TRANSACTION_POID", Types.NUMERIC),
+                            new SqlOutParameter("P_STATUS", Types.VARCHAR)
+                    );
+
+            Map<String, Object> inputMap = new HashMap<>();
+            inputMap.put("P_LOGIN_GROUP_POID", groupPoid);
+            inputMap.put("P_LOGIN_USER_POID", userPoid);
+            inputMap.put("P_LOGIN_COMPANY_POID", companyPoid);
+            inputMap.put("P_TRANSACTION_POID", transactionPoid);
+
+            Map<String, Object> result = jdbcCall.execute(inputMap);
+
+            String status = (String) result.get("P_STATUS");
+
+            log.info("[SP-3] PROC_PDA_IMPORT_TDR_DETAIL2 - Completed. Status: {}", status);
+            return status != null ? status : "Success";
+
+        } catch (Exception e) {
+            log.error("[SP-3] PROC_PDA_IMPORT_TDR_DETAIL2 - Error: {}", e.getMessage(), e);
+            return "Error: " + e.getMessage();
+        }
     }
 
 }

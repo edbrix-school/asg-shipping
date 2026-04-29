@@ -2,6 +2,7 @@ package com.asg.shipping.bookingFormSH.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.asg.shipping.common.dto.LovItem;
@@ -80,6 +81,10 @@ public class BookingFormDto {
 	private Long splitBookingNo;
 	private String finalDestination;
 	private String shipperDetailsManually;
+	private String createdBy;
+	private LocalDateTime createdDate;
+	private String lastModifiedBy;
+	private LocalDateTime lastModifiedDate;
 
 	// Detail tables
 	private List<BookingFormCargoDetailDto> cargoDetails;

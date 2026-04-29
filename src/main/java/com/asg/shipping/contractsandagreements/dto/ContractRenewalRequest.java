@@ -15,5 +15,5 @@ public class ContractRenewalRequest {
     private Long transactionPoid;
     private LocalDate effectiveDate;
     private LocalDate expiryDate;
-    private LocalDate lastRenewalDate;
+    private LocalDate renewalDueDate;
 }

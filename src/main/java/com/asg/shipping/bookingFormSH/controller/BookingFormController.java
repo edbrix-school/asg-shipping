@@ -14,7 +14,7 @@ import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
 import com.asg.shipping.bookingFormSH.service.BookingFormService;
 import com.asg.shipping.exceptions.ValidationException;
-import com.asg.shipping.portmaster.dto.PortMasterResponse;
+import com.asg.shipping.portMaster.dto.PortMasterResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -338,6 +338,41 @@ public class BookingFormController {
                 bookingFormService.transferBookingWithContainers(transactionPoid);
 
         return success("Booking Form retrieved successfully.", result);
+    }
+
+
+    @Operation(
+            summary = "Import file",
+            description = "Import Excel file containing TDR details using PROC_PDA_IMPORT_TDR_DETAIL2 stored procedure.",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Successfully imported TDR file",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid file or import error",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - Authentication required",
+                            content = @Content(mediaType = "application/json")
+                    )
+            },
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @PostMapping(value = "/{transactionPoid}/container-details/import-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> importTdrFile(
+            @Parameter(description = "Transaction POID", required = true)
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Excel file containing Container details", required = true)
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file
+    ) {
+        String result = bookingFormService.importFileWithTransaction(file, transactionPoid, UserContext.getGroupPoid(), UserContext.getCompanyPoid(), UserContext.getUserPoid());
+        return success(result, null);
     }
 
 }

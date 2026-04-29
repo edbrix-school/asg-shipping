@@ -20,6 +20,7 @@ public class BookingFormContainerDetailDto {
 
     private Long detRowId;
     private String containerNo;
+    private String soc;
     private String equipmentSealNo;
     private String equipmentIsoType;
     private LovItem equipmentIsoTypeDet; // LOV data

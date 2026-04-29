@@ -380,9 +380,9 @@ class ImportManifestServiceImplTest {
         ShipBlManifestHdr header = createHeader();
         header.setVoyageTransactionPoid(100L);
         when(headerRepository.findById(1L)).thenReturn(Optional.of(header));
-        when(procRepository.resendCan(100L, 1L, "Y")).thenReturn(new ResendCanResponseDto());
+        when(procRepository.resendCan(100L, 1L, null)).thenReturn(new ResendCanResponseDto());
         
-        ResendCanResponseDto result = service.resendCan(1L, "Y");
+        ResendCanResponseDto result = service.resendCan(1L, null);
         assertNotNull(result);
     }
 
@@ -496,13 +496,17 @@ class ImportManifestServiceImplTest {
 
     @Test
     void loadEmailFax_Success() {
+        LoadEmailFaxRequestDto req = new LoadEmailFaxRequestDto();
+        req.setAddressMasterPoid(100L);
+        req.setAddressType("CAN");
+        
         AddressDetails address = new AddressDetails();
         address.setAddressPoid("1");
         address.setEmail("test@test.com");
         
-        when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(100L, "CAN")).thenReturn(List.of(address));
+        when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(1L, "CAN")).thenReturn(List.of(address));
         
-        LoadEmailFaxResponseDto result = service.loadEmailFax(100L, "CAN");
+        LoadEmailFaxResponseDto result = service.loadEmailFax(1L, req.toString());
         assertNotNull(result);
         assertFalse(result.getEmailFaxDetails().isEmpty());
     }
@@ -586,7 +590,7 @@ class ImportManifestServiceImplTest {
         assertThrows(ResourceNotFoundException.class, () -> service.getImportManifest(1L));
         assertThrows(ResourceNotFoundException.class, () -> service.delete(1L, new DeleteReasonDto()));
         assertThrows(ResourceNotFoundException.class, () -> service.updateEmailVerification(1L, new EmailVerificationRequestDto()));
-        assertThrows(ResourceNotFoundException.class, () -> service.resendCan(1L, "Y"));
+        assertThrows(ResourceNotFoundException.class, () -> service.resendCan(1L, null));
         
         when(headerRepository.findByTransactionPoid(1L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> service.updateImportManifestBl(1L, new ImportManifestBlDto()));

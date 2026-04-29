@@ -14,7 +14,7 @@ import com.asg.shipping.containertypeportchargestariff.repository.ShipPortCharge
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linemasterthirdparty.repository.ShipLineMasterThirdPartyRepository;
-import com.asg.shipping.portmaster.repository.PortMasterRepository;
+import com.asg.shipping.portMaster.repository.PortMasterRepository;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Pageable;
 import org.junit.jupiter.api.BeforeEach;
@@ -413,4 +413,4 @@ class PortChargesTariffServiceImplTest {
             assertNull(result.getDetails());
         }
     }
-}
+}
