@@ -180,15 +180,8 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         validateTariffUpdateDTO(dto, id, groupPoid);
 
         // Store old values for logging
-        ShipPortTariffHdr oldTariff = ShipPortTariffHdr.builder()
-                .portPoid(tariff.getPortPoid())
-                .description(tariff.getDescription())
-                .tariffType(tariff.getTariffType())
-                .periodFrom(tariff.getPeriodFrom())
-                .periodTo(tariff.getPeriodTo())
-                .transactionDate(tariff.getTransactionDate())
-                .docRef(tariff.getDocRef())
-                .build();
+        ShipPortTariffHdr oldEntity = new ShipPortTariffHdr();
+        BeanUtils.copyProperties(tariff, oldEntity);
 
         // Update header entity
         mapper.mapUpdateDTOToEntity(dto, tariff, groupPoid, userPoid, companyPoid);
@@ -206,7 +199,7 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         enrichLovData(result);
 
         // Log changes
-        loggingService.logChanges(oldTariff, saved, ShipPortTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID);
+        loggingService.logChanges(oldEntity, saved, ShipPortTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID);
 
         log.info("Successfully updated tariff with id: {}", id);
         return result;

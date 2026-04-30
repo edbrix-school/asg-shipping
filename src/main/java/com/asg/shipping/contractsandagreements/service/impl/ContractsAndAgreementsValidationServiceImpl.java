@@ -9,7 +9,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -37,6 +36,17 @@ public class ContractsAndAgreementsValidationServiceImpl implements ContractsAnd
         );
     }
 
+    @Override
+    public void expiryDateValidationForRenew(LocalDate expiryDate, LocalDate effectiveStartDate) {
+
+        if (expiryDate == null || effectiveStartDate == null) {
+            throw new ValidationException("Expiry date and Effective start date must not be null");
+        }
+
+        if (effectiveStartDate.isAfter(expiryDate)) {
+            throw new ValidationException("Effective start date cannot be after expiry date");
+        }
+    }
 
     @Override
     public void expiryDateValidation(
@@ -65,40 +75,27 @@ public class ContractsAndAgreementsValidationServiceImpl implements ContractsAnd
             throw new ValidationException("Party Type or Party Poid cannot be null");
         }
 
-        String sql = null;
-
-        switch (partyType.toUpperCase()) {
-
-            case "CUSTOMER":
-                sql = """
-                        SELECT 1 
-                        FROM PRODUCTION.SALES_CUSTOMER_MASTER
-                        WHERE CUSTOMER_POID = ?
-                        AND NVL(DELETED,'N') <> 'Y'
-                        """;
-                break;
-
-            case "SUPPLIER":
-                sql = """
-                        SELECT 1 
-                        FROM PRODUCTION.AP_SUPPLIER_MASTER
-                        WHERE SUPPLIER_POID = ?
-                        AND NVL(DELETED,'N') <> 'Y'
-                        """;
-                break;
-
-            case "PRINCIPAL":
-                sql = """
-                        SELECT 1 
-                        FROM PRODUCTION.SHIP_PRINCIPAL_MASTER
-                        WHERE PRINCIPAL_POID = ?
-                        AND NVL(DELETED,'N') <> 'Y'
-                        """;
-                break;
-
-            default:
-                throw new ValidationException("Invalid Party Type");
-        }
+        String sql = switch (partyType.toUpperCase()) {
+            case "CUSTOMER" -> """
+                    SELECT 1 
+                    FROM SALES_CUSTOMER_MASTER
+                    WHERE CUSTOMER_POID = ?
+                    AND NVL(DELETED,'N') <> 'Y'
+                    """;
+            case "SUPPLIER" -> """
+                    SELECT 1 
+                    FROM AP_SUPPLIER_MASTER
+                    WHERE SUPPLIER_POID = ?
+                    AND NVL(DELETED,'N') <> 'Y'
+                    """;
+            case "PRINCIPAL" -> """
+                    SELECT 1 
+                    FROM SHIP_PRINCIPAL_MASTER
+                    WHERE PRINCIPAL_POID = ?
+                    AND NVL(DELETED,'N') <> 'Y'
+                    """;
+            default -> throw new ValidationException("Invalid Party Type");
+        };
 
         boolean exists = exists(sql, partyPoid);
 
