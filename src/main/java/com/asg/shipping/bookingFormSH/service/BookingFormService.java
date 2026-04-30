@@ -74,4 +74,7 @@ public interface BookingFormService {
 	Map<String, Object> transferBookingWithContainers(Long oldTransactionPoid);
 
     String importFileWithTransaction(MultipartFile file, Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid);
+
+	byte[] exportStuffingAdviceExcel(Long id);
+
 }

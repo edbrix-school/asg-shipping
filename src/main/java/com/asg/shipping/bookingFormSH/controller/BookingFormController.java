@@ -375,4 +375,18 @@ public class BookingFormController {
         return success(result, null);
     }
 
+    @GetMapping("/download-stuffing-advice/{id}")
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    public ResponseEntity<byte[]> downloadStuffingAdviceTemplate(
+            @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id){
+        log.info("Download Stuffing Advice Template: {}", id);
+        byte[] excel = bookingFormService.exportStuffingAdviceExcel(id);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=Stuffing_Advice_Template.xlsx")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
 }
