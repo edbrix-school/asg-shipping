@@ -180,6 +180,10 @@ public class PortMasterServiceImpl implements PortMasterService {
 		dto.setActive(entity.getActive());
 		dto.setCountryDetail(mapReadOnlyresponse(countryMaster));
 		dto.setTradelaneDetail(mapReadOnlyresponse(tradeLaneResponse));
+        dto.setCreatedBy(entity.getCreatedBy());
+        dto.setCreatedDate(entity.getCreatedDate());
+        dto.setLastModifiedBy(entity.getLastModifiedBy());
+        dto.setLastModifiedDate(entity.getLastModifiedDate());
 		return dto;
 	}
 
