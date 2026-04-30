@@ -1,5 +1,6 @@
 package com.asg.shipping.portMaster.dto;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import lombok.Data;
@@ -18,4 +19,8 @@ public class PortMasterResponse {
 	private String active;
 	private Map<String,Object> tradelaneDetail;
 	private Map<String,Object> countryDetail;
+    private String createdBy;
+    private LocalDateTime createdDate;
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
 }
