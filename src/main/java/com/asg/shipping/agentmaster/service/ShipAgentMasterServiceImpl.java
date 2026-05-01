@@ -24,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -152,7 +153,7 @@ public class ShipAgentMasterServiceImpl implements ShipAgentMasterService{
                 .details(e.getDetails())
                 .linePoid(e.getLinePoid())
                 .portPoid(e.getPortPoid())
-                .email(e.getEmail())
+                .email(e.getEmail() != null && !e.getEmail().isBlank() ? Arrays.asList(e.getEmail().split(",")) : List.of())
                 .contactNo(e.getContactNo())
                 .faxNo(e.getFaxNo())
                 .countryPoid(e.getCountryPoid())

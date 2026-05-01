@@ -60,7 +60,7 @@ public class ShipAgentMasterControllerTest {
                 .details("Test Details")
                 .linePoid(1L)
                 .portPoid(2L)
-                .email("test@example.com")
+                .email(Collections.singletonList("test@example.com"))
                 .contactNo("1234567890")
                 .active("Y")
                 .createdDate(LocalDateTime.now())
