@@ -682,9 +682,44 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     update.getExtraFreeDaysPrnpls(),
                     update.getContainerNo()
             );
+            
+            // Update the transfer detail record to reflect the new principal days
+            updateTransferDetailPrincipalDays(
+                    update.getMainfestTransactionPoid(),
+                    update.getExtraFreeDaysPrnpls(),
+                    update.getContainerNo()
+            );
+        }
+
+        // Force flush and clear to ensure changes are committed and cache is cleared
+        try {
+            jdbcTemplate.execute("COMMIT");
+            log.debug("Explicitly committed transaction after updating principal days");
+        } catch (Exception e) {
+            log.warn("Failed to explicitly commit transaction: {}", e.getMessage());
         }
 
         log.info("Successfully updated principal extra days");
+    }
+
+    /**
+     * Update transfer detail record to reflect updated principal days from manifest
+     */
+    private void updateTransferDetailPrincipalDays(Long manifestTransactionPoid, BigDecimal extraFreeDaysPrnpls, String containerNo) {
+        try {
+            String sql = "UPDATE SHIP_DEM_DETN_TRANSFER_DTL " +
+                    "SET EXTRA_FREE_DAYS_PRNPLS = ? " +
+                    "WHERE MAINFEST_TRANSACTION_POID = ? " +
+                    "AND CONTAINER_NO = ?";
+            
+            int updatedRows = jdbcTemplate.update(sql, extraFreeDaysPrnpls, manifestTransactionPoid, containerNo);
+            log.debug("Updated {} transfer detail rows for manifest: {}, container: {}", 
+                    updatedRows, manifestTransactionPoid, containerNo);
+        } catch (Exception e) {
+            log.error("Error updating transfer detail principal days for manifest: {}, container: {}", 
+                    manifestTransactionPoid, containerNo, e);
+            // Don't throw exception as the manifest is already updated
+        }
     }
 
     @Override

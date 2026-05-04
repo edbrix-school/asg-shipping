@@ -41,4 +41,15 @@ public interface ShipBlManifestContainerDtlRepository extends JpaRepository<Ship
               and d.containerNo = :containerNo
             """)
     Optional<BigDecimal> findTotalAmountCollected(@Param("transactionPoid") Long transactionPoid, @Param("containerNo") String containerNo);
+
+    /**
+     * Force fresh data retrieval from database using native query
+     * This bypasses any JPA caching to ensure we get the latest EXTRA_FREE_DAYS_PRNPLS values
+     */
+    @Query(value = """
+        SELECT * FROM SHIP_BL_MANIFEST_CONTAINER_DTL 
+        WHERE TRANSACTION_POID = :transactionPoid 
+        ORDER BY DET_ROW_ID
+        """, nativeQuery = true)
+    List<ShipBlManifestContainerDtl> findByTransactionPoidWithFreshData(@Param("transactionPoid") Long transactionPoid);
 }
