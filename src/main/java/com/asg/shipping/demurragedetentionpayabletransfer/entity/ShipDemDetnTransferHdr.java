@@ -23,6 +23,7 @@ import java.time.LocalDate;
 public class ShipDemDetnTransferHdr extends BaseEntity {
 
     @Id
+    @AuditIgnore
     @Column(name = "TRANSACTION_POID", nullable = false)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long transactionPoid;
