@@ -1,5 +1,6 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,15 +28,18 @@ public class ShipDemDetnTransferHdr extends BaseEntity {
     private Long transactionPoid;
 
     @Column(name = "GROUP_POID", nullable = false)
+    @AuditIgnore
     private Long groupPoid;
 
     @Column(name = "COMPANY_POID", nullable = false)
+    @AuditIgnore
     private Long companyPoid;
 
     @Column(name = "DOC_REF", length = 25, unique = true)
     private String docRef;
 
     @Column(name = "TRANSACTION_DATE")
+    @AuditIgnore
     private LocalDate transactionDate;
 
     @Column(name = "LINE_POID")
@@ -45,9 +49,11 @@ public class ShipDemDetnTransferHdr extends BaseEntity {
     private String blType;
 
     @Column(name = "EMPTY_FROM_DATE")
+    @AuditIgnore
     private LocalDate emptyFromDate;
 
     @Column(name = "EMPTY_TO_DATE")
+    @AuditIgnore
     private LocalDate emptyToDate;
 
     @Column(name = "PAYABLE_GL_POID", nullable = false)
