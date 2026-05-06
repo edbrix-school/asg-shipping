@@ -690,9 +690,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                     }
                 }
                 dto.setTradelaneDets(tradelaneDets);
-                if (!tradelaneDets.isEmpty()) {
-                    dto.setTradelaneDet(tradelaneDets.get(0));
-                }
+                dto.setTradelaneDet(tradelaneDets);
             }
             if (line.getBillTo() != null) {
                 dto.setBillToDet(lovService.getLovItemByCode(line.getBillTo(), "PRINCIPAL_MASTER_FOR_PDA", groupPoid,
