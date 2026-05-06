@@ -41,6 +41,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.utility.PaginationUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -1073,5 +1074,20 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 detailDto.setAddressPoid(headerDto.getOtherNotifies().getNotify3Poid());
             }
         }
+    }
+
+    @Override
+    public ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request) {
+        log.info("Fetching charge defaults for chargePoid: {}", request.getChargePoid());
+
+        Long companyPoid = UserContext.getCompanyPoid();
+        Object[] taxData = procRepository.getTaxRate(request.getChargePoid(), companyPoid, request.getTransactionDate());
+        Long taxPoid = (Long) taxData[0];
+        BigDecimal taxPercentage = (BigDecimal) taxData[1];
+
+        return ChargeDefaultsResponseDto.builder()
+                .taxPoid(taxPoid)
+                .taxPercentage(taxPercentage != null ? taxPercentage : BigDecimal.ZERO)
+                .build();
     }
 }

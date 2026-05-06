@@ -14,4 +14,5 @@ public interface ImportManifestBlProcRepository {
     DefaultValueDto callDefaultGetValue(Long loginGroupPoid, Long loginCompanyPoid, Long loginUserPoid, String docId);
     void saveEmailsToDb(Long transactionPoId, String addressType,
                         String email1, String email2, String scope);
+    Object[] getTaxRate(Long chargePoid, Long companyPoid, java.time.LocalDate transactionDate);
 }
