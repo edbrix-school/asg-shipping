@@ -71,7 +71,7 @@ public interface BookingFormService {
 
 	BookingFormAddressMasterDto getCustomerAddress(Long poid, String type);
 
-	Map<String, Object> transferBookingWithContainers(Long oldTransactionPoid);
+	void transferBookingWithContainers(Long oldTransactionPoid);
 
     String importFileWithTransaction(MultipartFile file, Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid);
 
