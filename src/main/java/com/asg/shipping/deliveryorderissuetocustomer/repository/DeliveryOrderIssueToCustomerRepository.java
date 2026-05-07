@@ -31,7 +31,7 @@ public class DeliveryOrderIssueToCustomerRepository {
     /**
      * Find delivery order by transaction POID
      */
-    public Optional<DeliveryOrderIssueToCustomerDto> findByTransactionPoid(Long transactionPoid, Long companyPoid) {
+    public Optional<DeliveryOrderIssueToCustomerDto> findByTransactionPoid(Long transactionPoid) {
         String sql = "SELECT COMPANY_POID, TRANSACTION_POID, TRANSACTION_DATE, DOC_REF, JOBNO, " +
                 "ARRIVAL_DATE, BL_NUMBER, LINE, CONSIGNEE, NOTIFY, C_20, C_40, HOLD_DO, " +
                 "DO_RELASED_ID_PERSON, DO_RELASED_TO_PERSON, DO_RELASED_ADDRS_PERSON, " +
@@ -40,10 +40,10 @@ public class DeliveryOrderIssueToCustomerRepository {
                 "DO_CNT_TO_OTHERS, DO_CNT_TO_OTHERS_MAILS, DO_EMAILS, DELIVERY_SENT_TO, " +
                 "PRINCIPAL_DO_NUMBER, PRINCIPAL_DO_REQUIRED " +
                 "FROM VW_CREDIT_DELIVERY_ORDER_PEND " +
-                "WHERE TRANSACTION_POID = ? AND COMPANY_POID = ?";
+                "WHERE TRANSACTION_POID = ?";
 
         try {
-            List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid, companyPoid);
+            List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid);
             return results.isEmpty() ? Optional.empty() : Optional.of(results.getFirst());
         } catch (Exception e) {
             // Log error and return empty
