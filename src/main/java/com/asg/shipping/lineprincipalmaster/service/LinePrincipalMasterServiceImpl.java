@@ -414,6 +414,11 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
 
         for (ChargeDetailDto chargeDto : chargeDtos) {
+            String action = resolveActionType(chargeDto.getActionType(), chargeDto.getDetRowId());
+            if (isDeleteAction(action)) {
+                continue;
+            }
+
             if (chargeDto.getChargePoid() != null) {
                 // Check for duplicate charge POID within the request
                 if (!chargePoids.add(chargeDto.getChargePoid())) {
@@ -457,6 +462,20 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 continue;
             }
 
+            if (isDeleteAction(action)) {
+                Long detRowId = normalizeDetRowId(chargeDto.getDetRowId());
+                if (detRowId == null) {
+                    throw new ValidationException("detRowId is required for deleting Charge Details");
+                }
+                ShipLineMasterChargeDtl existing = existingByDetRow.get(detRowId);
+                if (existing == null) {
+                    throw new ResourceNotFoundException("Charge Detail", "detRowId", detRowId.toString());
+                }
+                chargeDtlRepository.deleteById(new com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtlId(linePoid, detRowId));
+                logChildDeleted(linePoid, existing);
+                continue;
+            }
+
             if (chargeDto.getChargePoid() != null) {
                 if (!chargePoids.add(chargeDto.getChargePoid())) {
                     throw new ValidationException("Duplicate charge POID: " + chargeDto.getChargePoid());
@@ -472,20 +491,6 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                         throw new com.asg.common.lib.exception.ValidationException("Charge POID " + chargeDto.getChargePoid() + " already exists for this line");
                     }
                 }
-            }
-
-            if (isDeleteAction(action)) {
-                Long detRowId = normalizeDetRowId(chargeDto.getDetRowId());
-                if (detRowId == null) {
-                    throw new ValidationException("detRowId is required for deleting Charge Details");
-                }
-                ShipLineMasterChargeDtl existing = existingByDetRow.get(detRowId);
-                if (existing == null) {
-                    throw new ResourceNotFoundException("Charge Detail", "detRowId", detRowId.toString());
-                }
-                chargeDtlRepository.deleteById(new com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtlId(linePoid, detRowId));
-                logChildDeleted(linePoid, existing);
-                continue;
             }
 
             if (isUpdateAction(action)) {
@@ -521,6 +526,11 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
 
         for (ContainerTypeDetailDto containerTypeDto : containerTypeDtos) {
+            String action = resolveActionType(containerTypeDto.getActionType(), containerTypeDto.getDetRowId());
+            if (isDeleteAction(action)) {
+                continue;
+            }
+
             if (containerTypeDto.getContainerTypePoid() != null) {
                 // Check for duplicate container type POID within the request
                 if (!containerTypePoids.add(containerTypeDto.getContainerTypePoid())) {
@@ -564,6 +574,20 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 continue;
             }
 
+            if (isDeleteAction(action)) {
+                Long detRowId = normalizeDetRowId(containerTypeDto.getDetRowId());
+                if (detRowId == null) {
+                    throw new ValidationException("detRowId is required for deleting Container Type Details");
+                }
+                ShipLineMasterType existing = existingByDetRow.get(detRowId);
+                if (existing == null) {
+                    throw new ResourceNotFoundException("Container Type Detail", "detRowId", detRowId.toString());
+                }
+                containerTypeRepository.deleteById(new ShipLineMasterTypeId(linePoid, detRowId));
+                logChildDeleted(linePoid, existing);
+                continue;
+            }
+
             if (containerTypeDto.getContainerTypePoid() != null) {
                 if (!containerTypePoids.add(containerTypeDto.getContainerTypePoid())) {
                     throw new ValidationException("Duplicate container type POID: " + containerTypeDto.getContainerTypePoid());
@@ -579,20 +603,6 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                         throw new ValidationException("Container type POID " + containerTypeDto.getContainerTypePoid() + " already exists for this line");
                     }
                 }
-            }
-
-            if (isDeleteAction(action)) {
-                Long detRowId = normalizeDetRowId(containerTypeDto.getDetRowId());
-                if (detRowId == null) {
-                    throw new ValidationException("detRowId is required for deleting Container Type Details");
-                }
-                ShipLineMasterType existing = existingByDetRow.get(detRowId);
-                if (existing == null) {
-                    throw new ResourceNotFoundException("Container Type Detail", "detRowId", detRowId.toString());
-                }
-                containerTypeRepository.deleteById(new ShipLineMasterTypeId(linePoid, detRowId));
-                logChildDeleted(linePoid, existing);
-                continue;
             }
 
             if (isUpdateAction(action)) {
@@ -766,6 +776,11 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
 
         for (UserRoleDetailDto dto : userRoleDtos) {
+            String action = resolveActionType(dto.getActionType(), dto.getDetRowId());
+            if (isDeleteAction(action)) {
+                continue;
+            }
+
             if (dto.getUserRolePoid() != null) {
                 if (!userRolePoids.add(dto.getUserRolePoid())) {
                     throw new ValidationException("Duplicate user role POID: " + dto.getUserRolePoid());
@@ -798,6 +813,20 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 continue;
             }
 
+            if (isDeleteAction(action)) {
+                Long detRowId = normalizeDetRowId(dto.getDetRowId());
+                if (detRowId == null) {
+                    throw new ValidationException("detRowId is required for deleting User Role Details");
+                }
+                ShipLineMasterUserRoleDtl existing = existingByDetRow.get(detRowId);
+                if (existing == null) {
+                    throw new ResourceNotFoundException("User Role Detail", "detRowId", detRowId.toString());
+                }
+                userRoleDtlRepository.deleteById(new ShipLineMasterUserRoleDtlId(linePoid, detRowId));
+                logChildDeleted(linePoid, existing);
+                continue;
+            }
+
             if (dto.getUserRolePoid() != null) {
                 if (!userRolePoids.add(dto.getUserRolePoid())) {
                     throw new ValidationException("Duplicate user role POID: " + dto.getUserRolePoid());
@@ -813,18 +842,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 }
             }
 
-            if (isDeleteAction(action)) {
-                Long detRowId = normalizeDetRowId(dto.getDetRowId());
-                if (detRowId == null) {
-                    throw new ValidationException("detRowId is required for deleting User Role Details");
-                }
-                ShipLineMasterUserRoleDtl existing = existingByDetRow.get(detRowId);
-                if (existing == null) {
-                    throw new ResourceNotFoundException("User Role Detail", "detRowId", detRowId.toString());
-                }
-                userRoleDtlRepository.deleteById(new ShipLineMasterUserRoleDtlId(linePoid, detRowId));
-                logChildDeleted(linePoid, existing);
-            } else if (isUpdateAction(action)) {
+            if (isUpdateAction(action)) {
                 Long detRowId = normalizeDetRowId(dto.getDetRowId());
                 if (detRowId == null) {
                     throw new ValidationException("detRowId is required for updating User Role Details");
