@@ -416,7 +416,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         Long companyPoid = getCompanyPoid();
         Long userPoid = getUserPoid();
 
-        var procResult = callProcLovAfterBrws300103(groupPoid, companyPoid, userPoid, getDocumentId(), id, request.getLovName(), String.valueOf(id));
+        var procResult = callProcLovAfterBrws300103(groupPoid, companyPoid, userPoid, getDocumentId(), request.getTransactionPoid(), request.getLovName(), String.valueOf(id));
 
         var result = LoadBlDataResponseDTO.builder()
                 .companyPoid(procResult.get("companyPoid"))
