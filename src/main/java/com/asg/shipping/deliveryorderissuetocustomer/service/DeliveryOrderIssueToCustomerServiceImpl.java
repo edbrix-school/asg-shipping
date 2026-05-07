@@ -16,7 +16,6 @@ import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
-import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +30,6 @@ import javax.sql.DataSource;
 import java.io.InputStream;
 import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -52,16 +50,16 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final DataSource dataSource;
     private final LoggingService loggingService;
 
-    private static final String ARSHRCPTPRINTUPDATE="ARSHRCPTPRINTUPDATE";
-    private static final String TRANSACTIONPOID="transactionPoid";
-    private static final String DELIVERYORDER="Delivery Order";
+    private static final String ARSHRCPTPRINTUPDATE = "ARSHRCPTPRINTUPDATE";
+    private static final String TRANSACTIONPOID = "transactionPoid";
+    private static final String DELIVERYORDER = "Delivery Order";
 
     @Override
     @Transactional(readOnly = true)
     public DeliveryOrderIssueToCustomerDto getDeliveryOrderIssueToCustomer(Long transactionPoid) {
-        log.info("Getting delivery order with transactionPoid: {}, company poid: {}", transactionPoid,getCompanyPoid());
+        log.info("Getting delivery order with transactionPoid: {}, company poid: {}", transactionPoid, getCompanyPoid());
 
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, getCompanyPoid())
+        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
         enrichWithLovData(dto);
@@ -78,7 +76,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         String username = getUserName();
 
         // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired for validation
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, companyPoid)
+        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
         // Validate Principal DO Number
@@ -181,7 +179,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         blManifestRepository.save(blManifest);
-        loggingService.logChanges(oldBlManifest,blManifest,ShipBlManifestHDR.class,UserContext.getDocumentId(),blManifest.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
+        loggingService.logChanges(oldBlManifest, blManifest, ShipBlManifestHDR.class, UserContext.getDocumentId(), blManifest.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         DoShPrintingDtl doShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery order ship printing detail", TRANSACTIONPOID, transactionPoid.toString()));
@@ -203,7 +201,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         doShPrintingDtlRepository.save(doShPrintingDtl);
-        loggingService.logChanges(oldDoShPrintingDtl,doShPrintingDtl,DoShPrintingDtl.class,UserContext.getDocumentId(),doShPrintingDtl.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
+        loggingService.logChanges(oldDoShPrintingDtl, doShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), doShPrintingDtl.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
         return transactionPoid;
     }
 
@@ -217,7 +215,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         // In legacy, print methods only check if document can be printed and print it.
         // All field validations are done once in doCntPrint() before printing.
         // Here we only validate print conditions, not field values.
-        
+
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-414");
         params.put("P_TRAN_NO", transactionPoid);
 
@@ -233,7 +231,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             );
             return result;
         }
-        
+
         // If printing failed (result is null), don't call NOT_UPDATE
         // This happens when document cannot be printed (print validation failed or already printed)
         return null;
@@ -247,7 +245,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         String username = getUserName();
 
         // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(id, companyPoid)
+        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, id.toString()));
 
         // Validate Principal DO Number
@@ -347,7 +345,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                 "Shipping/SH/Container_Delivery_Validity.jrxml";
         JasperReport mainReport = printService.load(templatePath);
 
-        String fslStamp="FSL_STAMP";
+        String fslStamp = "FSL_STAMP";
 
         try {
             InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/FSL_STAMP.jpg");

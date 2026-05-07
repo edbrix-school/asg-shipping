@@ -117,7 +117,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             
-            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
+            when(viewRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.of(mockDto));
             when(lovService.getDetailsByCodeAndLovName(any(), any())).thenReturn(null);
             when(lovService.getDetailsByPoidAndLovName(any(), any())).thenReturn(null);
 
@@ -125,7 +125,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
 
             assertNotNull(result);
             assertEquals(transactionPoid, result.getTransactionPoid());
-            verify(viewRepository).findByTransactionPoid(transactionPoid, 100L);
+            verify(viewRepository).findByTransactionPoid(transactionPoid);
         }
     }
 
@@ -136,7 +136,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             
-            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.empty());
+            when(viewRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.getDeliveryOrderIssueToCustomer(transactionPoid));
@@ -161,7 +161,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
+            when(viewRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.of(mockDto));
 
             ValidationException exception = assertThrows(ValidationException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
@@ -188,7 +188,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             userContextMock.when(UserContext::getUserName).thenReturn("testuser");
             
-            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.of(mockDto));
+            when(viewRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.of(mockDto));
 
             ValidationException exception = assertThrows(ValidationException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, invalidRequest));
@@ -204,7 +204,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             
-            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.empty());
+            when(viewRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, issueRequest));
@@ -223,7 +223,7 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
             userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
             
-            when(viewRepository.findByTransactionPoid(transactionPoid, 100L)).thenReturn(Optional.empty());
+            when(viewRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, 
                     () -> service.issueDeliveryOrder(transactionPoid, issueRequest));
