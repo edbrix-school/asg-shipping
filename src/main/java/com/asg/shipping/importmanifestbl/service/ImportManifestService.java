@@ -2,12 +2,9 @@ package com.asg.shipping.importmanifestbl.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestupdate.dto.*;
 
-import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
-import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
-import com.asg.shipping.importmanifestbl.dto.ImportManifestBlDto;
-import com.asg.shipping.importmanifestbl.dto.ImportManifestBlResponseDto;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
@@ -33,7 +30,6 @@ public interface ImportManifestService {
 
     ImportManifestBlResponseDto createImportManifestBl(ImportManifestBlDto request, Long companyPoid, Long groupPoid);
 
-
     ImportManifestBlResponseDto updateImportManifestBl(Long id,  ImportManifestBlDto dto);
 
     ContainersDropDownDto getContainerTypesByVoyage(Long voyageTransPoid);
@@ -51,4 +47,5 @@ public interface ImportManifestService {
     byte[] printCheckPortCharges(Long transactionPoid) throws Exception;
 
     String saveEmails(Long transactionPoId, SaveEmailsRequestDto request);
+    ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request);
 }

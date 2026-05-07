@@ -5,6 +5,9 @@ import com.asg.shipping.importmanifestbl.dto.ContainerTypeDTO;
 
 import java.math.BigDecimal;
 public class ImportManifestDropdownMapper {
+    private ImportManifestDropdownMapper() {
+    }
+
 
     public static ContainerTypeDTO mapContainer(Object[] row) {
         return ContainerTypeDTO.builder()

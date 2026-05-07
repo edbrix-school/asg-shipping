@@ -334,10 +334,8 @@ public class BookingFormController {
     public ResponseEntity<?> transferBooking(
             @PathVariable Long transactionPoid) {
         log.info("Transfer poid: " + transactionPoid);
-        Map<String, Object> result =
-                bookingFormService.transferBookingWithContainers(transactionPoid);
-
-        return success("Booking Form retrieved successfully.", result);
+        bookingFormService.transferBookingWithContainers(transactionPoid);
+        return success("Container Transferred Successfully");
     }
 
 
