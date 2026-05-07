@@ -439,12 +439,11 @@ public class ImportManifestController {
         }
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
             summary = "Get Charge Tax Defaults",
             description = "Fetch tax POID and tax percentage for a selected charge. Called when the user selects a charge from the LOV."
     )
-    @GetMapping("/charge-defaults")
+    @GetMapping("/get-tax-rate")
     public ResponseEntity<?> getChargeDefaults(
             @Parameter(description = "Charge POID", required = true) @RequestParam Long chargePoid,
             @Parameter(description = "Transaction Date") @RequestParam(required = false) LocalDate transactionDate
