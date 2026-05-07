@@ -322,7 +322,7 @@ public class SalesInvoiceShippingController {
                             value = """
                                     {
                                       "blPoid": 456,
-                                      "blType": "IMPORT"
+                                      "blTypeInvoice": "IMPORT"
                                     }
                                     """
                     )

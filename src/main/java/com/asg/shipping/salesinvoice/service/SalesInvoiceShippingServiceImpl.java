@@ -213,13 +213,17 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     public LoadContainerDemurrageResponseDTO loadContainerDemurrageData(Long id, LoadContainerDemurrageRequestDTO request) {
         log.info("Loading container demurrage data for invoice id: {}, BL POID: {}", id, request.getBlPoid());
 
-        ArShSalesInvoiceHdr invoice = hdrRepository.findActiveByTransactionPoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
+        ArShSalesInvoiceHdr invoice = new ArShSalesInvoiceHdr();
+        invoice.setTransactionPoid(-999L);
+        if(!id.equals(-999L)) {
+            invoice = hdrRepository.findActiveByTransactionPoid(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
+        }
 
         List<SalesInvoiceContainerDtlDto> containers = executeLoadContainerDemurrageQuery(
                 request.getBlPoid(),
                 invoice.getTransactionPoid(),
-                invoice.getBlTypeInvoice()
+                request.getBlTypeInvoice()
         );
 
         return LoadContainerDemurrageResponseDTO.builder()
@@ -233,8 +237,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         log.info("Loading charge data for invoice id: {}, BL POID: {}, BL Type: {}", id, request.getBlPoid(), request.getBlTypeInvoice());
 
         Long companyPoid = getCompanyPoid();
-        ArShSalesInvoiceHdr invoice = hdrRepository.findActiveByTransactionPoid(id)
+        ArShSalesInvoiceHdr invoice = new ArShSalesInvoiceHdr();
+        invoice.setTransactionPoid(-999L);
+        if(!id.equals(-999L)) {
+            invoice = hdrRepository.findActiveByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
+        }
+        
 
         List<SalesInvoiceChargesDtlDto> charges = executeLoadChargeDataQuery(
                 request.getBlPoid(),
