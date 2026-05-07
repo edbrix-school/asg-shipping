@@ -19,5 +19,7 @@ public class LoadBlDataRequestDTO {
     @NotNull(message = "LOV name is required")
     @NotBlank
     private String lovName;
+
+    private Long transactionPoid;
 }
 
