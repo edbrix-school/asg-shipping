@@ -24,6 +24,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 import static com.asg.common.lib.dto.response.ApiResponse.error;
 
@@ -68,9 +70,38 @@ public class ExportManifestUpdateController {
         log.info("VIEW: Getting Export BL with transactionPoid: {}", transactionPoid);
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
         ExportManifestBlResponse response = service.getExportBlById(transactionPoid);
-        log.debug("VIEW: Successfully retrieved Export BL. BL Number: {}, Status: {}", 
-                response.getBlNumber(), response.getBlStatus());
-        return success("Export BL retrieved successfully", response);
+                if (response != null) {
+                        // Flatten cargoDescription list to multi-line string
+                        if (response.getCargoDescription() != null && !response.getCargoDescription().isEmpty()) {
+                                StringBuilder cargoDescriptionStr = new StringBuilder();
+                                for (var desc : response.getCargoDescription()) {
+                                        if (cargoDescriptionStr.length() > 0) cargoDescriptionStr.append("\n");
+                                        cargoDescriptionStr.append(desc.getCargoDescription() != null ? desc.getCargoDescription() : "");
+                                }
+                                // Create new CargoDescriptionDto and set combined string
+                                CargoDescriptionDto combinedDesc = new CargoDescriptionDto();
+                                combinedDesc.setCargoDescription(cargoDescriptionStr.toString());
+                                response.setCargoDescription(List.of(combinedDesc));
+                        }
+
+                        // Flatten cargoMarks list to multi-line string
+                        if (response.getCargoMarks() != null && !response.getCargoMarks().isEmpty()) {
+                                StringBuilder cargoMarksStr = new StringBuilder();
+                                for (var mark : response.getCargoMarks()) {
+                                        if (cargoMarksStr.length() > 0) cargoMarksStr.append("\n");
+                                        cargoMarksStr.append(mark.getCargoDescription() != null ? mark.getCargoDescription() : "");
+                                }
+                                // Create new CargoMarksDto and set combined string
+                                CargoMarksDto combinedMark = new CargoMarksDto();
+                                combinedMark.setCargoDescription(cargoMarksStr.toString());
+                                response.setCargoMarks(List.of(combinedMark));
+                        }
+                }
+        
+                log.debug("VIEW: Successfully retrieved Export BL. BL Number: {}, Status: {}", 
+                                response.getBlNumber(), response.getBlStatus());
+                return success("Export BL retrieved successfully", response);
+        
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -127,7 +158,37 @@ public class ExportManifestUpdateController {
     public ResponseEntity<?> createExportBl(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Export BL details", required = true)
             @Valid @RequestBody ExportManifestBlRequest request) {
-        return success("Export BL created successfully", service.createExportBl(request));
+                // Transform multi-line cargoDescription into list
+                if (request.getCargoDescription() != null && !request.getCargoDescription().isEmpty()) {
+                        String multilineDesc = request.getCargoDescription().get(0).getCargoDescription();
+                        if (multilineDesc != null) {
+                                String[] parts = multilineDesc.split("\\r?\\n");
+                                List<CargoDescriptionDto> list = new java.util.ArrayList<>();
+                                for (String part : parts) {
+                                        CargoDescriptionDto dto = new CargoDescriptionDto();
+                                        dto.setCargoDescription(part.trim());
+                                        list.add(dto);
+                                }
+                                request.setCargoDescription(list);
+                        }
+                }
+
+                // Transform multi-line cargoMarks into list
+                if (request.getCargoMarks() != null && !request.getCargoMarks().isEmpty()) {
+                        String multilineMarks = request.getCargoMarks().get(0).getCargoDescription();
+                        if (multilineMarks != null) {
+                                String[] parts = multilineMarks.split("\\r?\\n");
+                                List<CargoMarksDto> list = new java.util.ArrayList<>();
+                                for (String part : parts) {
+                                        CargoMarksDto dto = new CargoMarksDto();
+                                        dto.setCargoDescription(part.trim());
+                                        list.add(dto);
+                                }
+                                request.setCargoMarks(list);
+                        }
+                }
+
+                return success("Export BL created successfully", service.createExportBl(request));
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -155,7 +216,38 @@ public class ExportManifestUpdateController {
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated Export BL details", required = true)
             @Valid @RequestBody ExportManifestBlRequest request) {
-        return success("Export BL updated successfully", service.updateExportBl(transactionPoid, request));
+                // Transform multi-line cargoDescription into list
+                if (request.getCargoDescription() != null && !request.getCargoDescription().isEmpty()) {
+                        String multilineDesc = request.getCargoDescription().get(0).getCargoDescription();
+                        if (multilineDesc != null) {
+                                String[] parts = multilineDesc.split("\\r?\\n");
+                                List<CargoDescriptionDto> list = new java.util.ArrayList<>();
+                                for (String part : parts) {
+                                        CargoDescriptionDto dto = new CargoDescriptionDto();
+                                        dto.setCargoDescription(part.trim());
+                                        list.add(dto);
+                                }
+                                request.setCargoDescription(list);
+                        }
+                }
+
+                // Transform multi-line cargoMarks into list
+                if (request.getCargoMarks() != null && !request.getCargoMarks().isEmpty()) {
+                        String multilineMarks = request.getCargoMarks().get(0).getCargoDescription();
+                        if (multilineMarks != null) {
+                                String[] parts = multilineMarks.split("\\r?\\n");
+                                List<CargoMarksDto> list = new java.util.ArrayList<>();
+                                for (String part : parts) {
+                                        CargoMarksDto dto = new CargoMarksDto();
+                                        dto.setCargoDescription(part.trim());
+                                        list.add(dto);
+                                }
+                                request.setCargoMarks(list);
+                        }
+                }
+
+                // For update, the service should handle deleting old rows before saving new ones.
+                return success("Export BL updated successfully", service.updateExportBl(transactionPoid, request));
     }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
