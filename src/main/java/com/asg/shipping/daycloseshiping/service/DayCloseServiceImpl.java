@@ -112,7 +112,6 @@ public class DayCloseServiceImpl implements DayCloseService {
         String status = callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
                 hdr.getDocRef(), groupPoid, companyPoid, userPoid);
         if (status != null && !status.startsWith("SUCCESS")) throw new IllegalStateException(status);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
         loggingService.createLogSummaryEntry(UserContext.getDocumentId(),hdr.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), hdr.getDocRef()));
         return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
     }
