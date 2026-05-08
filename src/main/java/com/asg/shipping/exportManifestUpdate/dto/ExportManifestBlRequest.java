@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Request DTO for Export Manifest BL Header
@@ -129,5 +130,12 @@ public class ExportManifestBlRequest {
     private String printFreightDetails;
 
     private BigDecimal totalVolume;
+
+    // Nested detail collections
+    private List<GeneralCargoDetailDto> generalCargoDetails;
+    private List<ContainerDetailDto> containerDetails;
+    private List<CargoDescriptionDto> cargoDescription;
+    private List<CargoMarksDto> cargoMarks;
+    private List<ChargeDetailDto> chargeDetails;
 }
 

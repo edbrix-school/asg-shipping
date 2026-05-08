@@ -2,6 +2,8 @@ package com.asg.shipping.exportManifestUpdate.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestUpdate.dto.*;
@@ -36,6 +38,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.error;
 public class ExportManifestUpdateController {
 
     private final ExportManifestBlService service;
+        private final LoggingService loggingService;
 
     // ========== Header Operations ==========
 
@@ -62,7 +65,12 @@ public class ExportManifestUpdateController {
     @GetMapping("/{transactionPoid}")
     public ResponseEntity<?> getExportBlById(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Export BL retrieved successfully", service.getExportBlById(transactionPoid));
+        log.info("VIEW: Getting Export BL with transactionPoid: {}", transactionPoid);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+        ExportManifestBlResponse response = service.getExportBlById(transactionPoid);
+        log.debug("VIEW: Successfully retrieved Export BL. BL Number: {}, Status: {}", 
+                response.getBlNumber(), response.getBlStatus());
+        return success("Export BL retrieved successfully", response);
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -89,7 +97,10 @@ public class ExportManifestUpdateController {
     public ResponseEntity<?> searchExportBls(
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters) {
-        return success("Export BL list fetched successfully", service.searchExportBls(filters, pageable));
+        log.info("VIEW: Searching Export BLs with page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        var result = service.searchExportBls(filters, pageable);
+        log.debug("VIEW: Search completed successfully");
+        return success("Export BL list fetched successfully", result);
     }
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
@@ -199,7 +210,11 @@ public class ExportManifestUpdateController {
     @GetMapping("/{transactionPoid}/general-cargo-details")
     public ResponseEntity<?> getGeneralCargoDetails(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("General cargo details retrieved successfully", service.getGeneralCargoDetails(transactionPoid));
+        log.info("VIEW: Getting general cargo details for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+        var details = service.getGeneralCargoDetails(transactionPoid);
+        log.debug("VIEW: Retrieved {} general cargo details", details != null ? details.size() : 0);
+        return success("General cargo details retrieved successfully", details);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -256,7 +271,11 @@ public class ExportManifestUpdateController {
     @GetMapping("/{transactionPoid}/container-details")
     public ResponseEntity<?> getContainerDetails(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Container details retrieved successfully", service.getContainerDetails(transactionPoid));
+        log.info("VIEW: Getting container details for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+        var details = service.getContainerDetails(transactionPoid);
+        log.debug("VIEW: Retrieved {} container details", details != null ? details.size() : 0);
+        return success("Container details retrieved successfully", details);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -313,7 +332,11 @@ public class ExportManifestUpdateController {
     @GetMapping("/{transactionPoid}/cargo-description")
     public ResponseEntity<?> getCargoDescription(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Cargo description retrieved successfully", service.getCargoDescription(transactionPoid));
+        log.info("VIEW: Getting cargo description for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+        var descriptions = service.getCargoDescription(transactionPoid);
+        log.debug("VIEW: Retrieved {} cargo descriptions", descriptions != null ? descriptions.size() : 0);
+        return success("Cargo description retrieved successfully", descriptions);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -368,7 +391,11 @@ public class ExportManifestUpdateController {
     @GetMapping("/{transactionPoid}/cargo-marks")
     public ResponseEntity<?> getCargoMarks(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Cargo marks retrieved successfully", service.getCargoMarks(transactionPoid));
+        log.info("VIEW: Getting cargo marks for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+        var marks = service.getCargoMarks(transactionPoid);
+        log.debug("VIEW: Retrieved {} cargo marks", marks != null ? marks.size() : 0);
+        return success("Cargo marks retrieved successfully", marks);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -425,7 +452,13 @@ public class ExportManifestUpdateController {
     @GetMapping("/{transactionPoid}/charge-details")
     public ResponseEntity<?> getChargeDetails(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Charge details retrieved successfully", service.getChargeDetails(transactionPoid));
+        log.info("VIEW: Getting charge details for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+        var chargeData = service.getChargeDetails(transactionPoid);
+        @SuppressWarnings("unchecked")
+        java.util.List<ChargeDetailDto> details = (java.util.List<ChargeDetailDto>) chargeData.get("data");
+        log.debug("VIEW: Retrieved {} charge details", details != null ? details.size() : 0);
+        return success("Charge details retrieved successfully", chargeData);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -487,7 +520,7 @@ public class ExportManifestUpdateController {
         return success("Booking data loaded successfully", service.loadBooking(transactionPoid, request));
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @Operation(summary = "Generate BL Print", description = "Generates BL print (original or draft)")
     @Parameters({
             @Parameter(
@@ -508,25 +541,27 @@ public class ExportManifestUpdateController {
             )
     })
     @PostMapping("/{transactionPoid}/generate-bl-print")
-    public ResponseEntity<?> generateBlPrint(
+        public ResponseEntity<?> generateBlPrint(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate BL print request", required = true)
+                        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate BL print request", required = true) 
             @Valid @RequestBody GenerateBlPrintRequest request) {
-    	 try {
-    		 String docId=UserContext.getDocumentId();
-             byte[] pdf = service.generateBlPrint(transactionPoid, request,docId);
-             return ResponseEntity.ok()
-                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                             "attachment; filename=bl-print-" + transactionPoid + ".pdf")
-                     .contentType(MediaType.APPLICATION_PDF)
-                     .body(pdf);
-         } catch (Exception e) {
-             log.error("Failed to generate PDF for BL Print: {}", transactionPoid, e);
-             return error("Failed to generate PDF: " + e.getMessage(), 500);
-         }
+                log.info("PRINT: Generating BL print for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.PREVIEWED_OR_PRINTED_OR_DOWNLOADED, UserContext.getDocumentId(), transactionPoid.toString());
+                try {
+                        String docId=UserContext.getDocumentId();
+                        byte[] pdf = service.generateBlPrint(transactionPoid, request,docId);
+                        return ResponseEntity.ok()
+                                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                                         "attachment; filename=bl-print-" + transactionPoid + ".pdf")
+                                        .contentType(MediaType.APPLICATION_PDF)
+                                        .body(pdf);
+                } catch (Exception e) {
+                        log.error("Failed to generate PDF for BL Print: {}", transactionPoid, e);
+                        return error("Failed to generate PDF: " + e.getMessage(), 500);
+                }
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @Operation(summary = "Generate Manifest", description = "Generates cargo manifest or freight manifest")
     @Parameters({
             @Parameter(
@@ -547,25 +582,27 @@ public class ExportManifestUpdateController {
             )
     })
     @PostMapping("/{transactionPoid}/generate-manifest")
-    public ResponseEntity<?> generateManifest(
+        public ResponseEntity<?> generateManifest(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate manifest request", required = true)
+                        @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate manifest request", required = true) 
             @Valid @RequestBody GenerateManifestRequest request) {
-        try {
-        	String docId=UserContext.getDocumentId();
-			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-			String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-" : "freight-manifest-";
-			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=" + fileName + transactionPoid + ".pdf")
-					.contentType(MediaType.APPLICATION_PDF).body(pdf);
-		} catch (Exception e) {
-			log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
-		}
+                log.info("PRINT: Generating Manifest for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.PREVIEWED_OR_PRINTED_OR_DOWNLOADED, UserContext.getDocumentId(), transactionPoid.toString());
+                try {
+                        String docId=UserContext.getDocumentId();
+                        byte[] pdf = service.generateManifest(transactionPoid, request, docId);
+                        String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-" : "freight-manifest-";
+                        return ResponseEntity.ok()
+                                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                                        "attachment; filename=" + fileName + transactionPoid + ".pdf")
+                                        .contentType(MediaType.APPLICATION_PDF).body(pdf);
+                } catch (Exception e) {
+                        log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
+                        return error("Failed to generate PDF: " + e.getMessage(), 500);
+                }
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @AllowedAction(UserRolesRightsEnum.PRINT)
     @Operation(summary = "Generate Detention/Storage Report", description = "Generates detention/storage report")
     @Parameters({
             @Parameter(
@@ -586,20 +623,22 @@ public class ExportManifestUpdateController {
             )
     })
     @PostMapping("/{transactionPoid}/generate-detention-storage")
-    public ResponseEntity<?> generateDetentionStorage(
+        public ResponseEntity<?> generateDetentionStorage(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-    	try {
-   		 String docId=UserContext.getDocumentId();
-            byte[] pdf = service.generateDetentionStorage(transactionPoid,docId);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=detention-storage-" + transactionPoid + ".pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(pdf);
-        } catch (Exception e) {
-            log.error("Failed to generate PDF for detention or port storage: {}", transactionPoid, e);
-            return error("Failed to generate PDF: " + e.getMessage(), 500);
-        }
+                log.info("PRINT: Generating Detention Storage for transactionPoid: {}", transactionPoid);
+                loggingService.createLogSummaryEntry(LogDetailsEnum.PREVIEWED_OR_PRINTED_OR_DOWNLOADED, UserContext.getDocumentId(), transactionPoid.toString());
+                try {
+                        String docId=UserContext.getDocumentId();
+                        byte[] pdf = service.generateDetentionStorage(transactionPoid,docId);
+                        return ResponseEntity.ok()
+                                        .header(HttpHeaders.CONTENT_DISPOSITION,
+                                                        "attachment; filename=detention-storage-" + transactionPoid + ".pdf")
+                                        .contentType(MediaType.APPLICATION_PDF)
+                                        .body(pdf);
+                } catch (Exception e) {
+                        log.error("Failed to generate PDF for detention or port storage: {}", transactionPoid, e);
+                        return error("Failed to generate PDF: " + e.getMessage(), 500);
+                }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -708,6 +747,7 @@ public class ExportManifestUpdateController {
     @GetMapping("/{transactionPoid}/bl-status")
     public ResponseEntity<?> getBlStatus(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+                loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
         return success("BL status retrieved successfully", service.getBlStatus(transactionPoid));
     }
 

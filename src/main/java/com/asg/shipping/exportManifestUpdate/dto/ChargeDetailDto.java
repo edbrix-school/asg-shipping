@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Data
 public class ChargeDetailDto {
     private Long detRowId;
+    private String actionType; // CREATED, UPDATED, DELETED, or empty for no changes
     private Long chargePoid;
     private LovItem chargeDet; // LOV: CHARGE_MASTER
     private BigDecimal currencyExchange;

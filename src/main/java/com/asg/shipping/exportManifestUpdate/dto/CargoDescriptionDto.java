@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class CargoDescriptionDto {
     private Long detRowId;
+    private String actionType; // CREATED, UPDATED, DELETED, or empty for no changes
     private String cargoDescription;
     private String descriptionType;
     private Long recordOrder;

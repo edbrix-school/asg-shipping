@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Data
 public class ContainerDetailDto {
     private Long detRowId;
+    private String actionType; // CREATED, UPDATED, DELETED, or empty for no changes
     private Long mateTransactionPoid;
     private LovItem mateTransactionDet; // LOV: SHIP_MATE_HDR
     private String containerNo;

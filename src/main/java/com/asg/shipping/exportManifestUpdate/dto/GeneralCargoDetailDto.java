@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Data
 public class GeneralCargoDetailDto {
     private Long detRowId;
+    private String actionType; // CREATED, UPDATED, DELETED, or empty for no changes
     private Long comodityPoid;
     private LovItem comodityDet; // LOV: COMODITY
     private String cargoDescription;
