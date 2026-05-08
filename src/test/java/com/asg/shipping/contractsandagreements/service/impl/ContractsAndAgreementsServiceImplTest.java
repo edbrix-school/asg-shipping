@@ -21,6 +21,7 @@ import com.asg.shipping.contractsandagreements.repository.AdminContractsAgreemen
 import com.asg.shipping.contractsandagreements.repository.AdminContractsAgreementRenewalDtlRepository;
 import com.asg.shipping.contractsandagreements.repository.AdminContractsAgreementsHdrRepository;
 import com.asg.shipping.contractsandagreements.service.ContractsAndAgreementsValidationService;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,9 @@ class ContractsAndAgreementsServiceImplTest {
     private ContractsAndAgreementsValidationService validationService;
     @Mock
     private LoggingService loggingService;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private ContractsAndAgreementsServiceImpl service;

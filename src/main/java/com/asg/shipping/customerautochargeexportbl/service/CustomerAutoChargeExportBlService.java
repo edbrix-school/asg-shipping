@@ -7,21 +7,18 @@ import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportB
 import com.asg.shipping.customerautochargeexportbl.dto.CustomerAutoChargeExportBLUpdateDTO;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 public interface CustomerAutoChargeExportBlService {
 
-    Map<String, Object> list(FilterRequestDto filters, Pageable pageable);
-
-
+    Map<String, Object> list(FilterRequestDto filters, Pageable pageable, LocalDate startDate, LocalDate endDate);
 
     CustomerAutoChargeExportBLDto getCustomerAutoChargeExportBL(Long id);
-
 
     CustomerAutoChargeExportBLDto createCustomerAutoChargeExportBL(CustomerAutoChargeExportBLCreateDTO createDTO);
 
     CustomerAutoChargeExportBLDto updateCustomerAutoChargeExportBL(Long id, CustomerAutoChargeExportBLUpdateDTO updateDTO);
-
 
     void deleteCustomerAutoChargeExportBL(Long id, DeleteReasonDto deleteReasonDto);
 }

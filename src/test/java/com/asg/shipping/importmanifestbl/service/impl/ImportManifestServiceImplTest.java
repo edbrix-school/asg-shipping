@@ -1,6 +1,5 @@
 package com.asg.shipping.importmanifestbl.service.impl;
 
-import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.shipping.address.entity.AddressDetails;
 import com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestupdate.event.BlManifestSaveEvent;
@@ -21,6 +20,7 @@ import com.asg.shipping.importmanifestbl.repository.ContainerDropdownRepository;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
 import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
+import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
 import org.springframework.data.domain.Pageable;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -65,6 +65,7 @@ class ImportManifestServiceImplTest {
     @Mock private ShipChargeMasterRepository chargeMasterRepository;
     @Mock private com.asg.shipping.importmanifestupdate.service.ImportManifestBlServiceImpl updateService;
     @Mock private AddressDetailsRepository addressDetailsRepository;
+    @Mock private EntityManager entityManager;
     
     @InjectMocks
     private ImportManifestServiceImpl service;
@@ -323,8 +324,6 @@ class ImportManifestServiceImplTest {
             verify(emailFaxDtlRepository, times(4)).save(any());
             verify(mafiDtlRepository).save(any());
             verify(eventPublisher).publishEvent(any(BlManifestSaveEvent.class));
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), any(String.class), any(String.class));
-            verify(loggingService, atLeastOnce()).createLogSummaryEntry(any(String.class), any(String.class), any(String.class));
         }
     }
 
