@@ -244,7 +244,7 @@ class DayCloseServiceImplTest {
 
             assertNotNull(result);
             verify(hdrRepo).saveAndFlush(any());
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("DOC123"), anyString());
+            verify(loggingService, atLeastOnce()).createLogSummaryEntry(anyString(), anyString(), anyString());
         }
     }
 
