@@ -14,6 +14,7 @@ import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
+import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,6 +83,9 @@ class BookingFormServiceImplTest {
     @Mock
     private LoggingService loggingService;
 
+    @Mock
+    private EntityManager entityManager;
+
     private MockedStatic<UserContext> userContext;
 
     @BeforeEach
@@ -94,7 +98,7 @@ class BookingFormServiceImplTest {
 
         service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo,stuffingRepo,
                 globalAddressDetailsRepository,
-                lovService,commonLovService, documentService, jdbcTemplate, printService, dataSource, loggingService);
+                lovService,commonLovService, documentService, jdbcTemplate, printService, dataSource, loggingService,entityManager);
     }
 
     @AfterEach
@@ -244,19 +248,17 @@ class BookingFormServiceImplTest {
 
         ShipMateHdr savedEntity = savedHdr();
         when(headerRepository.save(any())).thenReturn(savedEntity);
-        when(headerRepository.findByTransactionPoid(TX_POID))
-                .thenReturn(Optional.of(savedEntity));
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
-
         mockJdbcCall("Ok");
 
         BookingFormDto result = service.createBookingForm(dto);
         assertNotNull(result);
     }
-
     @Test
     void createBookingForm_lineMateValidationError_throwsValidationException() {
         BookingFormCreateDTO dto = new BookingFormCreateDTO();
@@ -284,6 +286,7 @@ class BookingFormServiceImplTest {
         ShipMateHdr savedEntity = savedHdr();
         savedEntity.setLinePoid(10L);
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
@@ -314,6 +317,7 @@ class BookingFormServiceImplTest {
         ShipMateHdr savedEntity = savedHdr();
         savedEntity.setLinePoid(10L);
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
@@ -344,6 +348,7 @@ class BookingFormServiceImplTest {
         savedCargo.setDetRowId(1L);
 
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
@@ -374,6 +379,7 @@ class BookingFormServiceImplTest {
         ShipMateHdr savedEntity = savedHdr();
 
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
