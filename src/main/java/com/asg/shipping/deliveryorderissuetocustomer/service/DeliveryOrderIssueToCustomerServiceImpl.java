@@ -244,53 +244,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
 
-        // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, id.toString()));
-
-        // Validate Principal DO Number
-        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired()) && StringUtils.isBlank(requestDto.getPrincipalDoNumber()) || requestDto.getPrincipalDoNumber().trim().length() <= 3) {
-            throw new ValidationException("Principal Do number can not be blank");
-        }
-
-        // Validate Address
-        if (StringUtils.isBlank(requestDto.getDoReleasedAddressPerson())) {
-            throw new ValidationException("Address can not be blank");
-        }
-
-        // Validate ID/CPR
-        if (StringUtils.isBlank(requestDto.getDoReleasedIdPerson())) {
-            throw new ValidationException("ID/CPR can not be blank");
-        }
-
-        // Validate Name
-        if (StringUtils.isBlank(requestDto.getDoReleasedToPerson())) {
-            throw new ValidationException("Name can not be blank");
-        }
-
-        // Validate DO Priority
-        if (StringUtils.isBlank(requestDto.getDoPriority())) {
-            throw new ValidationException("Do Issue TO, can not be blank");
-        }
-
-        // Validate Original BL Release CR
-        if (StringUtils.isBlank(requestDto.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Bl issue type can not be blank");
-        }
-
-        // Validate BL Release Type Office matches Original BL Release CR
-        if (StringUtils.isBlank(dto.getBlReleaseTypeOffice())) {
-            throw new ValidationException("Office Bl issue type can not be blank");
-        }
-        if (!dto.getBlReleaseTypeOffice().equalsIgnoreCase(requestDto.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Check Bl issue type");
-        }
-
-        // Validate Delivery Sent To
-        if (StringUtils.isBlank(requestDto.getDeliverySentTo())) {
-            throw new ValidationException("Select delivery send to from dropdown list");
-        }
-
         // Validate Email Configuration
         validateEmailConfiguration(requestDto);
 
