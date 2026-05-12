@@ -99,11 +99,12 @@ class ManifestCorrectorServiceImplTest {
 
         when(documentSearchService.resolveOperator(filterRequest)).thenReturn("OR");
         when(documentSearchService.resolveIsDeleted(filterRequest)).thenReturn("N");
-        when(documentSearchService.resolveFilters(filterRequest)).thenReturn(List.of(filter));
+        when(documentSearchService.resolveDateFilters(filterRequest, "TRANSACTION_DATE", null, null))
+                .thenReturn(List.of(filter));
         when(documentSearchService.search(anyString(), any(), eq("OR"), eq(pageable), eq("N"), any(), any()))
                 .thenReturn(raw);
 
-        Map<String, Object> result = service.searchManifestCorrector("100-143", filterRequest, pageable);
+        Map<String, Object> result = service.searchManifestCorrector("100-143", filterRequest, null, null, pageable);
 
         assertNotNull(result);
         verify(documentSearchService).search(any(), any(), any(), any(), any(), any(), any());
@@ -234,11 +235,12 @@ class ManifestCorrectorServiceImplTest {
 
         when(documentSearchService.resolveOperator(filterRequest)).thenReturn("OR");
         when(documentSearchService.resolveIsDeleted(filterRequest)).thenReturn("N");
-        when(documentSearchService.resolveFilters(filterRequest)).thenReturn(List.of());
+        when(documentSearchService.resolveDateFilters(filterRequest, "TRANSACTION_DATE", null, null))
+                .thenReturn(List.of());
         when(documentSearchService.search(anyString(), any(), eq("OR"), eq(pageable), eq("N"), any(), any()))
                 .thenReturn(raw);
 
-        Map<String, Object> result = service.searchManifestCorrector("100-143", filterRequest, pageable);
+        Map<String, Object> result = service.searchManifestCorrector("100-143", filterRequest, null, null, pageable);
 
         assertNotNull(result);
     }
