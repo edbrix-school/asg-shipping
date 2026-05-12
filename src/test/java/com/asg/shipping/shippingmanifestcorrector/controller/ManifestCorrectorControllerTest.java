@@ -1,6 +1,7 @@
 package com.asg.shipping.shippingmanifestcorrector.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
@@ -80,18 +81,34 @@ class ManifestCorrectorControllerTest {
 
     @Test
     void searchManifestCorrector_Success() throws Exception {
-        FilterRequestDto filterRequest = new FilterRequestDto("OR", "N", List.of());
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 1, 31);
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "OR",
+                "N",
+                List.of(new FilterDto("TRANSACTION_DATE", "2024-01-15"))
+        );
         Map<String, Object> result = new HashMap<>();
         result.put("records", new Object[]{});
         result.put("totalElements", 0);
 
-        when(service.searchManifestCorrector(any(), any(), any())).thenReturn(result);
+        when(service.searchManifestCorrector(any(), any(), any(), any(), any())).thenReturn(result);
 
         mockMvc.perform(post("/v1/shipping-manifest-corrector/search")
                         .header("X-Document-Id", "100-143")
+                        .param("startDate", startDate.toString())
+                        .param("endDate", endDate.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(filterRequest)))
                 .andExpect(status().isOk());
+
+        verify(service).searchManifestCorrector(
+                eq("100-143"),
+                eq(filterRequest),
+                eq(startDate),
+                eq(endDate),
+                any()
+        );
     }
 
     @Test
