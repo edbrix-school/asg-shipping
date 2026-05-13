@@ -242,5 +242,102 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         assertThrows(RuntimeException.class, () -> service.deleteDetail(customerPoid, new DeleteReasonDto()));
         verify(documentDeleteService, never()).deleteDocument(any(), any(), any(), any(), any());
     }
+
+    @Test
+    void saveOrUpdate_isDeletedActionType_deletesDetailAndSkipsSave() {
+        CustomerInvoiceChargeMapMasterRequest request = new CustomerInvoiceChargeMapMasterRequest();
+        request.setCustomerPoid(1L);
+
+        CustomerInvoiceChargeMapDetailDto deleteDto = new CustomerInvoiceChargeMapDetailDto();
+        deleteDto.setDetRowId(1L);
+        deleteDto.setChargePoid(701L);
+        deleteDto.setLineChargeDescription("vida");
+        deleteDto.setActionType("isDeleted");
+
+        CustomerInvoiceChargeMapDetailDto keepDto = new CustomerInvoiceChargeMapDetailDto();
+        keepDto.setDetRowId(2L);
+        keepDto.setChargePoid(4771L);
+        keepDto.setLineChargeDescription("DER");
+        keepDto.setActionType("noChange"); // should be skipped
+
+        request.setDetails(List.of(deleteDto, keepDto));
+
+        CustomerInvoicePrtMasterEntity master = new CustomerInvoicePrtMasterEntity();
+        master.setCustomerPoid(1L);
+        master.setDeleted("N");
+
+        when(masterRepo.existsById(1L)).thenReturn(true);
+        when(masterRepo.findById(1L)).thenReturn(Optional.of(master));
+
+        CustomerInvoicePrtDtlEntity existingDetail = new CustomerInvoicePrtDtlEntity();
+        CustomerInvoicePrtDtlId deleteId = new CustomerInvoicePrtDtlId();
+        deleteId.setCustomerPoid(1L);
+        deleteId.setDetRowId(1L);
+        existingDetail.setId(deleteId);
+
+        when(detailRepo.findById(argThat(id -> id.getDetRowId().equals(1L)))).thenReturn(Optional.of(existingDetail));
+
+        CustomerInvoicePrtDtlId keepId = new CustomerInvoicePrtDtlId();
+        keepId.setCustomerPoid(1L);
+        keepId.setDetRowId(2L);
+        CustomerInvoicePrtDtlEntity remainingDetail = new CustomerInvoicePrtDtlEntity();
+        remainingDetail.setId(keepId);
+        remainingDetail.setChargePoid(4771L);
+        remainingDetail.setLineChargeDescription("DER");
+        when(detailRepo.findByIdCustomerPoid(1L)).thenReturn(List.of(remainingDetail));
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            CustomerInvoiceChargeMapMasterResponse response = service.saveOrUpdate(request, 2L);
+
+            assertEquals(1, response.getDetails().size());
+            assertEquals(4771L, response.getDetails().get(0).getChargePoid());
+        }
+
+        verify(detailRepo).delete(existingDetail);
+        verify(detailRepo, never()).save(any()); // noChange row skipped, nothing saved
+    }
+
+    @Test
+    void saveOrUpdate_isDeletedActionType_detailNotFound_skipsDeleteGracefully() {
+        CustomerInvoiceChargeMapMasterRequest request = new CustomerInvoiceChargeMapMasterRequest();
+        request.setCustomerPoid(1L);
+
+        CustomerInvoiceChargeMapDetailDto deleteDto = new CustomerInvoiceChargeMapDetailDto();
+        deleteDto.setDetRowId(99L);
+        deleteDto.setChargePoid(701L);
+        deleteDto.setActionType("isDeleted");
+        request.setDetails(List.of(deleteDto));
+
+        CustomerInvoicePrtMasterEntity master = new CustomerInvoicePrtMasterEntity();
+        master.setCustomerPoid(1L);
+        master.setDeleted("N");
+
+        when(masterRepo.existsById(1L)).thenReturn(true);
+        when(masterRepo.findById(1L)).thenReturn(Optional.of(master));
+        when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.empty());
+        when(detailRepo.findByIdCustomerPoid(1L)).thenReturn(List.of(
+                buildDetail(1L, 1L, 4771L, "DER")
+        ));
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            service.saveOrUpdate(request, 2L);
+        }
+
+        verify(detailRepo, never()).delete(any(CustomerInvoicePrtDtlEntity.class));
+        verify(detailRepo, never()).save(any());
+    }
+
+    private CustomerInvoicePrtDtlEntity buildDetail(Long customerPoid, Long detRowId, Long chargePoid, String desc) {
+        CustomerInvoicePrtDtlEntity e = new CustomerInvoicePrtDtlEntity();
+        CustomerInvoicePrtDtlId id = new CustomerInvoicePrtDtlId();
+        id.setCustomerPoid(customerPoid);
+        id.setDetRowId(detRowId);
+        e.setId(id);
+        e.setChargePoid(chargePoid);
+        e.setLineChargeDescription(desc);
+        return e;
+    }
 }
 
