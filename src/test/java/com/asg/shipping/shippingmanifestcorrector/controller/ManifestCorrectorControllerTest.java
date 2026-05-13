@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorUpdateDTO;
 import com.asg.shipping.shippingmanifestcorrector.service.ManifestCorrectorService;
@@ -151,6 +152,22 @@ class ManifestCorrectorControllerTest {
 
         mockMvc.perform(delete("/v1/shipping-manifest-corrector/1")
                         .header("X-Document-Id", "100-143"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void autoPopulateFromBlBrowse_Success() throws Exception {
+        ManifestCorrectorBlAutoPopulateDto autoPopulateDto = ManifestCorrectorBlAutoPopulateDto.builder()
+                .blPoid(12345L)
+                .consigneePoid(99L)
+                .build();
+
+        when(service.autoPopulateFromBlBrowse(eq("12345"), any())).thenReturn(autoPopulateDto);
+
+        mockMvc.perform(post("/v1/shipping-manifest-corrector/auto-fill/bl-after-browse/12345")
+                        .header("X-Document-Id", "100-143")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"transactionPoid\":1}"))
                 .andExpect(status().isOk());
     }
 }

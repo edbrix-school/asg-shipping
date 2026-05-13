@@ -3,6 +3,8 @@ package com.asg.shipping.shippingmanifestcorrector.service;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ContainerReprintResponse;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateDto;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateRequest;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorChargeDtlDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorDto;
@@ -75,5 +77,9 @@ public interface ManifestCorrectorService {
      * Auto-fill DEM refund charges for a BL
      */
     List<ManifestCorrectorChargeDtlDto> autoFillDemRefund(String blNumber);
-}
 
+    /**
+     * Auto-populate header fields after BL browse.
+     */
+    ManifestCorrectorBlAutoPopulateDto autoPopulateFromBlBrowse(String blNumber, ManifestCorrectorBlAutoPopulateRequest request);
+}
