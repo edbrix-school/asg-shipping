@@ -86,7 +86,7 @@ public class DeliveryOrderIssueToCustomerController {
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
-            log.error("Failed to generate PDF for Journal Voucher: {}", transactionPoid, e);
+            log.error("Failed to generate PDF for delivery order issue to customer: {}", transactionPoid, e);
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
 

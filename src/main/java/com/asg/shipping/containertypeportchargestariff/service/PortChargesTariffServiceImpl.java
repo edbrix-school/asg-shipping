@@ -114,7 +114,7 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
             processCreateDetails(savedHdr.getTransactionPoid(), dto.getDetails());
         }
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), savedHdr.getTransactionPoid().toString());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), savedHdr.getTransactionPoid().toString(),String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), savedHdr.getDocRef()));
 
         log.info("Successfully created port charges tariff with id: {}", savedHdr.getTransactionPoid());
         return getPortChargesTariff(savedHdr.getTransactionPoid());

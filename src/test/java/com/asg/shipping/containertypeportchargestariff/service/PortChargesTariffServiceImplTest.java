@@ -244,7 +244,7 @@ class PortChargesTariffServiceImplTest {
             service.createPortChargesTariff(createDto, 100L, 50L);
 
             verify(dtlRepository).saveAll(anyList());
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), anyString(), anyString());
+            verify(loggingService, atLeastOnce()).createLogSummaryEntry(anyString(), anyString(), anyString());
         }
     }
 

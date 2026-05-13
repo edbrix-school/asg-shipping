@@ -22,6 +22,8 @@ import com.asg.shipping.common.entity.GlobalAddressDetails;
 import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
@@ -82,6 +84,9 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
+
+    @PersistenceContext
+    private final EntityManager entityManager;
 
     private static final String ISCREATED = "ISCREATED";
     private static final String ISUPDATED = "ISUPDATED";
@@ -206,7 +211,8 @@ public class BookingFormServiceImpl implements BookingFormService {
         ShipMateHdr entity = new ShipMateHdr();
         BookingFormMapper.mapCreateDTOToEntity(createDTO, entity, groupPoid, companyPoid);
 
-        entity = headerRepository.save(entity);
+        entity = headerRepository.saveAndFlush(entity);
+        entityManager.refresh(entity);
 
         if (createDTO.getContainerDetails() != null) {
             for (BookingFormContainerDetailDto containerDto : createDTO.getContainerDetails()) {
@@ -225,8 +231,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         Long userPoid = UserContext.getUserPoid();
 //        callProcShipBlPageSaveAfter(groupPoid, companyPoid, entity.getTransactionPoid(), null, ALLOCATESPLITBOOKING,
 //                userPoid);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), entity.getTransactionPoid().toString());
-
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(),entity.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), entity.getDocRef()));
         // Reload and return
         return getBookingForm(entity.getTransactionPoid());
     }
@@ -328,7 +333,7 @@ public class BookingFormServiceImpl implements BookingFormService {
                 cs.close();
                 return status;
             });
-            if (!res.toLowerCase().startsWith("error"))
+            if (res!=null && !res.toLowerCase().startsWith("error"))
                 return generateCoprarFile(transactionPoid, userPoid);
             return res;
         } catch (Exception e) {

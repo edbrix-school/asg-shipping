@@ -220,21 +220,18 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         params.put("P_TRAN_NO", transactionPoid);
 
         byte[] result = generatePrintByButtonType(transactionPoid, buttonType, params);
-        if (result != null) {
-            // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 11 parameters (NOT_UPDATE) after successful print
-            // In legacy, this is called once after all 3 documents are printed in sequence.
-            // In new architecture, we call it after each successful print since printing is done separately.
-            // The stored procedure should handle being called multiple times gracefully.
-            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, ARSHRCPTPRINTUPDATE,
+        
+        // Only call the stored procedure if a PDF was actually generated
+        if (result != null && result.length > 0) {
+            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, buttonType.name(),
                     username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
                     requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
             );
             return result;
         }
 
-        // If printing failed (result is null), don't call NOT_UPDATE
-        // This happens when document cannot be printed (print validation failed or already printed)
-        return null;
+        // Return an empty PDF (0 bytes) if validations failed or no data found
+        return new byte[0];
     }
 
     @Override
