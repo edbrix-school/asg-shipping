@@ -434,6 +434,33 @@ public class ManifestCorrectorController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "BL After Browse Auto-population (DocId: 100-143)",
+            description = "Auto-populate Shipping Manifest Corrector header fields from BL number using PROC_LOV_AFTER_BRWS_100_143.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "BL details loaded successfully"),
+                    @ApiResponse(responseCode = "400", description = "BL number is required"),
+                    @ApiResponse(responseCode = "404", description = "BL not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @PostMapping("/auto-fill/bl-after-browse/{blNumber}")
+    public ResponseEntity<?> autoPopulateFromBlBrowse(
+            @Parameter(description = "BL Number", required = true, example = "12345")
+            @PathVariable String blNumber,
+            @RequestBody(required = false) ManifestCorrectorBlAutoPopulateRequest request) {
+        try {
+            log.info("BL after browse auto-population request for BL: {}", blNumber);
+            ManifestCorrectorBlAutoPopulateDto response = service.autoPopulateFromBlBrowse(blNumber, request);
+            return success("BL details loaded successfully", response);
+        } catch (ValidationException ex) {
+            return badRequest(ex.getMessage());
+        } catch (Exception ex) {
+            return internalServerError("Error loading BL details: " + ex.getMessage());
+        }
+    }
+
     private Pageable createPageable(int page, int size, String sort) {
 
         String sortField = "TRANSACTION_DATE";
@@ -488,4 +515,3 @@ public class ManifestCorrectorController {
     }
 
 }
-

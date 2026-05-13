@@ -368,6 +368,76 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         return getDemRefundCharges(blPoid);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ManifestCorrectorBlAutoPopulateDto autoPopulateFromBlBrowse(
+            String blNumber,
+            ManifestCorrectorBlAutoPopulateRequest request) {
+        log.info("Auto-populating Shipping Manifest Corrector fields for BL: {}", blNumber);
+
+        if (blNumber == null || blNumber.trim().isEmpty()) {
+            throw new ValidationException("BL number is required");
+        }
+
+        Long blPoid = validateAndGetBlPoid(blNumber);
+        Long transactionPoid = request != null && request.getTransactionPoid() != null
+                ? request.getTransactionPoid()
+                : 0L;
+
+        ManifestCorrectorBlAutoPopulateDto response = ManifestCorrectorBlAutoPopulateDto.builder()
+                .blPoid(blPoid)
+                .transactionPoid(transactionPoid)
+                .build();
+
+        try {
+            String sql = "{call PRODUCTION.PROC_LOV_AFTER_BRWS_100_143(?,?,?,?,?,?,?,?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, getGroupPoid());
+                cs.setLong(2, getCompanyPoid());
+                cs.setLong(3, getUserPoid());
+                cs.setString(4, getDocumentId());
+                cs.setLong(5, transactionPoid);
+                cs.setString(6, "SHIP_BL_REPRINT");
+                cs.setString(7, blPoid.toString());
+                cs.registerOutParameter(8, Types.REF_CURSOR);
+                cs.execute();
+
+                try (ResultSet rs = (ResultSet) cs.getObject(8)) {
+                    if (rs == null || !rs.next()) {
+                        throw new ValidationException("No auto-population data found for BL number: " + blNumber);
+                    }
+
+                    response.setConsigneePoid(getLongOrNull(rs, "CONSIGNEE_POID"));
+                    response.setIssueType(rs.getString("ISSUE_TYPE"));
+                    response.setNotifyPoid(getLongOrNull(rs, "NOTIFY_POID"));
+                    response.setShipperEdiName(rs.getString("SHIPPER_EDI_NAME"));
+                    response.setBlType(rs.getString("BL_TYPE"));
+                    response.setHoldCanDo(rs.getString("HOLD_CAN_DO"));
+                    response.setHoldReason(rs.getString("HOLD_REASON"));
+                    response.setPayableGlPoid(getLongOrNull(rs, "PAYABLE_GL_POID"));
+                    response.setIncomeGlPoid(getLongOrNull(rs, "INCOME_GL_POID"));
+                    response.setPlaceOfDeliveryPoid(getLongOrNull(rs, "PLACE_OF_DELIEVERY_POID"));
+                    response.setPlaceOfReceiptPoid(getLongOrNull(rs, "PLACE_OF_RECIEPT_POID"));
+                    response.setBlPlaceReceipt(rs.getString("BL_PLACE_RECEIPT"));
+                    response.setBlPlaceLoad(rs.getString("BL_PLACE_LOAD"));
+                    response.setBlFinalDestination(rs.getString("BL_FINAL_DESTINATION"));
+                    response.setBlPlaceDischargeDesc(rs.getString("BL_PLACE_DISCHARE_DESC"));
+                    response.setPortOfLoadingPoid(getLongOrNull(rs, "PORT_OF_LOADING_POID"));
+                    response.setPortOfDischargePoid(getLongOrNull(rs, "PORT_OF_DISCHARGE_POID"));
+                    response.setVoyageTransactionPoid(getLongOrNull(rs, "VOYAGE_TRANSACTION_POID"));
+                }
+                return null;
+            });
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error calling PROC_LOV_AFTER_BRWS_100_143 for BL: {}", blNumber, e);
+            throw new ValidationException("Error auto-populating BL details: " + e.getMessage());
+        }
+
+        return response;
+    }
+
     // ==================== Private Helper Methods ====================
 
     /**
@@ -1116,4 +1186,3 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         };
     }
 }
-
