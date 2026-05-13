@@ -200,6 +200,21 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         id.setCustomerPoid(customerPoid);
         id.setDetRowId(detRowId);
 
+        String actionType = dto.getActionType() != null ? dto.getActionType().trim().toUpperCase() : "";
+
+        if (actionType.contains("DELETE")) {
+            detailRepo.findById(id).ifPresent(existing -> {
+                detailRepo.delete(existing);
+                loggingService.logChanges(existing, null, CustomerInvoicePrtDtlEntity.class, docId, key,
+                        LogDetailsEnum.DELETED, "CUSTOMER_POID");
+            });
+            return;
+        }
+
+        if (actionType.contains("NOCHANGE") || actionType.contains("NO_CHANGE")) {
+            return;
+        }
+
         CustomerInvoicePrtDtlEntity existing = detailRepo.findById(id).orElse(null);
         boolean isNewDetail = existing == null;
 
