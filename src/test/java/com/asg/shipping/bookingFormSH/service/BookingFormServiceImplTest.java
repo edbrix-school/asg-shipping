@@ -3,6 +3,7 @@ package com.asg.shipping.bookingFormSH.service;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
@@ -71,7 +72,8 @@ class BookingFormServiceImplTest {
     @Mock
     private BookingFormLovService lovService;
 
-    private LovDataService commonLovService;
+    @Mock
+    private DocumentDeleteService documentDeleteService;
     @Mock
     private DocumentSearchService documentService;
     @Mock
@@ -96,9 +98,9 @@ class BookingFormServiceImplTest {
         userContext.when(UserContext::getUserPoid).thenReturn(USER_POID);
         userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
-        service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo,stuffingRepo,
+        service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo, stuffingRepo,
                 globalAddressDetailsRepository,
-                lovService,commonLovService, documentService, jdbcTemplate, printService, dataSource, loggingService,entityManager);
+                lovService, documentDeleteService, documentService, jdbcTemplate, printService, dataSource, loggingService, entityManager);
     }
 
     @AfterEach
@@ -830,21 +832,21 @@ class BookingFormServiceImplTest {
     void deleteBookingForm_success() {
         ShipMateHdr hdr = new ShipMateHdr();
         hdr.setDeleted("N");
+        hdr.setTransactionDate(null);
 
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(hdr));
 
-        service.deleteBookingForm(TX_POID);
+        service.deleteBookingForm(TX_POID, null);
 
-        assertEquals("Y", hdr.getDeleted());
-        verify(headerRepository).save(hdr);
+        verify(documentDeleteService).deleteDocument(eq(TX_POID), eq("SHIP_MATE_HDR"), eq("TRANSACTION_POID"), eq(null), eq(null));
     }
 
     @Test
     void deleteBookingForm_notFound_throwsResourceNotFound() {
         when(headerRepository.findByTransactionPoid(any()))
                 .thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> service.deleteBookingForm(TX_POID));
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteBookingForm(TX_POID, null));
     }
 
     // ============================================================

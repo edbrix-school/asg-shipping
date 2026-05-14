@@ -1,6 +1,7 @@
 package com.asg.shipping.bookingFormSH.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -119,9 +120,10 @@ public class BookingFormController {
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBookingForm(
-            @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
+            @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Delete request for Booking Form with id: {}", id);
-        bookingFormService.deleteBookingForm(id);
+        bookingFormService.deleteBookingForm(id, deleteReasonDto);
         loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
         return success("Booking Form deleted successfully");
     }
