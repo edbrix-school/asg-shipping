@@ -24,6 +24,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
@@ -54,6 +55,9 @@ class PortMasterServiceImplTest {
 
 	@Mock
 	private LoggingService loggingService;
+
+	@Mock
+	private DocumentDeleteService documentDeleteService;
 
 	@InjectMocks
 	private PortMasterServiceImpl service;
@@ -389,9 +393,9 @@ class PortMasterServiceImplTest {
 	void deletePort_Success() {
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
 
-		service.deletePort(1L);
+		service.deletePort(1L, null);
 
-		assertEquals("Y", entity.getDeleted());
+		verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_PORT_MASTER"), eq("PORT_POID"), eq(null), eq(null));
 	}
 
 	@Test
@@ -400,7 +404,7 @@ class PortMasterServiceImplTest {
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort( 1L));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort(1L, null));
 		assertEquals("Port has already been deleted.", exception.getMessage());
 	}
 
@@ -408,7 +412,7 @@ class PortMasterServiceImplTest {
 	void deletePort_NotFound_Throws() {
 		when(repository.findById(any())).thenReturn(Optional.empty());
 
-		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort( 1L));
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.deletePort(1L, null));
 		assertEquals("Port not found", exception.getMessage());
 	}
 }

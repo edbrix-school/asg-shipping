@@ -18,6 +18,7 @@ import com.asg.shipping.customerautochargeexportbl.repository.ShipCustomerCharge
 import com.asg.shipping.customerautochargeexportbl.repository.ShipCustomerChargesHdrRepository;
 import com.asg.shipping.customerautochargeexportbl.service.impl.CustomerAutoChargeExportBlServiceImpl;
 import com.asg.shipping.customerautochargeexportbl.util.CustomerAutoChargeExportBLMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,8 +28,6 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -57,6 +56,9 @@ class CustomerAutoChargeExportBlServiceImplTest {
 
     @Mock
     private LoggingService loggingService;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private CustomerAutoChargeExportBlServiceImpl service;
@@ -111,8 +113,6 @@ class CustomerAutoChargeExportBlServiceImplTest {
 
         when(documentSearchService.resolveOperator(any())).thenReturn("AND");
         when(documentSearchService.resolveIsDeleted(any())).thenReturn("N");
-        when(documentSearchService.resolveFilters(any())).thenReturn(Collections.emptyList());
-
         when(documentSearchService.search(
                 anyString(),
                 anyList(),
@@ -129,7 +129,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
             FilterRequestDto filters = new FilterRequestDto(null, null, Collections.emptyList());
             Pageable pageable = PageRequest.of(0, 10);
 
-            Map<String, Object> result = service.list(filters, pageable);
+            Map<String, Object> result = service.list(filters, pageable, LocalDate.now(), LocalDate.now());
 
             assertNotNull(result);
 
@@ -183,7 +183,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
                 return null;
             }).when(mapper).mapCreateDTOToEntity(any(), any(), anyLong());
 
-            when(headerRepository.save(any()))
+            when(headerRepository.saveAndFlush(any()))
                     .thenReturn(headerEntity);
 
             when(headerRepository.findById(1L))
@@ -203,7 +203,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
                     service.createCustomerAutoChargeExportBL(createDTO);
 
             assertNotNull(result);
-            verify(headerRepository).save(any());
+            verify(headerRepository).saveAndFlush(any());
             verify(headerRepository).findById(1L);
         }
     }
@@ -225,7 +225,7 @@ class CustomerAutoChargeExportBlServiceImplTest {
                 return null;
             }).when(mapper).mapCreateDTOToEntity(any(), any(), anyLong());
 
-            when(headerRepository.save(any()))
+            when(headerRepository.saveAndFlush(any()))
                     .thenReturn(headerEntity);
 
             when(headerRepository.findById(1L))
@@ -247,16 +247,12 @@ class CustomerAutoChargeExportBlServiceImplTest {
 
             assertNotNull(result);
 
-            verify(headerRepository).save(any());
+            verify(headerRepository).saveAndFlush(any());
 
             verify(headerRepository, never())
                     .findByDocRefAndDeleted(anyString(), anyString());
         }
     }
-
-
-
-
 
     @Test
     void testCreateInvalidPeriodDates() {

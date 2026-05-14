@@ -2,6 +2,7 @@ package com.asg.shipping.portMaster.controller;
 
 import java.util.Map;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -102,8 +103,9 @@ public class PortMasterController {
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
     @DeleteMapping("/{portPoid}")
     public ResponseEntity<?> delete(
-            @Parameter(description = "Port POID to be deleted", required = true, example = "5001") @PathVariable("portPoid") Long portPoid) {
-        service.deletePort(portPoid);
+            @Parameter(description = "Port POID to be deleted", required = true, example = "5001") @PathVariable("portPoid") Long portPoid,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
+        service.deletePort(portPoid, deleteReasonDto);
         loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), portPoid.toString());
         return success("Port deleted successfully");
     }

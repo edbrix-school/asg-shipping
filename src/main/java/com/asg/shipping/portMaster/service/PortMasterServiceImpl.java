@@ -1,10 +1,12 @@
 package com.asg.shipping.portMaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -18,6 +20,7 @@ import com.asg.shipping.portMaster.entity.PortMasterId;
 import com.asg.shipping.portMaster.repository.PortMasterRepository;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -41,6 +44,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	private final DocumentSearchService documentService;
 	private final ShipTradeLaneService tradeLaneService;
 	private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
     
     private static final String PORT_NOT_FOUND="Port not found";
 
@@ -117,7 +121,6 @@ public class PortMasterServiceImpl implements PortMasterService {
 		repository.save(entity);
 		String key = entity.getPortPoid().toString();
 		String docId = UserContext.getDocumentId();
-        System.err.println("--->"+oldData.toString()+"/n"+entity.toString());
 		loggingService.logChanges(oldData, entity, PortMaster.class, docId, key, LogDetailsEnum.MODIFIED, "PORT_POID");
 		return getPortById(portPoid);
 	}
@@ -141,7 +144,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	}
 
 	@Override
-	public void deletePort( Long portPoid) {
+	public void deletePort( Long portPoid, @Valid DeleteReasonDto deleteReasonDto) {
         Long groupPoid = UserContext.getGroupPoid();
 		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
 				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
@@ -149,7 +152,9 @@ public class PortMasterServiceImpl implements PortMasterService {
 		if (entity.getDeleted().equalsIgnoreCase("Y"))
 			throw new IllegalArgumentException("Port has already been deleted.");
 
-		entity.setDeleted("Y");
+        documentDeleteService.deleteDocument(portPoid, "SHIP_PORT_MASTER", "PORT_POID", deleteReasonDto,
+                null);
+
 	}
 
 	private Map<String, Object> listPorts(String docId, FilterRequestDto request, Pageable pageable) {

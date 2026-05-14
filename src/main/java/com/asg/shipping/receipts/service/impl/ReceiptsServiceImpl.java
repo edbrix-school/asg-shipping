@@ -22,6 +22,8 @@ import com.asg.shipping.receipts.enums.ButtonType;
 import com.asg.shipping.receipts.repository.*;
 import com.asg.shipping.receipts.service.ReceiptsService;
 import com.asg.shipping.receipts.util.ReceiptsMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,6 +68,9 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private final DocumentDeleteService documentDeleteService;
 	private final LoggingService loggingService;
 	private final com.asg.common.lib.service.LovDataService lovService;
+
+	@PersistenceContext
+	private final EntityManager entityManager;
 
 	@Override
 	public ReceiptsBlDetailsDto getReceipt(Long transactionPoid) {
@@ -129,12 +134,12 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		);
 		hdr.setPrintStatus("N");
 		hdr.setRcptAmount(createDto.getAmount() != null ? BigDecimal.valueOf(createDto.getAmount()) : BigDecimal.ZERO);
-		hdr = hdrRepository.save(hdr);
+		hdr = hdrRepository.saveAndFlush(hdr);
 		log.info("Receipt created with id: {}", hdr.getTransactionPoid());
 
 		saveDetailRecords(hdr.getTransactionPoid(), createDto);
 
-		loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
+		loggingService.createLogSummaryEntry(UserContext.getDocumentId(), hdr.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), hdr.getDocRef()));
 
 		// Call post-save procedure
 		procRepository.afterSave(hdr.getGroupPoid(), hdr.getCompanyPoid(), hdr.getTransactionPoid(), 0L, "INSERT", null);
