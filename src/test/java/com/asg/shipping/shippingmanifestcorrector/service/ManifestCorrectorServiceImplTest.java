@@ -8,6 +8,8 @@ import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateDto;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateRequest;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorUpdateDTO;
 import com.asg.shipping.shippingmanifestcorrector.entity.ShipBlReprintHdr;
@@ -19,14 +21,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.MockedStatic;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import com.asg.common.lib.security.util.UserContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.sql.CallableStatement;
+import java.sql.ResultSet;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -262,5 +269,57 @@ class ManifestCorrectorServiceImplTest {
         assertNotNull(result);
         verify(chargeDtlRepository).findByTransactionPoid(1L);
         verify(containerDtlRepository).findByTransactionPoid(1L);
+    }
+
+    @Test
+    void autoPopulateFromBlBrowse_Success() throws Exception {
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any())).thenReturn(1);
+
+        try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
+            userContext.when(UserContext::getGroupPoid).thenReturn(10L);
+            userContext.when(UserContext::getCompanyPoid).thenReturn(20L);
+            userContext.when(UserContext::getUserPoid).thenReturn(30L);
+            userContext.when(UserContext::getDocumentId).thenReturn("100-143");
+
+            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
+                    .thenAnswer(invocation -> {
+                        org.springframework.jdbc.core.CallableStatementCallback<?> callback = invocation.getArgument(1);
+                        CallableStatement cs = mock(CallableStatement.class);
+                        ResultSet rs = mock(ResultSet.class);
+
+                        when(cs.getObject(8)).thenReturn(rs);
+                        when(rs.next()).thenReturn(true);
+                        when(rs.getObject("CONSIGNEE_POID")).thenReturn(101L);
+                        when(rs.getString("ISSUE_TYPE")).thenReturn("ORIGINAL");
+                        when(rs.getObject("NOTIFY_POID")).thenReturn(202L);
+                        when(rs.getString("SHIPPER_EDI_NAME")).thenReturn("TEST SHIPPER");
+                        when(rs.getString("BL_TYPE")).thenReturn("IMPORT");
+                        when(rs.getString("HOLD_CAN_DO")).thenReturn("N");
+                        when(rs.getString("HOLD_REASON")).thenReturn("NONE");
+                        when(rs.getObject("PAYABLE_GL_POID")).thenReturn(303L);
+                        when(rs.getObject("INCOME_GL_POID")).thenReturn(404L);
+                        when(rs.getObject("PLACE_OF_DELIEVERY_POID")).thenReturn(505L);
+                        when(rs.getObject("PLACE_OF_RECIEPT_POID")).thenReturn(606L);
+                        when(rs.getString("BL_PLACE_RECEIPT")).thenReturn("RECEIPT");
+                        when(rs.getString("BL_PLACE_LOAD")).thenReturn("LOAD");
+                        when(rs.getString("BL_FINAL_DESTINATION")).thenReturn("DEST");
+                        when(rs.getString("BL_PLACE_DISCHARE_DESC")).thenReturn("DISCHARGE");
+                        when(rs.getObject("PORT_OF_LOADING_POID")).thenReturn(707L);
+                        when(rs.getObject("PORT_OF_DISCHARGE_POID")).thenReturn(808L);
+                        when(rs.getObject("VOYAGE_TRANSACTION_POID")).thenReturn(909L);
+
+                        return callback.doInCallableStatement(cs);
+                    });
+
+            ManifestCorrectorBlAutoPopulateDto result = service.autoPopulateFromBlBrowse(
+                    "12345",
+                    ManifestCorrectorBlAutoPopulateRequest.builder().transactionPoid(1L).build());
+
+            assertNotNull(result);
+            assertEquals(12345L, result.getBlPoid());
+            assertEquals(101L, result.getConsigneePoid());
+            assertEquals("ORIGINAL", result.getIssueType());
+            assertEquals(909L, result.getVoyageTransactionPoid());
+        }
     }
 }
