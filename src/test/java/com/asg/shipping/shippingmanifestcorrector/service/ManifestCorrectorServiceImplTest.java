@@ -2,11 +2,13 @@ package com.asg.shipping.shippingmanifestcorrector.service;
 
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateRequest;
@@ -58,6 +60,8 @@ class ManifestCorrectorServiceImplTest {
     private DocumentDeleteService documentDeleteService;
     @Mock
     private LoggingService loggingService;
+    @Mock
+    private LovDataService lovService;
     @Mock
     private JdbcTemplate jdbcTemplate;
     @Mock
@@ -123,11 +127,16 @@ class ManifestCorrectorServiceImplTest {
         when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(mapper.mapToDto(any())).thenReturn(responseDTO);
+        when(lovService.getDetailsByPoidAndLovName(12345L, "SHIP_BL_REPRINT"))
+                .thenReturn(new LovGetListDto(12345L, "240988", "240988", 12345L, "240988", null, null));
+
+        responseDTO.setBlNumber("12345");
 
         ManifestCorrectorDto result = service.getManifestCorrectorById(1L);
 
         assertNotNull(result);
         assertEquals(1L, result.getTransactionPoid());
+        assertNotNull(result.getBlNumberDet());
     }
 
     @Test
@@ -274,6 +283,32 @@ class ManifestCorrectorServiceImplTest {
     @Test
     void autoPopulateFromBlBrowse_Success() throws Exception {
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any())).thenReturn(1);
+        when(lovService.getDetailsByPoidAndLovName(12345L, "SHIP_BL_REPRINT"))
+                .thenReturn(new LovGetListDto(12345L, "12345", "12345", 12345L, "12345", null, null));
+        when(lovService.getDetailsByPoidAndLovName(101L, "ADDRESS_MASTER"))
+                .thenReturn(new LovGetListDto(101L, "C101", "Consignee", 101L, "Consignee", null, null));
+        when(lovService.getDetailsByCodeAndLovName("ORIGINAL", "BL_ISSUE_TYPE"))
+                .thenReturn(new LovGetListDto(1L, "ORIGINAL", "Original", 1L, "Original", null, null));
+        when(lovService.getDetailsByPoidAndLovName(202L, "ADDRESS_MASTER"))
+                .thenReturn(new LovGetListDto(202L, "N202", "Notify", 202L, "Notify", null, null));
+        when(lovService.getDetailsByCodeAndLovName("IMPORT", "BL_TYPE"))
+                .thenReturn(new LovGetListDto(1L, "IMPORT", "Import", 1L, "Import", null, null));
+        when(lovService.getDetailsByCodeAndLovName("NONE", "SHIP_DO_ANOTICE_HOLD"))
+                .thenReturn(new LovGetListDto(1L, "NONE", "None", 1L, "None", null, null));
+        when(lovService.getDetailsByPoidAndLovName(303L, "GL_MASTER_LEDGERS"))
+                .thenReturn(new LovGetListDto(303L, "GL303", "Payable GL", 303L, "Payable GL", null, null));
+        when(lovService.getDetailsByPoidAndLovName(404L, "GL_MASTER_LEDGERS"))
+                .thenReturn(new LovGetListDto(404L, "GL404", "Income GL", 404L, "Income GL", null, null));
+        when(lovService.getDetailsByPoidAndLovName(505L, "PORT_MASTER"))
+                .thenReturn(new LovGetListDto(505L, "P505", "Delivery Port", 505L, "Delivery Port", null, null));
+        when(lovService.getDetailsByPoidAndLovName(606L, "PORT_MASTER"))
+                .thenReturn(new LovGetListDto(606L, "P606", "Receipt Port", 606L, "Receipt Port", null, null));
+        when(lovService.getDetailsByPoidAndLovName(707L, "PORT_MASTER"))
+                .thenReturn(new LovGetListDto(707L, "P707", "Loading Port", 707L, "Loading Port", null, null));
+        when(lovService.getDetailsByPoidAndLovName(808L, "PORT_MASTER"))
+                .thenReturn(new LovGetListDto(808L, "P808", "Discharge Port", 808L, "Discharge Port", null, null));
+        when(lovService.getDetailsByPoidAndLovName(909L, "VESSAL_VOYAGE"))
+                .thenReturn(new LovGetListDto(909L, "V909", "Voyage", 909L, "Voyage", null, null));
 
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getGroupPoid).thenReturn(10L);
@@ -320,6 +355,10 @@ class ManifestCorrectorServiceImplTest {
             assertEquals(101L, result.getConsigneePoid());
             assertEquals("ORIGINAL", result.getIssueType());
             assertEquals(909L, result.getVoyageTransactionPoid());
+            assertNotNull(result.getBlDet());
+            assertNotNull(result.getConsigneeDet());
+            assertNotNull(result.getIssueTypeDet());
+            assertNotNull(result.getVoyageTransactionDet());
         }
     }
 }
