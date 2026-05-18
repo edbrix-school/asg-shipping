@@ -87,7 +87,6 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 			if (totalDemAmount == null) {
 				return BigDecimal.ZERO.negate();
 			}
-			log.info("total amount from demurragew --------------> {}", totalDemAmount);
 			return totalDemAmount.compareTo(demAmount) >= 0
 					? demAmount
 					: BigDecimal.ZERO.negate();
@@ -167,8 +166,8 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 					.setParameter("containerNo", containerNo)
 					.setParameter("containerIsoType", containerIsoType)
 					.setParameter("linePoid", linePoid)
-					.setParameter("fromDate", java.sql.Date.valueOf(fromDate))
-					.setParameter("toDate", java.sql.Date.valueOf(toDate))
+					.setParameter("fromDate", fromDate != null ? java.sql.Date.valueOf(fromDate) : null)
+					.setParameter("toDate", toDate != null ? java.sql.Date.valueOf(toDate) : null)
 					.setParameter("extraFreeDays",
 							extraFreeDays != null ? extraFreeDays : 0)
 					.getSingleResult();
@@ -498,6 +497,92 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 				.build();
 			return dto;
 		}).collect(Collectors.toList());
+	}
+
+	@Override
+	public String validateDuplicateBlReceipt(Long blPoid, String remarks) {
+		try {
+			return (String) entityManager.createNativeQuery(
+					"SELECT FUNC_RTN_TT_REF(:blPoid, :remarks) FROM DUAL")
+					.setParameter("blPoid", blPoid)
+					.setParameter("remarks", remarks)
+					.getSingleResult();
+		} catch (Exception e) {
+			log.error("Error in validateDuplicateBlReceipt", e);
+			return "FALSE";
+		}
+	}
+
+	@Override
+	public String validateChequeDate(LocalDate chequeDate, String type) {
+		try {
+			return (String) entityManager.createNativeQuery("""
+                SELECT DECODE(:type, 'SHPOSTCHQ', SIGN(VALID_CHQDT - :chqDate), 'SHPRECHQ', SIGN(VALID_CHQDT - :chqDate)) 
+                FROM (
+                    SELECT DECODE(:type, 'SHPOSTCHQ', TRUNC(SYSDATE) + TO_NUMBER(PARAMETER_VALUE), TRUNC(SYSDATE) - TO_NUMBER(PARAMETER_VALUE)) VALID_CHQDT 
+                    FROM GLOBAL_PARAMETERS 
+                    WHERE PARAMETER_KEYID_TYPE = :type
+                )
+            """)
+					.setParameter("type", type)
+					.setParameter("chqDate", java.sql.Date.valueOf(chequeDate))
+					.getSingleResult();
+		} catch (Exception e) {
+			log.error("Error in validateChequeDate for type: {}", type, e);
+			return "0";
+		}
+	}
+
+	@Override
+	public String validatePdcDateAgainstInvoice(Long blPoid, LocalDate chequeDate) {
+		try {
+			return (String) entityManager.createNativeQuery("""
+                SELECT SIGN(:chqDate - (TRUNC(INV_DATE) + CREDIT_DAYS)) 
+                FROM AR_SH_SALES_INVOICE_HDR 
+                WHERE INVOICE_TYPE = 'AUTOCAN' 
+                AND CUSTOMER_POID NOT IN (SELECT PARAMETER_VALUE FROM GLOBAL_PARAMETERS WHERE PARAMETER_NAME LIKE 'CAN_GL_CASHAC_SHIPPING%' AND PARAMETER_KEYID = 'SHCANCASHACT') 
+                AND NVL(DELETED, 'N') = 'N' 
+                AND CUSTOMER_POID IN (SELECT CUSTOMER_POID FROM SALES_CUSTOMER_MASTER WHERE CUSTOMER_TYPE IN ('PDC', 'CASH')) 
+                AND BL_POID = :blPoid
+            """)
+					.setParameter("chqDate", java.sql.Date.valueOf(chequeDate))
+					.setParameter("blPoid", blPoid)
+					.getSingleResult();
+		} catch (Exception e) {
+			log.error("Error in validatePdcDateAgainstInvoice", e);
+			return "0";
+		}
+	}
+
+	@Override
+	public Long getBankCompany(Long bankPoid) {
+		try {
+			BigDecimal companyPoid = (BigDecimal) entityManager.createNativeQuery(
+					"SELECT GET_BANK_COMPANY(:bankPoid) FROM DUAL")
+					.setParameter("bankPoid", bankPoid)
+					.getSingleResult();
+			return companyPoid != null ? companyPoid.longValue() : null;
+		} catch (Exception e) {
+			log.error("Error in getBankCompany", e);
+			return null;
+		}
+	}
+
+	@Override
+	public String getGlobalParameter(String paramName, String paramKeyIdType, Long companyPoid, String defaultValue) {
+		try {
+			return (String) entityManager.createNativeQuery(
+					"SELECT RTN_GLOBAL_PARAMETER(:groupPoid, :paramName, :paramKeyIdType, :companyPoid, :defaultValue) FROM DUAL")
+					.setParameter("groupPoid", "1")
+					.setParameter("paramName", paramName)
+					.setParameter("paramKeyIdType", paramKeyIdType)
+					.setParameter("companyPoid", companyPoid)
+					.setParameter("defaultValue", defaultValue)
+					.getSingleResult();
+		} catch (Exception e) {
+			log.error("Error in getGlobalParameter", e);
+			return defaultValue;
+		}
 	}
 
 	private Long toLong(Object value) {

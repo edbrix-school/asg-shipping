@@ -1,14 +1,17 @@
 package com.asg.shipping.importmanifestbl.dto;
 
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SendEdiEmailsRequestDto {
-    @NotNull(message = "Transaction POID is required")
-    private Long transactionPoId;
+public class ChargeDefaultsRequestDto {
+    private Long chargePoid;
+    private LocalDate transactionDate;
 }

@@ -137,7 +137,7 @@ public class DemurrageDetentionPayableTransferController {
             @Valid @RequestBody UpdateFreeDaysRequestDTO request) {
         log.info("Update principal days request for {} containers", request.getContainerUpdates().size());
         service.updatePrincipalDays(request);
-        return ApiResponse.success("Principal extra days updated successfully");
+        return ApiResponse.success("Updatation Completed, Requery for check...");
     }
 
     /**

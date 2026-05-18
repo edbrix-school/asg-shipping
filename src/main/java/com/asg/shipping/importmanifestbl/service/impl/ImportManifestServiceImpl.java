@@ -10,7 +10,6 @@ import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.DateUtil;
 import com.asg.shipping.importmanifestupdate.dto.*;
-import com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestupdate.entity.*;
 import com.asg.shipping.importmanifestupdate.event.BlManifestSaveEvent;
 import com.asg.shipping.importmanifestupdate.respository.*;
@@ -25,6 +24,8 @@ import com.asg.shipping.importmanifestupdate.service.ImportManifestBlServiceImpl
 import com.asg.shipping.importmanifestbl.util.ImportManifestDropdownMapper;
 import com.asg.shipping.importmanifestbl.util.ImportManifestMapper;
 import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
@@ -42,6 +43,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.utility.PaginationUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -85,7 +87,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     private static final String ACTION_NOCHANGES = "ACTION_NOCHANGES";
 
     private static final String LOG_KEY_ID_FORMAT = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
-    private static final String LOG_ROW_DELETED_FORMAT = "Row Deleted on %s with detRowId: %s";
+
+    @PersistenceContext
+    private final EntityManager entityManager;
+
 
     @Override
     public ImportManifestBlDto getImportManifest(Long transactionPoId) {
@@ -154,10 +159,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
     @Override
     @Transactional
-    public ResendCanResponseDto resendCan(Long transactionPoId) {
+    public ResendCanResponseDto resendCan(Long transactionPoId, String updateDemurrage) {
         try {
             ShipBlManifestHdr entity = findEntityById(transactionPoId);
-            return procRepository.resendCan(entity.getVoyageTransactionPoid(), transactionPoId);
+            return procRepository.resendCan(entity.getVoyageTransactionPoid(), transactionPoId, updateDemurrage);
         } catch (ResourceNotFoundException e) {
             log.error("Failed to resend CAN: Entity not found for transactionPoId: {}", transactionPoId);
             throw e;
@@ -184,28 +189,23 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
     @Override
     @Transactional
-    public LoadEmailFaxResponseDto loadEmailFax(Long transactionPoId, LoadEmailFaxRequestDto request) {
+    public LoadEmailFaxResponseDto loadEmailFax(Long addressMasterPoid, String addressType) {
         try {
-            findEntityById(transactionPoId);
             var addressDetails = addressDetailsRepository.findByAddressMasterPoidAndAddressType(
-                    request.getAddressMasterPoid(), "CAN");
+                    addressMasterPoid, "CAN");
             var emailFaxDetails = addressDetails.stream()
                     .map(ad -> EmailFaxDetailDto.builder()
-                            .addressPoid(Long.valueOf(ad.getAddressPoid()))
+                            .addressPoid(ad.getAddressPoid())
                             .email1(ad.getEmail())
                             .email2(ad.getEmail2())
                             .fax(ad.getFax())
-                            .addressType(request.getAddressType())
+                            .addressType(addressType)
                             .build())
                     .toList();
-            log.info("Loaded email/fax data for transactionPoId: {}, count: {}", transactionPoId,
-                    emailFaxDetails.size());
+            log.info("Loaded email/fax data for addressMasterPoid: {}, count: {}", addressMasterPoid, emailFaxDetails.size());
             return LoadEmailFaxResponseDto.builder().emailFaxDetails(emailFaxDetails).build();
-        } catch (ResourceNotFoundException e) {
-            log.error("Failed to load email/fax: Entity not found for transactionPoId: {}", transactionPoId);
-            throw e;
         } catch (Exception e) {
-            log.error("Error loading email/fax data for transactionPoId: {}", transactionPoId, e);
+            log.error("Error loading email/fax data for addressMasterPoid: {}", addressMasterPoid, e);
             throw e;
         }
     }
@@ -239,15 +239,15 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         updateService.formatEdiFields(entity);
 
         ShipBlManifestHdr saved = headerRepository.saveAndFlush(entity);
-        Long transactionPoid = saved.getTransactionPoid();
+        entityManager.refresh(entity);
 
+        Long transactionPoid = saved.getTransactionPoid();
         procRepository.validateBeforeSave(dto.getVesselVoyagePoid(), transactionPoid, dto.getQuotationPoid(),
                 dto.getFreight(), dto.getBookedByPrincipal());
 
         log.info("BL Manifest header saved with transactionPoid: {}", transactionPoid);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(),
-                transactionPoid.toString());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), saved.getDocRef()));
 
         List<String> logEntries = new ArrayList<>();
         saveGeneralCargoDetails(dto.getGeneralCargoDetails(), transactionPoid, logEntries);
@@ -1079,5 +1079,20 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 detailDto.setAddressPoid(headerDto.getOtherNotifies().getNotify3Poid());
             }
         }
+    }
+
+    @Override
+    public ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request) {
+        log.info("Fetching charge defaults for chargePoid: {}", request.getChargePoid());
+
+        Long companyPoid = UserContext.getCompanyPoid();
+        Object[] taxData = procRepository.getTaxRate(request.getChargePoid(), companyPoid, request.getTransactionDate());
+        Long taxPoid = (Long) taxData[0];
+        BigDecimal taxPercentage = (BigDecimal) taxData[1];
+
+        return ChargeDefaultsResponseDto.builder()
+                .taxPoid(taxPoid)
+                .taxPercentage(taxPercentage != null ? taxPercentage : BigDecimal.ZERO)
+                .build();
     }
 }

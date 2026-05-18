@@ -5,10 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.common.lib.service.DocumentDeleteService;
-import com.asg.common.lib.service.DocumentSearchService;
-import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.service.*;
 import com.asg.shipping.receipts.dto.*;
 import com.asg.shipping.receipts.entity.ArShReceiptHdr;
 import com.asg.shipping.receipts.enums.ButtonType;
@@ -27,7 +24,6 @@ import org.springframework.data.domain.Pageable;
 import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -66,6 +62,8 @@ public class ReceiptsServiceImplTest {
     private DocumentDeleteService documentDeleteService;
     @Mock
     private LoggingService loggingService;
+    @Mock
+    private com.asg.common.lib.service.LovDataService lovService;
 
     @InjectMocks
     private ReceiptsServiceImpl receiptsService;
@@ -210,13 +208,8 @@ public class ReceiptsServiceImplTest {
             when(chargesRepository.findById(any())).thenReturn(Optional.of(chargesEntity));
             when(paymentRepository.findById(any())).thenReturn(Optional.of(pymtEntity));
 
-            // For getReceipt call at the end
-            when(containerRepository.findByIdTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
-            when(chargesRepository.findByIdTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
-            when(paymentRepository.findByIdTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
-            when(mapper.mapBlDetailsEntityToDto(any(), any(), any(), any())).thenReturn(detailsDto);
-
-            receiptsService.updateReceipt(1L, updateDto);
+            // For save response
+            ReceiptSaveResponseDto result = receiptsService.updateReceipt(1L, updateDto);
 
             verify(validationService).validateReceiptUpdate(eq(updateDto), any());
             verify(hdrRepository).save(any());
@@ -231,12 +224,16 @@ public class ReceiptsServiceImplTest {
 
     @Test
     void calculateDemurrage_Success() {
+        ReceiptCalculateDemurrageRequestDto.ContainerRequest container = ReceiptCalculateDemurrageRequestDto.ContainerRequest.builder()
+                .containerNo("CONT123")
+                .equipmentIsoType("20")
+                .fromDate(LocalDate.now())
+                .toDate(LocalDate.now().plusDays(5))
+                .build();
+
         ReceiptCalculateDemurrageRequestDto requestDto = ReceiptCalculateDemurrageRequestDto.builder()
                 .blPoid(1001L)
-                .containerNo("CONT123")
-                .containerIsoType("20")
-                .fromDate(LocalDateTime.now())
-                .toDate(LocalDateTime.now().plusDays(5))
+                .containers(Collections.singletonList(container))
                 .build();
 
         TaxConfig taxConfig = TaxConfig.builder()
@@ -258,24 +255,31 @@ public class ReceiptsServiceImplTest {
             when(procRepository.calculateDemurrageAmount(any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(new java.math.BigDecimal("500"));
             when(procRepository.getDemurrageTaxInfo(anyLong())).thenReturn(taxConfig);
-            when(procRepository.getContainerSize(anyString())).thenReturn("20");
             when(procRepository.getCombinedCharges(anyLong(), anyLong()))
                     .thenReturn(Collections.singletonList(chargeDto));
+
+            // For LOV enrichment
+            when(lovService.getDetailsByPoidAndLovName(any(), anyString())).thenReturn(null);
 
             ReceiptCalculateDemurrageResponseDto result = receiptsService.calculateDemurrage(requestDto);
 
             assertNotNull(result);
-            assertEquals(new java.math.BigDecimal("500"), result.getDemurrageAmount());
-            assertEquals(new java.math.BigDecimal("50.00"), result.getDemurrageTaxAmount());
+            assertFalse(result.getContainerResults().isEmpty());
+            assertEquals(new java.math.BigDecimal("500"), result.getContainerResults().get(0).getDemurrageAmount());
+            assertEquals(new java.math.BigDecimal("50.00"), result.getContainerResults().get(0).getTaxAmount());
             assertEquals(new java.math.BigDecimal("602.50"), result.getTotalAmount());
         }
     }
 
     @Test
     void calculateDemurrage_InvalidDates() {
+        ReceiptCalculateDemurrageRequestDto.ContainerRequest container = ReceiptCalculateDemurrageRequestDto.ContainerRequest.builder()
+                .fromDate(LocalDate.now())
+                .toDate(LocalDate.now().minusDays(1))
+                .build();
+
         ReceiptCalculateDemurrageRequestDto requestDto = ReceiptCalculateDemurrageRequestDto.builder()
-                .fromDate(LocalDateTime.now())
-                .toDate(LocalDateTime.now().minusDays(1))
+                .containers(Collections.singletonList(container))
                 .build();
 
         assertThrows(com.asg.common.lib.exception.ValidationException.class,
@@ -296,12 +300,16 @@ public class ReceiptsServiceImplTest {
 
     @Test
     void calculateDemurrage_NoTaxInfo() {
+        ReceiptCalculateDemurrageRequestDto.ContainerRequest container = ReceiptCalculateDemurrageRequestDto.ContainerRequest.builder()
+                .containerNo("CONT123")
+                .equipmentIsoType("20")
+                .fromDate(LocalDate.now())
+                .toDate(LocalDate.now().plusDays(5))
+                .build();
+
         ReceiptCalculateDemurrageRequestDto requestDto = ReceiptCalculateDemurrageRequestDto.builder()
                 .blPoid(1001L)
-                .containerNo("CONT123")
-                .containerIsoType("20")
-                .fromDate(LocalDateTime.now())
-                .toDate(LocalDateTime.now().plusDays(5))
+                .containers(Collections.singletonList(container))
                 .build();
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
@@ -310,13 +318,13 @@ public class ReceiptsServiceImplTest {
             when(procRepository.calculateDemurrageAmount(any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(new java.math.BigDecimal("500"));
             when(procRepository.getDemurrageTaxInfo(anyLong())).thenReturn(null);
-            when(procRepository.getContainerSize(anyString())).thenReturn("20");
             when(procRepository.getCombinedCharges(anyLong(), anyLong())).thenReturn(null);
 
             ReceiptCalculateDemurrageResponseDto result = receiptsService.calculateDemurrage(requestDto);
 
             assertNotNull(result);
-            assertEquals(java.math.BigDecimal.ZERO, result.getDemurrageTaxAmount());
+            assertFalse(result.getContainerResults().isEmpty());
+            assertEquals(java.math.BigDecimal.ZERO, result.getContainerResults().get(0).getTaxAmount());
             assertEquals(new java.math.BigDecimal("500"), result.getTotalAmount());
         }
     }
@@ -344,13 +352,7 @@ public class ReceiptsServiceImplTest {
             when(mapper.mapContainerDtoToEntity(any(), anyLong(), anyLong())).thenReturn(contEntity);
             when(containerRepository.findById(any())).thenReturn(Optional.of(contEntity));
 
-            // For getReceipt
-            when(containerRepository.findByIdTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
-            when(chargesRepository.findByIdTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
-            when(paymentRepository.findByIdTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
-            when(mapper.mapBlDetailsEntityToDto(any(), any(), any(), any())).thenReturn(detailsDto);
-
-            receiptsService.updateReceipt(1L, updateDto);
+            ReceiptSaveResponseDto result = receiptsService.updateReceipt(1L, updateDto);
 
             verify(containerRepository, times(1)).save(any()); // One CREATED
 

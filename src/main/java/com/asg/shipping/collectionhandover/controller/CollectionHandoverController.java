@@ -10,9 +10,6 @@ import com.asg.shipping.collectionhandover.service.CollectionHandoverService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,11 +23,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 import static com.asg.common.lib.security.util.UserContext.getUserPoid;
+import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
 
 @RestController
 @RequiredArgsConstructor
@@ -78,6 +77,42 @@ public class CollectionHandoverController {
         log.info("Getting collection handover with id: {}", id);
         CollectionHandoverDto handover = collectionHandoverService.getCollectionHandover(id);
         return ApiResponse.success("Collection handover retrieved successfully", handover);
+    }
+
+    /**
+     * DocumentAfterNew equivalent: returns auto-populated header data
+     * (CashAmount, ChequeAmount, NoofChqs, TotalAmount, TransactionDate)
+     * for the earliest pending day-close date.
+     */
+    @AllowedAction(UserRolesRightsEnum.CREATE)
+    @GetMapping("/new-data")
+    @Operation(summary = "Get auto-populated data for a new collection handover",
+               description = "Returns receipt summary for the earliest pending day-close date (DocumentAfterNew logic)")
+    public ResponseEntity<?> getNewHandoverData(
+            @RequestParam(required = false) String transactionDate) {
+        try {
+            return ApiResponse.success("New handover data retrieved successfully",
+                    collectionHandoverService.getNewHandoverData(getGroupPoid(), getCompanyPoid(), transactionDate));
+        } catch (Exception e) {
+            return ApiResponse.internalServerError("Unable to fetch new handover data: " + e.getMessage());
+        }
+    }
+
+    /**
+     * LoadDinominationCurTypes equivalent: returns denomination rows for the given currency.
+     */
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/denominations")
+    @Operation(summary = "Get denomination list for a currency",
+               description = "Returns GLOBAL_CURRENCY_DINOMINATION rows ordered by SEQNO (LoadDinominationCurTypes logic)")
+    public ResponseEntity<?> getDenominations(
+            @RequestParam(defaultValue = "BHD") String currencyCode) {
+        try {
+            List<Map<String, Object>> result = collectionHandoverService.getDenominations(currencyCode);
+            return ApiResponse.success("Denominations retrieved successfully", result);
+        } catch (Exception e) {
+            return ApiResponse.internalServerError("Unable to fetch denominations: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.CREATE)

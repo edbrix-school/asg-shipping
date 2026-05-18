@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 @Builder
 public class CollectionHandoverDetailUpdateDTO {
 
-    private Long detRowId; // Null for new records, present for existing records
+    private Long detRowId;
 
     @PositiveOrZero(message = "Currency amount must be positive or zero")
     private BigDecimal currencyAmount;
@@ -31,5 +31,8 @@ public class CollectionHandoverDetailUpdateDTO {
 
     @PositiveOrZero(message = "Cash amount must be positive or zero")
     private BigDecimal cashAmount;
+
+    /** ISCREATED | ISUPDATED | ISDELETED */
+    private String action;
 }
 

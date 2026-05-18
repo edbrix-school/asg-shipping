@@ -2,12 +2,9 @@ package com.asg.shipping.importmanifestbl.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestupdate.dto.*;
 
-import com.asg.shipping.importmanifestbl.dto.ContainersDropDownDto;
-import com.asg.shipping.importmanifestbl.dto.DefaultValueDto;
-import com.asg.shipping.importmanifestbl.dto.ImportManifestBlDto;
-import com.asg.shipping.importmanifestbl.dto.ImportManifestBlResponseDto;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
@@ -21,18 +18,17 @@ public interface ImportManifestService {
 
     EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
 
-    ResendCanResponseDto resendCan(Long transactionPoId);
+    ResendCanResponseDto resendCan(Long transactionPoId, String updateDemurrage);
 
     SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId);
 
-    LoadEmailFaxResponseDto loadEmailFax(Long transactionPoId, LoadEmailFaxRequestDto request);
+    LoadEmailFaxResponseDto loadEmailFax(Long addressMasterPoid, String addressType);
 
     BlStatusResponseDto getBlStatus(Long transactionPoId);
 
     Map<String, Object> list(FilterRequestDto filters, Pageable pageable);
 
     ImportManifestBlResponseDto createImportManifestBl(ImportManifestBlDto request, Long companyPoid, Long groupPoid);
-
 
     ImportManifestBlResponseDto updateImportManifestBl(Long id,  ImportManifestBlDto dto);
 
@@ -51,4 +47,5 @@ public interface ImportManifestService {
     byte[] printCheckPortCharges(Long transactionPoid) throws Exception;
 
     String saveEmails(Long transactionPoId, SaveEmailsRequestDto request);
+    ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request);
 }

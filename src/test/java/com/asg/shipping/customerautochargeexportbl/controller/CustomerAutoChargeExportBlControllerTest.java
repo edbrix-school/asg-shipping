@@ -242,13 +242,13 @@ class CustomerAutoChargeExportBlControllerTest {
 
     @Test
     void testListInternalError() {
-        when(service.list(any(FilterRequestDto.class), any(Pageable.class)))
+        when(service.list(any(FilterRequestDto.class), any(Pageable.class),any(LocalDate.class),any(LocalDate.class)))
                 .thenThrow(new RuntimeException("Database error"));
 
         FilterRequestDto filters = new FilterRequestDto(null, null, Collections.emptyList());
         Pageable pageable = PageRequest.of(0, 10);
 
-        ResponseEntity<?> result = controller.list(pageable, filters);
+        ResponseEntity<?> result = controller.list(pageable, filters,LocalDate.now(), LocalDate.now());
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, result.getStatusCode());
         Map<String, Object> body = (Map<String, Object>) result.getBody();

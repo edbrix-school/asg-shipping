@@ -3,12 +3,15 @@ package com.asg.shipping.bookingFormSH.service;
 import java.time.LocalDate;
 import java.util.Map;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Service interface for Booking Form operations
@@ -38,7 +41,7 @@ public interface BookingFormService {
 	/**
 	 * Delete Booking Form (soft delete)
 	 */
-	void deleteBookingForm(Long id);
+	void deleteBookingForm(Long id, DeleteReasonDto deleteReasonDto);
 
 	/**
 	 * Generate COPRAR booking file
@@ -62,4 +65,17 @@ public interface BookingFormService {
 	byte[] cntEmptyBookingPrintForm(Long transactionPoid) throws Exception;
 	
 	byte[] cntReturnBookingPrintFormAll(Long transactionPoid, String printStamp) throws Exception;
+
+	byte[] cntReturnBookingPrintForm(Long transactionPoid, String printStamp, String containerNo) throws Exception;
+
+	Map<String, Object> searchContainerInventory(String docId, String containerNo, String equipmentIsoType, Long linePoid, Pageable pageable);
+
+	BookingFormAddressMasterDto getCustomerAddress(Long poid, String type);
+
+	void transferBookingWithContainers(Long oldTransactionPoid);
+
+    String importFileWithTransaction(MultipartFile file, Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid);
+
+	byte[] exportStuffingAdviceExcel(Long id);
+
 }

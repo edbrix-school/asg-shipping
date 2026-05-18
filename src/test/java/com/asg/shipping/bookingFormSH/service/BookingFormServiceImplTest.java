@@ -3,21 +3,19 @@ package com.asg.shipping.bookingFormSH.service;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.bookingFormSH.dto.*;
-import com.asg.shipping.bookingFormSH.entity.ShipMateCargoDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateChargesDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
-import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
-import com.asg.shipping.bookingFormSH.repository.ShipMateCargoDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateChargesDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
-import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
+import com.asg.shipping.bookingFormSH.entity.*;
+import com.asg.shipping.bookingFormSH.repository.*;
 import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
+import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,8 +62,18 @@ class BookingFormServiceImplTest {
     private ShipMateChargesDtlRepository chargesRepo;
     @Mock
     private ShipMateContainerDtlRepository containerRepo;
+
+    @Mock
+    private ShipMateStuffingDtlRepository stuffingRepo;
+
+    @Mock
+    private GlobalAddressDetailsRepository globalAddressDetailsRepository;
+
     @Mock
     private BookingFormLovService lovService;
+
+    @Mock
+    private DocumentDeleteService documentDeleteService;
     @Mock
     private DocumentSearchService documentService;
     @Mock
@@ -77,6 +85,9 @@ class BookingFormServiceImplTest {
     @Mock
     private LoggingService loggingService;
 
+    @Mock
+    private EntityManager entityManager;
+
     private MockedStatic<UserContext> userContext;
 
     @BeforeEach
@@ -87,8 +98,9 @@ class BookingFormServiceImplTest {
         userContext.when(UserContext::getUserPoid).thenReturn(USER_POID);
         userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
-        service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo,
-                lovService, documentService, jdbcTemplate, printService, dataSource, loggingService);
+        service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo, stuffingRepo,
+                globalAddressDetailsRepository,
+                lovService, documentDeleteService, documentService, jdbcTemplate, printService, dataSource, loggingService, entityManager);
     }
 
     @AfterEach
@@ -131,6 +143,7 @@ class BookingFormServiceImplTest {
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
         BookingFormDto result = service.getBookingForm(TX_POID);
         assertNotNull(result);
@@ -159,6 +172,7 @@ class BookingFormServiceImplTest {
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
         when(lovService.getQuotaionLov(1L)).thenReturn(List.of(lovItem));
         when(lovService.getVesselMasterLov(2L)).thenReturn(List.of(lovItem));
@@ -188,11 +202,16 @@ class BookingFormServiceImplTest {
         containerDtl.setComodityPoid(7L);
         containerDtl.setDestinationPortPoid(8L);
 
+        ShipMateStuffingDtl stuffingDtl = new ShipMateStuffingDtl();
+        stuffingDtl.setTransactionPoid(TX_POID);
+        stuffingDtl.setDetRowId(1L);
+
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(hdr));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(chargesDtl));
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(containerDtl));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(stuffingDtl));
 
         when(lovService.getChargeMasterLov(5L)).thenReturn(List.of(lovItem));
         when(lovService.getPortMasterLov(6L)).thenReturn(List.of(lovItem));
@@ -231,18 +250,17 @@ class BookingFormServiceImplTest {
 
         ShipMateHdr savedEntity = savedHdr();
         when(headerRepository.save(any())).thenReturn(savedEntity);
-        when(headerRepository.findByTransactionPoid(TX_POID))
-                .thenReturn(Optional.of(savedEntity));
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
-
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         mockJdbcCall("Ok");
 
         BookingFormDto result = service.createBookingForm(dto);
         assertNotNull(result);
     }
-
     @Test
     void createBookingForm_lineMateValidationError_throwsValidationException() {
         BookingFormCreateDTO dto = new BookingFormCreateDTO();
@@ -270,6 +288,7 @@ class BookingFormServiceImplTest {
         ShipMateHdr savedEntity = savedHdr();
         savedEntity.setLinePoid(10L);
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
@@ -277,6 +296,7 @@ class BookingFormServiceImplTest {
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(containerRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
         when(containerRepo.saveAll(anyList())).thenReturn(List.of(new ShipMateContainerDtl()));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
         mockJdbcCall("Ok");
 
@@ -299,6 +319,7 @@ class BookingFormServiceImplTest {
         ShipMateHdr savedEntity = savedHdr();
         savedEntity.setLinePoid(10L);
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
@@ -306,6 +327,7 @@ class BookingFormServiceImplTest {
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(containerRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
         when(containerRepo.saveAll(anyList())).thenReturn(List.of(new ShipMateContainerDtl()));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
         mockJdbcCall("Ok");
 
@@ -328,6 +350,7 @@ class BookingFormServiceImplTest {
         savedCargo.setDetRowId(1L);
 
         when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(savedEntity));
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
@@ -335,12 +358,47 @@ class BookingFormServiceImplTest {
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(cargoRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
         when(cargoRepo.saveAll(anyList())).thenReturn(List.of(savedCargo));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
         mockJdbcCall("Ok");
 
         BookingFormDto result = service.createBookingForm(dto);
         assertNotNull(result);
         verify(cargoRepo).saveAll(anyList());
+    }
+
+    @Test
+    void createBookingForm_withStuffingCreate() {
+        BookingFormCreateDTO dto = new BookingFormCreateDTO();
+        dto.setLinePoid(10L);
+        dto.setTransactionDate(java.time.LocalDate.now());
+
+        BookingFormStuffingLoadDetailDtoRequest stuffing = new BookingFormStuffingLoadDetailDtoRequest();
+        stuffing.setActionType("ISCREATED");
+
+        dto.setStuffingDetails(List.of(stuffing));
+
+        ShipMateHdr savedEntity = savedHdr();
+
+        when(headerRepository.save(any())).thenReturn(savedEntity);
+        when(headerRepository.saveAndFlush(any())).thenReturn(savedEntity);
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(savedEntity));
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(stuffingRepo.getMaxDetRowId(TX_POID)).thenReturn(0L);
+        when(stuffingRepo.saveAll(anyList())).thenReturn(List.of(new ShipMateStuffingDtl()));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+
+        mockJdbcCall("Ok");
+
+        BookingFormDto result = service.createBookingForm(dto);
+        assertNotNull(result);
+
+        verify(stuffingRepo).saveAll(anyList());
     }
 
     // ============================================================
@@ -494,6 +552,36 @@ class BookingFormServiceImplTest {
 
         service.updateBookingForm(TX_POID, dto);
         verify(cargoRepo).saveAll(anyList());
+    }
+
+    @Test
+    void updateBookingForm_withStuffingUpdate() {
+        BookingFormUpdateDTO dto = new BookingFormUpdateDTO();
+
+        BookingFormStuffingLoadDetailDtoRequest stuffing = new BookingFormStuffingLoadDetailDtoRequest();
+        stuffing.setActionType("ISUPDATED");
+        stuffing.setDetRowId(1L);
+
+        dto.setStuffingDetails(List.of(stuffing));
+
+        ShipMateHdr entity = new ShipMateHdr();
+        entity.setDeleted("N");
+
+        ShipMateStuffingDtl stuffingDtl = new ShipMateStuffingDtl();
+        stuffingDtl.setDetRowId(1L);
+
+        when(headerRepository.findByTransactionPoid(TX_POID))
+                .thenReturn(Optional.of(entity));
+        when(stuffingRepo.findByTransactionPoidAndDetRowId(TX_POID, 1L))
+                .thenReturn(Optional.of(stuffingDtl));
+        when(stuffingRepo.saveAll(anyList()))
+                .thenReturn(List.of(stuffingDtl));
+
+        mockJdbcCall("Ok");
+
+        service.updateBookingForm(TX_POID, dto);
+
+        verify(stuffingRepo).saveAll(anyList());
     }
 
     @Test
@@ -744,21 +832,21 @@ class BookingFormServiceImplTest {
     void deleteBookingForm_success() {
         ShipMateHdr hdr = new ShipMateHdr();
         hdr.setDeleted("N");
+        hdr.setTransactionDate(null);
 
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(hdr));
 
-        service.deleteBookingForm(TX_POID);
+        service.deleteBookingForm(TX_POID, null);
 
-        assertEquals("Y", hdr.getDeleted());
-        verify(headerRepository).save(hdr);
+        verify(documentDeleteService).deleteDocument(eq(TX_POID), eq("SHIP_MATE_HDR"), eq("TRANSACTION_POID"), eq(null), eq(null));
     }
 
     @Test
     void deleteBookingForm_notFound_throwsResourceNotFound() {
         when(headerRepository.findByTransactionPoid(any()))
                 .thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> service.deleteBookingForm(TX_POID));
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteBookingForm(TX_POID, null));
     }
 
     // ============================================================

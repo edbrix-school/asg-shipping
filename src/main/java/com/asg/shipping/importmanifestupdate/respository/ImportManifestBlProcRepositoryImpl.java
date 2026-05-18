@@ -57,7 +57,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
     }
 
     @Override
-    public ResendCanResponseDto resendCan(Long voyageTransactionPoId, Long transactionPoId) {
+    public ResendCanResponseDto resendCan(Long voyageTransactionPoId, Long transactionPoId, String updateDemurrage) {
         StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROD_RESEND_CAN");
 
         query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, ParameterMode.IN);
@@ -66,10 +66,10 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
 
         query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoId);
         query.setParameter("P_TRANSACTION_POID", transactionPoId);
-        query.setParameter("P_UPDATE_DEMURRAGE", "C");
+        query.setParameter("P_UPDATE_DEMURRAGE", updateDemurrage != null ? updateDemurrage : "C");
 
         query.execute();
-        log.info("CAN resent successfully for transactionPoId: {}", transactionPoId);
+        log.info("CAN resent successfully for transactionPoId: {} with flag: {}", transactionPoId, updateDemurrage);
 
         return ResendCanResponseDto.builder().status("SUCCESS").build();
     }
@@ -339,6 +339,30 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
         }
     }
 
+    @Override
+    public Object[] getTaxRate(Long chargePoid, Long companyPoid, java.time.LocalDate transactionDate) {
+        try {
+            StoredProcedureQuery query = entityManager.createStoredProcedureQuery("get_tax_rate");
 
+            query.registerStoredProcedureParameter("P_CHARGE_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_TAX_POID", Long.class, ParameterMode.OUT);
+            query.registerStoredProcedureParameter("P_TAX_PERCENTAGE", java.math.BigDecimal.class, ParameterMode.OUT);
+            query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
+            query.registerStoredProcedureParameter("P_TRANSACTION_DATE", java.sql.Date.class, ParameterMode.IN);
 
+            query.setParameter("P_CHARGE_POID", chargePoid);
+            query.setParameter("P_COMPANY_POID", companyPoid);
+            query.setParameter("P_TRANSACTION_DATE", transactionDate != null ? java.sql.Date.valueOf(transactionDate) : null);
+
+            query.execute();
+
+            Long taxPoid = (Long) query.getOutputParameterValue("P_TAX_POID");
+            java.math.BigDecimal taxPercentage = (java.math.BigDecimal) query.getOutputParameterValue("P_TAX_PERCENTAGE");
+
+            return new Object[]{taxPoid, taxPercentage};
+        } catch (Exception e) {
+            log.error("Error calling get_tax_rate procedure", e);
+            return new Object[]{null, java.math.BigDecimal.ZERO};
+        }
+    }
 }

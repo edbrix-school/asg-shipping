@@ -737,7 +737,15 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         Long actualTransactionPoid = transactionPoid != null ? transactionPoid : 0L; // Use 0 for new records
         
-        customRepository.processQuotationAfterBrowse(actualTransactionPoid, request.getQuotationTransactionPoid());
+        customRepository.processQuotationAfterBrowse(
+                getGroupPoid(),
+                getCompanyPoid(),
+                getUserPoid(),
+                DOC_ID,
+                actualTransactionPoid,
+                "SHIP_QUOTATION_EXPORT",
+                request.getQuotationTransactionPoid()
+        );
         
         Map<String, Object> result = new HashMap<>();
         result.put("fieldsUpdated", Arrays.asList("salesmanPoid", "portOfLoadingPoid", "portOfDischargePoid"));

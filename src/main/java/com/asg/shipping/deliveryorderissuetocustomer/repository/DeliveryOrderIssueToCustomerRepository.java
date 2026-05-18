@@ -1,5 +1,6 @@
 package com.asg.shipping.deliveryorderissuetocustomer.repository;
 
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import jakarta.persistence.EntityManager;
@@ -31,7 +32,7 @@ public class DeliveryOrderIssueToCustomerRepository {
     /**
      * Find delivery order by transaction POID
      */
-    public Optional<DeliveryOrderIssueToCustomerDto> findByTransactionPoid(Long transactionPoid, Long companyPoid) {
+    public Optional<DeliveryOrderIssueToCustomerDto> findByTransactionPoid(Long transactionPoid) {
         String sql = "SELECT COMPANY_POID, TRANSACTION_POID, TRANSACTION_DATE, DOC_REF, JOBNO, " +
                 "ARRIVAL_DATE, BL_NUMBER, LINE, CONSIGNEE, NOTIFY, C_20, C_40, HOLD_DO, " +
                 "DO_RELASED_ID_PERSON, DO_RELASED_TO_PERSON, DO_RELASED_ADDRS_PERSON, " +
@@ -40,10 +41,10 @@ public class DeliveryOrderIssueToCustomerRepository {
                 "DO_CNT_TO_OTHERS, DO_CNT_TO_OTHERS_MAILS, DO_EMAILS, DELIVERY_SENT_TO, " +
                 "PRINCIPAL_DO_NUMBER, PRINCIPAL_DO_REQUIRED " +
                 "FROM VW_CREDIT_DELIVERY_ORDER_PEND " +
-                "WHERE TRANSACTION_POID = ? AND COMPANY_POID = ?";
+                "WHERE TRANSACTION_POID = ?";
 
         try {
-            List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid, companyPoid);
+            List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid);
             return results.isEmpty() ? Optional.empty() : Optional.of(results.getFirst());
         } catch (Exception e) {
             // Log error and return empty
@@ -134,8 +135,8 @@ public class DeliveryOrderIssueToCustomerRepository {
 
             BigDecimal pendingAmount = jdbcTemplate.queryForObject(pendingAmountQuery, BigDecimal.class, transactionPoid);
 
-            if (pendingAmount != null && pendingAmount.compareTo(BigDecimal.ZERO) > 0) {
-                return "Y";
+            if (pendingAmount != null && pendingAmount.compareTo(BigDecimal.ZERO) != 0) {
+                throw new ValidationException("Total amount need to Collect for D/O...." + pendingAmount);
             }
             String printStatusQuery = " select DO_PRINTED ,CNT_FORM_DLV_PRINTED,CNT_FORM_RTN_PRINTED " + " FROM DO_sh_PRINTING_DTL WHERE TRANSACTION_POID=?";
 
@@ -170,6 +171,8 @@ public class DeliveryOrderIssueToCustomerRepository {
 
             return "N";
 
+        } catch (ValidationException e) {
+            throw e;
         } catch (Exception e) {
             return "Y";
         }
@@ -210,7 +213,7 @@ public class DeliveryOrderIssueToCustomerRepository {
 
     public String getGlobalParameterValue(String parameterName, String parameterKeyIdType, String parameterKeyId, String defaultValue) {
 
-        String sql = "SELECT PRODUCTION.RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
+        String sql = "SELECT RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
 
         try {
             return jdbcTemplate.queryForObject(

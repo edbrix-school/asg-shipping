@@ -28,7 +28,7 @@ public interface ExportManifestBlCustomRepository {
      * Process after quotation LOV browse
      * Calls PROC_LOV_AFTER_BRWS_300_103
      */
-    void processQuotationAfterBrowse(Long transactionPoid, Long quotationTransactionPoid);
+    void processQuotationAfterBrowse(Long groupPoid, Long companyPoid, Long userPoid, String docId, Long transactionPoid, String lovName, Long quotationTransactionPoid);
 
     /**
      * Update BL print status

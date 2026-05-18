@@ -29,9 +29,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
-
 import static com.asg.common.lib.dto.response.ApiResponse.*;
 
 @RestController
@@ -158,12 +156,8 @@ public class ReceiptsController {
 	public ResponseEntity<?> create(
 			@Valid @RequestBody ReceiptsCreateDto createDto
 	) {
-		try {
-			ReceiptsBlDetailsDto response = receiptsService.createReceipt(createDto);
-			return success("Receipt created successfully", response);
-		} catch (Exception e) {
-			return internalServerError("Failed to create Receipt: " + e.getMessage());
-		}
+		ReceiptSaveResponseDto response = receiptsService.createReceipt(createDto);
+		return success("Receipt created successfully", response);
 	}
 
 	@AllowedAction(UserRolesRightsEnum.EDIT)
@@ -258,7 +252,7 @@ public class ReceiptsController {
 			@PathVariable Long transactionPoid,
 			@Valid @RequestBody ReceiptsUpdateDto updateDto
 	) {
-			ReceiptsBlDetailsDto response = receiptsService.updateReceipt(transactionPoid, updateDto);
+			ReceiptSaveResponseDto response = receiptsService.updateReceipt(transactionPoid, updateDto);
 			return success("Receipt updated successfully", response);
 	}
 
@@ -326,48 +320,18 @@ public class ReceiptsController {
 			return success("Receipt list retrieved successfully", response);
 	}
 
-	@AllowedAction(UserRolesRightsEnum.VIEW)
-	@PostMapping("/autopopulate")
+	@GetMapping("/autopopulate")
 	@Operation(
 			summary = "Auto Populate Receipt Fields",
 			description = """
 					Auto-populate receipt fields based on BL POID.
 					
 					### Usage
-					- **For Create**: Pass `transactionPoid` as `null`
+					- **For Create**: Pass `transactionPoid` as null or omit it
 					- **For Update**: Pass existing `transactionPoid` to exclude current receipt from duplicate checks
 					
 					Returns BL details, available charges, and container demurrage information.
 					"""
-	)
-	@io.swagger.v3.oas.annotations.parameters.RequestBody(
-			description = "Auto-populate request with BL POID and optional transaction POID",
-			required = true,
-			content = @Content(
-					mediaType = "application/json",
-					examples = {
-							@ExampleObject(
-									name = "Create Receipt - Auto Populate",
-									description = "For new receipt creation, pass transactionPoid as null",
-									value = """
-											{
-											  "blPoid": 1001,
-											  "transactionPoid": null
-											}
-											"""
-							),
-							@ExampleObject(
-									name = "Update Receipt - Auto Populate",
-									description = "For existing receipt update, pass the transaction POID",
-									value = """
-											{
-											  "blPoid": 1001,
-											  "transactionPoid": 5001
-											}
-											"""
-							)
-					}
-			)
 	)
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "Fields auto-populated successfully"),
@@ -375,14 +339,14 @@ public class ReceiptsController {
 			@ApiResponse(responseCode = "500", description = "Internal server error")
 	})
 	public ResponseEntity<?> autoPopulateFields(
-			@Valid @RequestBody ReceiptAutoPopulateRequestDto requestDto
+			@Parameter(description = "BL POID", required = true) @RequestParam Long blPoid,
+			@Parameter(description = "Optional Transaction POID (for update mode)") @RequestParam(required = false) Long transactionPoid
 	) {
-			ReceiptAutoPopulateDto dto = receiptsService.autoPopulateFields(requestDto.getBlPoid(), requestDto.getTransactionPoid());
+			ReceiptAutoPopulateDto dto = receiptsService.autoPopulateFields(blPoid, transactionPoid);
 			return success("Successfully auto-populated the fields", dto);
 
 	}
 
-	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@PostMapping("/calculate-demurrage")
 	@Operation(
 			summary = "Calculate Demurrage Amount with Charges and Tax",

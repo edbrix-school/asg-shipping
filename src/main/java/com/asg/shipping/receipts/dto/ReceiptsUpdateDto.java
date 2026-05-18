@@ -6,8 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -20,7 +19,7 @@ public class ReceiptsUpdateDto {
 	private String docRef;
 
 	@Schema(description = "Transaction Date", example = "2025-01-15")
-	private LocalDateTime transactionDate;
+	private LocalDate transactionDate;
 
 	@Schema(description = "BL POID", example = "1001")
 	private Long blPoid;
@@ -55,8 +54,8 @@ public class ReceiptsUpdateDto {
 	@Schema(description = "Token Number", example = "12345")
 	private Long token;
 
-	@Schema(description = "Receipt Amount", example = "5000.00")
-	private BigDecimal rcptAmount;
+	@Schema(description = "Total amount in the payment table", example = "5000")
+	private Long amount;
 
 	@Schema(description = "Receipt Type", example = "CASH")
 	private String rcptType;

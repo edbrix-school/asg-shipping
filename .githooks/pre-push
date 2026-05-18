@@ -1,0 +1,17 @@
+#!/bin/sh
+
+echo "Running Maven build before push..."
+
+cd "$(git rev-parse --show-toplevel)"
+
+sh mvnw package -q
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Build failed. Push aborted."
+    echo "Fix the build errors and try again."
+    exit 1
+fi
+
+echo "Build succeeded. Proceeding with push."
+exit 0

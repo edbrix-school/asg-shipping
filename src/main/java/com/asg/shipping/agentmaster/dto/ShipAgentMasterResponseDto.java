@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -24,7 +25,7 @@ public class ShipAgentMasterResponseDto {
     private Long portPoid;
 
 
-    private String email;
+    private List<String> email;
     private String contactNo;
     private String faxNo;
 

@@ -22,4 +22,11 @@ public interface BookingFormLovService {
 	List<LovItem> getVoyageMasterLov(Long poid);
 	
 	List<LovItem> getChargeMasterLov(Long poid);
+
+	List<LovItem> getEquipmentIsoTypeLov(String code);
+
+	List<LovItem> getImcoClassTypeLov(String code);
+
+	List<LovItem> getOogTypeLov(String code);
+
 }

@@ -1,12 +1,12 @@
 package com.asg.shipping.receipts.dto;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -18,11 +18,15 @@ public class ReceiptsBlDetailsDto {
     private String docRef;
     private LocalDate date;
     private Long blPoid;
+    private LovGetListDto blDet;
     private Long companyPoid;
+    private LovGetListDto companyDet;
     private String releaseType;
     private String originalReleaseType;
     private Long printDoCustomerPoid;
+    private LovGetListDto printDoCustomerDet;
     private Long chequeCompany;
+    private LovGetListDto chequeCompanyDet;
     private String cpr;
     private String name;
     private String contact;

@@ -16,14 +16,15 @@ public class IssueDeliveryOrderRequestDto {
     private String doReleasedIdPerson;
 
     @Size(max = 50, message = "DO released to person must not exceed 50 characters")
+    @NotBlank(message = "DO Released Id Person is required")
     private String doReleasedToPerson;
 
     @Size(max = 100, message = "DO released address person must not exceed 100 characters")
+    @NotBlank(message = "DO Released Id Person is required")
     private String doReleasedAddressPerson;
 
     private String originalBlReleaseCr;
 
-    @NotBlank(message = "DO Priority is required")
     @Size(max = 10, message = "DO priority must not exceed 10 characters")
     private String doPriority;
 
@@ -42,7 +43,6 @@ public class IssueDeliveryOrderRequestDto {
     @Size(max = 500, message = "DO emails must not exceed 500 characters")
     private String emailsDo;
 
-    @NotBlank(message = "Delivery sent to is required")
     @Size(max = 1, message = "Delivery sent to must not exceed 1 character")
     private String deliverySentTo;
 

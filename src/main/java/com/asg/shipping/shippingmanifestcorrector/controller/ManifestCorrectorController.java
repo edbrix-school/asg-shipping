@@ -26,6 +26,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -63,12 +64,19 @@ public class ManifestCorrectorController {
     )
     @PostMapping("/search")
     public ResponseEntity<?> searchManifestCorrector(
+
+            @Parameter(description = "Start date for filtering")
+            @RequestParam(required = false) LocalDate startDate,
+
+            @Parameter(description = "End date for filtering")
+            @RequestParam(required = false) LocalDate endDate,
             @RequestBody(required = false) FilterRequestDto request,
             @Parameter(description = "Page number (0-indexed)", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction (e.g., 'transactionDate,asc')")
+
             @RequestParam(required = false) String sort) {
 
         try {
@@ -79,6 +87,8 @@ public class ManifestCorrectorController {
             Map<String, Object> result = service.searchManifestCorrector(
                     UserContext.getDocumentId(),
                     request,
+                    startDate,
+                    endDate,
                     pageable
             );
 
@@ -308,6 +318,149 @@ public class ManifestCorrectorController {
         }
     }
 
+    /**
+     * Auto-fill DO reprint charges
+     */
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Auto-fill DO Reprint Charges (DocId: 100-143)",
+            description = "Auto-fill charges for DO reprint based on BL number. Loads charges with CHARGE_TYPE_APPLICABLE='REPRINTIMP' and CHARGE_APPLICABLE='PERBL'.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Charges loaded successfully"),
+                    @ApiResponse(responseCode = "400", description = "BL number is required"),
+                    @ApiResponse(responseCode = "404", description = "BL not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @PostMapping("/auto-fill/do-reprint/{blNumber}")
+    public ResponseEntity<?> autoFillDoReprint(
+            @Parameter(description = "BL Number", required = true, example = "12345")
+            @PathVariable String blNumber) {
+        try {
+            log.info("Auto-fill DO reprint charges for BL: {}", blNumber);
+            List<ManifestCorrectorChargeDtlDto> charges = service.autoFillDoReprint(blNumber);
+            return success("DO reprint charges loaded successfully", charges);
+        } catch (ValidationException ex) {
+            return badRequest(ex.getMessage());
+        } catch (Exception ex) {
+            return internalServerError("Error loading DO reprint charges: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Auto-fill container reprint charges and containers
+     */
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Auto-fill Container Reprint (DocId: 100-143)",
+            description = "Auto-fill containers and charges for container reprint based on BL number. Loads containers from manifest and charges with CHARGE_APPLICABLE='PERQUENTITY'.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Container reprint data loaded successfully"),
+                    @ApiResponse(responseCode = "400", description = "BL number is required"),
+                    @ApiResponse(responseCode = "404", description = "BL not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @PostMapping("/auto-fill/container-reprint/{blNumber}")
+    public ResponseEntity<?> autoFillContainerReprint(
+            @Parameter(description = "BL Number", required = true, example = "12345")
+            @PathVariable String blNumber) {
+        try {
+            log.info("Auto-fill container reprint for BL: {}", blNumber);
+            ContainerReprintResponse result = service.autoFillContainerReprint(blNumber);
+            return success("Container reprint data loaded successfully", result);
+        } catch (ValidationException ex) {
+            return badRequest(ex.getMessage());
+        } catch (Exception ex) {
+            return internalServerError("Error loading container reprint data: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Auto-fill BL reprint charges
+     */
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Auto-fill BL Reprint Charges (DocId: 100-143)",
+            description = "Auto-fill charges for BL reprint based on BL number. Loads charges with CHARGE_TYPE_APPLICABLE='REPRINTEXP' and CHARGE_APPLICABLE='PERBL'.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "BL reprint charges loaded successfully"),
+                    @ApiResponse(responseCode = "400", description = "BL number is required"),
+                    @ApiResponse(responseCode = "404", description = "BL not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @PostMapping("/auto-fill/bl-reprint/{blNumber}")
+    public ResponseEntity<?> autoFillBlReprint(
+            @Parameter(description = "BL Number", required = true, example = "12345")
+            @PathVariable String blNumber) {
+        try {
+            log.info("Auto-fill BL reprint charges for BL: {}", blNumber);
+            List<ManifestCorrectorChargeDtlDto> charges = service.autoFillBlReprint(blNumber);
+            return success("BL reprint charges loaded successfully", charges);
+        } catch (ValidationException ex) {
+            return badRequest(ex.getMessage());
+        } catch (Exception ex) {
+            return internalServerError("Error loading BL reprint charges: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Auto-fill DEM refund charges
+     */
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Auto-fill DEM Refund Charges (DocId: 100-143)",
+            description = "Auto-fill demurrage refund charges based on BL number using stored procedure PROC_SHIP_BL_REPRINT_DEM_LOAD.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "DEM refund charges loaded successfully"),
+                    @ApiResponse(responseCode = "400", description = "BL number is required"),
+                    @ApiResponse(responseCode = "404", description = "BL not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @PostMapping("/auto-fill/dem-refund/{blNumber}")
+    public ResponseEntity<?> autoFillDemRefund(
+            @Parameter(description = "BL Number", required = true, example = "12345")
+            @PathVariable String blNumber) {
+        try {
+            log.info("Auto-fill DEM refund charges for BL: {}", blNumber);
+            List<ManifestCorrectorChargeDtlDto> charges = service.autoFillDemRefund(blNumber);
+            return success("DEM refund charges loaded successfully", charges);
+        } catch (ValidationException ex) {
+            return badRequest(ex.getMessage());
+        } catch (Exception ex) {
+            return internalServerError("Error loading DEM refund charges: " + ex.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "BL After Browse Auto-population (DocId: 100-143)",
+            description = "Auto-populate Shipping Manifest Corrector header fields from BL number using PROC_LOV_AFTER_BRWS_100_143.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "BL details loaded successfully"),
+                    @ApiResponse(responseCode = "400", description = "BL number is required"),
+                    @ApiResponse(responseCode = "404", description = "BL not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @PostMapping("/auto-fill/bl-after-browse/{blNumber}")
+    public ResponseEntity<?> autoPopulateFromBlBrowse(
+            @Parameter(description = "BL Number", required = true, example = "12345")
+            @PathVariable String blNumber,
+            @RequestBody(required = false) ManifestCorrectorBlAutoPopulateRequest request) {
+        try {
+            log.info("BL after browse auto-population request for BL: {}", blNumber);
+            ManifestCorrectorBlAutoPopulateDto response = service.autoPopulateFromBlBrowse(blNumber, request);
+            return success("BL details loaded successfully", response);
+        } catch (ValidationException ex) {
+            return badRequest(ex.getMessage());
+        } catch (Exception ex) {
+            return internalServerError("Error loading BL details: " + ex.getMessage());
+        }
+    }
+
     private Pageable createPageable(int page, int size, String sort) {
 
         String sortField = "TRANSACTION_DATE";
@@ -362,4 +515,3 @@ public class ManifestCorrectorController {
     }
 
 }
-

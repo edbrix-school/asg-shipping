@@ -1,5 +1,6 @@
 package com.asg.shipping.salesinvoice.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,5 +18,8 @@ public class LoadContainerDemurrageRequestDTO {
 
     @NotNull(message = "BL POID is required")
     private Long blPoid;
+
+    @NotBlank(message = "BL type invoice is required")
+    private String blTypeInvoice;
 }
 

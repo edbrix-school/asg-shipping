@@ -19,7 +19,7 @@ import com.asg.shipping.containertypeportchargestariff.repository.ShipPortCharge
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linemasterthirdparty.repository.ShipLineMasterThirdPartyRepository;
-import com.asg.shipping.portmaster.repository.PortMasterRepository;
+import com.asg.shipping.portMaster.repository.PortMasterRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -114,7 +114,7 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
             processCreateDetails(savedHdr.getTransactionPoid(), dto.getDetails());
         }
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), savedHdr.getTransactionPoid().toString());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), savedHdr.getTransactionPoid().toString(),String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), savedHdr.getDocRef()));
 
         log.info("Successfully created port charges tariff with id: {}", savedHdr.getTransactionPoid());
         return getPortChargesTariff(savedHdr.getTransactionPoid());

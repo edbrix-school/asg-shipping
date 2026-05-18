@@ -20,9 +20,10 @@ public class BookingFormContainerDetailDto {
 
     private Long detRowId;
     private String containerNo;
+    private String soc;
     private String equipmentSealNo;
     private String equipmentIsoType;
-    //	private LovItem equipmentIsoTypeDet; // LOV data
+    private LovItem equipmentIsoTypeDet; // LOV data
     private String equipmentType;
     //	private LovItem equipmentTypeDet; // LOV data
     private String equipmentSize;
@@ -60,7 +61,9 @@ public class BookingFormContainerDetailDto {
     private String oogA;
     private String isSplit;
     private String imcoClassType;
+    private LovItem imcoClassTypeDet; //Lov data
     private String oogType;
+    private LovItem oogTypeDet; // Lov data
     private BigDecimal vgmWeight;
     private String vgmDocId;
     private LocalDate vgmDate;

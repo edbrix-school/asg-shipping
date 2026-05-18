@@ -1,9 +1,11 @@
 package com.asg.shipping.shippingmanifestcorrector.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
+import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorUpdateDTO;
 import com.asg.shipping.shippingmanifestcorrector.service.ManifestCorrectorService;
@@ -80,18 +82,34 @@ class ManifestCorrectorControllerTest {
 
     @Test
     void searchManifestCorrector_Success() throws Exception {
-        FilterRequestDto filterRequest = new FilterRequestDto("OR", "N", List.of());
+        LocalDate startDate = LocalDate.of(2024, 1, 1);
+        LocalDate endDate = LocalDate.of(2024, 1, 31);
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "OR",
+                "N",
+                List.of(new FilterDto("TRANSACTION_DATE", "2024-01-15"))
+        );
         Map<String, Object> result = new HashMap<>();
         result.put("records", new Object[]{});
         result.put("totalElements", 0);
 
-        when(service.searchManifestCorrector(any(), any(), any())).thenReturn(result);
+        when(service.searchManifestCorrector(any(), any(), any(), any(), any())).thenReturn(result);
 
         mockMvc.perform(post("/v1/shipping-manifest-corrector/search")
                         .header("X-Document-Id", "100-143")
+                        .param("startDate", startDate.toString())
+                        .param("endDate", endDate.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(filterRequest)))
                 .andExpect(status().isOk());
+
+        verify(service).searchManifestCorrector(
+                eq("100-143"),
+                eq(filterRequest),
+                eq(startDate),
+                eq(endDate),
+                any()
+        );
     }
 
     @Test
@@ -134,6 +152,22 @@ class ManifestCorrectorControllerTest {
 
         mockMvc.perform(delete("/v1/shipping-manifest-corrector/1")
                         .header("X-Document-Id", "100-143"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void autoPopulateFromBlBrowse_Success() throws Exception {
+        ManifestCorrectorBlAutoPopulateDto autoPopulateDto = ManifestCorrectorBlAutoPopulateDto.builder()
+                .blPoid(12345L)
+                .consigneePoid(99L)
+                .build();
+
+        when(service.autoPopulateFromBlBrowse(eq("12345"), any())).thenReturn(autoPopulateDto);
+
+        mockMvc.perform(post("/v1/shipping-manifest-corrector/auto-fill/bl-after-browse/12345")
+                        .header("X-Document-Id", "100-143")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"transactionPoid\":1}"))
                 .andExpect(status().isOk());
     }
 }

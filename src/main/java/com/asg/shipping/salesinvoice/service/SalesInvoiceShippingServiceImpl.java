@@ -3,8 +3,10 @@ package com.asg.shipping.salesinvoice.service;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -60,6 +62,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final JdbcTemplate jdbcTemplate;
     private final DataSource dataSource;
     private final PrintService printService;
+    private final DocumentDeleteService documentDeleteService;
 
     @Override
     @Transactional(readOnly = true)
@@ -183,7 +186,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
     @Override
     @Transactional
-    public void deleteSalesInvoice(Long id) {
+    public void deleteSalesInvoice(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting Sales Invoice with id: {}", id);
 
         ArShSalesInvoiceHdr entity = hdrRepository.findActiveByTransactionPoid(id)
@@ -194,13 +197,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             return;
         }
 
-        entity.setDeleted("Y");
-        chargDtlRepository.deleteByTransactionPoid(id);
-        contnrDtlRepository.deleteByTransactionPoid(id);
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-
-        hdrRepository.saveAndFlush(entity);
+        documentDeleteService.deleteDocument(
+                id,
+                "AR_SH_SALES_INVOICE_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                LocalDate.now()
+        );
 
         log.info("Successfully deleted Sales Invoice with id: {}", id);
     }
@@ -210,13 +213,17 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     public LoadContainerDemurrageResponseDTO loadContainerDemurrageData(Long id, LoadContainerDemurrageRequestDTO request) {
         log.info("Loading container demurrage data for invoice id: {}, BL POID: {}", id, request.getBlPoid());
 
-        ArShSalesInvoiceHdr invoice = hdrRepository.findActiveByTransactionPoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
+        ArShSalesInvoiceHdr invoice = new ArShSalesInvoiceHdr();
+        invoice.setTransactionPoid(-999L);
+        if(!id.equals(-999L)) {
+            invoice = hdrRepository.findActiveByTransactionPoid(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
+        }
 
         List<SalesInvoiceContainerDtlDto> containers = executeLoadContainerDemurrageQuery(
                 request.getBlPoid(),
                 invoice.getTransactionPoid(),
-                invoice.getBlTypeInvoice()
+                request.getBlTypeInvoice()
         );
 
         return LoadContainerDemurrageResponseDTO.builder()
@@ -230,8 +237,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         log.info("Loading charge data for invoice id: {}, BL POID: {}, BL Type: {}", id, request.getBlPoid(), request.getBlTypeInvoice());
 
         Long companyPoid = getCompanyPoid();
-        ArShSalesInvoiceHdr invoice = hdrRepository.findActiveByTransactionPoid(id)
+        ArShSalesInvoiceHdr invoice = new ArShSalesInvoiceHdr();
+        invoice.setTransactionPoid(-999L);
+        if(!id.equals(-999L)) {
+            invoice = hdrRepository.findActiveByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
+        }
+        
 
         List<SalesInvoiceChargesDtlDto> charges = executeLoadChargeDataQuery(
                 request.getBlPoid(),
@@ -404,7 +416,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         Long companyPoid = getCompanyPoid();
         Long userPoid = getUserPoid();
 
-        var procResult = callProcLovAfterBrws300103(groupPoid, companyPoid, userPoid, getDocumentId(), id, request.getLovName(), String.valueOf(id));
+        var procResult = callProcLovAfterBrws300103(groupPoid, companyPoid, userPoid, getDocumentId(), request.getTransactionPoid(), request.getLovName(), String.valueOf(id));
 
         var result = LoadBlDataResponseDTO.builder()
                 .companyPoid(procResult.get("companyPoid"))
@@ -493,7 +505,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 cs.execute();
 
                 ResultSet rs = (ResultSet) cs.getObject(3);
-                if (!rs.next()) {
+                if (rs == null || !rs.next()) {
                     log.info("No custom print data found for customer POID: {}", request.getCustomerPoid());
                     return new ArrayList<>();
                 }
@@ -501,7 +513,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 log.info("Result Set : {}", rs);
                 List<InvoicePrintDetailDto> details = new ArrayList<>();
                 int detRowId = 0;
-                while (rs.next()) {
+                do {
                     detRowId++;
                     InvoicePrintDetailDto detail = InvoicePrintDetailDto.builder()
                             .detRowId((long) detRowId)
@@ -518,7 +530,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                             .build();
                     log.info("Detail : {}", detail);
                     details.add(detail);
-                }
+                } while (rs.next());
                 rs.close();
                 log.info("Details : {}", details);
                 return details;

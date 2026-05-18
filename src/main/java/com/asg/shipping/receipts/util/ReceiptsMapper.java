@@ -1,6 +1,6 @@
 package com.asg.shipping.receipts.util;
 
-import com.asg.common.lib.utility.ASGHelperUtils;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.receipts.dto.ReceiptCharges;
 import com.asg.shipping.receipts.dto.ReceiptContainerDto;
 import com.asg.shipping.receipts.dto.ReceiptPaymentDetailDto;
@@ -9,7 +9,6 @@ import com.asg.shipping.receipts.entity.*;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -203,6 +202,7 @@ public class ReceiptsMapper {
 				.container(mapContainerDtlListToDto(containers))
 				.charges(mapChargesDtlListToDto(charges))
 				.paymentDetail(mapPaymentDtlListToDto(payments))
+				.amount(entity.getRcptAmount() != null ? entity.getRcptAmount().longValue() : null)
 				.build();
 	}
 
@@ -217,13 +217,15 @@ public class ReceiptsMapper {
 				.blReleaseTypeOffice(dto.getOriginalReleaseType())
 				.printCustomerPoid(dto.getPrintDoCustomerPoid())
 				.documentCmpPoid(dto.getChequeCompany())
+				.orignalBlReleaseType(dto.getReleaseType())
 				.doReleasedIdPerson(dto.getCpr())
+				.groupPoid(UserContext.getGroupPoid())
 				.doReleasedToPerson(dto.getName())
 				.doReleasedAddrsPerson(dto.getContact())
 				.paymentRef(dto.getPaymentReference())
 				.remarks(dto.getRemarks())
 				.tokenNumber(dto.getToken())
-				.rcptAmount(BigDecimal.valueOf(dto.getAmount()))
+				.rcptAmount(dto.getAmount() != null ? BigDecimal.valueOf(dto.getAmount()) : null)
 				.build();
 	}
 }

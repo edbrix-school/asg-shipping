@@ -3,6 +3,7 @@ package com.asg.shipping.shippingmanifestcorrector.service;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
@@ -37,10 +38,12 @@ import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.ResultSet;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import static com.asg.common.lib.security.util.UserContext.*;
 
@@ -58,22 +61,23 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     private final DocumentSearchService documentSearchService;
     private final DocumentDeleteService documentDeleteService;
     private final LoggingService loggingService;
+    private final LovDataService lovService;
     private final JdbcTemplate jdbcTemplate;
     private final ManifestCorrectorMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchManifestCorrector(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchManifestCorrector(String docId, FilterRequestDto filters, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info("Searching Shipping Manifest Corrector records with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
 
-        String operator = documentSearchService.resolveOperator(request);
-        String isDeleted = documentSearchService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentSearchService.resolveFilters(request);
-
+        String operator = documentSearchService.resolveOperator(filters);
+        String isDeleted = documentSearchService.resolveIsDeleted(filters);
+        List<FilterDto> filterList = documentSearchService.resolveDateFilters(filters, "TRANSACTION_DATE", startDate,
+                endDate);
         RawSearchResult raw = documentSearchService.search(
                 docId,
-                filters,
+                filterList,
                 operator,
                 pageable,
                 isDeleted,
@@ -105,6 +109,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         dto.setChargesDetails(mapper.mapChargeDtlListToDto(charges));
         dto.setContainerDetails(mapper.mapContainerDtlListToDto(containers));
+        enrichLovData(dto);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
@@ -134,7 +139,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         ManifestCorrectorDto result = mapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
-//        enrichLovData(result);
+        enrichLovData(result);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
 
@@ -168,7 +173,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         ManifestCorrectorDto result = mapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
-//        enrichLovData(result);
+        enrichLovData(result);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
@@ -307,7 +312,474 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         return response;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<ManifestCorrectorChargeDtlDto> autoFillDoReprint(String blNumber) {
+        log.info("Auto-filling DO reprint charges for BL: {}", blNumber);
+        
+        if (blNumber == null || blNumber.trim().isEmpty()) {
+            throw new ValidationException("BL number is required");
+        }
+        
+        Long blPoid = validateAndGetBlPoid(blNumber);
+        return getChargesForDoReprint(blPoid);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ContainerReprintResponse autoFillContainerReprint(String blNumber) {
+        log.info("Auto-filling container reprint for BL: {}", blNumber);
+        
+        if (blNumber == null || blNumber.trim().isEmpty()) {
+            throw new ValidationException("BL number is required");
+        }
+        
+        Long blPoid = validateAndGetBlPoid(blNumber);
+        
+        List<ManifestCorrectorContainerDtlDto> containers = getContainersForReprint(blPoid);
+        List<ManifestCorrectorChargeDtlDto> charges = getChargesForContainerReprint(blPoid);
+        
+        return ContainerReprintResponse.builder()
+                .blNumber(blNumber)
+                .containers(containers)
+                .charges(charges)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ManifestCorrectorChargeDtlDto> autoFillBlReprint(String blNumber) {
+        log.info("Auto-filling BL reprint charges for BL: {}", blNumber);
+        
+        if (blNumber == null || blNumber.trim().isEmpty()) {
+            throw new ValidationException("BL number is required");
+        }
+        
+        Long blPoid = validateAndGetBlPoid(blNumber);
+        return getChargesForBlReprint(blPoid);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ManifestCorrectorChargeDtlDto> autoFillDemRefund(String blNumber) {
+        log.info("Auto-filling DEM refund charges for BL: {}", blNumber);
+        
+        if (blNumber == null || blNumber.trim().isEmpty()) {
+            throw new ValidationException("BL number is required");
+        }
+        
+        Long blPoid = validateAndGetBlPoid(blNumber);
+        return getDemRefundCharges(blPoid);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ManifestCorrectorBlAutoPopulateDto autoPopulateFromBlBrowse(
+            String blNumber,
+            ManifestCorrectorBlAutoPopulateRequest request) {
+        log.info("Auto-populating Shipping Manifest Corrector fields for BL: {}", blNumber);
+
+        if (blNumber == null || blNumber.trim().isEmpty()) {
+            throw new ValidationException("BL number is required");
+        }
+
+        Long blPoid = validateAndGetBlPoid(blNumber);
+        Long transactionPoid = request != null && request.getTransactionPoid() != null
+                ? request.getTransactionPoid()
+                : 0L;
+
+        ManifestCorrectorBlAutoPopulateDto response = ManifestCorrectorBlAutoPopulateDto.builder()
+                .blPoid(blPoid)
+                .transactionPoid(transactionPoid)
+                .build();
+
+        try {
+            String sql = "{call PRODUCTION.PROC_LOV_AFTER_BRWS_100_143(?,?,?,?,?,?,?,?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, getGroupPoid());
+                cs.setLong(2, getCompanyPoid());
+                cs.setLong(3, getUserPoid());
+                cs.setString(4, getDocumentId());
+                cs.setLong(5, transactionPoid);
+                cs.setString(6, "SHIP_BL_REPRINT");
+                cs.setString(7, blPoid.toString());
+                cs.registerOutParameter(8, Types.REF_CURSOR);
+                cs.execute();
+
+                try (ResultSet rs = (ResultSet) cs.getObject(8)) {
+                    if (rs == null || !rs.next()) {
+                        throw new ValidationException("No auto-population data found for BL number: " + blNumber);
+                    }
+
+                    response.setConsigneePoid(getLongOrNull(rs, "CONSIGNEE_POID"));
+                    response.setIssueType(rs.getString("ISSUE_TYPE"));
+                    response.setNotifyPoid(getLongOrNull(rs, "NOTIFY_POID"));
+                    response.setShipperEdiName(rs.getString("SHIPPER_EDI_NAME"));
+                    response.setBlType(rs.getString("BL_TYPE"));
+                    response.setHoldCanDo(rs.getString("HOLD_CAN_DO"));
+                    response.setHoldReason(rs.getString("HOLD_REASON"));
+                    response.setPayableGlPoid(getLongOrNull(rs, "PAYABLE_GL_POID"));
+                    response.setIncomeGlPoid(getLongOrNull(rs, "INCOME_GL_POID"));
+                    response.setPlaceOfDeliveryPoid(getLongOrNull(rs, "PLACE_OF_DELIEVERY_POID"));
+                    response.setPlaceOfReceiptPoid(getLongOrNull(rs, "PLACE_OF_RECIEPT_POID"));
+                    response.setBlPlaceReceipt(rs.getString("BL_PLACE_RECEIPT"));
+                    response.setBlPlaceLoad(rs.getString("BL_PLACE_LOAD"));
+                    response.setBlFinalDestination(rs.getString("BL_FINAL_DESTINATION"));
+                    response.setBlPlaceDischargeDesc(rs.getString("BL_PLACE_DISCHARE_DESC"));
+                    response.setPortOfLoadingPoid(getLongOrNull(rs, "PORT_OF_LOADING_POID"));
+                    response.setPortOfDischargePoid(getLongOrNull(rs, "PORT_OF_DISCHARGE_POID"));
+                    response.setVoyageTransactionPoid(getLongOrNull(rs, "VOYAGE_TRANSACTION_POID"));
+                }
+                return null;
+            });
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Error calling PROC_LOV_AFTER_BRWS_100_143 for BL: {}", blNumber, e);
+            throw new ValidationException("Error auto-populating BL details: " + e.getMessage());
+        }
+
+        enrichLovData(response);
+        return response;
+    }
+
     // ==================== Private Helper Methods ====================
+
+    /**
+     * Validate BL number and return BL POID
+     */
+    private Long validateAndGetBlPoid(String blNumber) {
+        String checkBlSql = "SELECT COUNT(*) FROM SHIP_BL_MANIFEST_HDR WHERE TRANSACTION_POID = ? AND (DELETED = 'N' OR DELETED IS NULL)";
+        Long blPoid = Long.parseLong(blNumber);
+        Integer count = jdbcTemplate.queryForObject(checkBlSql, Integer.class, blPoid);
+        if (count == null || count == 0) {
+            throw new ValidationException("BL number not found: " + blNumber);
+        }
+        return blPoid;
+    }
+
+    private void enrichLovData(ManifestCorrectorDto dto) {
+        if (dto == null) {
+            return;
+        }
+
+        enrichLovByPoid(parseLongSafely(dto.getBlNumber()), dto::setBlNumberDet, "SHIP_BL_REPRINT");
+        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE");
+        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER");
+        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER");
+        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD");
+        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE");
+        enrichLovByPoid(dto.getCompanyPoid(), dto::setCompanyDet, "COMPANY");
+
+        if (dto.getChargesDetails() != null) {
+            for (ManifestCorrectorChargeDtlDto charge : dto.getChargesDetails()) {
+                enrichLovByPoid(charge.getChargePoid(), charge::setChargeDet, "CHARGE_MASTER");
+                enrichLovByPoid(charge.getPaidAtPortPoid(), charge::setPaidAtPortDet, "PORT_MASTER");
+                enrichLovByCode(charge.getCurrencyCode(), charge::setCurrencyDet, "CURRENCY");
+                enrichLovByCode(charge.getChargeType(), charge::setChargeTypeDet, "CHARGE_TYPE");
+                enrichLovByCode(charge.getFreightType(), charge::setFreightTypeDet, "SHIP_FREIGHT_TYPE");
+                enrichLovByCode(charge.getChargeBasisOn(), charge::setChargeBasisOnDet, "CONTAINER_TYPE_MASTER");
+            }
+        }
+    }
+
+    private void enrichLovData(ManifestCorrectorBlAutoPopulateDto dto) {
+        if (dto == null) {
+            return;
+        }
+
+        enrichLovByPoid(dto.getBlPoid(), dto::setBlDet, "SHIP_BL_REPRINT");
+        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER");
+        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE");
+        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER");
+        enrichLovByCode(dto.getBlType(), dto::setBlTypeDet, "BL_TYPE");
+        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD");
+        enrichLovByPoid(dto.getPayableGlPoid(), dto::setPayableGlDet, "GL_MASTER_LEDGERS");
+        enrichLovByPoid(dto.getIncomeGlPoid(), dto::setIncomeGlDet, "GL_MASTER_LEDGERS");
+        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE");
+    }
+
+    private void enrichLovByPoid(Long poid, Consumer<LovGetListDto> setter, String lovName) {
+        if (poid == null) {
+            return;
+        }
+
+        try {
+            setter.accept(lovService.getDetailsByPoidAndLovName(poid, lovName));
+        } catch (Exception e) {
+            log.warn("Failed to fetch {} LOV for poid: {}", lovName, poid, e);
+        }
+    }
+
+    private void enrichLovByCode(String code, Consumer<LovGetListDto> setter, String lovName) {
+        if (code == null || code.isBlank()) {
+            return;
+        }
+
+        try {
+            setter.accept(lovService.getDetailsByCodeAndLovName(code, lovName));
+        } catch (Exception e) {
+            log.warn("Failed to fetch {} LOV for code: {}", lovName, code, e);
+        }
+    }
+
+    private Long parseLongSafely(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            log.warn("Failed to parse numeric value: {}", value);
+            return null;
+        }
+    }
+
+    /**
+     * Get charges for DO reprint (PERBL basis, REPRINTIMP)
+     */
+    private List<ManifestCorrectorChargeDtlDto> getChargesForDoReprint(Long blPoid) {
+        String sql = "SELECT MCDTL.CHARGE_CODE_POID, MCDTL.AMOUNT_OTHER, " +
+                "CM.CHARGE_CODE, CM.CHARGE_NAME " +
+                "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
+                "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID " +
+                "LEFT JOIN SHIP_CHARGE_MASTER CM ON MCDTL.CHARGE_CODE_POID = CM.CHARGE_POID " +
+                "WHERE (SELECT TO_DATE(NVL(VHDR.ARRIVAL_DATE, VHDR.EXPECTED_DATE)) " +
+                "       FROM SHIP_VOYAGE_HDR VHDR " +
+                "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID " +
+                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN MCHDR.PERIOD_FROM AND MCHDR.PERIOD_TO " +
+                "AND NVL(MCHDR.CHARGE_LINE_POID, 0) = 0 " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE = 'REPRINTIMP' " +
+                "AND MCDTL.CHARGE_APPLICABLE = 'PERBL' " +
+                "AND NVL(MCHDR.DELETED, 'N') = 'N' " +
+                "ORDER BY MCDTL.CHARGE_TYPE_APPLICABLE, MCDTL.CHARGE_APPLICABLE";
+
+        List<Map<String, Object>> charges = jdbcTemplate.queryForList(sql, blPoid);
+        List<ManifestCorrectorChargeDtlDto> result = new ArrayList<>();
+        
+        Long detRowId = 1L;
+        for (Map<String, Object> charge : charges) {
+            ManifestCorrectorChargeDtlDto dto = ManifestCorrectorChargeDtlDto.builder()
+                    .detRowId(detRowId++)
+                    .chargePoid(getLongFromMap(charge, "CHARGE_CODE_POID"))
+                    .currencyExchange(BigDecimal.ONE)
+                    .quantity(BigDecimal.ONE)
+                    .perQuantityAmount(getBigDecimalFromMap(charge, "AMOUNT_OTHER"))
+                    .chargeType("LOCAL")
+                    .printGroup("Local Charge")
+                    .currencyCode("BHD")
+                    .chargeBasisOn("NOBASIS")
+                    .freightType("C")
+                    .build();
+            result.add(dto);
+        }
+        
+        return result;
+    }
+
+    /**
+     * Get charges for container reprint (PERQUENTITY basis, REPRINTIMP)
+     */
+    private List<ManifestCorrectorChargeDtlDto> getChargesForContainerReprint(Long blPoid) {
+        // First get container sizes - using a simpler approach
+        String containerSizeSql = "SELECT EQUIPMENT_ISO_TYPE " +
+                "FROM SHIP_BL_MANIFEST_CONTAINER_DTL " +
+                "WHERE TRANSACTION_POID = ?";
+        List<String> containerTypes = jdbcTemplate.queryForList(containerSizeSql, String.class, blPoid);
+
+        // Count containers by size (assuming first 2 characters indicate size)
+        long count20 = containerTypes.stream().filter(type -> type != null && type.startsWith("2")).count();
+        long count40 = containerTypes.stream().filter(type -> type != null && type.startsWith("4")).count();
+
+        // Load charges
+        String sql = "SELECT MCDTL.CHARGE_CODE_POID, MCDTL.AMOUNT_20, MCDTL.AMOUNT_40, " +
+                "CM.CHARGE_CODE, CM.CHARGE_NAME " +
+                "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
+                "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID " +
+                "LEFT JOIN SHIP_CHARGE_MASTER CM ON MCDTL.CHARGE_CODE_POID = CM.CHARGE_POID " +
+                "WHERE (SELECT TO_DATE(NVL(VHDR.ARRIVAL_DATE, VHDR.EXPECTED_DATE)) " +
+                "       FROM SHIP_VOYAGE_HDR VHDR " +
+                "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID " +
+                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN MCHDR.PERIOD_FROM AND MCHDR.PERIOD_TO " +
+                "AND NVL(MCHDR.CHARGE_LINE_POID, 0) = 0 " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE = 'REPRINTIMP' " +
+                "AND MCDTL.CHARGE_APPLICABLE = 'PERQUENTITY' " +
+                "AND NVL(MCHDR.DELETED, 'N') = 'N' " +
+                "ORDER BY MCDTL.CHARGE_TYPE_APPLICABLE, MCDTL.CHARGE_APPLICABLE";
+
+        List<Map<String, Object>> charges = jdbcTemplate.queryForList(sql, blPoid);
+        List<ManifestCorrectorChargeDtlDto> result = new ArrayList<>();
+        
+        Long detRowId = 1L;
+        for (Map<String, Object> charge : charges) {
+            // Create charge for 20ft containers
+            if (count20 > 0) {
+                ManifestCorrectorChargeDtlDto dto20 = ManifestCorrectorChargeDtlDto.builder()
+                        .detRowId(detRowId++)
+                        .chargePoid(getLongFromMap(charge, "CHARGE_CODE_POID"))
+                        .currencyExchange(BigDecimal.ONE)
+                        .quantity(BigDecimal.valueOf(count20))
+                        .perQuantityAmount(getBigDecimalFromMap(charge, "AMOUNT_20"))
+                        .chargeType("LOCAL")
+                        .printGroup("Local Charge")
+                        .currencyCode("BHD")
+                        .chargeBasisOn("NOBASIS")
+                        .freightType("C")
+                        .build();
+                result.add(dto20);
+            }
+
+            // Create charge for 40ft containers
+            if (count40 > 0) {
+                ManifestCorrectorChargeDtlDto dto40 = ManifestCorrectorChargeDtlDto.builder()
+                        .detRowId(detRowId++)
+                        .chargePoid(getLongFromMap(charge, "CHARGE_CODE_POID"))
+                        .currencyExchange(BigDecimal.ONE)
+                        .quantity(BigDecimal.valueOf(count40))
+                        .perQuantityAmount(getBigDecimalFromMap(charge, "AMOUNT_40"))
+                        .chargeType("LOCAL")
+                        .printGroup("Local Charge")
+                        .currencyCode("BHD")
+                        .chargeBasisOn("NOBASIS")
+                        .freightType("C")
+                        .build();
+                result.add(dto40);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * Get charges for BL reprint (PERBL basis, REPRINTEXP, PREPAID)
+     */
+    private List<ManifestCorrectorChargeDtlDto> getChargesForBlReprint(Long blPoid) {
+        String sql = "SELECT MCDTL.CHARGE_CODE_POID, MCDTL.AMOUNT_OTHER, " +
+                "CM.CHARGE_CODE, CM.CHARGE_NAME " +
+                "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
+                "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID " +
+                "LEFT JOIN SHIP_CHARGE_MASTER CM ON MCDTL.CHARGE_CODE_POID = CM.CHARGE_POID " +
+                "WHERE (SELECT TO_DATE(NVL(VHDR.ARRIVAL_DATE, VHDR.EXPECTED_DATE)) " +
+                "       FROM SHIP_VOYAGE_HDR VHDR " +
+                "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID " +
+                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN MCHDR.PERIOD_FROM AND MCHDR.PERIOD_TO " +
+                "AND NVL(MCHDR.CHARGE_LINE_POID, 0) = 0 " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE = 'REPRINTEXP' " +
+                "AND MCDTL.CHARGE_APPLICABLE = 'PERBL' " +
+                "AND NVL(MCHDR.DELETED, 'N') = 'N' " +
+                "ORDER BY MCDTL.CHARGE_TYPE_APPLICABLE, MCDTL.CHARGE_APPLICABLE";
+
+        List<Map<String, Object>> charges = jdbcTemplate.queryForList(sql, blPoid);
+        List<ManifestCorrectorChargeDtlDto> result = new ArrayList<>();
+        
+        Long detRowId = 1L;
+        for (Map<String, Object> charge : charges) {
+            ManifestCorrectorChargeDtlDto dto = ManifestCorrectorChargeDtlDto.builder()
+                    .detRowId(detRowId++)
+                    .chargePoid(getLongFromMap(charge, "CHARGE_CODE_POID"))
+                    .currencyExchange(BigDecimal.ONE)
+                    .quantity(BigDecimal.ONE)
+                    .perQuantityAmount(getBigDecimalFromMap(charge, "AMOUNT_OTHER"))
+                    .chargeType("LOCAL")
+                    .printGroup("Local Charge")
+                    .currencyCode("BHD")
+                    .chargeBasisOn("NOBASIS")
+                    .freightType("P")
+                    .build();
+            result.add(dto);
+        }
+        
+        return result;
+    }
+
+    /**
+     * Get containers for reprint
+     */
+    private List<ManifestCorrectorContainerDtlDto> getContainersForReprint(Long blPoid) {
+        String sql = "SELECT CONTAINER_NO, EQUIPMENT_ISO_TYPE, " +
+                "NVL(PRINT_DELIVERY_FORM_DEFAULT, 'N') PRINT_DELIVERY_FORM_DEFAULT " +
+                "FROM SHIP_BL_MANIFEST_CONTAINER_DTL " +
+                "WHERE TRANSACTION_POID = ?";
+
+        List<Map<String, Object>> containers = jdbcTemplate.queryForList(sql, blPoid);
+        List<ManifestCorrectorContainerDtlDto> result = new ArrayList<>();
+        
+        Long detRowId = 1L;
+        for (Map<String, Object> container : containers) {
+            ManifestCorrectorContainerDtlDto dto = ManifestCorrectorContainerDtlDto.builder()
+                    .detRowId(detRowId++)
+                    .containerNumber((String) container.get("CONTAINER_NO"))
+                    .containerType((String) container.get("EQUIPMENT_ISO_TYPE"))
+                    .equipmentIsoType((String) container.get("EQUIPMENT_ISO_TYPE"))
+                    .isSelectedDlv((String) container.get("PRINT_DELIVERY_FORM_DEFAULT"))
+                    .isSelectedRtn("N")
+                    .build();
+            result.add(dto);
+        }
+        
+        return result;
+    }
+
+    /**
+     * Get DEM refund charges using stored procedure
+     */
+    private List<ManifestCorrectorChargeDtlDto> getDemRefundCharges(Long blPoid) {
+        List<ManifestCorrectorChargeDtlDto> result = new ArrayList<>();
+
+        try {
+            String sql = "{call PROC_SHIP_BL_REPRINT_DEM_LOAD(?,?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, blPoid);
+                cs.registerOutParameter(2, Types.REF_CURSOR);
+                cs.execute();
+
+                try (ResultSet rs = (ResultSet) cs.getObject(2)) {
+                    if (rs != null) {
+                        Long detRowId = 1L;
+                        while (rs.next()) {
+                            ManifestCorrectorChargeDtlDto dto = ManifestCorrectorChargeDtlDto.builder()
+                                    .detRowId(detRowId++)
+                                    .chargePoid(getLongOrNull(rs, "CHARGE_POID"))
+                                    .containerNumber(rs.getString("CONTAINER_NO"))
+                                    .equipmentIsoType(rs.getString("EQUIPMENT_ISO_TYPE"))
+                                    .buyPercharge(getBigDecimalOrNull(rs, "BUY_PERCHARGE"))
+                                    .perQuantityAmount(getBigDecimalOrNull(rs, "PER_QUANTITY_AMOUNT"))
+                                    .freightType(rs.getString("FREIGHT_TYPE"))
+                                    .revPayable(getBigDecimalOrNull(rs, "REV_PAYABLE"))
+                                    .revIncome(getBigDecimalOrNull(rs, "REV_INCOME"))
+                                    .currencyExchange(BigDecimal.ONE)
+                                    .quantity(BigDecimal.ONE)
+                                    .currencyCode("BHD")
+                                    .chargeBasisOn(rs.getString("EQUIPMENT_ISO_TYPE"))
+                                    .chargeType("LOCAL")
+                                    .printGroup("Local Charge")
+                                    .build();
+                            result.add(dto);
+                        }
+                    }
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            log.error("Error calling PROC_SHIP_BL_REPRINT_DEM_LOAD", e);
+            throw new ValidationException("Error loading demurrage refund charges: " + e.getMessage());
+        }
+
+        if (result.isEmpty()) {
+            log.warn("No demurrage refund charges found for BL POID: {}", blPoid);
+        }
+
+        return result;
+    }
 
     /**
      * Generate DOC_REF using company code and sequence
@@ -436,16 +908,16 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
                 "AMOUNT_20, AMOUNT_40, AMOUNT_OTHER " +
                 "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
                 "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID " +
-                "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE, EXPECTED_DATE)) " +
+                "WHERE (SELECT TO_DATE(NVL(VHDR.ARRIVAL_DATE, VHDR.EXPECTED_DATE)) " +
                 "       FROM SHIP_VOYAGE_HDR VHDR " +
                 "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID " +
-                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN PERIOD_FROM AND PERIOD_TO " +
-                "AND NVL(CHARGE_LINE_POID, '0') = '0' " +
-                "AND CHARGE_TYPE_APPLICABLE = 'REPRINTIMP' " +
-                "AND CHARGE_APPLICABLE = 'PERBL' " +
-                "AND CHARGE_TYPE_APPLICABLE IN ('REPRINTIMP', 'REPRINTEXP', 'REPRINTBOTH') " +
-                "AND NVL(DELETED, 'N') = 'N' " +
-                "ORDER BY CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE";
+                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN MCHDR.PERIOD_FROM AND MCHDR.PERIOD_TO " +
+                "AND NVL(MCHDR.CHARGE_LINE_POID, 0) = 0 " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE = 'REPRINTIMP' " +
+                "AND MCDTL.CHARGE_APPLICABLE = 'PERBL' " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE IN ('REPRINTIMP', 'REPRINTEXP', 'REPRINTBOTH') " +
+                "AND NVL(MCHDR.DELETED, 'N') = 'N' " +
+                "ORDER BY MCDTL.CHARGE_TYPE_APPLICABLE, MCDTL.CHARGE_APPLICABLE";
 
         List<Map<String, Object>> charges = jdbcTemplate.queryForList(sql, blPoid);
 
@@ -477,30 +949,31 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
      * Load charges for container reprint (PERQUENTITY basis)
      */
     private void loadChargesForContainerReprint(Long transactionPoid, Long blPoid) {
-        // First get container sizes
-        String containerSizeSql = "SELECT GET_CONTAINER_TYPE(EQUIPMENT_ISO_TYPE, 'SIZE') CNTSIZE " +
+        // First get container sizes - using a simpler approach
+        String containerSizeSql = "SELECT EQUIPMENT_ISO_TYPE " +
                 "FROM SHIP_BL_MANIFEST_CONTAINER_DTL " +
                 "WHERE TRANSACTION_POID = ?";
-        List<String> containerSizes = jdbcTemplate.queryForList(containerSizeSql, String.class, blPoid);
+        List<String> containerTypes = jdbcTemplate.queryForList(containerSizeSql, String.class, blPoid);
 
-        long count20 = containerSizes.stream().filter("20"::equals).count();
-        long count40 = containerSizes.stream().filter(s -> !"20".equals(s)).count();
+        // Count containers by size (assuming first character indicates size)
+        long count20 = containerTypes.stream().filter(type -> type != null && type.startsWith("2")).count();
+        long count40 = containerTypes.stream().filter(type -> type != null && type.startsWith("4")).count();
 
         // Load charges
         String sql = "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, " +
                 "AMOUNT_20, AMOUNT_40, AMOUNT_OTHER " +
                 "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
                 "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID " +
-                "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE, EXPECTED_DATE)) " +
+                "WHERE (SELECT TO_DATE(NVL(VHDR.ARRIVAL_DATE, VHDR.EXPECTED_DATE)) " +
                 "       FROM SHIP_VOYAGE_HDR VHDR " +
                 "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID " +
-                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN PERIOD_FROM AND PERIOD_TO " +
-                "AND NVL(CHARGE_LINE_POID, '0') = '0' " +
-                "AND CHARGE_TYPE_APPLICABLE = 'REPRINTIMP' " +
-                "AND CHARGE_APPLICABLE = 'PERQUENTITY' " +
-                "AND CHARGE_TYPE_APPLICABLE IN ('REPRINTIMP', 'REPRINTEXP', 'REPRINTBOTH') " +
-                "AND NVL(DELETED, 'N') = 'N' " +
-                "ORDER BY CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE";
+                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN MCHDR.PERIOD_FROM AND MCHDR.PERIOD_TO " +
+                "AND NVL(MCHDR.CHARGE_LINE_POID, 0) = 0 " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE = 'REPRINTIMP' " +
+                "AND MCDTL.CHARGE_APPLICABLE = 'PERQUENTITY' " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE IN ('REPRINTIMP', 'REPRINTEXP', 'REPRINTBOTH') " +
+                "AND NVL(MCHDR.DELETED, 'N') = 'N' " +
+                "ORDER BY MCDTL.CHARGE_TYPE_APPLICABLE, MCDTL.CHARGE_APPLICABLE";
 
         List<Map<String, Object>> charges = jdbcTemplate.queryForList(sql, blPoid);
 
@@ -558,16 +1031,16 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
                 "AMOUNT_20, AMOUNT_40, AMOUNT_OTHER " +
                 "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
                 "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID " +
-                "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE, EXPECTED_DATE)) " +
+                "WHERE (SELECT TO_DATE(NVL(VHDR.ARRIVAL_DATE, VHDR.EXPECTED_DATE)) " +
                 "       FROM SHIP_VOYAGE_HDR VHDR " +
                 "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID " +
-                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN PERIOD_FROM AND PERIOD_TO " +
-                "AND NVL(CHARGE_LINE_POID, '0') = '0' " +
-                "AND CHARGE_TYPE_APPLICABLE = 'REPRINTEXP' " +
-                "AND CHARGE_APPLICABLE = 'PERBL' " +
-                "AND CHARGE_TYPE_APPLICABLE IN ('REPRINTIMP', 'REPRINTEXP', 'REPRINTBOTH') " +
-                "AND NVL(DELETED, 'N') = 'N' " +
-                "ORDER BY CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE";
+                "       WHERE BLHDR.TRANSACTION_POID = ?) BETWEEN MCHDR.PERIOD_FROM AND MCHDR.PERIOD_TO " +
+                "AND NVL(MCHDR.CHARGE_LINE_POID, 0) = 0 " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE = 'REPRINTEXP' " +
+                "AND MCDTL.CHARGE_APPLICABLE = 'PERBL' " +
+                "AND MCDTL.CHARGE_TYPE_APPLICABLE IN ('REPRINTIMP', 'REPRINTEXP', 'REPRINTBOTH') " +
+                "AND NVL(MCHDR.DELETED, 'N') = 'N' " +
+                "ORDER BY MCDTL.CHARGE_TYPE_APPLICABLE, MCDTL.CHARGE_APPLICABLE";
 
         List<Map<String, Object>> charges = jdbcTemplate.queryForList(sql, blPoid);
 
@@ -804,4 +1277,3 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         };
     }
 }
-

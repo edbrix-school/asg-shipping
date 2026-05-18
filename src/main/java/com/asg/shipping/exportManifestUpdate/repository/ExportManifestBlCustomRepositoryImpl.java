@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.StoredProcedureQuery;
+import java.sql.ResultSet;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -55,14 +56,25 @@ public class ExportManifestBlCustomRepositoryImpl implements ExportManifestBlCus
     }
 
     @Override
-    public void processQuotationAfterBrowse(Long transactionPoid, Long quotationTransactionPoid) {
+    public void processQuotationAfterBrowse(Long groupPoid, Long companyPoid, Long userPoid, String docId, Long transactionPoid, String lovName, Long quotationTransactionPoid) {
         StoredProcedureQuery query = entityManager.createStoredProcedureQuery("PROC_LOV_AFTER_BRWS_300_103");
         
-        query.registerStoredProcedureParameter("P_TRANSACTION_POID", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_QUOTATION_TRANSACTION_POID", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_DOC_ID", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOV_NAME", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOV_VALUE", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("OUTDATA", ResultSet.class, ParameterMode.REF_CURSOR);
         
-        query.setParameter("P_TRANSACTION_POID", transactionPoid);
-        query.setParameter("P_QUOTATION_TRANSACTION_POID", quotationTransactionPoid);
+        query.setParameter("P_LOGIN_GROUP_POID", groupPoid);
+        query.setParameter("P_LOGIN_COMPANY_POID", companyPoid);
+        query.setParameter("P_LOGIN_USER_POID", userPoid);
+        query.setParameter("P_DOC_ID", docId);
+        query.setParameter("P_DOC_KEY_POID", transactionPoid);
+        query.setParameter("P_LOV_NAME", lovName);
+        query.setParameter("P_LOV_VALUE", quotationTransactionPoid != null ? quotationTransactionPoid.toString() : null);
         
         query.execute();
     }

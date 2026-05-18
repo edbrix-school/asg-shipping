@@ -3,6 +3,8 @@ package com.asg.shipping.shipcommisiontransfer.service;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.shipcommisiontransfer.dto.*;
 
+import java.time.LocalDate;
+
 import java.util.List;
 import java.util.Map;
 
@@ -14,7 +16,7 @@ public interface ShipCommissionTransferService {
     /**
      * Search Ship Commission Transfer records
      */
-    Map<String, Object> searchShipCommissionTransfer(String docId, FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchShipCommissionTransfer(String docId, FilterRequestDto request, LocalDate startDate, LocalDate endDate, org.springframework.data.domain.Pageable pageable);
 
     /**
      * Get Ship Commission Transfer by ID
@@ -61,4 +63,6 @@ public interface ShipCommissionTransferService {
     List<PdaFdaDtlResponseDTO> getPdaFdaDetails(Long transactionPoid);
 
     List<Object[]> getCommissionByVoyage(Long voyageTransactionPoid, Long transactionPoid);
+
+    List<Object[]> getCommissionPending(Long companyPoid, Long voyageTransactionPoid, CommissionPendingRequestDTO request);
 }

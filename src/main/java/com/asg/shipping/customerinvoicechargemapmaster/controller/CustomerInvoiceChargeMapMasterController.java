@@ -129,10 +129,10 @@ public class CustomerInvoiceChargeMapMasterController {
             @Valid @RequestBody CustomerInvoiceChargeMapMasterRequest request
     ) {
         log.info("Saving/updating customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
-        service.saveOrUpdate(request, UserContext.getGroupPoid());
+        CustomerInvoiceChargeMapMasterResponse response =service.saveOrUpdate(request, UserContext.getGroupPoid());
         log.info("Successfully saved/updated customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
         return ApiResponse.success(
-                "Customer invoice charge mapping saved successfully"
+                "Customer invoice charge mapping saved successfully", response
         );
     }
 

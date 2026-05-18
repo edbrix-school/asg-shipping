@@ -1,23 +1,26 @@
-package com.asg.shipping.portmaster.service;
+package com.asg.shipping.portMaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.entity.GlobalCountryMaster;
 import com.asg.shipping.common.repository.GlobalCountryMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.portmaster.dto.PortMasterRequest;
-import com.asg.shipping.portmaster.dto.PortMasterResponse;
-import com.asg.shipping.portmaster.entity.PortMaster;
-import com.asg.shipping.portmaster.entity.PortMasterId;
-import com.asg.shipping.portmaster.repository.PortMasterRepository;
+import com.asg.shipping.portMaster.dto.PortMasterRequest;
+import com.asg.shipping.portMaster.dto.PortMasterResponse;
+import com.asg.shipping.portMaster.entity.PortMaster;
+import com.asg.shipping.portMaster.entity.PortMasterId;
+import com.asg.shipping.portMaster.repository.PortMasterRepository;
 import com.asg.shipping.tradelanemaster.dto.response.ShipTradelaneResponse;
 import com.asg.shipping.tradelanemaster.service.ShipTradeLaneService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -41,6 +44,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	private final DocumentSearchService documentService;
 	private final ShipTradeLaneService tradeLaneService;
 	private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
     
     private static final String PORT_NOT_FOUND="Port not found";
 
@@ -80,11 +84,11 @@ public class PortMasterServiceImpl implements PortMasterService {
 	public PortMasterResponse updatePort( Long portPoid, PortMasterRequest request) {
 
         Long groupPoid = UserContext.getGroupPoid();
-		PortMaster existingData = repository.findById(new PortMasterId(groupPoid, portPoid))
+		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
 				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
-		
-		PortMaster entity =new PortMaster();
-		BeanUtils.copyProperties(existingData, entity);
+
+        PortMaster oldData = new PortMaster();
+        BeanUtils.copyProperties(entity, oldData);
 
 		if (!Objects.equals(entity.getPortCode(), request.getPortCode())) {
 
@@ -117,7 +121,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 		repository.save(entity);
 		String key = entity.getPortPoid().toString();
 		String docId = UserContext.getDocumentId();
-		loggingService.logChanges(existingData, entity, PortMaster.class, docId, key, LogDetailsEnum.MODIFIED, "PORT_POID");
+		loggingService.logChanges(oldData, entity, PortMaster.class, docId, key, LogDetailsEnum.MODIFIED, "PORT_POID");
 		return getPortById(portPoid);
 	}
 
@@ -140,7 +144,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	}
 
 	@Override
-	public void deletePort( Long portPoid) {
+	public void deletePort( Long portPoid, @Valid DeleteReasonDto deleteReasonDto) {
         Long groupPoid = UserContext.getGroupPoid();
 		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
 				.orElseThrow(() -> new RuntimeException(PORT_NOT_FOUND));
@@ -148,7 +152,9 @@ public class PortMasterServiceImpl implements PortMasterService {
 		if (entity.getDeleted().equalsIgnoreCase("Y"))
 			throw new IllegalArgumentException("Port has already been deleted.");
 
-		entity.setDeleted("Y");
+        documentDeleteService.deleteDocument(portPoid, "SHIP_PORT_MASTER", "PORT_POID", deleteReasonDto,
+                null);
+
 	}
 
 	private Map<String, Object> listPorts(String docId, FilterRequestDto request, Pageable pageable) {
@@ -179,6 +185,10 @@ public class PortMasterServiceImpl implements PortMasterService {
 		dto.setActive(entity.getActive());
 		dto.setCountryDetail(mapReadOnlyresponse(countryMaster));
 		dto.setTradelaneDetail(mapReadOnlyresponse(tradeLaneResponse));
+        dto.setCreatedBy(entity.getCreatedBy());
+        dto.setCreatedDate(entity.getCreatedDate());
+        dto.setLastModifiedBy(entity.getLastModifiedBy());
+        dto.setLastModifiedDate(entity.getLastModifiedDate());
 		return dto;
 	}
 

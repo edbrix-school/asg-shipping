@@ -59,6 +59,7 @@ public class MafiTrailerDateUpdateFormMapper {
 		}
 		entity.setAgentReference(request.getMafiHeader().getAgentReference());
 		entity.setRemarks(request.getMafiHeader().getRemarks());
+		entity.setTransactionDate(request.getMafiHeader().getTransactionDate());
 
 	}
 

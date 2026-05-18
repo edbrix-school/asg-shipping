@@ -8,6 +8,7 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
+import com.asg.shipping.shipcommisiontransfer.dto.CommissionPendingRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferUpdateDTO;
@@ -22,10 +23,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.StoredProcedureQuery;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -51,6 +55,10 @@ class ShipCommissionTransferServiceImplTest {
     private ShipCommissionTransferMapper mapper;
     @Mock
     private JdbcTemplate jdbcTemplate;
+    @Mock
+    private EntityManager entityManager;
+    @Mock
+    private StoredProcedureQuery storedProcedureQuery;
 
     @InjectMocks
     private ShipCommissionTransferServiceImpl service;
@@ -62,6 +70,7 @@ class ShipCommissionTransferServiceImplTest {
 
     @BeforeEach
     void setup() {
+        ReflectionTestUtils.setField(service, "entityManager", entityManager);
         hdrEntity = ShipBlCommissionHdr.builder()
                 .transactionPoid(1L)
                 .groupPoid(10L)
@@ -107,11 +116,11 @@ class ShipCommissionTransferServiceImplTest {
 
         when(documentService.resolveOperator(filterRequest)).thenReturn("OR");
         when(documentService.resolveIsDeleted(filterRequest)).thenReturn("N");
-        when(documentService.resolveFilters(filterRequest)).thenReturn(List.of(filter));
+        when(documentService.resolveDateFilters(eq(filterRequest), eq("TRANSACTION_DATE"), isNull(), isNull())).thenReturn(List.of(filter));
         when(documentService.search(anyString(), any(), eq("OR"), eq(pageable), eq("N"), eq("DOC_REF"), eq("TRANSACTION_POID")))
                 .thenReturn(raw);
 
-        Map<String, Object> result = service.searchShipCommissionTransfer("DOC-1", filterRequest, pageable);
+        Map<String, Object> result = service.searchShipCommissionTransfer("DOC-1", filterRequest, null, null, pageable);
 
         assertNotNull(result);
         verify(documentService).search(any(), any(), any(), any(), any(), any(), any());
@@ -389,5 +398,67 @@ class ShipCommissionTransferServiceImplTest {
             assertThrows(com.asg.common.lib.exception.ValidationException.class, 
                 () -> service.insertPdaCommission(1L));
         }
+    }
+
+    @Test
+    void testGetCommissionPending_Success() {
+        CommissionPendingRequestDTO request = new CommissionPendingRequestDTO();
+        request.setExchangeRate(1.5);
+        request.setBlPoid(50L);
+        request.setFrtBuyActual(200.0);
+        request.setShortLegSelected("Y");
+
+        List<Object[]> expectedRows = List.of(new Object[]{"row1"}, new Object[]{"row2"});
+
+        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING")).thenReturn(storedProcedureQuery);
+        when(storedProcedureQuery.getResultList()).thenReturn(expectedRows);
+
+        List<Object[]> result = service.getCommissionPending(20L, 100L, request);
+
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        verify(storedProcedureQuery).setParameter("P_COMPANY_POID", 20L);
+        verify(storedProcedureQuery).setParameter("P_VOYAGE_TRANSACTION_POID", 100L);
+        verify(storedProcedureQuery).setParameter("p_exchageRage", 1.5);
+        verify(storedProcedureQuery).setParameter("P_BL_POID", 50L);
+        verify(storedProcedureQuery).setParameter("p_FrtBuyActual", 200.0);
+        verify(storedProcedureQuery).setParameter("p_Short_Leg_Selected", "Y");
+        verify(storedProcedureQuery).execute();
+    }
+
+    @Test
+    void testGetCommissionPending_WithNullRequestFields_UsesDefaults() {
+        CommissionPendingRequestDTO request = new CommissionPendingRequestDTO();
+        // all fields null — should fall back to defaults
+
+        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING")).thenReturn(storedProcedureQuery);
+        when(storedProcedureQuery.getResultList()).thenReturn(List.of());
+
+        List<Object[]> result = service.getCommissionPending(20L, 100L, request);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(storedProcedureQuery).setParameter("p_exchageRage", 0.0);
+        verify(storedProcedureQuery).setParameter("P_BL_POID", 0L);
+        verify(storedProcedureQuery).setParameter("p_FrtBuyActual", 0.0);
+        verify(storedProcedureQuery).setParameter("p_Short_Leg_Selected", "N");
+    }
+
+    @Test
+    void testGetCommissionPending_ReturnsEmptyList() {
+        CommissionPendingRequestDTO request = new CommissionPendingRequestDTO();
+        request.setExchangeRate(1.0);
+        request.setBlPoid(0L);
+        request.setFrtBuyActual(0.0);
+        request.setShortLegSelected("N");
+
+        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING")).thenReturn(storedProcedureQuery);
+        when(storedProcedureQuery.getResultList()).thenReturn(List.of());
+
+        List<Object[]> result = service.getCommissionPending(20L, 100L, request);
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(storedProcedureQuery).execute();
     }
 }

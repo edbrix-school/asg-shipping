@@ -3,6 +3,7 @@ package com.asg.shipping.shipcommisiontransferTest.controller;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.shipcommisiontransfer.controller.ShipCommissionTransferController;
 import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
+import com.asg.shipping.shipcommisiontransfer.dto.CommissionPendingRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferUpdateDTO;
@@ -28,6 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -68,7 +70,7 @@ class ShipCommissionTransferControllerTest {
         result.put("records", new Object[]{});
         result.put("totalElements", 0);
 
-        when(commissionTransferService.searchShipCommissionTransfer(any(), any(), any()))
+        when(commissionTransferService.searchShipCommissionTransfer(any(), any(), any(), any(),any()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/v1/ship-commission-transfer/list")
@@ -189,7 +191,7 @@ class ShipCommissionTransferControllerTest {
 
     @Test
     void testListWithException() throws Exception {
-        when(commissionTransferService.searchShipCommissionTransfer(any(), any(), any()))
+        when(commissionTransferService.searchShipCommissionTransfer(any(), any(),any(), any(), any()))
                 .thenThrow(new RuntimeException("Database error"));
 
         mockMvc.perform(post("/v1/ship-commission-transfer/list")
@@ -256,5 +258,62 @@ class ShipCommissionTransferControllerTest {
                         .content(objectMapper.writeValueAsString(CalculateCommissionRequestDTO.builder().build())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testGetCommissionPending_Success() throws Exception {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+
+            CommissionPendingRequestDTO request = new CommissionPendingRequestDTO();
+            request.setExchangeRate(1.5);
+            request.setBlPoid(50L);
+            request.setFrtBuyActual(200.0);
+            request.setShortLegSelected("Y");
+
+            List<Object[]> mockResult = List.of(new Object[]{"BL-001", 1000.0}, new Object[]{"BL-002", 2000.0});
+
+            when(commissionTransferService.getCommissionPending(eq(20L), eq(100L), any(CommissionPendingRequestDTO.class)))
+                    .thenReturn(mockResult);
+
+            mockMvc.perform(post("/v1/ship-commission-transfer/pending/100")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Commission pending data fetched successfully"));
+        }
+    }
+
+    @Test
+    void testGetCommissionPending_WithNullBody_UsesDefaultRequest() throws Exception {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+
+            when(commissionTransferService.getCommissionPending(eq(20L), eq(100L), any(CommissionPendingRequestDTO.class)))
+                    .thenReturn(List.of());
+
+            mockMvc.perform(post("/v1/ship-commission-transfer/pending/100")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Commission pending data fetched successfully"));
+        }
+    }
+
+    @Test
+    void testGetCommissionPending_ServiceThrowsException_ReturnsInternalServerError() throws Exception {
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+
+            when(commissionTransferService.getCommissionPending(eq(20L), eq(100L), any(CommissionPendingRequestDTO.class)))
+                    .thenThrow(new RuntimeException("DB error"));
+
+            mockMvc.perform(post("/v1/ship-commission-transfer/pending/100")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new CommissionPendingRequestDTO())))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
     }
 }

@@ -72,6 +72,8 @@ public class LineTariffUpdateDTO {
 
     private Integer seqno;
 
+    private String extraTariff;
+
     @Valid
     private List<TariffDetailUpdateDTO> importDemurrageCollectable;
 

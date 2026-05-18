@@ -235,15 +235,13 @@ public class RegionMasterServiceImpl implements RegionMasterService {
     public void delete(Long regionPoid, DeleteReasonDto deleteReason) {
 
 
-        ShipRegionMasterEntity entity =
-                repository.findByRegionPoidAndGroupPoid(regionPoid, UserContext.getGroupPoid())
-                        .orElseThrow(() -> {
-                            return new ResourceNotFoundException(
+        repository.findByRegionPoidAndGroupPoid(regionPoid, UserContext.getGroupPoid())
+                        .orElseThrow(() -> new ResourceNotFoundException(
                                     "RegionMaster",
                                     "regionPoid",
                                     regionPoid
-                            );
-                        });
+                            )
+                        );
 
 
         documentDeleteService.deleteDocument(regionPoid,"SHIP_REGION_MASTER",

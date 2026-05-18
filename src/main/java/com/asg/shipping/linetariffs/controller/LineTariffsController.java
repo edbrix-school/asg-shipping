@@ -28,6 +28,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
@@ -314,6 +315,35 @@ public class LineTariffsController {
         log.info("Copying slabs to payable for id: {}, type: {}", id, type);
         lineTariffsService.copySlabsToPayable(id, type);
         return ApiResponse.success("Slabs copied to payable successfully", null);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/{id}/load-container-types")
+    @Operation(
+            summary = "Load available container types",
+            description = "Returns container types from SHIP_LINE_MASTER_TYPE_DTL for the tariff's line, excluding already-used ones. type=IMP excludes from SHIP_LINE_TARIFF_IMP_DTL, type=EXP excludes from SHIP_LINE_TARIFF_EXP_DTL.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Container types loaded successfully",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "404",
+                    description = "Line tariff not found",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    public ResponseEntity<?> loadContainerTypes(
+            @Parameter(description = "Transaction POID", required = true)
+            @PathVariable Long id,
+            @Parameter(description = "IMP for Import Demurrage, EXP for Export Detention", required = true)
+            @RequestParam String type) {
+        log.info("Loading container types for id: {}, type: {}", id, type);
+        lineTariffsService.loadContainerTypes(id, type);
+        return ApiResponse.success("Container types loaded successfully");
     }
 
     /**

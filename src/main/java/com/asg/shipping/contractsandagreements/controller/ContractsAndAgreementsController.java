@@ -8,6 +8,8 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementHdrDto;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalRequest;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalResponse;
 import com.asg.shipping.contractsandagreements.service.ContractsAndAgreementsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -302,6 +304,19 @@ public class ContractsAndAgreementsController {
                 service.updateContractsAndAgreements(id, updateDTO);
 
         return success("Contracts and Agreements updated successfully", response);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @PostMapping("/renew")
+    @Operation(
+            summary = "Renew Contracts and Agreements",
+            description = "Renew an existing contract by providing new expiry and renewal dates."
+    )
+    public ResponseEntity<?> renew(
+            @Valid @RequestBody ContractRenewalRequest renewalRequest
+    ) {
+        ContractRenewalResponse response = service.renewContractsAndAgreements(renewalRequest);
+        return success("Contracts and Agreements renewed successfully", response);
     }
 
 }

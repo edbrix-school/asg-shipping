@@ -20,6 +20,8 @@ public class TariffDetailUpdateDTO {
 
     private Long detRowId; // Null for new records, present for existing records
 
+    private String actionType; // "isDeleted" to delete, empty/null to keep
+
     @NotNull(message = "Container type is required")
     @jakarta.validation.constraints.Positive(message = "Container type is required")
     private Long containerTypePoid;

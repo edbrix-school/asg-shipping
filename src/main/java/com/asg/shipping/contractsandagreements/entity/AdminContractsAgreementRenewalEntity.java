@@ -1,13 +1,11 @@
 package com.asg.shipping.contractsandagreements.entity;
 
-import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import com.asg.shipping.contractsandagreements.entity.key.AdminContractsAgreementDtlId;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ADMIN_CONTRACTS_AGREEMENT_RENEWAL_DTL")

@@ -263,10 +263,10 @@ class ImportManifestServiceImplTest {
     void resendCan_Success() {
         mockEntity.setVoyageTransactionPoid(100L);
         when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
-        when(procRepository.resendCan(100L, 1L))
+        when(procRepository.resendCan(100L, 1L, null))
                 .thenReturn(com.asg.shipping.importmanifestupdate.dto.ResendCanResponseDto.builder().status("SUCCESS").build());
 
-        var response = service.resendCan(1L);
+        var response = service.resendCan(1L, null);
 
         assertNotNull(response);
         assertEquals("SUCCESS", response.getStatus());
@@ -286,7 +286,6 @@ class ImportManifestServiceImplTest {
 
     @Test
     void loadEmailFax_Success() {
-        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
         when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(anyLong(), anyString()))
                 .thenReturn(List.of());
 
@@ -295,7 +294,7 @@ class ImportManifestServiceImplTest {
                 .addressType("CAN")
                 .build();
 
-        var response = service.loadEmailFax(1L, request);
+        var response = service.loadEmailFax(1L, request.toString());
 
         assertNotNull(response);
         verify(addressDetailsRepository).findByAddressMasterPoidAndAddressType(anyLong(), anyString());

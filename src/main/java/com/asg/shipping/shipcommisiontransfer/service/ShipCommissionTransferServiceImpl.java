@@ -36,6 +36,7 @@ import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.ResultSet;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -67,12 +68,12 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchShipCommissionTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchShipCommissionTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info("Searching ship commission transfer records with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
 
         RawSearchResult raw = documentService.search(
                 docId,
@@ -397,6 +398,34 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 .fdaAmount(entity.getFdaAmount())
                 .build()
         ).toList();
+    }
+
+    @Override
+    @Transactional
+    public List<Object[]> getCommissionPending(Long companyPoid, Long voyageTransactionPoid, CommissionPendingRequestDTO request) {
+        log.info("Fetching commission pending for voyageTransactionPoid: {}", voyageTransactionPoid);
+
+        StoredProcedureQuery query = entityManager
+                .createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING");
+
+        query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_exchageRage", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_BL_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_FrtBuyActual", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_Short_Leg_Selected", String.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("OUTDATA", void.class, jakarta.persistence.ParameterMode.REF_CURSOR);
+
+        query.setParameter("P_COMPANY_POID", companyPoid);
+        query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoid);
+        query.setParameter("p_exchageRage", request.getExchangeRate() != null ? request.getExchangeRate() : 0.0);
+        query.setParameter("P_BL_POID", request.getBlPoid() != null ? request.getBlPoid() : 0L);
+        query.setParameter("p_FrtBuyActual", request.getFrtBuyActual() != null ? request.getFrtBuyActual() : 0.0);
+        query.setParameter("p_Short_Leg_Selected", request.getShortLegSelected() != null ? request.getShortLegSelected() : "N");
+
+        query.execute();
+
+        return query.getResultList();
     }
 
     @Transactional

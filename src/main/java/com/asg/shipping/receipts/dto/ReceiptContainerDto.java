@@ -1,5 +1,6 @@
 package com.asg.shipping.receipts.dto;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,7 @@ public class ReceiptContainerDto {
 	private Long detRowId;
 	private String containerSocYn;
 	private Long blPoid;
+	private LovGetListDto blDet;
 	private String containerNo;
 	private String equipmentIsoType;
 	private Long freeDays;
@@ -32,4 +34,5 @@ public class ReceiptContainerDto {
 	private BigDecimal cntTaxAmount;
 	private LocalDate emptyIn;
 	private Long cntTaxPoid;
+	private LovGetListDto taxDet;
 }

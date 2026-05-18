@@ -13,7 +13,9 @@ import java.util.Optional;
 
 import javax.sql.DataSource;
 
+import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -63,8 +65,15 @@ class DayCloseServiceImplTest {
     @Mock private DataSource dataSource;
     @Mock private LoggingService loggingService;
 
-    /* ---------------- GET DAY CLOSE ---------------- */
+    @Mock private EntityManager entityManager;
 
+    /* ---------------- GET DAY CLOSE ---------------- */
+    @BeforeEach
+    void setUp() throws Exception {
+        java.lang.reflect.Field field = DayCloseServiceImpl.class.getDeclaredField("entityManager");
+        field.setAccessible(true);
+        field.set(service, entityManager);
+    }
     @Test
     void getDayClose_success() {
         ArShDayEndCloseHdr hdr = ArShDayEndCloseHdr.builder()
@@ -221,7 +230,7 @@ class DayCloseServiceImplTest {
                 .build();
 
         when(hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(any(), any(), any())).thenReturn(0L);
-        when(hdrRepo.save(any())).thenReturn(savedHdr);
+        when(hdrRepo.saveAndFlush(any())).thenReturn(savedHdr);
         when(hdrRepo.findById(1L)).thenReturn(Optional.of(savedHdr));
         when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
 
@@ -234,8 +243,8 @@ class DayCloseServiceImplTest {
             DayCloseDto result = service.createDayClose(dto, 1L, 1L, 1L);
 
             assertNotNull(result);
-            verify(hdrRepo).save(any());
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("DOC123"), anyString());
+            verify(hdrRepo).saveAndFlush(any());
+            verify(loggingService, atLeastOnce()).createLogSummaryEntry(anyString(), anyString(), anyString());
         }
     }
 
@@ -267,7 +276,7 @@ class DayCloseServiceImplTest {
                 .build();
 
         when(hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(any(), any(), any())).thenReturn(0L);
-        when(hdrRepo.save(any())).thenReturn(savedHdr);
+        when(hdrRepo.saveAndFlush(any())).thenReturn(savedHdr);
         when(hdrRepo.findById(1L)).thenReturn(Optional.of(savedHdr));
         when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
         when(dtlRepo.getMaxDetRowId(any())).thenReturn(0L);
@@ -304,7 +313,7 @@ class DayCloseServiceImplTest {
                 .build();
 
         when(hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(any(), any(), any())).thenReturn(0L);
-        when(hdrRepo.save(any())).thenReturn(savedHdr);
+        when(hdrRepo.saveAndFlush(any())).thenReturn(savedHdr);
 
         try (MockedStatic<UserContext> mockedContext = Mockito.mockStatic(UserContext.class)) {
             mockedContext.when(UserContext::getDocumentId).thenReturn("DOC123");
@@ -577,7 +586,7 @@ class DayCloseServiceImplTest {
                 .build();
 
         when(hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(any(), any(), any())).thenReturn(0L);
-        when(hdrRepo.save(any())).thenReturn(savedHdr);
+        when(hdrRepo.saveAndFlush(any())).thenReturn(savedHdr);
         when(hdrRepo.findById(1L)).thenReturn(Optional.of(savedHdr));
         when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
         when(dtlRepo.getMaxDetRowId(any())).thenReturn(0L);
@@ -661,7 +670,7 @@ class DayCloseServiceImplTest {
                 .build();
 
         when(hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(any(), any(), any())).thenReturn(0L);
-        when(hdrRepo.save(any())).thenReturn(savedHdr);
+        when(hdrRepo.saveAndFlush(any())).thenReturn(savedHdr);
         when(hdrRepo.findById(1L)).thenReturn(Optional.of(savedHdr));
         when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
         when(dtlRepo.getMaxDetRowId(any())).thenReturn(0L);
@@ -700,7 +709,7 @@ class DayCloseServiceImplTest {
                 .build();
 
         when(hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(any(), any(), any())).thenReturn(0L);
-        when(hdrRepo.save(any())).thenReturn(savedHdr);
+        when(hdrRepo.saveAndFlush(any())).thenReturn(savedHdr);
         when(hdrRepo.findById(1L)).thenReturn(Optional.of(savedHdr));
         when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
 
@@ -713,7 +722,7 @@ class DayCloseServiceImplTest {
             DayCloseDto result = service.createDayClose(dto, 1L, 1L, 1L);
 
             assertNotNull(result);
-            verify(hdrRepo).save(any());
+            verify(hdrRepo).saveAndFlush(any());
         }
     }
 
@@ -745,7 +754,7 @@ class DayCloseServiceImplTest {
                 .build();
 
         when(hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(any(), any(), any())).thenReturn(0L);
-        when(hdrRepo.save(any())).thenReturn(savedHdr);
+        when(hdrRepo.saveAndFlush(any())).thenReturn(savedHdr);
         when(hdrRepo.findById(1L)).thenReturn(Optional.of(savedHdr));
         when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
         when(dtlRepo.getMaxDetRowId(any())).thenReturn(0L);

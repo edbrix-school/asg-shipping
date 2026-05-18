@@ -17,6 +17,7 @@ public class ManifestCorrectorContainerDtlDto {
     private Long detRowId;
     private String containerNumber;
     private String containerType;
+    private String equipmentIsoType;
     private String isSelectedDlv;
     private String isSelectedRtn;
 }

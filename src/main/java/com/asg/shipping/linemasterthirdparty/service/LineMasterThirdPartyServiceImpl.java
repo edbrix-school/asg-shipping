@@ -19,6 +19,7 @@ import com.asg.shipping.linemasterthirdparty.repository.ShipLineMasterThirdParty
 import com.asg.shipping.linemasterthirdparty.util.LineMasterThirdPartyMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -152,7 +153,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         ShipLineMaster saved = lineRepository.save(line);
 
         // Log creation
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), String.format("%s %s", LogDetailsEnum.CREATED, saved.getLineName()));
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getLinePoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED, saved.getLineName()));
 
         // Fetch and return with LOV data
         LineMasterThirdPartyDto result = mapper.mapToDto(saved);
@@ -184,16 +185,8 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         validateLineUpdateDTO(dto, groupPoid, id);
 
         // Store old values for logging
-        ShipLineMaster oldLine = ShipLineMaster.builder()
-                .lineName(line.getLineName())
-                .lineName2(line.getLineName2())
-                .lineAddress(line.getLineAddress())
-                .countryPoid(line.getCountryPoid())
-                .currencyPoid(line.getCurrencyPoid())
-                .billTo(line.getBillTo())
-                .active(line.getActive())
-                .seqno(line.getSeqno())
-                .build();
+        ShipLineMaster oldLine = new ShipLineMaster();
+        BeanUtils.copyProperties(line,oldLine);
 
         // Update main entity
         mapper.mapUpdateDTOToEntity(dto, line, groupPoid, userPoid, companyPoid);

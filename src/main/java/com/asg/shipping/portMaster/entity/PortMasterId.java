@@ -1,4 +1,4 @@
-package com.asg.shipping.portmaster.entity;
+package com.asg.shipping.portMaster.entity;
 
 import java.io.Serializable;
 import java.util.Objects;

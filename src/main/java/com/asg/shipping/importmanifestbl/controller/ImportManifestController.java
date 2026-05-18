@@ -9,7 +9,6 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
-import com.asg.shipping.importmanifestbl.dto.LoadEmailFaxRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -69,6 +68,7 @@ public class ImportManifestController {
     }
 
 
+    @AllowedAction(UserRolesRightsEnum.VIEW)
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Import Manifest BL retrieved successfully"),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
@@ -190,30 +190,28 @@ public class ImportManifestController {
     public ResponseEntity<?> resendCan(
             @Valid @RequestBody ResendCanRequestDto request
     ) {
-            ResendCanResponseDto response = importManifestService.resendCan(request.getTransactionPoId());
-            return success("CAN resent successfully", response);
-
+        ResendCanResponseDto response = importManifestService.resendCan(request.getTransactionPoId(), request.getUpdateDemurrage());
+        return success("CAN resent successfully", response);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(
-            summary = "Send EDI Emails",
-            description = "Send EDI emails for Import Manifest BL."
+            summary = "Get EDI Emails",
+            description = "Get EDI emails for Import Manifest BL."
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "EDI emails sent successfully"),
+            @ApiResponse(responseCode = "200", description = "EDI emails retrieved successfully"),
             @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error@Put")
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/send-edi-emails")
+    @GetMapping("/{id}/get-edi-emails")
     public ResponseEntity<?> sendEdiEmails(
-            @Valid @RequestBody SendEdiEmailsRequestDto request
+            @PathVariable Long id
     ) {
-        SendEdiEmailsResponseDto response = importManifestService.sendEdiEmails(request.getTransactionPoId());
-        return success("EDI emails sent successfully", response);
+        SendEdiEmailsResponseDto response = importManifestService.sendEdiEmails(id);
+        return success("EDI emails retrieved successfully", response);
     }
-    @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(
             summary = "Load Email/Fax Data",
             description = "Load email/fax data for selected party."
@@ -224,13 +222,13 @@ public class ImportManifestController {
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/load-email-fax")
+    @GetMapping("/load-email-fax")
     public ResponseEntity<?> loadEmailFax(
-            @Valid @RequestBody LoadEmailFaxRequestDto request
+            @RequestParam Long addressMasterPoid,
+            @RequestParam String addressType
     ) {
-            LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(request.getTransactionPoId(), null);
+            LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(addressMasterPoid, addressType);
             return success("Email/Fax data loaded successfully", response);
-
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -299,7 +297,6 @@ public class ImportManifestController {
             return success("Import Manifest BL list retrieved successfully", response);
 
 }
-    @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
             summary = "Get Default Values",
             description = "Fetch default values for Import Manifest BL creation based on document ID."
@@ -320,7 +317,6 @@ public class ImportManifestController {
 
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
             summary = "Get Container Types and Commodities Dropdown",
             description = "Fetch container types and commodities for a specific voyage to populate dropdown lists."
@@ -441,5 +437,22 @@ public class ImportManifestController {
             log.error("error",e);
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
+    }
+
+    @Operation(
+            summary = "Get Charge Tax Defaults",
+            description = "Fetch tax POID and tax percentage for a selected charge. Called when the user selects a charge from the LOV."
+    )
+    @GetMapping("/get-tax-rate")
+    public ResponseEntity<?> getChargeDefaults(
+            @Parameter(description = "Charge POID", required = true) @RequestParam Long chargePoid,
+            @Parameter(description = "Transaction Date") @RequestParam(required = false) LocalDate transactionDate
+    ) {
+        ChargeDefaultsRequestDto request = ChargeDefaultsRequestDto.builder()
+                .chargePoid(chargePoid)
+                .transactionDate(transactionDate)
+                .build();
+        ChargeDefaultsResponseDto response = importManifestService.getChargeDefaults(request);
+        return success("Charge defaults retrieved successfully", response);
     }
 }

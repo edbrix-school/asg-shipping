@@ -35,7 +35,7 @@ public class AdminContractsAgreementHdrDto {
 
     private Long agreementCompanyPoid;
     private String partyType;
-   @NotNull(message = "Party Name is required")
+    @NotNull(message = "Party Name is required")
     private Long partyPoid;
     private String newParty;
     private String newPartyName;

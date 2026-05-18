@@ -5,6 +5,8 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementHdrDto;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalRequest;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalResponse;
 import com.asg.shipping.contractsandagreements.service.ContractsAndAgreementsService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +24,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -111,5 +112,18 @@ class ContractsAndAgreementsControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         verify(service).updateContractsAndAgreements(1L, request);
+    }
+
+    @Test
+    void testRenew() {
+        ContractRenewalRequest request = new ContractRenewalRequest();
+        ContractRenewalResponse responseDto = new ContractRenewalResponse();
+        
+        when(service.renewContractsAndAgreements(request)).thenReturn(responseDto);
+
+        ResponseEntity<?> response = controller.renew(request);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(service).renewContractsAndAgreements(request);
     }
 }

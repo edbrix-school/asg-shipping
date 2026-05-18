@@ -16,7 +16,6 @@ import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
-import com.asg.shipping.remuneration.entity.ShipRemunerationMaster;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +30,6 @@ import javax.sql.DataSource;
 import java.io.InputStream;
 import java.sql.CallableStatement;
 import java.sql.Connection;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -52,16 +50,16 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final DataSource dataSource;
     private final LoggingService loggingService;
 
-    private static final String ARSHRCPTPRINTUPDATE="ARSHRCPTPRINTUPDATE";
-    private static final String TRANSACTIONPOID="transactionPoid";
-    private static final String DELIVERYORDER="Delivery Order";
+    private static final String ARSHRCPTPRINTUPDATE = "ARSHRCPTPRINTUPDATE";
+    private static final String TRANSACTIONPOID = "transactionPoid";
+    private static final String DELIVERYORDER = "Delivery Order";
 
     @Override
     @Transactional(readOnly = true)
     public DeliveryOrderIssueToCustomerDto getDeliveryOrderIssueToCustomer(Long transactionPoid) {
-        log.info("Getting delivery order with transactionPoid: {}, company poid: {}", transactionPoid,getCompanyPoid());
+        log.info("Getting delivery order with transactionPoid: {}, company poid: {}", transactionPoid, getCompanyPoid());
 
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, getCompanyPoid())
+        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
         enrichWithLovData(dto);
@@ -78,7 +76,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         String username = getUserName();
 
         // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired for validation
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid, companyPoid)
+        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
         // Validate Principal DO Number
@@ -181,7 +179,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         blManifestRepository.save(blManifest);
-        loggingService.logChanges(oldBlManifest,blManifest,ShipBlManifestHDR.class,UserContext.getDocumentId(),blManifest.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
+        loggingService.logChanges(oldBlManifest, blManifest, ShipBlManifestHDR.class, UserContext.getDocumentId(), blManifest.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         DoShPrintingDtl doShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery order ship printing detail", TRANSACTIONPOID, transactionPoid.toString()));
@@ -203,7 +201,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         doShPrintingDtlRepository.save(doShPrintingDtl);
-        loggingService.logChanges(oldDoShPrintingDtl,doShPrintingDtl,DoShPrintingDtl.class,UserContext.getDocumentId(),doShPrintingDtl.getTransactionPoid().toString(),LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
+        loggingService.logChanges(oldDoShPrintingDtl, doShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), doShPrintingDtl.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
         return transactionPoid;
     }
 
@@ -217,26 +215,23 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         // In legacy, print methods only check if document can be printed and print it.
         // All field validations are done once in doCntPrint() before printing.
         // Here we only validate print conditions, not field values.
-        
+
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-414");
         params.put("P_TRAN_NO", transactionPoid);
 
         byte[] result = generatePrintByButtonType(transactionPoid, buttonType, params);
-        if (result != null) {
-            // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 11 parameters (NOT_UPDATE) after successful print
-            // In legacy, this is called once after all 3 documents are printed in sequence.
-            // In new architecture, we call it after each successful print since printing is done separately.
-            // The stored procedure should handle being called multiple times gracefully.
-            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, ARSHRCPTPRINTUPDATE,
+        
+        // Only call the stored procedure if a PDF was actually generated
+        if (result != null && result.length > 0) {
+            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, buttonType.name(),
                     username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
                     requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
             );
             return result;
         }
-        
-        // If printing failed (result is null), don't call NOT_UPDATE
-        // This happens when document cannot be printed (print validation failed or already printed)
-        return null;
+
+        // Return an empty PDF (0 bytes) if validations failed or no data found
+        return new byte[0];
     }
 
     @Override
@@ -245,53 +240,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
-
-        // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(id, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, id.toString()));
-
-        // Validate Principal DO Number
-        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired()) && StringUtils.isBlank(requestDto.getPrincipalDoNumber()) || requestDto.getPrincipalDoNumber().trim().length() <= 3) {
-            throw new ValidationException("Principal Do number can not be blank");
-        }
-
-        // Validate Address
-        if (StringUtils.isBlank(requestDto.getDoReleasedAddressPerson())) {
-            throw new ValidationException("Address can not be blank");
-        }
-
-        // Validate ID/CPR
-        if (StringUtils.isBlank(requestDto.getDoReleasedIdPerson())) {
-            throw new ValidationException("ID/CPR can not be blank");
-        }
-
-        // Validate Name
-        if (StringUtils.isBlank(requestDto.getDoReleasedToPerson())) {
-            throw new ValidationException("Name can not be blank");
-        }
-
-        // Validate DO Priority
-        if (StringUtils.isBlank(requestDto.getDoPriority())) {
-            throw new ValidationException("Do Issue TO, can not be blank");
-        }
-
-        // Validate Original BL Release CR
-        if (StringUtils.isBlank(requestDto.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Bl issue type can not be blank");
-        }
-
-        // Validate BL Release Type Office matches Original BL Release CR
-        if (StringUtils.isBlank(dto.getBlReleaseTypeOffice())) {
-            throw new ValidationException("Office Bl issue type can not be blank");
-        }
-        if (!dto.getBlReleaseTypeOffice().equalsIgnoreCase(requestDto.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Check Bl issue type");
-        }
-
-        // Validate Delivery Sent To
-        if (StringUtils.isBlank(requestDto.getDeliverySentTo())) {
-            throw new ValidationException("Select delivery send to from dropdown list");
-        }
 
         // Validate Email Configuration
         validateEmailConfiguration(requestDto);
@@ -347,7 +295,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                 "Shipping/SH/Container_Delivery_Validity.jrxml";
         JasperReport mainReport = printService.load(templatePath);
 
-        String fslStamp="FSL_STAMP";
+        String fslStamp = "FSL_STAMP";
 
         try {
             InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/FSL_STAMP.jpg");

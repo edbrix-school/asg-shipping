@@ -4,20 +4,22 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementHdrDto;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementPicDtlDto;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementRenewalDto;
+import com.asg.shipping.contractsandagreements.dto.ContractRenewalResponse;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementHdr;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementPicDtl;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementRenewalEntity;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
-public  class ContractsAndAgreementsMapper {
+public class ContractsAndAgreementsMapper {
+    private ContractsAndAgreementsMapper() {
+    }
+
 
     public static AdminContractsAgreementHdrDto mapToExportDto(
             AdminContractsAgreementHdr hdr,
             List<AdminContractsAgreementPicDtl> picDtls,
-            List<AdminContractsAgreementRenewalEntity> renewalDtls
-    ) {
+            List<AdminContractsAgreementRenewalEntity> renewalDtls) {
 
         return AdminContractsAgreementHdrDto.builder()
                 .transactionPoid(hdr.getTransactionPoid())
@@ -69,11 +71,8 @@ public  class ContractsAndAgreementsMapper {
                 .build();
     }
 
-
-
     private static List<AdminContractsAgreementPicDtlDto> mapPicDtlList(
-            List<AdminContractsAgreementPicDtl> picDtls
-    ) {
+            List<AdminContractsAgreementPicDtl> picDtls) {
         if (picDtls == null) {
             return List.of();
         }
@@ -86,35 +85,41 @@ public  class ContractsAndAgreementsMapper {
                         .periodFrom(pic.getPeriodFrom())
                         .periodTo(pic.getPeriodTo())
                         .remarks(pic.getRemarks())
-                        .build()
-                )
+                        .build())
                 .toList();
     }
 
+    private static AdminContractsAgreementRenewalDto mapRenewalDtlToDto(AdminContractsAgreementRenewalEntity renewal) {
+        if (renewal == null) {
+            return null;
+        }
+
+        return AdminContractsAgreementRenewalDto.builder()
+                .detRowId(renewal.getId().getDetRowId())
+                .effectiveStartDate(renewal.getEffectiveStartDate())
+                .expiryDate(renewal.getExpiryDate())
+                .renewalDate(renewal.getRenewalDate())
+                .lastUpdatedBy(renewal.getLastModifiedBy())
+                .lastUpdatedDate(renewal.getLastModifiedDate())
+                .build();
+    }
+
     private static List<AdminContractsAgreementRenewalDto> mapRenewalDtlList(
-            List<AdminContractsAgreementRenewalEntity> renewalDtls
-    ) {
+            List<AdminContractsAgreementRenewalEntity> renewalDtls) {
         if (renewalDtls == null) {
             return List.of();
         }
 
         return renewalDtls.stream()
-                .map(renewal -> AdminContractsAgreementRenewalDto.builder()
-                        .effectiveStartDate(renewal.getEffectiveStartDate())
-                        .expiryDate(renewal.getExpiryDate())
-                        .renewalDate(renewal.getRenewalDate())
-                        .lastUpdatedBy(renewal.getLastModifiedBy())
-                        .lastUpdatedDate(renewal.getLastModifiedDate())
-                        .build()
-                )
+                .map(ContractsAndAgreementsMapper::mapRenewalDtlToDto)
                 .toList();
     }
 
     public static void updateHdrEntity(
             AdminContractsAgreementHdrDto dto,
-            AdminContractsAgreementHdr entity
-    ) {
-        if (dto == null || entity == null) return;
+            AdminContractsAgreementHdr entity) {
+        if (dto == null || entity == null)
+            return;
 
         entity.setCompanyPoid(UserContext.getCompanyPoid());
         entity.setGroupPoid(UserContext.getGroupPoid());
@@ -131,6 +136,7 @@ public  class ContractsAndAgreementsMapper {
         entity.setNewPartyName(dto.getNewPartyName());
         entity.setLinePoid(dto.getLinePoid());
         entity.setDeleted("N");
+        entity.setTransactionDate(dto.getTransactionDate());
         entity.setPartyContactPerson(dto.getPartyContactPerson());
         entity.setPartyContactEmail(dto.getPartyContactEmail());
         entity.setPartyContactPhone(dto.getPartyContactPhone());
@@ -155,14 +161,13 @@ public  class ContractsAndAgreementsMapper {
         entity.setSignatory(dto.getSignatory());
     }
 
-
     /* ---------------- PIC DETAILS ---------------- */
 
     public static void updatePicDtlEntity(
             AdminContractsAgreementPicDtlDto dto,
-            AdminContractsAgreementPicDtl entity
-    ) {
-        if (dto == null || entity == null) return;
+            AdminContractsAgreementPicDtl entity) {
+        if (dto == null || entity == null)
+            return;
 
         entity.setDepartmentPoid(dto.getDepartmentPoid());
         entity.setHandledUserPoid(dto.getHandledUserPoid());
@@ -171,29 +176,25 @@ public  class ContractsAndAgreementsMapper {
         entity.setRemarks(dto.getRemarks());
     }
 
-
-
     /* ---------------- RENEWAL DETAILS ---------------- */
 
     public static void updateRenewalDtlEntity(
             AdminContractsAgreementRenewalDto dto,
-            AdminContractsAgreementRenewalEntity entity
-    ) {
-        if (dto == null || entity == null) return;
+            AdminContractsAgreementRenewalEntity entity) {
+        if (dto == null || entity == null)
+            return;
 
         entity.setEffectiveStartDate(dto.getEffectiveStartDate());
         entity.setExpiryDate(dto.getExpiryDate());
         entity.setRenewalDate(dto.getRenewalDate());
     }
 
-
     public static AdminContractsAgreementRenewalEntity mapRenewalDtlDto(
-            AdminContractsAgreementRenewalDto dto
-    ) {
-        if (dto == null) return null;
+            AdminContractsAgreementRenewalDto dto) {
+        if (dto == null)
+            return null;
 
-        AdminContractsAgreementRenewalEntity entity =
-                new AdminContractsAgreementRenewalEntity();
+        AdminContractsAgreementRenewalEntity entity = new AdminContractsAgreementRenewalEntity();
 
         // reuse update logic to avoid duplication
         updateRenewalDtlEntity(dto, entity);
@@ -202,21 +203,29 @@ public  class ContractsAndAgreementsMapper {
         return entity;
     }
 
-
     public static AdminContractsAgreementPicDtl mapPicDtlDtoToEntity(
-            AdminContractsAgreementPicDtlDto dto
-    ) {
-        if (dto == null) return null;
+            AdminContractsAgreementPicDtlDto dto) {
+        if (dto == null)
+            return null;
 
-        AdminContractsAgreementPicDtl entity =
-                new AdminContractsAgreementPicDtl();
+        AdminContractsAgreementPicDtl entity = new AdminContractsAgreementPicDtl();
         updatePicDtlEntity(dto, entity);
 
         return entity;
     }
 
+    public static ContractRenewalResponse mapToContractRenewalResponse(AdminContractsAgreementRenewalEntity entity) {
+        if (entity == null) {
+            return null;
+        }
 
-
-
-
+        return ContractRenewalResponse.builder()
+                .effectiveStartDate(entity.getEffectiveStartDate())
+                .expiryDate(entity.getExpiryDate())
+                .renewalDate(entity.getRenewalDate())
+                .lastUpdatedBy(entity.getLastModifiedBy())
+                .lastUpdatedOn(entity.getLastModifiedDate())
+                .isNewlyCreated(true)
+                .build();
+    }
 }

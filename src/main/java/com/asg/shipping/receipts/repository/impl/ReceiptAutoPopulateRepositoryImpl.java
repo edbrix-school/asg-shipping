@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -233,8 +234,8 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
 
                             .containerNo((String) r[2])
 
-                            .fromDate(((LocalDateTime) r[3]))
-                            .toDate(((LocalDateTime) r[4]))
+                            .fromDate(convertToLocalDate(r[3]))
+                            .toDate(convertToLocalDate(r[4]))
 
                             .days(((Number) r[5]).longValue())
 
@@ -244,9 +245,7 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
 
                             .freeDays(((Number) r[8]).longValue())
 
-                            .emptyIn(r[9] != null
-                                    ? ((LocalDateTime) r[9])
-                                    : null)
+                            .emptyIn(convertToLocalDate(r[9]))
 
                             .build())
                     .toList();
@@ -257,6 +256,55 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
                     "Failed to auto populate  containers for BL POID: " + blPoid,
                     e
             );
+        }
+    }
+
+    @Override
+    public ReceiptAutoPopulateChargeDto findDemurrageChargeRow(Long blPoid, Long companyPoid, BigDecimal totalDemAmount) {
+        if (totalDemAmount == null || totalDemAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+        try {
+            String sql = """
+                SELECT 
+                    PARAMETER_VALUE,
+                    (SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN (
+                        SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH 
+                        INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID 
+                        WHERE TO_DATE(sysdate) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) AND CHARGE_POID=PARAMETER_VALUE
+                    )) Tax_poid,
+                    (SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN (
+                        SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH 
+                        INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID 
+                        WHERE TO_DATE(sysdate) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) AND CHARGE_POID=PARAMETER_VALUE
+                    )) Tax_Percentage,
+                    RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', :companyPoid, 'N') TAX_APPLICABLE
+                FROM GLOBAL_PARAMETERS WHERE PARAMETER_KEYID_TYPE IN ('SHDEMURRAGE')
+                """;
+
+            Object[] row = (Object[]) entityManager.createNativeQuery(sql)
+                    .setParameter("companyPoid", companyPoid)
+                    .getSingleResult();
+
+            BigDecimal taxPercentage = (BigDecimal) row[2];
+            BigDecimal taxAmount = BigDecimal.ZERO;
+            if (row[1] != null && "Y".equalsIgnoreCase((String) row[3])) {
+                taxAmount = totalDemAmount.multiply(taxPercentage.divide(new BigDecimal("100")));
+            }
+
+            return ReceiptAutoPopulateChargeDto.builder()
+                    .blPoid(blPoid)
+                    .chargePoid(((Number) row[0]).longValue())
+                    .amount(totalDemAmount)
+                    .taxPoid(row[1] != null ? ((Number) row[1]).longValue() : null)
+                    .taxPercentage(taxPercentage)
+                    .taxAmount(taxAmount)
+                    .totalAmount(totalDemAmount.add(taxAmount))
+                    .addFlag("Y")
+                    .build();
+        } catch (Exception e) {
+            log.warn("Demurrage charge parameter not configured: {}", e.getMessage());
+            return null;
         }
     }
 
@@ -273,5 +321,35 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
         }
     }
 
+    @Override
+    public java.time.LocalDate findArrivalDate(Long blPoid, String containerNo) {
+        try {
+            String sql = """
+                SELECT TO_DATE(NVL(VHDR.ARRIVAL_DATE, VHDR.EXPECTED_DATE))
+                FROM SHIP_BL_MANIFEST_HDR BLHDR
+                INNER JOIN SHIP_VOYAGE_HDR VHDR
+                    ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID
+                INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL
+                    ON CONTAINERDTL.TRANSACTION_POID = BLHDR.TRANSACTION_POID
+                WHERE BLHDR.TRANSACTION_POID = :blPoid
+                  AND CONTAINERDTL.CONTAINER_NO = :containerNo
+            """;
+            Object result = entityManager.createNativeQuery(sql)
+                    .setParameter("blPoid", blPoid)
+                    .setParameter("containerNo", containerNo)
+                    .getSingleResult();
+            return convertToLocalDate(result);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private java.time.LocalDate convertToLocalDate(Object date) {
+        if (date == null) return null;
+        if (date instanceof LocalDate) return (LocalDate) date;
+        if (date instanceof LocalDateTime) return ((LocalDateTime) date).toLocalDate();
+        if (date instanceof java.util.Date) return ((java.util.Date) date).toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        return null;
+    }
 
 }

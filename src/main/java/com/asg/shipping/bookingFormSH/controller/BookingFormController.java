@@ -1,6 +1,7 @@
 package com.asg.shipping.bookingFormSH.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -8,11 +9,13 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
 import com.asg.shipping.bookingFormSH.service.BookingFormService;
-import com.asg.shipping.portmaster.dto.PortMasterResponse;
+import com.asg.shipping.exceptions.ValidationException;
+import com.asg.shipping.portMaster.dto.PortMasterResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,6 +25,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.util.StringUtil;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
@@ -43,7 +47,6 @@ public class BookingFormController {
     private final BookingFormService bookingFormService;
     private final ExcelExportService excelExportService;
     private final LoggingService loggingService;
-
     private static final String FAILEDTOGENERATEPDF = "Failed to generate PDF: ";
     private static final String FAILEDTOGENERATEPDFFORBOOKINGFORM = "Failed to generate PDF for Banking Form SH: {}";
 
@@ -117,9 +120,10 @@ public class BookingFormController {
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBookingForm(
-            @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
+            @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Delete request for Booking Form with id: {}", id);
-        bookingFormService.deleteBookingForm(id);
+        bookingFormService.deleteBookingForm(id, deleteReasonDto);
         loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
         return success("Booking Form deleted successfully");
     }
@@ -128,7 +132,7 @@ public class BookingFormController {
     @Operation(summary = "Generate COPRAR Booking Form", description = "Generate COPRAR Booking Form", responses = {
             @ApiResponse(responseCode = "200", description = "Generate COPRAR Booking Form successfully"),
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
-    @PostMapping("/{id}/generate-coprar")
+    @PostMapping("/{id}/generate-copran")
     public ResponseEntity<?> generateCoprarBooking(
             @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id) {
         log.info("Generate COPRAR booking file request for transaction: {}", id);
@@ -144,7 +148,7 @@ public class BookingFormController {
             @ApiResponse(responseCode = "401", description = "Unauthorized")}, security = @SecurityRequirement(name = "bearerAuth"))
     @GetMapping("/empty-shipper")
     public ResponseEntity<?> getEmptyShipper() {
-        Long companyPoid=UserContext.getCompanyPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
         log.info("Get empty shipper request for company: {}", companyPoid);
         String shipperPoid = bookingFormService.getEmptyShipper(companyPoid);
         return success("Empty shipper retrieved successfully", shipperPoid);
@@ -231,5 +235,158 @@ public class BookingFormController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/container/{transactionPoid}")
+    public ResponseEntity<?> cntReturnBookingPrintForm(
+            @Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid,
+            @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp) {
+        try {
+            byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, null);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=container-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF).body(pdf);
+        } catch (Exception e) {
+            log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
+            return error(FAILEDTOGENERATEPDF + e.getMessage(), 500);
+        }
+    }
 
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/container-individual/{transactionPoid}")
+    public ResponseEntity<?> cntReturnBookingPrintFormIndividual(
+            @Parameter(description = "Transaction POID", example = "21") @PathVariable Long transactionPoid,
+            @Parameter(description = "Print Stamp", example = "Y") @RequestParam String printStamp,
+            @Parameter(description = "Container Number") @RequestParam(required = true) String containerNo) {
+        try {
+            if (StringUtil.isBlank(containerNo)) throw new ValidationException("Container number is required");
+            byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, containerNo);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=container-individual" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF).body(pdf);
+        } catch (Exception e) {
+            log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
+            return error(FAILEDTOGENERATEPDF + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(summary = "Search Container Inventory Empty In",
+            description = "Fetches paginated records from VW_CONTAINER_INVENTORY_EMPTYIN with filter and search support. " +
+                    "Use 'filters' array for field-level filtering (BL_NUMBER, CONTAINER_NO, LINE, EQUIPMENT_ISO_TYPE) " +
+                    "or 'searchField'/'searchValue' for single field / GLOBALSEARCH.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Records retrieved successfully",
+                            content = @Content(mediaType = "application/json")),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized")
+            },
+            security = @SecurityRequirement(name = "bearerAuth"))
+    @PostMapping("/container-inventory/search")
+    public ResponseEntity<?> searchContainerInventory(
+            @ParameterObject Pageable pageable,
+            @RequestParam(required = false) String containerNo,
+            @RequestParam(required = false) String isoType,
+            @RequestParam(required = true) Long linePoid) {
+
+        Map<String, Object> result = bookingFormService.searchContainerInventory(
+                UserContext.getDocumentId(), containerNo, isoType, linePoid, pageable);
+
+        return success("Container inventory records retrieved successfully", result);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Customer Address (DocId: 100-140)",
+            description = "Retrieve customer address details for a specific address type (MAIN, DELIVERY, etc.).",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Customer address retrieved successfully"),
+                    @ApiResponse(responseCode = "404", description = "Address not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            },
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/customer-address/{addressMasterPoid}")
+    public ResponseEntity<?> getCustomerAddress(
+            @Parameter(description = "Address Master POID", required = true, example = "111")
+            @PathVariable Long addressMasterPoid,
+            @Parameter(description = "Address Type (MAIN, DELIVERY, etc.)", required = false, example = "MAIN")
+            @RequestParam(required = false, defaultValue = "MAIN") String addressType) {
+        try {
+            log.info("Get customer address request for addressMasterPoid: {}, addressType: {}", addressMasterPoid, addressType);
+            BookingFormAddressMasterDto result = bookingFormService.getCustomerAddress(addressMasterPoid, addressType);
+            return success("Customer address retrieved successfully", result);
+        } catch (Exception e) {
+            return internalServerError("Error fetching customer address: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Customer Address (DocId: 100-140)",
+            description = "Retrieve Datas From the Container Based on the Split Values",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Transfer Datas retrieved successfully"),
+                    @ApiResponse(responseCode = "404", description = "Transfer Data Not FOund not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            },
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PostMapping("/transfer/{transactionPoid}")
+    public ResponseEntity<?> transferBooking(
+            @PathVariable Long transactionPoid) {
+        log.info("Transfer poid: " + transactionPoid);
+        bookingFormService.transferBookingWithContainers(transactionPoid);
+        return success("Container Transferred Successfully");
+    }
+
+
+    @Operation(
+            summary = "Import file",
+            description = "Import Excel file containing TDR details using PROC_PDA_IMPORT_TDR_DETAIL2 stored procedure.",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Successfully imported TDR file",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid file or import error",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "401",
+                            description = "Unauthorized - Authentication required",
+                            content = @Content(mediaType = "application/json")
+                    )
+            },
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @PostMapping(value = "/{transactionPoid}/container-details/import-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> importTdrFile(
+            @Parameter(description = "Transaction POID", required = true)
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "Excel file containing Container details", required = true)
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file
+    ) {
+        String result = bookingFormService.importFileWithTransaction(file, transactionPoid, UserContext.getGroupPoid(), UserContext.getCompanyPoid(), UserContext.getUserPoid());
+        return success(result, null);
+    }
+
+    @GetMapping("/download-stuffing-advice/{id}")
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    public ResponseEntity<byte[]> downloadStuffingAdviceTemplate(
+            @Parameter(description = "Transaction POID", required = true, example = "5001") @PathVariable Long id){
+        log.info("Download Stuffing Advice Template: {}", id);
+        byte[] excel = bookingFormService.exportStuffingAdviceExcel(id);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=Stuffing_Advice_Template.xlsx")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excel);
+    }
 }

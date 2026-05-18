@@ -25,6 +25,8 @@ import com.asg.shipping.daycloseshiping.repository.ArShDayEndCloseDtlRepository;
 import com.asg.shipping.daycloseshiping.repository.ArShDayEndCloseHdrRepository;
 import com.asg.shipping.daycloseshiping.repository.ArShReceiptHdrRepository;
 import com.asg.shipping.daycloseshiping.util.DayCloseMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
@@ -65,6 +67,9 @@ public class DayCloseServiceImpl implements DayCloseService {
     private final DataSource dataSource;
     private final LoggingService loggingService;
 
+    @PersistenceContext
+    private final EntityManager entityManager;
+
     private static final String TRANSACTION_POID="TRANSACTION_POID";
     private static final String TRANSACTIONPOID="transactionPoid";
 
@@ -99,15 +104,15 @@ public class DayCloseServiceImpl implements DayCloseService {
         ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
         DayCloseMapper.mapCreateDTOToEntity(header, hdr, groupPoid, companyPoid);
 
-        hdr = hdrRepo.save(hdr);
+        hdr = hdrRepo.saveAndFlush(hdr);
+        entityManager.refresh(hdr);
 
         saveDenominations(hdr.getTransactionPoid(), dto.getDenominations());
 
         String status = callProcGlChoIntoChqMainShip(hdr.getTransactionPoid(), hdr.getTransactionDate(), UserContext.getDocumentId(),
                 hdr.getDocRef(), groupPoid, companyPoid, userPoid);
         if (status != null && !status.startsWith("SUCCESS")) throw new IllegalStateException(status);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), hdr.getTransactionPoid().toString());
-
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(),hdr.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), hdr.getDocRef()));
         return getDayClose(hdr.getTransactionPoid(), groupPoid, companyPoid);
     }
 

@@ -6,6 +6,7 @@ import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -83,5 +84,16 @@ public interface LineTariffsService {
      * @param type "DMG" for import demurrage, "DTN" for export detention
      */
     void copySlabsToPayable(Long id, String type);
+
+    /**
+     * Load container types into both collectable and payable detail tables.
+     * IMP: inserts into SHIP_LINE_TARIFF_IMP_DTL and SHIP_LINE_TARIFF_IMP_PAY_DTL
+     * EXP: inserts into SHIP_LINE_TARIFF_EXP_DTL and SHIP_LINE_TARIFF_EXP_PAY_DTL
+     *
+     * @param transactionPoid TRANSACTION_POID of the tariff header
+     * @param type            "IMP" for Import Demurrage, "EXP" for Export Detention
+     * @return Updated LineTariffDto
+     */
+    void loadContainerTypes(Long transactionPoid, String type);
 }
 

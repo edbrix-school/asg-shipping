@@ -1,6 +1,7 @@
 package com.asg.shipping.salesinvoice.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
@@ -285,10 +286,11 @@ public class SalesInvoiceShippingController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteSalesInvoice(
             @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         try {
             log.info("Delete request for Sales Invoice with id: {}", id);
-            service.deleteSalesInvoice(id);
+            service.deleteSalesInvoice(id, deleteReasonDto);
             return success("Sales Invoice deleted successfully", null);
         } catch (Exception e) {
             return internalServerError("Error deleting Sales Invoice: " + e.getMessage());
@@ -320,7 +322,7 @@ public class SalesInvoiceShippingController {
                             value = """
                                     {
                                       "blPoid": 456,
-                                      "blType": "IMPORT"
+                                      "blTypeInvoice": "IMPORT"
                                     }
                                     """
                     )
@@ -504,8 +506,8 @@ public class SalesInvoiceShippingController {
     public ResponseEntity<?> createFFPurchaseJournal(
             @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
             @PathVariable Long id,
-            @Parameter(description = "FF Job Transaction POID", required = true, example = "789")
-            @RequestParam Long ffJobPoid) {
+            @Parameter(description = "FF Job Transaction POID", required = false, example = "789")
+            @RequestParam(required = false) Long ffJobPoid) {
         try {
             log.info("Create FF purchase journal request for invoice id: {}, FF Job POID: {}", id, ffJobPoid);
             CreateFFPurchaseJournalResponseDTO result = service.createFFPurchaseJournal(id, ffJobPoid);
@@ -612,20 +614,21 @@ public class SalesInvoiceShippingController {
                             name = "Load BL Data Example",
                             value = """
                                     {
-                                      "blPoid": 456
+                                      "lovName": "ALLBLNUMBER_INV",
+                                      "transactionPoid": null
                                     }
                                     """
                     )
             )
     )
-    @PostMapping("/{id}/load-bl-data")
+    @PostMapping("/{blPoid}/load-bl-data")
     public ResponseEntity<?> loadBlData(
             @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
-            @PathVariable Long id,
+            @PathVariable Long blPoid,
             @Valid @RequestBody LoadBlDataRequestDTO request) {
         try {
-            log.info("Load BL data request for invoice id: {}", id);
-            var result = service.loadBlData(id, request);
+            log.info("Load BL data request for invoice id: {}", blPoid);
+            var result = service.loadBlData(blPoid, request);
             return success("BL data loaded successfully", result);
         } catch (Exception e) {
             return internalServerError("Error loading BL data: " + e.getMessage());
