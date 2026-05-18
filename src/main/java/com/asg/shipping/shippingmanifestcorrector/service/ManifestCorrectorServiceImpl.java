@@ -460,26 +460,26 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             return;
         }
 
-//        enrichLovByPoid(parseLongSafely(dto.getBlNumber()), dto::setBlNumberDet, "SHIP_BL_REPRINT");
-//        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE");
-//        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER");
-//        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER");
-//        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD");
-//        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE");
-//        enrichLovByPoid(dto.getCompanyPoid(), dto::setCompanyDet, "COMPANY");
+        enrichLovByPoid(parseLongSafely(dto.getBlNumber()), dto::setBlNumberDet, "SHIP_BL_REPRINT");
+        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE");
+        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER");
+        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER");
+        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD");
+        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE");
+        enrichLovByPoid(dto.getCompanyPoid(), dto::setCompanyDet, "COMPANY");
 
         if (dto.getChargesDetails() != null) {
             for (ManifestCorrectorChargeDtlDto charge : dto.getChargesDetails()) {
-//                enrichLovByPoid(charge.getChargePoid(), charge::setChargeDet, "CHARGE_MASTER");
-//                enrichLovByPoid(charge.getPaidAtPortPoid(), charge::setPaidAtPortDet, "PORT_MASTER");
-//                enrichLovByCode(charge.getCurrencyCode(), charge::setCurrencyDet, "CURRENCY");
-//                enrichLovByCode(charge.getChargeType(), charge::setChargeTypeDet, "CHARGE_TYPE");
-//                enrichLovByCode(charge.getFreightType(), charge::setFreightTypeDet, "SHIP_FREIGHT_TYPE");
-//                enrichLovByCode(charge.getChargeBasisOn(), charge::setChargeBasisOnDet, "CONTAINER_TYPE_MASTER");
+                enrichLovByPoid(charge.getChargePoid(), charge::setChargeDet, "CHARGE_MASTER");
+                enrichLovByPoid(charge.getPaidAtPortPoid(), charge::setPaidAtPortDet, "PORT_MASTER");
+                enrichLovByCode(charge.getCurrencyCode(), charge::setCurrencyDet, "CURRENCY");
+                enrichLovByCode(charge.getChargeType(), charge::setChargeTypeDet, "CHARGE_TYPE");
+                enrichLovByCode(charge.getFreightType(), charge::setFreightTypeDet, "SHIP_FREIGHT_TYPE");
+                enrichLovByCode(charge.getChargeBasisOn(), charge::setChargeBasisOnDet, "CONTAINER_TYPE_MASTER");
             }
         }
     }
@@ -489,19 +489,19 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             return;
         }
 
-//        enrichLovByPoid(dto.getBlPoid(), dto::setBlDet, "SHIP_BL_REPRINT");
-//        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER");
-//        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE");
-//        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER");
-//        enrichLovByCode(dto.getBlType(), dto::setBlTypeDet, "BL_TYPE");
-//        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD");
-//        enrichLovByPoid(dto.getPayableGlPoid(), dto::setPayableGlDet, "GL_MASTER_LEDGERS");
-//        enrichLovByPoid(dto.getIncomeGlPoid(), dto::setIncomeGlDet, "GL_MASTER_LEDGERS");
-//        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER");
-//        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE");
+        enrichLovByPoid(dto.getBlPoid(), dto::setBlDet, "SHIP_BL_REPRINT");
+        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER");
+        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE");
+        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER");
+        enrichLovByCode(dto.getBlType(), dto::setBlTypeDet, "BL_TYPE");
+        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD");
+        enrichLovByPoid(dto.getPayableGlPoid(), dto::setPayableGlDet, "GL_MASTER_LEDGERS");
+        enrichLovByPoid(dto.getIncomeGlPoid(), dto::setIncomeGlDet, "GL_MASTER_LEDGERS");
+        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER");
+        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE");
     }
 
     private void enrichLovByPoid(Long poid, Consumer<LovGetListDto> setter, String lovName) {
