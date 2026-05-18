@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 @Builder
 public class ManifestCorrectorChargeDtlDto {
 
+    private String actionType;
     private Long detRowId;
     private Long chargePoid;
     private LovGetListDto chargeDet;
@@ -44,4 +45,3 @@ public class ManifestCorrectorChargeDtlDto {
     private BigDecimal revPayable;
     private BigDecimal revIncome;
 }
-

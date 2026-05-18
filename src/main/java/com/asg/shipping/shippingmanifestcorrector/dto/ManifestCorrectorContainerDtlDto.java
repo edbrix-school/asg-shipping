@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ManifestCorrectorContainerDtlDto {
 
+    private String actionType;
     private Long detRowId;
     private String containerNumber;
     private String containerType;
@@ -21,4 +22,3 @@ public class ManifestCorrectorContainerDtlDto {
     private String isSelectedDlv;
     private String isSelectedRtn;
 }
-
