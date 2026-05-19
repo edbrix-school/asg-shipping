@@ -150,14 +150,14 @@ public class ImportManifestBlController {
     public ResponseEntity<?> updateImportManifestBl(
             @Parameter(description = "Transaction POID", required = true, example = "12345")
             @PathVariable Long id,
-            @Valid @RequestBody ImportManifestBlUpdateDTO dto) {
+            @Valid @RequestBody ImportManifestUpdateOpsDto dto) {
 
         log.info("Updating Import Manifest BL with id: {}", id);
 
         Long companyPoid = getCompanyPoid();
         Long groupPoid = getGroupPoid();
 
-        ImportManifestBlRequestDto updated = service.updateImportManifestBl(id, dto, companyPoid, groupPoid);
+        ImportManifestUpdateOpsDto updated = service.updateImportManifestUpdateOps(id, dto, companyPoid, groupPoid);
 
         log.info("Successfully updated Import Manifest BL with id: {}", id);
         return ApiResponse.success("Import Manifest BL updated successfully", updated);
@@ -176,7 +176,7 @@ public class ImportManifestBlController {
                     description = "Successfully retrieved Import Manifest BL record",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = ImportManifestBlRequestDto.class)
+                            schema = @Schema(implementation = ImportManifestUpdateOpsDto.class)
                     )
             ),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -190,7 +190,7 @@ public class ImportManifestBlController {
             @PathVariable Long id) {
 
         log.info("Getting Import Manifest BL with id: {}", id);
-        ImportManifestBlRequestDto manifestBl = service.getImportManifestBl(id);
+        ImportManifestUpdateOpsDto manifestBl = service.getImportManifestUpdateOps(id);
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved Import Manifest BL with id: {}", id);
         return ApiResponse.success("Import Manifest BL retrieved successfully", manifestBl);
@@ -225,30 +225,6 @@ public class ImportManifestBlController {
         return ApiResponse.success("Import Manifest BL deleted successfully");
     }
 
-    @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(
-            summary = "Update Email Verification",
-            description = "Update email verification status for Import Manifest BL."
-    )
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Email verification updated successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping("/update-email-verification")
-    public ResponseEntity<?> updateEmailVerification(
-            @Valid @RequestBody EmailVerificationRequestDto request
-    ) {
-        try {
-            EmailVerificationResponseDto response = service.updateEmailVerification(request.getTransactionPoId(), request);
-            return success("Email verification updated successfully", response);
-        } catch (ResourceNotFoundException e) {
-            return notFound(e.getMessage());
-        } catch (Exception e) {
-            return internalServerError("Failed to update email verification: " + e.getMessage());
-        }
-    }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(
@@ -275,30 +251,6 @@ public class ImportManifestBlController {
         }
     }
 
-    @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(
-            summary = "Get EDI Emails",
-            description = "Get EDI emails for Import Manifest BL."
-    )
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "EDI emails retrieved successfully"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient permissions"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/{id}/send-edi-emails")
-    public ResponseEntity<?> sendEdiEmails(
-            @PathVariable Long id
-    ) {
-        try {
-            SendEdiEmailsResponseDto response = service.sendEdiEmails(id);
-            return success("EDI emails retrieved successfully", response);
-        } catch (ResourceNotFoundException e) {
-            return notFound(e.getMessage());
-        } catch (Exception e) {
-            return internalServerError("Failed to retrieve EDI emails: " + e.getMessage());
-        }
-    }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(
