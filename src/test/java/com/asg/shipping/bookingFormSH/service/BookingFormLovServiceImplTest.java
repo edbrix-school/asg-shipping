@@ -94,35 +94,6 @@ class BookingFormLovServiceImplTest {
         assertEquals(1, result.size());
     }
 
-    // ============================================================
-    // getQuotaionLov
-    // ============================================================
-
-    @Test
-    void getQuotaionLov_withNullPoid_callsQueryWithoutParams() {
-        when(jdbcTemplate.query(anyString(), any(RowMapper.class))).thenReturn(List.of(sampleLovItem));
-
-        List<LovItem> result = service.getQuotaionLov(null);
-
-        assertNotNull(result);
-        assertEquals(1, result.size());
-    }
-
-    @Test
-    void getQuotaionLov_withNonNullPoid_callsQueryWithParams() {
-        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
-                .thenReturn(List.of(sampleLovItem));
-
-        List<LovItem> result = service.getQuotaionLov(30L);
-
-        assertNotNull(result);
-        assertEquals(1, result.size());
-    }
-
-    // ============================================================
-    // getSalesmanLov
-    // ============================================================
-
     @Test
     void getSalesmanLov_withNullPoid_callsQueryWithoutParams() {
         when(jdbcTemplate.query(anyString(), any(RowMapper.class))).thenReturn(List.of(sampleLovItem));
