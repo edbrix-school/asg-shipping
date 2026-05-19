@@ -24,18 +24,12 @@ public interface ExportManifestBlService {
     void deleteExportBl(Long transactionPoid);
 
     // General Cargo Details Operations
-    List<GeneralCargoDetailDto> getGeneralCargoDetails(Long transactionPoid);
-    
     List<GeneralCargoDetailDto> bulkSaveGeneralCargoDetails(Long transactionPoid, BulkSaveRequest<GeneralCargoDetailDto> request);
 
     // Container Details Operations
-    List<ContainerDetailDto> getContainerDetails(Long transactionPoid);
-    
     List<ContainerDetailDto> bulkSaveContainerDetails(Long transactionPoid, BulkSaveRequest<ContainerDetailDto> request);
 
     // Cargo Description and Marks Operations
-    List<CargoDescriptionDto> getCargoDescription(Long transactionPoid);
-    
     List<CargoDescriptionDto> bulkSaveCargoDescription(Long transactionPoid, BulkSaveRequest<CargoDescriptionDto> request);
     
     List<CargoMarksDto> getCargoMarks(Long transactionPoid);

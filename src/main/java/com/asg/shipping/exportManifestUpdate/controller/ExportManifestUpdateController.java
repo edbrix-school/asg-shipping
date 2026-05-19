@@ -6,11 +6,15 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService;
+import com.asg.shipping.importmanifestbl.service.ImportManifestService;
+import com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +40,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.error;
 public class ExportManifestUpdateController {
 
     private final ExportManifestBlService service;
+    private final ImportManifestService importManifestService;
 
     // ========== Header Operations ==========
 
@@ -176,32 +181,6 @@ public class ExportManifestUpdateController {
 
     // ========== General Cargo Details Operations ==========
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(summary = "Get General Cargo Details", description = "Retrieves all general cargo details for an Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
-    @GetMapping("/{transactionPoid}/general-cargo-details")
-    public ResponseEntity<?> getGeneralCargoDetails(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("General cargo details retrieved successfully", service.getGeneralCargoDetails(transactionPoid));
-    }
-
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Bulk Save General Cargo Details", description = "Bulk save general cargo details (create, update, delete in single transaction)")
     @Parameters({
@@ -232,32 +211,6 @@ public class ExportManifestUpdateController {
     }
 
     // ========== Container Details Operations ==========
-
-    @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(summary = "Get Container Details", description = "Retrieves all container details for an Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
-    @GetMapping("/{transactionPoid}/container-details")
-    public ResponseEntity<?> getContainerDetails(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Container details retrieved successfully", service.getContainerDetails(transactionPoid));
-    }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Bulk Save Container Details", description = "Bulk save container details (create, update, delete in single transaction)")
@@ -290,32 +243,6 @@ public class ExportManifestUpdateController {
 
     // ========== Cargo Description and Marks Operations ==========
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(summary = "Get Cargo Description", description = "Retrieves all cargo description details for an Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
-    @GetMapping("/{transactionPoid}/cargo-description")
-    public ResponseEntity<?> getCargoDescription(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Cargo description retrieved successfully", service.getCargoDescription(transactionPoid));
-    }
-
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Bulk Save Cargo Description", description = "Bulk save cargo description (create, update, delete in single transaction)")
     @Parameters({
@@ -345,6 +272,24 @@ public class ExportManifestUpdateController {
                 service.bulkSaveCargoDescription(transactionPoid, request));
     }
 
+    @Operation(
+            summary = "Load Email/Fax Data",
+            description = "Load email/fax data for selected party."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Email/Fax data loaded successfully"),
+            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
+            @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/load-email-fax")
+    public ResponseEntity<?> loadEmailFax(
+            @RequestParam Long addressMasterPoid,
+            @RequestParam String addressType
+    ) {
+        LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(addressMasterPoid, addressType);
+        return success("Email/Fax data loaded successfully", response);
+    }
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get Cargo Marks", description = "Retrieves all cargo marks details for an Export BL")
     @Parameters({
