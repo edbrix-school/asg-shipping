@@ -13,6 +13,139 @@ import java.util.stream.Collectors;
 @Component
 public class ImportManifestBlMapper {
 
+    public ImportManifestUpdateOpsDto mapToScreenDto(ImportManifestBlRequestDto requestDto) {
+        if (requestDto == null) {
+            return null;
+        }
+        return ImportManifestUpdateOpsDto.builder()
+                .transactionPoid(requestDto.getTransactionPoid())
+                .docRef(requestDto.getDocRef())
+                .voyageTransactionPoid(requestDto.getVoyageTransactionPoid())
+                .blNumber(requestDto.getBlNumber())
+                .blType(requestDto.getBlType())
+                .cargoType(requestDto.getCargoType())
+                .noOfOrgnlBls(requestDto.getNoOfOrgnlBls())
+                .typeOfMove(requestDto.getTypeOfMove())
+                .demFreeDays(requestDto.getDemFreeDays())
+                .demRate(requestDto.getDemRate())
+                .bookedByPp(requestDto.getBookedByPp())
+                .allInOneFreight(requestDto.getAllInOneFreight())
+                .agentReference(requestDto.getAgentReference())
+                .exportReference(requestDto.getExportReference())
+                .remarks(requestDto.getRemarks())
+                
+                .shipperEdiName(requestDto.getShipperEdiName())
+                .shipperEdiAddress(requestDto.getShipperEdiAddress())
+                .consigneeEdiName(requestDto.getConsigneeEdiName())
+                .consigneeEdiAddress(requestDto.getConsigneeEdiAddress())
+                .consigneePoid(requestDto.getConsigneePoid())
+                .bookingPartyPoid(requestDto.getBookingPartyPoid())
+                
+                .preCarriedBy(requestDto.getPreCarriedBy())
+                .placeOfReceiptPoid(requestDto.getPlaceOfRecieptPoid())
+                .placeOfDeliveryPoid(requestDto.getPlaceOfDelieveryPoid())
+                .portOfLoadingPoid(requestDto.getPortOfLoadingPoid())
+                .portOfDischargePoid(requestDto.getPortOfDischargePoid())
+                
+                .comodityPoid(requestDto.getComodityPoid())
+                .totalNetVolume(requestDto.getTotalNetVolume())
+                .totalWeight(requestDto.getTotalWeight())
+                .totalNetWeight(requestDto.getTotalNetWeight())
+                .weightUnit(requestDto.getWeightUnit())
+                .unitPack(requestDto.getUnitPack())
+                .totalNoOfPacks(requestDto.getTotalNoOfPacks())
+                
+                .notify1EdiName(requestDto.getNotify1EdiName())
+                .notify1EdiAddress(requestDto.getNotify1EdiAddress())
+                .notify2EdiName(requestDto.getNotify2EdiName())
+                .notify2EdiAddress(requestDto.getNotify2EdiAddress())
+                .notify3EdiName(requestDto.getNotify3EdiName())
+                .notify3EdiAddress(requestDto.getNotify3EdiAddress())
+                .notifyPoid1(requestDto.getNotifyPoid1())
+                .notifyPoid2(requestDto.getNotifyPoid2())
+                .notifyPoid3(requestDto.getNotifyPoid3())
+                
+                .holdReason(requestDto.getHoldReason())
+                .holdCanDo(requestDto.getHoldCanDo())
+                .holdRemarks(requestDto.getHoldRemarks())
+                .manuallyCanSend(requestDto.getManuallyCanSend())
+                .manifestEmailVerified(requestDto.getManifestEmailVerified())
+                .emailVerifiedWithSpecialC(requestDto.getEmailVerifiedWithSpecialC())
+                .doNo(requestDto.getDoNo())
+                .freightStatus(requestDto.getFreightStatus())
+                
+                .generalCargoDetails(requestDto.getGeneralCargoDetails())
+                .cargoDescriptions(requestDto.getCargoDescriptions())
+                .containers(requestDto.getContainers())
+                .chargeDetails(requestDto.getChargeDetails())
+                .partBls(requestDto.getPartBls())
+                .addressDetails(requestDto.getNotifyParties())
+                .mafiDetails(requestDto.getMafiDetails())
+                .build();
+    }
+
+    public ImportManifestBlUpdateDTO mapScreenDtoToUpdateDto(ImportManifestUpdateOpsDto screenDto) {
+        if (screenDto == null) {
+            return null;
+        }
+        return ImportManifestBlUpdateDTO.builder()
+                .voyageTransactionPoid(screenDto.getVoyageTransactionPoid())
+                .blNumber(screenDto.getBlNumber())
+                .agentReference(screenDto.getAgentReference())
+                .consigneePoid(screenDto.getConsigneePoid())
+                .notifyPoid1(screenDto.getNotifyPoid1())
+                .notifyPoid2(screenDto.getNotifyPoid2())
+                .notifyPoid3(screenDto.getNotifyPoid3())
+                .quotationTransactionPoid(screenDto.getQuotationTransactionPoid())
+                .salesmanPoid(screenDto.getSalesmanPoid())
+                .comodityPoid(screenDto.getComodityPoid())
+                .noOfOrgnlBls(screenDto.getNoOfOrgnlBls())
+                .exportReference(screenDto.getExportReference())
+                .typeOfMove(screenDto.getTypeOfMove())
+                .preCarriedBy(screenDto.getPreCarriedBy())
+                .totalNetVolume(screenDto.getTotalNetVolume())
+                .totalWeight(screenDto.getTotalWeight())
+                .totalNetWeight(screenDto.getTotalNetWeight())
+                .weightUnit(screenDto.getWeightUnit())
+                .unitPack(screenDto.getUnitPack())
+                .totalNoOfPacks(screenDto.getTotalNoOfPacks())
+                .placeOfRecieptPoid(screenDto.getPlaceOfReceiptPoid())
+                .placeOfDelieveryPoid(screenDto.getPlaceOfDeliveryPoid())
+                .portOfLoadingPoid(screenDto.getPortOfLoadingPoid())
+                .portOfDischargePoid(screenDto.getPortOfDischargePoid())
+                .remarks(screenDto.getRemarks())
+                .shipperEdiName(screenDto.getShipperEdiName())
+                .shipperEdiAddress(screenDto.getShipperEdiAddress())
+                .consigneeEdiName(screenDto.getConsigneeEdiName())
+                .consigneeEdiAddress(screenDto.getConsigneeEdiAddress())
+                .notify1EdiName(screenDto.getNotify1EdiName())
+                .notify1EdiAddress(screenDto.getNotify1EdiAddress())
+                .notify2EdiName(screenDto.getNotify2EdiName())
+                .notify2EdiAddress(screenDto.getNotify2EdiAddress())
+                .notify3EdiName(screenDto.getNotify3EdiName())
+                .notify3EdiAddress(screenDto.getNotify3EdiAddress())
+                .bookingPartyPoid(screenDto.getBookingPartyPoid())
+                .bookedByPp(screenDto.getBookedByPp())
+                .manuallyCanSend(screenDto.getManuallyCanSend())
+                .allInOneFreight(screenDto.getAllInOneFreight())
+                .holdRemarks(screenDto.getHoldRemarks())
+                .holdReason(screenDto.getHoldReason())
+                .holdCanDo(screenDto.getHoldCanDo())
+                .doNo(screenDto.getDoNo())
+                .freightStatus(screenDto.getFreightStatus())
+                .cargoType(screenDto.getCargoType())
+                .blType(screenDto.getBlType())
+                
+                .notifyParties(screenDto.getAddressDetails())
+                .generalCargoDetails(screenDto.getGeneralCargoDetails())
+                .containers(screenDto.getContainers())
+                .cargoDescriptions(screenDto.getCargoDescriptions())
+                .mafiDetails(screenDto.getMafiDetails())
+                .partBls(screenDto.getPartBls())
+                .chargeDetails(screenDto.getChargeDetails())
+                .build();
+    }
+
     /**
      * Convert Header Entity to DTO
      */
@@ -152,7 +285,8 @@ public class ImportManifestBlMapper {
      * Convert DTO to Header Entity for create operation
      */
     public ShipBlManifestHdr mapToEntity(ImportManifestBlCreateDto dto) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
         return ShipBlManifestHdr.builder()
                 .groupPoid(UserContext.getGroupPoid())
                 .companyPoid(UserContext.getCompanyPoid())
@@ -353,10 +487,10 @@ public class ImportManifestBlMapper {
         return entity;
     }
 
-
     // Detail mapping methods - General DTL
     public GeneralCargoRequestDto mapGeneralDtlToDto(ShipBlManifestGeneralDtl entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         return GeneralCargoRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .comodityPoid(entity.getComodityPoid())
@@ -374,12 +508,12 @@ public class ImportManifestBlMapper {
     }
 
     public ShipBlManifestGeneralDtl mapGeneralDtlFromDto(GeneralCargoRequestDto dto, Long transactionPoid) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
 
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(
                 transactionPoid,
-                dto.getDetRowId()
-        );
+                dto.getDetRowId());
         return ShipBlManifestGeneralDtl.builder()
                 .id(id)
                 .comodityPoid(dto.getComodityPoid())
@@ -398,23 +532,24 @@ public class ImportManifestBlMapper {
 
     // Detail mapping methods - Cargo DTL
     public CargoDescriptionRequestDto mapCargoDtlToDto(ShipBlManifestCargoDtl entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         return CargoDescriptionRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .cargoDescription(entity.getCargoDescription())
-                .descriptionType(entity.getId()!=null ? entity.getId().getDescriptionType() : null)
+                .descriptionType(entity.getId() != null ? entity.getId().getDescriptionType() : null)
                 .recordOrder(entity.getRecordOrder())
                 .build();
     }
 
     public ShipBlManifestCargoDtl mapCargoDtlFromDto(CargoDescriptionRequestDto dto, Long transactionPoid) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
 
         ShipBlManifestCargoDtlId id = new ShipBlManifestCargoDtlId(
                 transactionPoid,
                 dto.getDetRowId(),
-               dto.getDescriptionType()
-        );
+                dto.getDescriptionType());
         return ShipBlManifestCargoDtl.builder()
                 .id(id)
                 .cargoDescription(dto.getCargoDescription())
@@ -424,7 +559,8 @@ public class ImportManifestBlMapper {
 
     // Detail mapping methods - Container DTL
     public ContainerRequestDto mapContainerDtlToDto(ShipBlManifestContainerDtl entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
 
         return ContainerRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
@@ -483,17 +619,15 @@ public class ImportManifestBlMapper {
                 .build();
     }
 
-
     public ShipBlManifestContainerDtl mapContainerDtlFromDto(
             ContainerRequestDto dto,
-            Long transactionPoid
-    ) {
-        if (dto == null) return null;
+            Long transactionPoid) {
+        if (dto == null)
+            return null;
 
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(
                 transactionPoid,
-                dto.getDetRowId()
-        );
+                dto.getDetRowId());
 
         return ShipBlManifestContainerDtl.builder()
                 .id(id)
@@ -554,10 +688,10 @@ public class ImportManifestBlMapper {
                 .build();
     }
 
-
     // Detail mapping methods - Charges DTL
     public ChargeRequestDto mapChargesDtlToDto(ShipBlManifestChargesDtl entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         return ChargeRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .chargePoid(entity.getChargePoid())
@@ -592,11 +726,11 @@ public class ImportManifestBlMapper {
     }
 
     public ShipBlManifestChargesDtl mapChargesDtlFromDto(ChargeRequestDto dto, Long transactionPoid) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(
                 transactionPoid,
-                dto.getDetRowId()
-        );
+                dto.getDetRowId());
         return ShipBlManifestChargesDtl.builder()
                 .id(id)
                 .chargePoid(dto.getChargePoid())
@@ -632,7 +766,8 @@ public class ImportManifestBlMapper {
 
     // Detail mapping methods - Container PRT
     public PartBlRequestDto mapContainerPrtToDto(ShipBlManifestPartBL entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         return PartBlRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .shipperName(entity.getShipperName())
@@ -649,11 +784,11 @@ public class ImportManifestBlMapper {
     }
 
     public ShipBlManifestPartBL mapContainerPrtFromDto(PartBlRequestDto dto, Long transactionPoid) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(
                 transactionPoid,
-                dto.getDetRowId()
-        );
+                dto.getDetRowId());
         return ShipBlManifestPartBL.builder()
                 .id(id)
                 .shipperName(dto.getShipperName())
@@ -671,7 +806,8 @@ public class ImportManifestBlMapper {
 
     // Detail mapping methods - Email Fax DTL
     public NotifyPartyRequestDto mapEmailFaxDtlToDto(ShipBlManifestEmailFaxDtl entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         return NotifyPartyRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .addressPoid(entity.getAddressPoid())
@@ -680,7 +816,7 @@ public class ImportManifestBlMapper {
                 .email2(entity.getEmail2())
                 .sendEmailFax(entity.getSendEmailFax())
                 .sendYesNo(entity.getSendYesNo())
-                //.addressType(entity.getAddressType())
+                // .addressType(entity.getAddressType())
                 .addressType(entity.getId().getAddressType())
                 .faxLog(entity.getFaxLog())
                 .emailLog(entity.getEmailLog())
@@ -688,12 +824,12 @@ public class ImportManifestBlMapper {
     }
 
     public ShipBlManifestEmailFaxDtl mapEmailFaxDtlFromDto(NotifyPartyRequestDto dto, Long transactionPoid) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
         ShipBlManifestEmailFaxId id = new ShipBlManifestEmailFaxId(
                 transactionPoid,
                 dto.getDetRowId(),
-                dto.getAddressType()
-        );
+                dto.getAddressType());
         return ShipBlManifestEmailFaxDtl.builder()
                 .id(id)
                 .addressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid() : 1L)
@@ -709,7 +845,8 @@ public class ImportManifestBlMapper {
 
     // Detail mapping methods - MAFI DTL
     public MafiRequestDto mapMafiDtlToDto(ShipBlManifestMafiDtl entity) {
-        if (entity == null) return null;
+        if (entity == null)
+            return null;
         return MafiRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .mafiRef(entity.getMafiRef())
@@ -722,11 +859,11 @@ public class ImportManifestBlMapper {
     }
 
     public ShipBlManifestMafiDtl mapMafiDtlFromDto(MafiRequestDto dto, Long transactionPoid) {
-        if (dto == null) return null;
+        if (dto == null)
+            return null;
         ShipBlManifestDtlId id = new ShipBlManifestDtlId(
                 transactionPoid,
-                dto.getDetRowId()
-        );
+                dto.getDetRowId());
         return ShipBlManifestMafiDtl.builder()
                 .id(id)
                 .mafiRef(dto.getMafiRef())
@@ -740,37 +877,44 @@ public class ImportManifestBlMapper {
 
     // Helper methods to map lists
     public List<GeneralCargoRequestDto> mapGeneralDtlListToDto(List<ShipBlManifestGeneralDtl> entities) {
-        if (entities == null) return null;
+        if (entities == null)
+            return null;
         return entities.stream().map(this::mapGeneralDtlToDto).collect(Collectors.toList());
     }
 
     public List<CargoDescriptionRequestDto> mapCargoDtlListToDto(List<ShipBlManifestCargoDtl> entities) {
-        if (entities == null) return null;
+        if (entities == null)
+            return null;
         return entities.stream().map(this::mapCargoDtlToDto).collect(Collectors.toList());
     }
 
     public List<ContainerRequestDto> mapContainerDtlListToDto(List<ShipBlManifestContainerDtl> entities) {
-        if (entities == null) return null;
+        if (entities == null)
+            return null;
         return entities.stream().map(this::mapContainerDtlToDto).collect(Collectors.toList());
     }
 
     public List<ChargeRequestDto> mapChargesDtlListToDto(List<ShipBlManifestChargesDtl> entities) {
-        if (entities == null) return null;
+        if (entities == null)
+            return null;
         return entities.stream().map(this::mapChargesDtlToDto).collect(Collectors.toList());
     }
 
     public List<PartBlRequestDto> mapContainerPrtListToDto(List<ShipBlManifestPartBL> entities) {
-        if (entities == null) return null;
+        if (entities == null)
+            return null;
         return entities.stream().map(this::mapContainerPrtToDto).collect(Collectors.toList());
     }
 
     public List<NotifyPartyRequestDto> mapEmailFaxDtlListToDto(List<ShipBlManifestEmailFaxDtl> entities) {
-        if (entities == null) return null;
+        if (entities == null)
+            return null;
         return entities.stream().map(this::mapEmailFaxDtlToDto).collect(Collectors.toList());
     }
 
     public List<MafiRequestDto> mapMafiDtlListToDto(List<ShipBlManifestMafiDtl> entities) {
-        if (entities == null) return null;
+        if (entities == null)
+            return null;
         return entities.stream().map(this::mapMafiDtlToDto).collect(Collectors.toList());
     }
 
@@ -917,7 +1061,6 @@ public class ImportManifestBlMapper {
         entity.setHsDescription(dto.getHsDescription());
         entity.setAmountPerDayAfterFree(dto.getAmountPerDayAfterFree());
     }
-
 
     public static LocalDateTime toLocalDateTime(Object value) {
         return switch (value) {

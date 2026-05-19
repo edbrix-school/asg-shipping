@@ -11,17 +11,17 @@ public interface ImportManifestBlService {
 
     ImportManifestBlRequestDto updateImportManifestBl(Long id, ImportManifestBlUpdateDTO dto, Long companyPoid, Long groupPoid);
 
+    ImportManifestUpdateOpsDto updateImportManifestUpdateOps(Long id, ImportManifestUpdateOpsDto dto, Long companyPoid, Long groupPoid);
+
     Map<String, Object> listOfImportManifest(String docId, FilterRequestDto request, Pageable pageable);
 
     ImportManifestBlRequestDto getImportManifestBl(Long id);
 
+    ImportManifestUpdateOpsDto getImportManifestUpdateOps(Long id);
+
     void deleteImportManifestBl(Long id, DeleteReasonDto deleteReasonDto);
 
-    EmailVerificationResponseDto updateEmailVerification(Long transactionPoId, EmailVerificationRequestDto request);
-
     ResendCanResponseDto resendCan(Long transactionPoId, String updateDemurrage);
-
-    SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId);
 
     LoadEmailFaxResponseDto loadEmailFax(Long addressMasterPoid, String addressType);
 
