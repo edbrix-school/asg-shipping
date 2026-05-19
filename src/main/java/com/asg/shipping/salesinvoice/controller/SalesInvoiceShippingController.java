@@ -506,8 +506,8 @@ public class SalesInvoiceShippingController {
     public ResponseEntity<?> createFFPurchaseJournal(
             @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
             @PathVariable Long id,
-            @Parameter(description = "FF Job Transaction POID", required = true, example = "789")
-            @RequestParam Long ffJobPoid) {
+            @Parameter(description = "FF Job Transaction POID", required = false, example = "789")
+            @RequestParam(required = false) Long ffJobPoid) {
         try {
             log.info("Create FF purchase journal request for invoice id: {}, FF Job POID: {}", id, ffJobPoid);
             CreateFFPurchaseJournalResponseDTO result = service.createFFPurchaseJournal(id, ffJobPoid);

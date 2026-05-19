@@ -28,6 +28,8 @@ import com.asg.shipping.contractsandagreements.repository.AdminContractsAgreemen
 import com.asg.shipping.contractsandagreements.service.ContractsAndAgreementsService;
 import com.asg.shipping.contractsandagreements.service.ContractsAndAgreementsValidationService;
 import com.asg.shipping.contractsandagreements.util.mapper.ContractsAndAgreementsMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -57,6 +59,9 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
         private final ContractsAndAgreementsValidationService validationService;
         private final LoggingService loggingService;
 
+        @PersistenceContext
+        private final EntityManager entityManager;
+
         private static final String ACTION_NOCHANGES = "NOCHANGES";
         private static final String ACTION_ISCREATED = "ISCREATED";
         private static final String ACTION_ISUPDATED = "ISUPDATED";
@@ -79,13 +84,11 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
 
                 AdminContractsAgreementHdr saved = headerRepo.saveAndFlush(entity);
+                entityManager.refresh(entity);
                 log.info("Created new Contracts and Agreements with ID: {}", saved.getTransactionPoid());
 
                 saveAgreementContentDetails(dto.getAgreementContentDetails(), saved.getTransactionPoid());
-                loggingService.createLogSummaryEntry(
-                                LogDetailsEnum.CREATED,
-                                UserContext.getDocumentId(),
-                                saved.getTransactionPoid().toString());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), entity.getDocRef()));
 
                 return getContractsAndAgreementsById(saved.getTransactionPoid());
         }

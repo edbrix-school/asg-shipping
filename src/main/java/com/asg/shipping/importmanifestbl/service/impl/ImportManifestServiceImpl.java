@@ -24,6 +24,8 @@ import com.asg.shipping.importmanifestupdate.service.ImportManifestBlServiceImpl
 import com.asg.shipping.importmanifestbl.util.ImportManifestDropdownMapper;
 import com.asg.shipping.importmanifestbl.util.ImportManifestMapper;
 import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
@@ -85,7 +87,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     private static final String ACTION_NOCHANGES = "ACTION_NOCHANGES";
 
     private static final String LOG_KEY_ID_FORMAT = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
-    private static final String LOG_ROW_DELETED_FORMAT = "Row Deleted on %s with detRowId: %s";
+
+    @PersistenceContext
+    private final EntityManager entityManager;
+
 
     @Override
     public ImportManifestBlDto getImportManifest(Long transactionPoId) {
@@ -234,15 +239,15 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         updateService.formatEdiFields(entity);
 
         ShipBlManifestHdr saved = headerRepository.saveAndFlush(entity);
-        Long transactionPoid = saved.getTransactionPoid();
+        entityManager.refresh(entity);
 
+        Long transactionPoid = saved.getTransactionPoid();
         procRepository.validateBeforeSave(dto.getVesselVoyagePoid(), transactionPoid, dto.getQuotationPoid(),
                 dto.getFreight(), dto.getBookedByPrincipal());
 
         log.info("BL Manifest header saved with transactionPoid: {}", transactionPoid);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(),
-                transactionPoid.toString());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), saved.getDocRef()));
 
         List<String> logEntries = new ArrayList<>();
         saveGeneralCargoDetails(dto.getGeneralCargoDetails(), transactionPoid, logEntries);

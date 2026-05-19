@@ -1,5 +1,6 @@
 package com.asg.shipping.deliveryorderissuetocustomer.repository;
 
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import jakarta.persistence.EntityManager;
@@ -134,8 +135,8 @@ public class DeliveryOrderIssueToCustomerRepository {
 
             BigDecimal pendingAmount = jdbcTemplate.queryForObject(pendingAmountQuery, BigDecimal.class, transactionPoid);
 
-            if (pendingAmount != null && pendingAmount.compareTo(BigDecimal.ZERO) > 0) {
-                return "Y";
+            if (pendingAmount != null && pendingAmount.compareTo(BigDecimal.ZERO) != 0) {
+                throw new ValidationException("Total amount need to Collect for D/O...." + pendingAmount);
             }
             String printStatusQuery = " select DO_PRINTED ,CNT_FORM_DLV_PRINTED,CNT_FORM_RTN_PRINTED " + " FROM DO_sh_PRINTING_DTL WHERE TRANSACTION_POID=?";
 
@@ -170,6 +171,8 @@ public class DeliveryOrderIssueToCustomerRepository {
 
             return "N";
 
+        } catch (ValidationException e) {
+            throw e;
         } catch (Exception e) {
             return "Y";
         }
@@ -210,7 +213,7 @@ public class DeliveryOrderIssueToCustomerRepository {
 
     public String getGlobalParameterValue(String parameterName, String parameterKeyIdType, String parameterKeyId, String defaultValue) {
 
-        String sql = "SELECT PRODUCTION.RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
+        String sql = "SELECT RTN_GLOBAL_PARAMETER(?, ?, ?, ?, ?) FROM DUAL";
 
         try {
             return jdbcTemplate.queryForObject(

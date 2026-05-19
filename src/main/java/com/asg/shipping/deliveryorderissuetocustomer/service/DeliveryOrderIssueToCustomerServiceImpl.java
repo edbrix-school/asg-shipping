@@ -220,21 +220,18 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         params.put("P_TRAN_NO", transactionPoid);
 
         byte[] result = generatePrintByButtonType(transactionPoid, buttonType, params);
-        if (result != null) {
-            // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 11 parameters (NOT_UPDATE) after successful print
-            // In legacy, this is called once after all 3 documents are printed in sequence.
-            // In new architecture, we call it after each successful print since printing is done separately.
-            // The stored procedure should handle being called multiple times gracefully.
-            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, ARSHRCPTPRINTUPDATE,
+        
+        // Only call the stored procedure if a PDF was actually generated
+        if (result != null && result.length > 0) {
+            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, buttonType.name(),
                     username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
                     requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
             );
             return result;
         }
 
-        // If printing failed (result is null), don't call NOT_UPDATE
-        // This happens when document cannot be printed (print validation failed or already printed)
-        return null;
+        // Return an empty PDF (0 bytes) if validations failed or no data found
+        return new byte[0];
     }
 
     @Override
@@ -243,53 +240,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
-
-        // Fetch the delivery order DTO to get blReleaseTypeOffice and principalDoRequired
-        DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(id)
-                .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, id.toString()));
-
-        // Validate Principal DO Number
-        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired()) && StringUtils.isBlank(requestDto.getPrincipalDoNumber()) || requestDto.getPrincipalDoNumber().trim().length() <= 3) {
-            throw new ValidationException("Principal Do number can not be blank");
-        }
-
-        // Validate Address
-        if (StringUtils.isBlank(requestDto.getDoReleasedAddressPerson())) {
-            throw new ValidationException("Address can not be blank");
-        }
-
-        // Validate ID/CPR
-        if (StringUtils.isBlank(requestDto.getDoReleasedIdPerson())) {
-            throw new ValidationException("ID/CPR can not be blank");
-        }
-
-        // Validate Name
-        if (StringUtils.isBlank(requestDto.getDoReleasedToPerson())) {
-            throw new ValidationException("Name can not be blank");
-        }
-
-        // Validate DO Priority
-        if (StringUtils.isBlank(requestDto.getDoPriority())) {
-            throw new ValidationException("Do Issue TO, can not be blank");
-        }
-
-        // Validate Original BL Release CR
-        if (StringUtils.isBlank(requestDto.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Bl issue type can not be blank");
-        }
-
-        // Validate BL Release Type Office matches Original BL Release CR
-        if (StringUtils.isBlank(dto.getBlReleaseTypeOffice())) {
-            throw new ValidationException("Office Bl issue type can not be blank");
-        }
-        if (!dto.getBlReleaseTypeOffice().equalsIgnoreCase(requestDto.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Check Bl issue type");
-        }
-
-        // Validate Delivery Sent To
-        if (StringUtils.isBlank(requestDto.getDeliverySentTo())) {
-            throw new ValidationException("Select delivery send to from dropdown list");
-        }
 
         // Validate Email Configuration
         validateEmailConfiguration(requestDto);

@@ -3,6 +3,7 @@ package com.asg.shipping.bookingFormSH.service;
 import java.time.LocalDate;
 import java.util.Map;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
 import org.springframework.data.domain.Pageable;
 
@@ -40,7 +41,7 @@ public interface BookingFormService {
 	/**
 	 * Delete Booking Form (soft delete)
 	 */
-	void deleteBookingForm(Long id);
+	void deleteBookingForm(Long id, DeleteReasonDto deleteReasonDto);
 
 	/**
 	 * Generate COPRAR booking file

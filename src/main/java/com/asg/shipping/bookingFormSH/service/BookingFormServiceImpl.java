@@ -1,14 +1,15 @@
 package com.asg.shipping.bookingFormSH.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.bookingFormSH.dto.*;
@@ -22,14 +23,17 @@ import com.asg.shipping.common.entity.GlobalAddressDetails;
 import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
-import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.util.StringUtil;
-import org.apache.poi.xssf.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
@@ -76,13 +80,16 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final ShipMateStuffingDtlRepository stuffingDtlRepository;
     private final GlobalAddressDetailsRepository globalAddressDetailsRepository;
     private final BookingFormLovService lovService;
-    private final LovDataService commonLovService;
+    private final DocumentDeleteService documentDeleteService;
     private final DocumentSearchService documentService;
     private final JdbcTemplate jdbcTemplate;
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
     private final LovDataService lovDataService;
+
+    @PersistenceContext
+    private final EntityManager entityManager;
 
     private static final String ISCREATED = "ISCREATED";
     private static final String ISUPDATED = "ISUPDATED";
@@ -207,7 +214,8 @@ public class BookingFormServiceImpl implements BookingFormService {
         ShipMateHdr entity = new ShipMateHdr();
         BookingFormMapper.mapCreateDTOToEntity(createDTO, entity, groupPoid, companyPoid);
 
-        entity = headerRepository.save(entity);
+        entity = headerRepository.saveAndFlush(entity);
+        entityManager.refresh(entity);
 
         if (createDTO.getContainerDetails() != null) {
             for (BookingFormContainerDetailDto containerDto : createDTO.getContainerDetails()) {
@@ -222,12 +230,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         saveDetailTables(entity.getTransactionPoid(), createDTO.getCargoDetails(), createDTO.getChargesDetails(),
                 createDTO.getContainerDetails(), createDTO.getStuffingDetails());
 
-        // Call PROC_SHIP_BL_PAGE_SAVE_AFTER after save (for split booking allocation)
-        Long userPoid = UserContext.getUserPoid();
-//        callProcShipBlPageSaveAfter(groupPoid, companyPoid, entity.getTransactionPoid(), null, ALLOCATESPLITBOOKING,
-//                userPoid);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), entity.getTransactionPoid().toString());
-
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entity.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), entity.getDocRef()));
         // Reload and return
         return getBookingForm(entity.getTransactionPoid());
     }
@@ -297,17 +300,15 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional
-    public void deleteBookingForm(Long id) {
+    public void deleteBookingForm(Long id, DeleteReasonDto deleteReason) {
         log.info("Deleting booking form with id: {}", id);
 
         ShipMateHdr entity = headerRepository
                 .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
-        entity.setDeleted("Y");
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-        headerRepository.save(entity);
+        documentDeleteService.deleteDocument(id, "SHIP_MATE_HDR",
+                "TRANSACTION_POID", deleteReason, entity.getTransactionDate());
     }
 
     @Override
@@ -329,7 +330,7 @@ public class BookingFormServiceImpl implements BookingFormService {
                 cs.close();
                 return status;
             });
-            if (!res.toLowerCase().startsWith("error"))
+            if (res != null && !res.toLowerCase().startsWith("error"))
                 return generateCoprarFile(transactionPoid, userPoid);
             return res;
         } catch (Exception e) {

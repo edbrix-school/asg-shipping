@@ -2,6 +2,7 @@ package com.asg.shipping.portMaster.service;
 
 import java.util.Map;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import org.springframework.data.domain.Pageable;
 
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -18,5 +19,5 @@ public interface PortMasterService {
 
 	PortMasterResponse getPortById( Long portPoid);
 
-	void deletePort(Long portPoid);
+	void deletePort(Long portPoid, DeleteReasonDto deleteReasonDto);
 }

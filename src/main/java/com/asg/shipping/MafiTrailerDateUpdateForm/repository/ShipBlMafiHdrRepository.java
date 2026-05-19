@@ -69,7 +69,7 @@ public interface ShipBlMafiHdrRepository extends JpaRepository<ShipBlMafiHdr, Lo
 	    UPDATE SHIP_BL_MAFI_HDR
 	    SET AGENT_REFERENCE = :agentReference,
 	        REMARKS = :remarks,
-	        TRANSACTION_DATE = :transactionDate
+	        TRANSACTION_DATE = :transactionDate,
 	        LASTMODIFIED_BY = :userId,
 	        LASTMODIFIED_DATE = CURRENT_TIMESTAMP
 	    WHERE TRANSACTION_POID = :transactionPoid

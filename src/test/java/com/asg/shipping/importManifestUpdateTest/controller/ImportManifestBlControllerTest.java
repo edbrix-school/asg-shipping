@@ -6,8 +6,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importmanifestupdate.controller.ImportManifestBlController;
-import com.asg.shipping.importmanifestupdate.dto.ImportManifestBlRequestDto;
-import com.asg.shipping.importmanifestupdate.dto.ImportManifestBlUpdateDTO;
+import com.asg.shipping.importmanifestupdate.dto.ImportManifestUpdateOpsDto;
 import com.asg.shipping.importmanifestupdate.service.ImportManifestBlService;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,8 +23,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,7 +32,7 @@ import static org.mockito.Mockito.*;
 
 
 @ExtendWith(MockitoExtension.class)
-public class ImportManifestBlControllerTest {
+class ImportManifestBlControllerTest {
 
     @Mock
     private ImportManifestBlService service;
@@ -110,13 +107,12 @@ public class ImportManifestBlControllerTest {
     void updateImportManifestBl_Success() {
         // Given
         Long id = 1L;
-        ImportManifestBlUpdateDTO updateDto = ImportManifestBlUpdateDTO.builder()
+        ImportManifestUpdateOpsDto updateDto = ImportManifestUpdateOpsDto.builder()
                 .blNumber("TEST123")
                 .agentReference("AGENT001")
-                .transactionDate(LocalDate.now())
                 .build();
         
-        ImportManifestBlRequestDto expectedResponse = ImportManifestBlRequestDto.builder()
+        ImportManifestUpdateOpsDto expectedResponse = ImportManifestUpdateOpsDto.builder()
                 .transactionPoid(id)
                 .blNumber("TEST123")
                 .build();
@@ -125,7 +121,7 @@ public class ImportManifestBlControllerTest {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(200L);
             
-            when(service.updateImportManifestBl(eq(id), eq(updateDto), eq(100L), eq(200L)))
+            when(service.updateImportManifestUpdateOps(eq(id), eq(updateDto), eq(100L), eq(200L)))
                     .thenReturn(expectedResponse);
 
             // When
@@ -135,7 +131,7 @@ public class ImportManifestBlControllerTest {
             assertEquals(HttpStatus.OK, response.getStatusCode());
             Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
             assertEquals("Import Manifest BL updated successfully", responseBody.get("message"));
-            verify(service).updateImportManifestBl(eq(id), eq(updateDto), eq(100L), eq(200L));
+            verify(service).updateImportManifestUpdateOps(eq(id), eq(updateDto), eq(100L), eq(200L));
         }
     }
 
@@ -143,24 +139,28 @@ public class ImportManifestBlControllerTest {
     void getImportManifestBl_Success() {
         // Given
         Long id = 1L;
-        ImportManifestBlRequestDto expectedResponse = ImportManifestBlRequestDto.builder()
+        ImportManifestUpdateOpsDto expectedResponse = ImportManifestUpdateOpsDto.builder()
                 .transactionPoid(id)
                 .blNumber("TEST123")
                 .agentReference("AGENT001")
                 .build();
 
-        when(service.getImportManifestBl(id)).thenReturn(expectedResponse);
+        when(service.getImportManifestUpdateOps(id)).thenReturn(expectedResponse);
 
-        // When
-        ResponseEntity<?> response = controller.getImportManifestBl(id);
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("123");
 
-        // Then
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
-        assertEquals("Import Manifest BL retrieved successfully", responseBody.get("message"));
-        Map<String, Object> result = (Map<String, Object>) responseBody.get("result");
-        assertEquals(expectedResponse, result.get("data"));
-        verify(service).getImportManifestBl(id);
+            // When
+            ResponseEntity<?> response = controller.getImportManifestBl(id);
+
+            // Then
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+            assertEquals("Import Manifest BL retrieved successfully", responseBody.get("message"));
+            Map<String, Object> result = (Map<String, Object>) responseBody.get("result");
+            assertEquals(expectedResponse, result.get("data"));
+            verify(service).getImportManifestUpdateOps(id);
+        }
     }
 
     @Test
@@ -183,13 +183,13 @@ public class ImportManifestBlControllerTest {
     void updateImportManifestBl_WithNullDto() {
         // Given
         Long id = 1L;
-        ImportManifestBlUpdateDTO updateDto = null;
+        ImportManifestUpdateOpsDto updateDto = null;
         
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(200L);
             
-            when(service.updateImportManifestBl(eq(id), eq(updateDto), eq(100L), eq(200L)))
+            when(service.updateImportManifestUpdateOps(eq(id), eq(updateDto), eq(100L), eq(200L)))
                     .thenThrow(new IllegalArgumentException("Update DTO cannot be null"));
 
             // When & Then
@@ -203,14 +203,14 @@ public class ImportManifestBlControllerTest {
     void getImportManifestBl_NotFound() {
         // Given
         Long id = 999L;
-        when(service.getImportManifestBl(id))
+        when(service.getImportManifestUpdateOps(id))
                 .thenThrow(new RuntimeException("Import Manifest BL not found"));
 
         // When & Then
         assertThrows(RuntimeException.class, () -> {
             controller.getImportManifestBl(id);
         });
-        verify(service).getImportManifestBl(id);
+        verify(service).getImportManifestUpdateOps(id);
     }
 
     @Test
@@ -225,23 +225,7 @@ public class ImportManifestBlControllerTest {
         verify(service).deleteImportManifestBl(id, new DeleteReasonDto());
     }
 
-    @Test
-    void updateEmailVerification_Success() {
-        var request = com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto.builder()
-                .transactionPoId(1L)
-                .verified(true)
-                .build();
-        var response = com.asg.shipping.importmanifestupdate.dto.EmailVerificationResponseDto.builder()
-                .status("SUCCESS")
-                .build();
 
-        when(service.updateEmailVerification(1L, request)).thenReturn(response);
-
-        ResponseEntity<?> result = controller.updateEmailVerification(request);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(service).updateEmailVerification(1L, request);
-    }
 
     @Test
     void resendCan_Success() {
@@ -260,19 +244,7 @@ public class ImportManifestBlControllerTest {
         verify(service).resendCan(1L, "Y");
     }
 
-    @Test
-    void sendEdiEmails_Success() {
-        var response = com.asg.shipping.importmanifestupdate.dto.SendEdiEmailsResponseDto.builder()
-                .emailsSent(2)
-                .build();
 
-        when(service.sendEdiEmails(1L)).thenReturn(response);
-
-        ResponseEntity<?> result = controller.sendEdiEmails(1L);
-
-        assertEquals(HttpStatus.OK, result.getStatusCode());
-        verify(service).sendEdiEmails(1L);
-    }
 
     @Test
     void getBlStatus_Success() {
@@ -313,21 +285,7 @@ public class ImportManifestBlControllerTest {
         verify(service).loadEmailFax(999L, "CONSIGNEE");
     }
 
-    @Test
-    void updateEmailVerification_NotFound() {
-        var request = com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto.builder()
-                .transactionPoId(999L)
-                .verified(true)
-                .build();
 
-        when(service.updateEmailVerification(999L, request))
-                .thenThrow(new com.asg.common.lib.exception.ResourceNotFoundException("Import Manifest BL", "id", 999L));
-
-        ResponseEntity<?> result = controller.updateEmailVerification(request);
-
-        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
-        verify(service).updateEmailVerification(999L, request);
-    }
 
     @Test
     void resendCan_NotFound() {
@@ -344,16 +302,7 @@ public class ImportManifestBlControllerTest {
         verify(service).resendCan(999L, "N");
     }
 
-    @Test
-    void sendEdiEmails_NotFound() {
-        when(service.sendEdiEmails(999L))
-                .thenThrow(new com.asg.common.lib.exception.ResourceNotFoundException("Import Manifest BL", "id", 999L));
 
-        ResponseEntity<?> result = controller.sendEdiEmails(999L);
-
-        assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
-        verify(service).sendEdiEmails(999L);
-    }
 
     @Test
     void getBlStatus_NotFound() {

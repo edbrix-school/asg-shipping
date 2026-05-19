@@ -23,7 +23,8 @@ import com.asg.shipping.customerautochargeexportbl.repository.ShipCustomerCharge
 import com.asg.shipping.customerautochargeexportbl.repository.ShipCustomerChargesHdrRepository;
 import com.asg.shipping.customerautochargeexportbl.service.CustomerAutoChargeExportBlService;
 import com.asg.shipping.customerautochargeexportbl.util.CustomerAutoChargeExportBLMapper;
-import com.asg.shipping.receipts.entity.ArShReceiptContainerDtl;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,11 +35,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import static com.asg.common.lib.security.util.UserContext.getUserName;
 
 
 @Service
@@ -51,18 +50,33 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
     private static final String ACTION_ISUPDATED = "ISUPDATED";
     private static final String ACTION_ISDELETED = "ISDELETED";
 
+    private static final String SCREEN_NAME = "Customer Auto Charge Export BL";
+    private static final String FIELD_TRANSACTION_POID = "transactionPoid";
+    private static final String COL_TRANSACTION_POID = "TRANSACTION_POID";
+    private static final String TABLE_HDR = "SHIP_CUSTOMER_CHARGES_HDR";
+    private static final String LOG_ROW_CREATED = "Row Created on Customer Charge Detail with DetRowId: %s";
+    private static final String LOG_ROW_DELETED = "Row Deleted on Customer Charge Detail with DetRowId: %s";
+    private static final String LOG_KEY_ID = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
+    private static final String ERR_PERIOD_NULL = "Period From and Period To must not be null";
+    private static final String ERR_PERIOD_ORDER = "Period From cannot be after Period To";
+    private static final String ERR_DET_ROW_ID_NULL = "Customer Charge Detail DetRowId is null";
+
     private final DocumentSearchService documentSearchService;
     private final ShipCustomerChargesHdrRepository headerRepository;
     private final ShipCustomerChargesDtlRepository detailRepository;
     private final CustomerAutoChargeExportBLMapper mapper;
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
+
+    @PersistenceContext
+    private final EntityManager entityManager;
+
     @Override
-    public Map<String, Object> list(FilterRequestDto filters, Pageable pageable) {
+    public Map<String, Object> list(FilterRequestDto filters, Pageable pageable,LocalDate startDate, LocalDate endDate) {
         String operator = documentSearchService.resolveOperator(filters);
         String isDeleted = documentSearchService.resolveIsDeleted(filters);
-        List<FilterDto> filterList = documentSearchService.resolveFilters(filters);
-
+        List<FilterDto> filterList = documentSearchService.resolveDateFilters(filters, "TRANSACTION_DATE", startDate,
+                endDate);
         RawSearchResult raw = documentSearchService.search(
                 UserContext.getDocumentId(),
                 filterList,
@@ -70,7 +84,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
                 pageable,
                 isDeleted,
                 "DESCRIPTION",
-                "TRANSACTION_POID"
+                COL_TRANSACTION_POID
         );
 
         Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
@@ -83,7 +97,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         log.info("Getting customer auto charge export BL with id: {}", id);
 
         ShipCustomerChargesHdrEntity entity = headerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SCREEN_NAME, FIELD_TRANSACTION_POID, id.toString()));
 
 
         List<ShipCustomerChargesDtlEntity> detailRecords = detailRepository.findByTransactionPoidOrderByDetRowId(id);
@@ -103,13 +117,14 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         ShipCustomerChargesHdrEntity entity = ShipCustomerChargesHdrEntity.builder().build();
         mapper.mapCreateDTOToEntity(createDTO, entity, UserContext.getGroupPoid());
 
-        entity = headerRepository.save(entity);
+        entity = headerRepository.saveAndFlush(entity);
+        entityManager.refresh(entity);
         log.info("Customer auto charge export BL created with id: {}", entity.getTransactionPoid());
 
         if (createDTO.getChargeDetails() != null && !createDTO.getChargeDetails().isEmpty()) {
             saveDetailRecords(entity.getTransactionPoid(), createDTO.getChargeDetails());
         }
-       loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED,UserContext.getDocumentId(),entity.getTransactionPoid().toString());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entity.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), entity.getDocRef()));
         return getCustomerAutoChargeExportBL(entity.getTransactionPoid());
     }
 
@@ -121,7 +136,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
 
                   entity.setDetRowId(maxDetRowId != null ? ++maxDetRowId : 1L);
                 detailRepository.save(entity);
-                String logDetail = String.format("Row Created on Customer Charge Detail with DetRowId: %s", entity.getDetRowId());
+                String logDetail = String.format(LOG_ROW_CREATED, entity.getDetRowId());
                 loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
@@ -133,7 +148,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         log.info("Updating customer auto charge export BL with id: {}", id);
 
         ShipCustomerChargesHdrEntity existingEntity = headerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SCREEN_NAME, FIELD_TRANSACTION_POID, id.toString()));
 
         ShipCustomerChargesHdrEntity oldEntity = new ShipCustomerChargesHdrEntity();
         BeanUtils.copyProperties(existingEntity,oldEntity);
@@ -152,7 +167,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
 
         log.info("Customer auto charge export BL updated with id: {}", id);
 
-        loggingService.logChanges(oldEntity,existingEntity, ShipCustomerChargesHdrEntity.class,UserContext.getDocumentId(),id.toString(), LogDetailsEnum.MODIFIED,"TRANSACTION_POID");
+        loggingService.logChanges(oldEntity,existingEntity, ShipCustomerChargesHdrEntity.class,UserContext.getDocumentId(),id.toString(), LogDetailsEnum.MODIFIED,COL_TRANSACTION_POID);
 
         if (updateDTO.getChargeDetails() != null && !updateDTO.getChargeDetails().isEmpty()) {
             updateDetailRecords(existingEntity.getTransactionPoid(), updateDTO.getChargeDetails());
@@ -167,10 +182,9 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         log.info("Deleting customer auto charge export BL with id: {}", id);
 
         ShipCustomerChargesHdrEntity entity = headerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Customer Auto Charge Export BL", "transactionPoid", id.toString()));
+                .orElseThrow(() -> new ResourceNotFoundException(SCREEN_NAME, FIELD_TRANSACTION_POID, id.toString()));
 
-        documentDeleteService.deleteDocument(id,"SHIP_CUSTOMER_CHARGES_HDR","TRANSACTION_POID"
-        ,deleteReasonDto,entity.getTransactionDate());
+        documentDeleteService.deleteDocument(id, TABLE_HDR, COL_TRANSACTION_POID, deleteReasonDto, entity.getTransactionDate());
 
     }
 
@@ -178,11 +192,11 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
 
     private void validatePeriodDates(LocalDate from, LocalDate to) {
         if (from == null || to == null) {
-            throw new ValidationException("Period From and Period To must not be null");
+            throw new ValidationException(ERR_PERIOD_NULL);
         }
 
         if (from.isAfter(to)) {
-            throw new ValidationException("Period From cannot be after Period To");
+            throw new ValidationException(ERR_PERIOD_ORDER);
         }
     }
 
@@ -199,11 +213,11 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
                 case ACTION_ISDELETED -> {
                     if (dto.getDetRowId() != null) {
                         detailRepository.deleteByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId());
-                        String logDetail = String.format("Row Deleted on Customer Charge Detail with DetRowId: %s", dto.getDetRowId());
+                        String logDetail = String.format(LOG_ROW_DELETED, dto.getDetRowId());
                         loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
                     }
                     else {
-                        throw new ValidationException("Customer Charge Detail DetRowId is null");
+                        throw new ValidationException(ERR_DET_ROW_ID_NULL);
                     }
                 }
                 case ACTION_ISCREATED -> {
@@ -211,7 +225,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
                     long detRowId = dto.getDetRowId() != null ? dto.getDetRowId() : (maxDetRowId != null ? maxDetRowId + 1 : 1L);
                     ShipCustomerChargesDtlEntity entity = mapper.mapDtlFromDto(dto, transactionPoid, detRowId);
                     detailRepository.save(entity);
-                    String logDetail = String.format("Row Created on Customer Charge Detail with DetRowId: %s", entity.getDetRowId());
+                    String logDetail = String.format(LOG_ROW_CREATED, entity.getDetRowId());
                     loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
                 }
                 case ACTION_ISUPDATED -> {
@@ -222,11 +236,11 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
                         BeanUtils.copyProperties(entity,oldEntity);
                         mapper.updateDtlEntity(dto, entity);
                         toUpdate.add(entity);
-                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+                        String logDetail = String.format(LOG_KEY_ID, transactionPoid, dto.getDetRowId());
                         logRequests.add(new LogRequestDto<>(oldEntity, entity, ShipCustomerChargesDtlEntity.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
                     }
                     else {
-                        throw new ValidationException("Customer Charge Detail  DetRowId is null");
+                        throw new ValidationException(ERR_DET_ROW_ID_NULL);
                     }
                 }
             }

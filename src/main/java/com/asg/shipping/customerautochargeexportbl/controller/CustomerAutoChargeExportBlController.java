@@ -2,7 +2,6 @@ package com.asg.shipping.customerautochargeexportbl.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
-import com.asg.common.lib.dto.DocumenResponsetDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
@@ -29,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
@@ -204,10 +204,11 @@ public class CustomerAutoChargeExportBlController {
     @PostMapping("/list")
     public ResponseEntity<?> list(
             @ParameterObject Pageable pageable,
-            @RequestBody(required = false) FilterRequestDto filters
+            @RequestBody(required = false) FilterRequestDto filters,   @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
     ) {
         try {
-            Map<String, Object> response = service.list(filters, pageable);
+            Map<String, Object> response = service.list(filters, pageable,startDate,endDate);
             return success("Customer Auto Charge Export BL list retrieved successfully", response);
         } catch (Exception e) {
             return internalServerError("Failed to retrieve Customer Auto Charge Export BL list: " + e.getMessage());
