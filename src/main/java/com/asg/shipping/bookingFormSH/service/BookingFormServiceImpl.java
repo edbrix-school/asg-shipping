@@ -82,6 +82,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
+    private final LovDataService lovDataService;
 
     private static final String ISCREATED = "ISCREATED";
     private static final String ISUPDATED = "ISUPDATED";
@@ -1242,8 +1243,11 @@ public class BookingFormServiceImpl implements BookingFormService {
     }
 
     private void enrichLovDetails(BookingFormDto dto) {
-
-        setLov(dto.getQuotationTransactionPoid(), lovService::getQuotaionLov, dto::setQuotationTransactionPoidDet);
+        if (dto.getQuotationTransactionPoid() != null) {
+            dto.setQuotationTransactionPoidDet(
+                    lovDataService.getDetailsByPoidAndLovNameFast(dto.getQuotationTransactionPoid(), "SHIP_QUOTATION_EXPORT")
+            );
+        }
         setLov(dto.getVesselPoid(), lovService::getVesselMasterLov, dto::setVesselPoidDet);
         setLov(dto.getLinePoid(), lovService::getLineMasterLov, dto::setLinePoidDet);
         setLov(dto.getSalesmanPoid(), lovService::getSalesmanLov, dto::setSalesmanPoidDet);

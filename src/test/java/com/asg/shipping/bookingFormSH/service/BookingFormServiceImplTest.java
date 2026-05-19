@@ -14,6 +14,7 @@ import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.exceptions.ValidationException;
+import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,6 +83,12 @@ class BookingFormServiceImplTest {
     @Mock
     private LoggingService loggingService;
 
+    @Mock
+    private LovDataService lovDataService;
+
+    @Mock
+    private EntityManager entityManager;
+
     private MockedStatic<UserContext> userContext;
 
     @BeforeEach
@@ -94,7 +101,7 @@ class BookingFormServiceImplTest {
 
         service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo,stuffingRepo,
                 globalAddressDetailsRepository,
-                lovService,commonLovService, documentService, jdbcTemplate, printService, dataSource, loggingService);
+                lovService,commonLovService, documentService, jdbcTemplate, printService, dataSource, loggingService,lovDataService);
     }
 
     @AfterEach
@@ -168,7 +175,6 @@ class BookingFormServiceImplTest {
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
-        when(lovService.getQuotaionLov(1L)).thenReturn(List.of(lovItem));
         when(lovService.getVesselMasterLov(2L)).thenReturn(List.of(lovItem));
         when(lovService.getLineMasterLov(3L)).thenReturn(List.of(lovItem));
         when(lovService.getSalesmanLov(4L)).thenReturn(List.of(lovItem));

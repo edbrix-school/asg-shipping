@@ -11,8 +11,6 @@ public interface BookingFormLovService {
 	
 	List<LovItem> getVesselMasterLov(Long linePoid);
 	
-	List<LovItem> getQuotaionLov(Long poid);
-	
 	List<LovItem> getSalesmanLov(Long poid);
 	
 	List<LovItem> getCommodityMasterLov(Long poid);

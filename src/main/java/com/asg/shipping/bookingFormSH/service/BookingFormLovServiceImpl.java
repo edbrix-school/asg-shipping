@@ -95,35 +95,6 @@ public class BookingFormLovServiceImpl implements BookingFormLovService {
 
 	@Override
 	@Transactional(readOnly = true)
-	public List<LovItem> getQuotaionLov(Long poid) {
-		log.info("Fetching QUOTATION LOV with linePoid filter: {}", poid);
-
-		StringBuilder sql = new StringBuilder();
-		sql.append("SELECT TRANSACTION_POID AS POID, ");
-		sql.append("       TO_CHAR (TRANSACTION_POID) AS CODE, ");
-		sql.append("       'ADD CUSTOMER LATTER' AS DESCRIPTION ");
-		sql.append("FROM SALES_QUOTATION_HDR ");
-		sql.append("WHERE (DELETED = 'N' OR DELETED IS NULL)");
-
-		List<Object> params = new ArrayList<>();
-
-		if (poid != null) {
-			sql.append("AND TRANSACTION_POID = ? ");
-			params.add(poid);
-		}
-
-		List<LovItem> result;
-		if (params.isEmpty()) {
-			result = jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER);
-		} else {
-			result = jdbcTemplate.query(sql.toString(), LOV_ITEM_ROW_MAPPER, params.toArray());
-		}
-		log.info("Fetched {} QUOTATION LOV items", result.size());
-		return result;
-	}
-
-	@Override
-	@Transactional(readOnly = true)
 	public List<LovItem> getSalesmanLov(Long poid) {
 		log.info("Fetching SALESMAN_MASTER LOV with linePoid filter: {}", poid);
 
