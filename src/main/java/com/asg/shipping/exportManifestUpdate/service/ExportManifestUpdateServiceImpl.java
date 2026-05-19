@@ -79,6 +79,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Enrich with LOV data
         enrichHeaderWithLovData(response, entity);
+
+        // Retrieve and set details
+        response.setGeneralCargoDetails(getGeneralCargoDetails(transactionPoid));
+        response.setContainerDetails(getContainerDetails(transactionPoid));
+        response.setCargoDescription(getCargoDescription(transactionPoid));
         
         return response;
     }
@@ -261,7 +266,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     // ========== General Cargo Details Operations ==========
 
-    @Override
     @Transactional(readOnly = true)
     public List<GeneralCargoDetailDto> getGeneralCargoDetails(Long transactionPoid) {
         log.info("Getting general cargo details for Export BL: {}", transactionPoid);
@@ -332,7 +336,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     // ========== Container Details Operations ==========
 
-    @Override
     @Transactional(readOnly = true)
     public List<ContainerDetailDto> getContainerDetails(Long transactionPoid) {
         log.info("Getting container details for Export BL: {}", transactionPoid);
@@ -411,7 +414,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     // ========== Cargo Description and Marks Operations ==========
 
-    @Override
     @Transactional(readOnly = true)
     public List<CargoDescriptionDto> getCargoDescription(Long transactionPoid) {
         log.info("Getting cargo description for Export BL: {}", transactionPoid);
