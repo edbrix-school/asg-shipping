@@ -31,13 +31,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
 @Service
 @RequiredArgsConstructor
@@ -110,11 +107,11 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdrRepository.flush();
         em.refresh(savedHdr);
 
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), savedHdr.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), savedHdr.getDocRef()));
+
         if (dto.getDetails() != null && !dto.getDetails().isEmpty()) {
             processCreateDetails(savedHdr.getTransactionPoid(), dto.getDetails());
         }
-
-        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), savedHdr.getTransactionPoid().toString(),String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), savedHdr.getDocRef()));
 
         log.info("Successfully created port charges tariff with id: {}", savedHdr.getTransactionPoid());
         return getPortChargesTariff(savedHdr.getTransactionPoid());
@@ -136,7 +133,7 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
 
         validateUpdateRequest(dto, id);
 
-        // 🔑 capture old values BEFORE mutation
+
         LocalDate oldFrom = hdr.getPeriodFrom();
         LocalDate oldTo = hdr.getPeriodTo();
 
@@ -148,7 +145,7 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         hdr.setChargeLinePoid(dto.getChargeLinePoid());
         hdr.setChargeDivision(dto.getChargeDivision());
 
-        // 🔑 flush so DB reflects new state
+
         hdrRepository.saveAndFlush(hdr);
 
         boolean periodChanged = !oldFrom.equals(dto.getPeriodFrom()) || !oldTo.equals(dto.getPeriodTo());
@@ -278,29 +275,35 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         }
 
         if (!entitiesToDelete.isEmpty()) dtlRepository.deleteAll(entitiesToDelete);
-        if (!entitiesToSave.isEmpty()) dtlRepository.saveAll(entitiesToSave);
     }
 
     private void handleDeleteAction(Long transactionPoid, PortChargesDetailUpdateDto dto, List<ShipPortChargesDtl> entitiesToDelete) {
         if (dto.getDetRowId() != null) {
             dtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
-                    .ifPresent(entitiesToDelete::add);
+                    .ifPresent(entity -> {
+                        entitiesToDelete.add(entity);
+                        loggingService.logDelete(entity, UserContext.getDocumentId(), entity.getTransactionPoid().toString());
+                    });
         }
     }
+
 
     private void handleCreateOrUpdateAction(Long transactionPoid, PortChargesDetailUpdateDto dto, List<ShipPortChargesDtl> entitiesToSave) {
         if (dto.getDetRowId() != null) {
             dtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
                     .ifPresentOrElse(
-                            existingEntity -> updateExistingEntity(existingEntity, dto, entitiesToSave),
-                            () -> createNewEntity(transactionPoid, dto, entitiesToSave)
+                            existingEntity -> updateExistingEntity(existingEntity, dto),
+                            () -> createNewEntity(transactionPoid, dto)
                     );
         } else {
-            createNewEntity(transactionPoid, dto, entitiesToSave);
+            createNewEntity(transactionPoid, dto);
         }
     }
 
-    private void updateExistingEntity(ShipPortChargesDtl entity, PortChargesDetailUpdateDto dto, List<ShipPortChargesDtl> entitiesToSave) {
+    private void updateExistingEntity(ShipPortChargesDtl entity, PortChargesDetailUpdateDto dto) {
+        ShipPortChargesDtl oldEntity = new ShipPortChargesDtl();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         entity.setChargeCodePoid(dto.getChargeCodePoid());
         entity.setChargeTypeApplicable(dto.getChargeTypeApplicable());
         entity.setChargeApplicable(dto.getChargeApplicable());
@@ -316,10 +319,12 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         entity.setAmount53Cost(dto.getAmount53Cost());
         entity.setAmountOtherCost(dto.getAmountOtherCost());
         entity.setShipChargeType(dto.getShipChargeType());
-        entitiesToSave.add(entity);
+        ShipPortChargesDtl savedEntity = dtlRepository.save(entity);
+        String logDetails = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", savedEntity.getTransactionPoid(), savedEntity.getDetRowId());
+        loggingService.createLog(oldEntity, savedEntity, ShipPortChargesDtl.class, UserContext.getDocumentId(), savedEntity.getTransactionPoid().toString(), logDetails);
     }
 
-    private void createNewEntity(Long transactionPoid, PortChargesDetailUpdateDto dto, List<ShipPortChargesDtl> entitiesToSave) {
+    private void createNewEntity(Long transactionPoid, PortChargesDetailUpdateDto dto) {
         ShipPortChargesDtl newEntity = new ShipPortChargesDtl();
         newEntity.setTransactionPoid(transactionPoid);
         newEntity.setDetRowId(dto.getDetRowId() != null ? dto.getDetRowId() : getNextDetRowId(transactionPoid));
@@ -338,11 +343,12 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
         newEntity.setAmount53Cost(dto.getAmount53Cost());
         newEntity.setAmountOtherCost(dto.getAmountOtherCost());
         newEntity.setShipChargeType(dto.getShipChargeType());
-        entitiesToSave.add(newEntity);
+        ShipPortChargesDtl savedEntity = dtlRepository.save(newEntity);
+        String logDetail = String.format("Row Created on Charge Detail with detRowId: %s", savedEntity.getDetRowId());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), savedEntity.getTransactionPoid().toString(), logDetail);
     }
 
     private void processCreateDetails(Long transactionPoid, List<PortChargesDetailCreateDto> details) {
-        List<ShipPortChargesDtl> entitiesToSave = new ArrayList<>();
 
         for (int i = 0; i < details.size(); i++) {
             PortChargesDetailCreateDto dto = details.get(i);
@@ -364,10 +370,10 @@ public class PortChargesTariffServiceImpl implements PortChargesTariffService {
             entity.setAmount53Cost(dto.getAmount53Cost());
             entity.setAmountOtherCost(dto.getAmountOtherCost());
             entity.setShipChargeType(dto.getShipChargeType());
-            entitiesToSave.add(entity);
+            ShipPortChargesDtl savedEntity = dtlRepository.save(entity);
+            String logDetail = String.format("Row Created on Charge Detail with detRowId: %s", savedEntity.getDetRowId());
+            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), savedEntity.getTransactionPoid().toString(), logDetail);
         }
-
-        dtlRepository.saveAll(entitiesToSave);
     }
 
     private Long getNextDetRowId(Long transactionPoid) {

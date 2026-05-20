@@ -235,7 +235,9 @@ class PortChargesTariffServiceImplTest {
         when(hdrRepository.findOverlappingTariffs(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of());
         when(hdrRepository.save(any(ShipPortChargesHdr.class))).thenReturn(mockHdr);
         when(hdrRepository.findById(any(Long.class))).thenReturn(Optional.of(mockHdr));
-        
+        when(dtlRepository.save(any(ShipPortChargesDtl.class))).thenReturn(mockDtl);
+        when(dtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
+
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getGroupPoid).thenReturn(100L);
             userContext.when(UserContext::getTimeZoneCode).thenReturn("UTC");
@@ -243,7 +245,7 @@ class PortChargesTariffServiceImplTest {
 
             service.createPortChargesTariff(createDto, 100L, 50L);
 
-            verify(dtlRepository).saveAll(anyList());
+            verify(dtlRepository, atLeastOnce()).save(any(ShipPortChargesDtl.class));
             verify(loggingService, atLeastOnce()).createLogSummaryEntry(anyString(), anyString(), anyString());
         }
     }
@@ -323,6 +325,7 @@ class PortChargesTariffServiceImplTest {
         when(dtlRepository.findByTransactionPoidAndDetRowId(1L, 1L)).thenReturn(Optional.of(mockDtl));
         when(dtlRepository.findByTransactionPoidAndDetRowId(1L, 2L)).thenReturn(Optional.of(new ShipPortChargesDtl()));
         when(dtlRepository.findByTransactionPoid(1L)).thenReturn(List.of(mockDtl)); // For getNextDetRowId
+        when(dtlRepository.save(any(ShipPortChargesDtl.class))).thenReturn(mockDtl);
 
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getGroupPoid).thenReturn(100L);
@@ -331,7 +334,7 @@ class PortChargesTariffServiceImplTest {
             service.updatePortChargesTariff(1L, updateDto, 100L, 50L);
 
             verify(dtlRepository).deleteAll(anyList());
-            verify(dtlRepository).saveAll(anyList());
+            verify(dtlRepository, atLeastOnce()).save(any(ShipPortChargesDtl.class));
             verify(loggingService).logChanges(any(), any(), any(), anyString(), anyString(), eq(LogDetailsEnum.MODIFIED), anyString());
         }
     }
@@ -392,12 +395,13 @@ class PortChargesTariffServiceImplTest {
 
         when(hdrRepository.findById(any(Long.class))).thenReturn(Optional.of(mockHdr));
         when(dtlRepository.findByTransactionPoid(1L)).thenReturn(Collections.emptyList());
+        when(dtlRepository.save(any(ShipPortChargesDtl.class))).thenReturn(mockDtl);
 
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getGroupPoid).thenReturn(100L);
             userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
             service.updatePortChargesTariff(1L, updateDto, 100L, 50L);
-            verify(dtlRepository).saveAll(anyList());
+            verify(dtlRepository, atLeastOnce()).save(any(ShipPortChargesDtl.class));
         }
     }
 
