@@ -211,6 +211,32 @@ public class ExportManifestUpdateController {
 
     // ========== Container Details Operations ==========
 
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(summary = "Get Cargo and Container Details", description = "Retrieves container details and cargo description for an Export BL")
+    @Parameters({
+            @Parameter(
+                    name = "X-Document-Id",
+                    in = ParameterIn.HEADER,
+                    description = "Document identifier required for auditing purposes.",
+                    example = "100-352",
+                    required = true,
+                    schema = @Schema(type = "string", example = "100-352")
+            ),
+            @Parameter(
+                    name = "X-Action-Requested",
+                    in = ParameterIn.HEADER,
+                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
+                    example = "VIEW",
+                    required = true,
+                    schema = @Schema(type = "string", example = "VIEW")
+            )
+    })
+    @GetMapping("/{transactionPoid}/cargo-container-details")
+    public ResponseEntity<?> getCargoContainerDetails(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        return success("Cargo and container details retrieved successfully", service.getCargoContainerDetails(transactionPoid));
+    }
+
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Bulk Save Container Details", description = "Bulk save container details (create, update, delete in single transaction)")
     @Parameters({
@@ -328,6 +354,31 @@ public class ExportManifestUpdateController {
 
     // ========== Charge Details Operations ==========
 
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(summary = "Get Charge Details", description = "Retrieves all charge details for an Export BL")
+    @Parameters({
+            @Parameter(
+                    name = "X-Document-Id",
+                    in = ParameterIn.HEADER,
+                    description = "Document identifier required for auditing purposes.",
+                    example = "100-352",
+                    required = true,
+                    schema = @Schema(type = "string", example = "100-352")
+            ),
+            @Parameter(
+                    name = "X-Action-Requested",
+                    in = ParameterIn.HEADER,
+                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
+                    example = "VIEW",
+                    required = true,
+                    schema = @Schema(type = "string", example = "VIEW")
+            )
+    })
+    @GetMapping("/{transactionPoid}/charge-details")
+    public ResponseEntity<?> getChargeDetails(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        return success("Charge details retrieved successfully", service.getChargeDetails(transactionPoid));
+    }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Bulk Save Charge Details", description = "Bulk save charge details (create, update, delete in single transaction)")
