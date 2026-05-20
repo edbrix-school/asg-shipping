@@ -63,28 +63,5 @@ public class ExportShipBlManifestGeneralDtl extends BaseEntity {
     @Column(name = "DESTINATION_PORT_POID")
     private Long destinationPortPoid;
 
-    @PrePersist
-    protected void onCreate() {
-        // Trigger logic: If NET_VOLUME is null and GRS_VOLUME is not null, set NET_VOLUME = GRS_VOLUME
-        if (netVolume == null && grsVolume != null) {
-            netVolume = grsVolume;
-        }
-        // Trigger logic: If NO_OF_PACKS is null and QUANTITY is not null, set NO_OF_PACKS = QUANTITY
-        if (noOfPacks == null && quantity != null) {
-            noOfPacks = quantity;
-        }
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        // Trigger logic: If NET_VOLUME is null and GRS_VOLUME is not null, set NET_VOLUME = GRS_VOLUME
-        if (netVolume == null && grsVolume != null) {
-            netVolume = grsVolume;
-        }
-        // Trigger logic: If NO_OF_PACKS is null and QUANTITY is not null, set NO_OF_PACKS = QUANTITY
-        if (noOfPacks == null && quantity != null) {
-            noOfPacks = quantity;
-        }
-    }
 }
 

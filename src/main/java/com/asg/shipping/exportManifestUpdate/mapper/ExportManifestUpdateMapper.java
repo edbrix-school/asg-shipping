@@ -312,6 +312,9 @@ public class ExportManifestUpdateMapper {
         if (request.getTotalVolume() != null) {
             entity.setTotalVolume(request.getTotalVolume());
         }
+        if (request.getOriginalBl() != null) {
+            entity.setBlOrginalPrint(request.getOriginalBl());
+        }
 
         // Set audit fields
         entity.setGroupPoid(groupPoid);
@@ -726,6 +729,27 @@ public class ExportManifestUpdateMapper {
         return entities.stream()
                 .map(this::mapChargeToDto)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Convert Address Details Entity to DTO
+     */
+    public ExportManifestAddressDto mapAddressToDto(com.asg.shipping.address.entity.AddressDetails entity) {
+        if (entity == null) {
+            return null;
+        }
+
+        ExportManifestAddressDto dto = new ExportManifestAddressDto();
+        dto.setAddressPoid(entity.getAddressPoid());
+        dto.setAddressMasterPoid(entity.getAddressMasterPoid());
+        dto.setAddressType(entity.getAddressType());
+        dto.setOffTel1(entity.getOffTel1());
+        dto.setContactPerson(entity.getContactPerson());
+        dto.setMobile(entity.getMobile());
+        dto.setFax(entity.getFax());
+        dto.setEmail(entity.getEmail());
+        dto.setPoBox(entity.getPoBox());
+        return dto;
     }
 }
 
