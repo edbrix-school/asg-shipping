@@ -135,26 +135,7 @@ public class SalesInvoiceShippingController {
             required = true,
             description = "Provide full details for Sales Invoice including header, charges, and containers.",
             content = @Content(
-                    schema = @Schema(implementation = SalesInvoiceShippingCreateDTO.class),
-                    examples = @ExampleObject(
-                            name = "Sales Invoice Create Example",
-                            value = """
-                                    {
-                                      "customerPoid": 123,
-                                      "blPoid": 456,
-                                      "invDate": "2024-01-15",
-                                      "blTypeInvoice": "IMPORT",
-                                      "chargesDetails": [
-                                        {
-                                          "chargePoid": 789,
-                                          "amount": 1000.00,
-                                          "amountSelect": "Y",
-                                          "currencyCode": "USD"
-                                        }
-                                      ]
-                                    }
-                                    """
-                    )
+                    schema = @Schema(implementation = SalesInvoiceShippingCreateDTO.class)
             )
     )
     @PostMapping("/create")
@@ -234,23 +215,7 @@ public class SalesInvoiceShippingController {
             required = true,
             description = "Provide fields to update. Only provided fields will be updated.",
             content = @Content(
-                    schema = @Schema(implementation = SalesInvoiceShippingUpdateDTO.class),
-                    examples = @ExampleObject(
-                            name = "Sales Invoice Update Example",
-                            value = """
-                                    {
-                                      "invDate": "2024-01-20",
-                                      "invAmount": 1500.00,
-                                      "chargesDetails": [
-                                        {
-                                          "detRowId": 1,
-                                          "amount": 1200.00,
-                                          "amountSelect": "Y"
-                                        }
-                                      ]
-                                    }
-                                    """
-                    )
+                    schema = @Schema(implementation = SalesInvoiceShippingUpdateDTO.class)
             )
     )
     @PutMapping("/{id}")
