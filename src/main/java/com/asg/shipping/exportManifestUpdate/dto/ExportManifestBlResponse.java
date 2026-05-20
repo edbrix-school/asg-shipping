@@ -145,5 +145,7 @@ public class ExportManifestBlResponse {
     private List<GeneralCargoDetailDto> generalCargoDetails;
     private List<ContainerDetailDto> containerDetails;
     private List<CargoDescriptionDto> cargoDescription;
+    private List<ChargeDetailDto> chargeDetails;
+    private ChargeTotalsDto chargeTotals;
 }
 

@@ -40,7 +40,6 @@ import static com.asg.common.lib.dto.response.ApiResponse.error;
 public class ExportManifestUpdateController {
 
     private final ExportManifestBlService service;
-    private final ImportManifestService importManifestService;
 
     // ========== Header Operations ==========
 
@@ -272,24 +271,6 @@ public class ExportManifestUpdateController {
                 service.bulkSaveCargoDescription(transactionPoid, request));
     }
 
-    @Operation(
-            summary = "Load Email/Fax Data",
-            description = "Load email/fax data for selected party."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Email/Fax data loaded successfully"),
-            @ApiResponse(responseCode = "403", description = "Insufficient permissions"),
-            @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
-            @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/load-email-fax")
-    public ResponseEntity<?> loadEmailFax(
-            @RequestParam Long addressMasterPoid,
-            @RequestParam String addressType
-    ) {
-        LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(addressMasterPoid, addressType);
-        return success("Email/Fax data loaded successfully", response);
-    }
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get Cargo Marks", description = "Retrieves all cargo marks details for an Export BL")
     @Parameters({
@@ -347,31 +328,6 @@ public class ExportManifestUpdateController {
 
     // ========== Charge Details Operations ==========
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(summary = "Get Charge Details", description = "Retrieves all charge details for an Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
-    @GetMapping("/{transactionPoid}/charge-details")
-    public ResponseEntity<?> getChargeDetails(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Charge details retrieved successfully", service.getChargeDetails(transactionPoid));
-    }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Bulk Save Charge Details", description = "Bulk save charge details (create, update, delete in single transaction)")
@@ -684,6 +640,33 @@ public class ExportManifestUpdateController {
             @Valid @RequestBody QuotationAfterBrowseRequest request) {
         return success("Quotation data loaded successfully", 
                 service.quotationAfterBrowse(transactionPoid, request));
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(summary = "Get Address Details", description = "Retrieves address details for a customer by address master POID and address type")
+    @Parameters({
+            @Parameter(
+                    name = "X-Document-Id",
+                    in = ParameterIn.HEADER,
+                    description = "Document identifier required for auditing purposes.",
+                    example = "100-352",
+                    required = true,
+                    schema = @Schema(type = "string", example = "100-352")
+            ),
+            @Parameter(
+                    name = "X-Action-Requested",
+                    in = ParameterIn.HEADER,
+                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
+                    example = "VIEW",
+                    required = true,
+                    schema = @Schema(type = "string", example = "VIEW")
+            )
+    })
+    @GetMapping("/address-details")
+    public ResponseEntity<?> getAddressDetails(
+            @Parameter(description = "Address Master POID", required = true) @RequestParam Long addressMasterPoid,
+            @Parameter(description = "Address Type", required = false) @RequestParam(required = false, defaultValue = "CAN") String addressType) {
+        return success("Address details retrieved successfully", service.getAddressDetails(addressMasterPoid, addressType));
     }
 }
 

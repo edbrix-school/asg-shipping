@@ -59,5 +59,7 @@ public interface ExportManifestBlService {
     BlStatusResponse getBlStatus(Long transactionPoid);
     
     Map<String, Object> quotationAfterBrowse(Long transactionPoid, QuotationAfterBrowseRequest request);
+
+    ExportManifestAddressDto getAddressDetails(Long addressMasterPoid, String addressType);
 }
 

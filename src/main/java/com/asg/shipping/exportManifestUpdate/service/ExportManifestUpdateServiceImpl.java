@@ -15,6 +15,8 @@ import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.entity.*;
 import com.asg.shipping.exportManifestUpdate.mapper.ExportManifestUpdateMapper;
 import com.asg.shipping.exportManifestUpdate.repository.*;
+import com.asg.shipping.address.entity.AddressDetails;
+import com.asg.shipping.address.entity.AddressDetailsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -59,6 +61,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     private final LovService lovService;
 	private final PrintService printService;
 	private final DataSource dataSource;
+    private final AddressDetailsRepository addressDetailsRepository;
 
     // ========== Header Operations ==========
 
@@ -84,6 +87,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         response.setGeneralCargoDetails(getGeneralCargoDetails(transactionPoid));
         response.setContainerDetails(getContainerDetails(transactionPoid));
         response.setCargoDescription(getCargoDescription(transactionPoid));
+        
+        // Retrieve and set charge details
+        Map<String, Object> chargeDetailsMap = getChargeDetails(transactionPoid);
+        response.setChargeDetails((List<ChargeDetailDto>) chargeDetailsMap.get("data"));
+        response.setChargeTotals((ChargeTotalsDto) chargeDetailsMap.get("totals"));
         
         return response;
     }
@@ -992,6 +1000,33 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);
             }
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ExportManifestAddressDto getAddressDetails(Long addressMasterPoid, String addressType) {
+        log.info("Fetching address details for addressMasterPoid: {} and addressType: {}", addressMasterPoid, addressType);
+        
+        List<AddressDetails> addressList = addressDetailsRepository.findByAddressMasterPoidAndAddressType(addressMasterPoid, addressType);
+        if (addressList == null || addressList.isEmpty()) {
+            if (addressType != null && !addressType.equalsIgnoreCase("MAIN")) {
+                log.info("Address of type {} not found. Falling back to MAIN.", addressType);
+                addressList = addressDetailsRepository.findByAddressMasterPoidAndAddressType(addressMasterPoid, "MAIN");
+            }
+        }
+        
+        if (addressList == null || addressList.isEmpty()) {
+            log.info("Address of type MAIN not found. Fetching any address for master poid.");
+            addressList = addressDetailsRepository.findAll().stream()
+                    .filter(addr -> addressMasterPoid.equals(addr.getAddressMasterPoid()))
+                    .collect(Collectors.toList());
+        }
+        
+        if (addressList == null || addressList.isEmpty()) {
+            throw new RuntimeException("Address details not found for master poid: " + addressMasterPoid);
+        }
+        
+        return mapper.mapAddressToDto(addressList.getFirst());
     }
 }
 
