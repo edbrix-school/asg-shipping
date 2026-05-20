@@ -19,6 +19,7 @@ import com.asg.shipping.vesseltypemaster.repository.ShipVesselTypeMasterReposito
 import com.asg.shipping.vesseltypemaster.util.VesselTypeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -125,12 +126,8 @@ public class VesselTypeServiceImpl implements VesselTypeService {
 
         validateVesselTypeUpdateDTO(dto, id);
 
-        ShipVesselTypeMaster oldVesselType = ShipVesselTypeMaster.builder()
-                .vesselTypeName(vesselType.getVesselTypeName())
-                .vesselTypeName2(vesselType.getVesselTypeName2())
-                .active(vesselType.getActive())
-                .seqno(vesselType.getSeqno())
-                .build();
+        ShipVesselTypeMaster oldVesselType = new ShipVesselTypeMaster();
+        BeanUtils.copyProperties(vesselType, oldVesselType);
 
         mapper.mapUpdateDTOToEntity(dto, vesselType, groupPoid, userPoid);
 

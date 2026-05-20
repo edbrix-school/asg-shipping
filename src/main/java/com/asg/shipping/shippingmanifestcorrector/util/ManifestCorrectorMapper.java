@@ -256,6 +256,31 @@ public class ManifestCorrectorMapper {
                 .build();
     }
 
+    public void updateChargeDtlEntity(ManifestCorrectorChargeDtlDto dto, ShipBlReprintChargeDtl entity) {
+        if (dto == null || entity == null) {
+            return;
+        }
+
+        entity.setChargePoid(dto.getChargePoid());
+        entity.setCurrencyExchange(dto.getCurrencyExchange() != null ? dto.getCurrencyExchange() : BigDecimal.ONE);
+        entity.setQuantity(dto.getQuantity());
+        entity.setBuyPercharge(dto.getBuyPercharge());
+        entity.setPerQuantityAmount(dto.getPerQuantityAmount());
+        entity.setPaidAtPortPoid(dto.getPaidAtPortPoid());
+        entity.setChargeType(dto.getChargeType() != null ? dto.getChargeType() : "MANIFEST");
+        entity.setCurrencyCode(dto.getCurrencyCode());
+        entity.setFreightType(dto.getFreightType());
+        entity.setEdiChargeCode(dto.getEdiChargeCode());
+        entity.setArShReceiptTransactionPoid(dto.getArShReceiptTransactionPoid());
+        entity.setChargeBasisOn(dto.getChargeBasisOn());
+        entity.setPrintGroup(dto.getPrintGroup());
+        entity.setReceiptInvoicePoid(dto.getReceiptInvoicePoid());
+        entity.setDocRefLinkNo(dto.getDocRefLinkNo());
+        entity.setContainerNumber(dto.getContainerNumber());
+        entity.setRevPayable(dto.getRevPayable());
+        entity.setRevIncome(dto.getRevIncome());
+    }
+
     /**
      * Convert Container Detail Entity to DTO
      */
@@ -291,6 +316,17 @@ public class ManifestCorrectorMapper {
                 .build();
     }
 
+    public void updateContainerDtlEntity(ManifestCorrectorContainerDtlDto dto, ShipBlReprintContainerDtl entity) {
+        if (dto == null || entity == null) {
+            return;
+        }
+
+        entity.setContainerNumber(dto.getContainerNumber());
+        entity.setEquipmentIsoType(dto.getContainerType());
+        entity.setIsSelectedDlv(dto.getIsSelectedDlv());
+        entity.setIsSelectedRtn(dto.getIsSelectedRtn());
+    }
+
     /**
      * Convert list of Charge Details
      */
@@ -315,4 +351,3 @@ public class ManifestCorrectorMapper {
                 .collect(Collectors.toList());
     }
 }
-
