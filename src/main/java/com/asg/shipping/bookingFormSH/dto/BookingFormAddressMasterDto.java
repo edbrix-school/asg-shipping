@@ -16,7 +16,7 @@ public class BookingFormAddressMasterDto {
     private String mobile;
     private String poBox;
     private String telephone;
-
+    private String fax;
 }
 
 
