@@ -136,6 +136,9 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         saved.setInvAmount(invAmount);
 
         saved = hdrRepository.saveAndFlush(saved);
+        
+        // Re-fetch the entity to get the actual database values after trigger execution
+        saved = hdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
 
         callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "INVSHRCPTPRINTUPDATE");
 
@@ -173,6 +176,9 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         BigDecimal invAmount = calculateInvoiceAmount(id);
         saved.setInvAmount(invAmount);
         saved = hdrRepository.saveAndFlush(saved);
+        
+        // Re-fetch the entity to get the actual database values after trigger execution
+        saved = hdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
 
         callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "INVSHRCPTPRINTUPDATE");
 
