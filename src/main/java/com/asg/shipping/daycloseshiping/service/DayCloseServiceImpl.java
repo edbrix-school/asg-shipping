@@ -144,6 +144,10 @@ public class DayCloseServiceImpl implements DayCloseService {
         ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
         hdr.setTransactionPoid(transactionPoid);
 
+        if("Y".equals(existingData.getVerifiedRcvd())){
+            throw new ValidationException("Already Handover Completed.");
+        }
+
         DayCloseMapper.mapCreateDTOToEntity(request.getHeader(), hdr, groupPoid, companyPoid);
         hdrRepo.save(hdr);
 
@@ -159,7 +163,7 @@ public class DayCloseServiceImpl implements DayCloseService {
         log.info("Deleting DayClose Shipping with id: {}", id);
 
 
-        hdrRepo.findByTransactionPoidDeleted(id)
+        ArShDayEndCloseHdr existingData=hdrRepo.findByTransactionPoidDeleted(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dayclose Shipping", TRANSACTIONPOID, id));
 
         // Use DocumentDeleteService for deletion (handles logging internally)
@@ -168,7 +172,7 @@ public class DayCloseServiceImpl implements DayCloseService {
                 "AR_SH_DAY_END_CLOSE_HDR",
                 TRANSACTION_POID,
                 deleteReasonDto,
-                null
+                existingData.getTransactionDate()
         );
 
         log.info("Successfully deleted dayclose shipping with id: {}", id);
