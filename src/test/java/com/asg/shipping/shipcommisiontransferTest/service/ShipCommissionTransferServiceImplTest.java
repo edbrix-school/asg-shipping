@@ -4,6 +4,8 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -51,6 +53,8 @@ class ShipCommissionTransferServiceImplTest {
     private DocumentSearchService documentService;
     @Mock
     private LoggingService loggingService;
+    @Mock
+    private DocumentDeleteService documentDeleteService;
     @Mock
     private ShipCommissionTransferMapper mapper;
     @Mock
@@ -159,6 +163,7 @@ class ShipCommissionTransferServiceImplTest {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::isLogEnabled).thenReturn(true);
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
                     .thenReturn(Optional.of(hdrEntity));
@@ -171,7 +176,7 @@ class ShipCommissionTransferServiceImplTest {
 
             assertNotNull(result);
             assertEquals(1L, result.getTransactionPoid());
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.VIEWED), eq("DOC-001"), eq("1"));
+            verifyNoInteractions(loggingService);
         }
     }
 
@@ -221,12 +226,11 @@ class ShipCommissionTransferServiceImplTest {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getUserPoid).thenReturn(1L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::isLogEnabled).thenReturn(true);
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
                     .thenReturn(Optional.of(hdrEntity));
             when(headerRepository.save(any(ShipBlCommissionHdr.class))).thenReturn(hdrEntity);
-            
-            // Mock the service call to getShipCommissionTransfer for the return
             when(detailRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
             when(mapper.mapToDto(hdrEntity)).thenReturn(dto);
             when(mapper.mapDtlListToDto(any())).thenReturn(List.of());
@@ -235,8 +239,7 @@ class ShipCommissionTransferServiceImplTest {
 
             assertNotNull(result);
             verify(headerRepository).save(any(ShipBlCommissionHdr.class));
-            verify(detailRepository).deleteByTransactionPoid(1L);
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.MODIFIED), eq("DOC-001"), eq("1"));
+            verify(loggingService).logChanges(any(), any(), eq(ShipBlCommissionHdr.class), eq("DOC-001"), eq("1"), eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
         }
     }
 
@@ -249,28 +252,28 @@ class ShipCommissionTransferServiceImplTest {
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
                     .thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> service.deleteShipCommissionTransfer(1L));
+            assertThrows(ResourceNotFoundException.class, () -> service.deleteShipCommissionTransfer(1L, null));
         }
     }
 
     @Test
     void testDeleteShipCommissionTransfer_Success() {
-        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class);
-             var mockedHelperUtils = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
-            
+        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
-            mockedHelperUtils.when(com.asg.common.lib.utility.ASGHelperUtils::getCurrentUser).thenReturn("testuser");
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
                     .thenReturn(Optional.of(hdrEntity));
-            when(headerRepository.save(any(ShipBlCommissionHdr.class))).thenReturn(hdrEntity);
 
-            service.deleteShipCommissionTransfer(1L);
+            service.deleteShipCommissionTransfer(1L, null);
 
-            verify(headerRepository).save(any(ShipBlCommissionHdr.class));
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.DELETED), eq("DOC-001"), eq("1"));
+            verify(documentDeleteService).deleteDocument(
+                    eq(1L),
+                    eq("SHIP_BL_COMMISSION_HDR"),
+                    eq("TRANSACTION_POID"),
+                    isNull(),
+                    eq(hdrEntity.getTransactionDate())
+            );
         }
     }
 

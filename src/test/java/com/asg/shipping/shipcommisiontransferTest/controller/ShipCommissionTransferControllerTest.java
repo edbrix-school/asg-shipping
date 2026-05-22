@@ -25,8 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
@@ -43,6 +42,9 @@ class ShipCommissionTransferControllerTest {
 
     @Mock
     private ShipCommissionTransferService commissionTransferService;
+
+    @Mock
+    private com.asg.common.lib.service.LoggingService loggingService;
 
     @InjectMocks
     private ShipCommissionTransferController controller;
@@ -123,7 +125,7 @@ class ShipCommissionTransferControllerTest {
 
     @Test
     void testDelete() throws Exception {
-        doNothing().when(commissionTransferService).deleteShipCommissionTransfer(eq(1L));
+        doNothing().when(commissionTransferService).deleteShipCommissionTransfer(eq(1L), isNull());
 
         mockMvc.perform(delete("/v1/ship-commission-transfer/1"))
                 .andExpect(status().isOk())
@@ -229,7 +231,7 @@ class ShipCommissionTransferControllerTest {
     @Test
     void testDeleteWithInvalidId() throws Exception {
         doThrow(new IllegalArgumentException("Invalid ID"))
-                .when(commissionTransferService).deleteShipCommissionTransfer(eq(0L));
+                .when(commissionTransferService).deleteShipCommissionTransfer(eq(0L), isNull());
 
         mockMvc.perform(delete("/v1/ship-commission-transfer/0"))
                 .andExpect(status().isBadRequest())
