@@ -611,7 +611,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         Long maxDetRowId = detailRepository.getMaxDetRowId(transactionPoid);
         for (ShipCommissionDetailDto dto : detailDtos) {
             ActionType action = dto.getActionType();
-            if (action == null) continue;
+            if (action == null || action == ActionType.noChange) continue;
 
             if (action == ActionType.isCreated) {
                 ShipBlCommissionDtl entity = mapper.mapDtlFromDto(dto, transactionPoid);
