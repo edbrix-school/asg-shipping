@@ -1475,7 +1475,7 @@ public class BookingFormServiceImpl implements BookingFormService {
             }
             return result != null ? result : "TDR details uploaded successfully from Excel";
         } else {
-            return String.format("Successfully imported %d rows to temp table. Click 'Empty Container load' to process.", insertedCount);
+            return String.format("Successfully Imported");
         }
     }
 
