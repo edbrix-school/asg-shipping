@@ -1,9 +1,12 @@
 package com.asg.shipping.shipcommisiontransfer.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shipcommisiontransfer.dto.CommissionPendingRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
@@ -43,6 +46,7 @@ import static com.asg.shipping.common.ApiResponse.success;
 public class ShipCommissionTransferController {
 
     private final ShipCommissionTransferService commissionTransferService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
@@ -81,6 +85,7 @@ public class ShipCommissionTransferController {
             @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested) {
         log.info("Get Ship Commission Transfer request | transactionPoid={}, actionRequested={}", transactionPoid, actionRequested);
         ShipCommissionTransferDto dto = commissionTransferService.getShipCommissionTransfer(transactionPoid);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
         return success("Ship Commission Transfer fetched successfully", dto);
     }
 
@@ -115,9 +120,10 @@ public class ShipCommissionTransferController {
     @Operation(summary = "Delete Ship Commission Transfer (Soft delete)", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> delete(
             @PathVariable @NotNull @Positive Long transactionPoid,
-            @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested) {
+            @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested,
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Delete Ship Commission Transfer request | transactionPoid={}, actionRequested={}", transactionPoid, actionRequested);
-        commissionTransferService.deleteShipCommissionTransfer(transactionPoid);
+        commissionTransferService.deleteShipCommissionTransfer(transactionPoid, deleteReasonDto);
         return success("Ship Commission Transfer deleted successfully");
     }
 

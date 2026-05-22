@@ -1,19 +1,23 @@
 package com.asg.shipping.shipcommisiontransfer.service;
 
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.shipcommisiontransfer.dto.PdaFdaDtlResponseDTO;
 import com.asg.shipping.shipcommisiontransfer.entity.PdaFdaDtl;
+import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionDtlId;
 import com.asg.shipping.shipcommisiontransfer.repository.PdaFdaDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.dto.*;
+import com.asg.shipping.shipcommisiontransfer.enums.ActionType;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionDtl;
 import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionDtlRepository;
@@ -25,6 +29,7 @@ import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import oracle.jdbc.OracleTypes;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -59,6 +64,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     private final ShipCommissionTransferMapper mapper;
     private final JdbcTemplate jdbcTemplate;
     private final PdaFdaDtlRepository pdaFdaDtlRepository;
+    private final DocumentDeleteService documentDeleteService;
 
     private static final String TRANSACTION_POID = "transactionPoid";
     private static final String SHIP_COMMISSION_TRANSFER = "Ship Commission Transfer";
@@ -118,11 +124,6 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         // Enrich with LOV data
         enrichWithLovData(dto);
 
-        // Log view
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED,
-                com.asg.common.lib.security.util.UserContext.getDocumentId(),
-                id.toString());
-
         return dto;
     }
 
@@ -172,28 +173,26 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER,TRANSACTION_POID, id.toString()));
 
+        ShipBlCommissionHdr oldEntity = new ShipBlCommissionHdr();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         if ("Y".equals(entity.getDeleted())) {
             throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, id.toString());
         }
 
         // Update header
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
-         headerRepository.save(entity);
+        ShipBlCommissionHdr shipBlCommissionHdr = headerRepository.save(entity);
 
-        // Delete existing detail records
-        detailRepository.deleteByTransactionPoid(id);
-
-        // Save updated detail records
-        saveDetailRecords(id, updateDTO.getCommissionDetails());
+        // Update detail records by actionType
+        updateDetailRecords(id, updateDTO.getCommissionDetails());
 
         // Call PROC_SHIP_BL_PAGE_SAVE_AFTER for post-save processing
         callProcShipBlPageSaveAfter(groupPoid, companyPoid, id, null, "COMMISSION_UPDATE",
                 com.asg.common.lib.security.util.UserContext.getUserPoid());
 
         // Log update
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED,
-                com.asg.common.lib.security.util.UserContext.getDocumentId(),
-                id.toString());
+        loggingService.logChanges(oldEntity, shipBlCommissionHdr, ShipBlCommissionHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         // Reload and return
         return getShipCommissionTransfer(id);
@@ -201,7 +200,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
     @Override
     @Transactional
-    public void deleteShipCommissionTransfer(Long id) {
+    public void deleteShipCommissionTransfer(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting ship commission transfer with id: {}", id);
 
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
@@ -210,15 +209,13 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, id.toString()));
 
-        entity.setDeleted("Y");
-        entity.setLastModifiedBy(getCurrentUser());
-        entity.setLastModifiedDate(LocalDateTime.now());
-        headerRepository.save(entity);
-
-        // Log deletion
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED,
-                com.asg.common.lib.security.util.UserContext.getDocumentId(),
-                id.toString());
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_BL_COMMISSION_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                entity.getTransactionDate()
+        );
     }
 
     @Override
@@ -606,6 +603,42 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 }
             }
             throw new ValidationException("Error inserting commission into PDA: " + errorMsg);
+        }
+    }
+
+    private void updateDetailRecords(Long transactionPoid, List<ShipCommissionDetailDto> detailDtos) {
+        if (detailDtos == null || detailDtos.isEmpty()) return;
+        Long maxDetRowId = detailRepository.getMaxDetRowId(transactionPoid);
+        for (ShipCommissionDetailDto dto : detailDtos) {
+            ActionType action = dto.getActionType();
+            if (action == null || action == ActionType.noChange) continue;
+
+            if (action == ActionType.isCreated) {
+                ShipBlCommissionDtl entity = mapper.mapDtlFromDto(dto, transactionPoid);
+                entity.setDetRowId(++maxDetRowId);
+                ShipBlCommissionDtl saved = detailRepository.save(entity);
+                String logDetail = String.format("Row Created on  with detRowId: %s", saved.getDetRowId());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+
+            } else if (action == ActionType.isUpdated) {
+                detailRepository.findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId()).ifPresent(existing -> {
+                    ShipBlCommissionDtl oldDetail = new ShipBlCommissionDtl();
+                    BeanUtils.copyProperties(existing, oldDetail);
+                    ShipBlCommissionDtl mapped = mapper.mapDtlFromDto(dto, transactionPoid);
+                    BeanUtils.copyProperties(mapped, existing, "transactionPoid", "detRowId");
+                    ShipBlCommissionDtl updated = detailRepository.save(existing);
+                    String logDetail = String.format("KeyId = TRANSACTION_POID %s: DET_ROW_ID %s", updated.getTransactionPoid(), updated.getDetRowId());
+                    loggingService.createLog(oldDetail, updated, ShipBlCommissionDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+                });
+
+            } else if (action == ActionType.isDeleted) {
+                ShipBlCommissionDtlId dtlId = new ShipBlCommissionDtlId();
+                dtlId.setTransactionPoid(transactionPoid);
+                dtlId.setDetRowId(dto.getDetRowId());
+                detailRepository.deleteById(dtlId);
+                String logDetail = String.format("Row Deleted on  with detRowId: %s", dto.getDetRowId());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+            }
         }
     }
 
