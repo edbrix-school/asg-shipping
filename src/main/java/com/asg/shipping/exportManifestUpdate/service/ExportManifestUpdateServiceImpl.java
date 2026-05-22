@@ -903,6 +903,46 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     }
 
     /**
+     * Helper to fetch LOV item using an in-request cache map to avoid duplicate calls.
+     */
+    private LovItem getLovItemWithCache(Map<String, Map<Long, LovItem>> cache, Long poid, String masterType, Long groupPoid, Long companyPoid, Long userPoid) {
+        if (poid == null) {
+            return null;
+        }
+        Map<Long, LovItem> innerCache = cache.computeIfAbsent(masterType, k -> new HashMap<>());
+        if (!innerCache.containsKey(poid)) {
+            try {
+                LovItem item = lovService.getLovItemByPoid(poid, masterType, groupPoid, companyPoid, userPoid);
+                innerCache.put(poid, item);
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV for masterType: {} and poid: {}", masterType, poid, e);
+                innerCache.put(poid, null);
+            }
+        }
+        return innerCache.get(poid);
+    }
+
+    /**
+     * Helper to fetch LOV item by code using an in-request cache map to avoid duplicate calls.
+     */
+    private LovItem getLovItemByCodeWithCache(Map<String, Map<String, LovItem>> cache, String code, String lovName, Long groupPoid, Long companyPoid, Long userPoid) {
+        if (code == null || code.trim().isEmpty()) {
+            return null;
+        }
+        Map<String, LovItem> innerCache = cache.computeIfAbsent(lovName, k -> new HashMap<>());
+        if (!innerCache.containsKey(code)) {
+            try {
+                LovItem item = lovService.getLovItemByCode(code, lovName, groupPoid, companyPoid, userPoid);
+                innerCache.put(code, item);
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV for lovName: {} and code: {}", lovName, code, e);
+                innerCache.put(code, null);
+            }
+        }
+        return innerCache.get(code);
+    }
+
+    /**
      * Enrich general cargo details DTOs with LOV data
      */
     private void enrichGeneralCargoDetailsWithLovData(List<GeneralCargoDetailDto> dtos) {
@@ -913,16 +953,15 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         Long userPoid = getUserPoid();
+        Map<String, Map<Long, LovItem>> cache = new HashMap<>();
 
         for (GeneralCargoDetailDto dto : dtos) {
             try {
                 if (dto.getComodityPoid() != null) {
-                    dto.setComodityDet(lovService.getLovItemByPoid(
-                            dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
+                    dto.setComodityDet(getLovItemWithCache(cache, dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
                 }
                 if (dto.getDestinationPortPoid() != null) {
-                    dto.setDestinationPortDet(lovService.getLovItemByPoid(
-                            dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
+                    dto.setDestinationPortDet(getLovItemWithCache(cache, dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
                 }
             } catch (Exception e) {
                 log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
@@ -941,24 +980,15 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         Long userPoid = getUserPoid();
+        Map<String, Map<Long, LovItem>> cache = new HashMap<>();
 
         for (ContainerDetailDto dto : dtos) {
             try {
                 if (dto.getComodityPoid() != null) {
-                    dto.setComodityDet(lovService.getLovItemByPoid(
-                            dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
+                    dto.setComodityDet(getLovItemWithCache(cache, dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
                 }
                 if (dto.getDestinationPortPoid() != null) {
-                    dto.setDestinationPortDet(lovService.getLovItemByPoid(
-                            dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
-                }
-                if (dto.getMateTransactionPoid() != null) {
-                    try {
-                        dto.setMateTransactionDet(lovService.getLovItemByPoid(
-                                dto.getMateTransactionPoid(), "SHIP_MATE_HDR", groupPoid, companyPoid, userPoid));
-                    } catch (Exception e) {
-                        log.warn("Failed to fetch SHIP_MATE_HDR LOV for mateTransactionPoid: {}", dto.getMateTransactionPoid(), e);
-                    }
+                    dto.setDestinationPortDet(getLovItemWithCache(cache, dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
                 }
             } catch (Exception e) {
                 log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
@@ -977,32 +1007,31 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         Long userPoid = getUserPoid();
+        Map<String, Map<Long, LovItem>> cache = new HashMap<>();
+        Map<String, Map<String, LovItem>> codeCache = new HashMap<>();
 
         for (ChargeDetailDto dto : dtos) {
             try {
                 if (dto.getChargePoid() != null) {
-                    dto.setChargeDet(lovService.getLovItemByPoid(
-                            dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid, userPoid));
+                    dto.setChargeDet(getLovItemWithCache(cache, dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid, userPoid));
                 }
                 if (dto.getPaidAtPortPoid() != null) {
-                    dto.setPaidAtPortDet(lovService.getLovItemByPoid(
-                            dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
+                    dto.setPaidAtPortDet(getLovItemWithCache(cache, dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
                 }
                 if (dto.getReceiptInvoicePoid() != null) {
-                    try {
-                        dto.setReceiptInvoiceDet(lovService.getLovItemByPoid(
-                                dto.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE", groupPoid, companyPoid, userPoid));
-                    } catch (Exception e) {
-                        log.warn("Failed to fetch MANIFEST_RECEIPT_INVOICE LOV for receiptInvoicePoid: {}", dto.getReceiptInvoicePoid(), e);
-                    }
+                    dto.setReceiptInvoiceDet(getLovItemWithCache(cache, dto.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE", groupPoid, companyPoid, userPoid));
                 }
                 if (dto.getTaxPoid() != null) {
-                    try {
-                        dto.setTaxDet(lovService.getLovItemByPoid(
-                                dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid, userPoid));
-                    } catch (Exception e) {
-                        log.warn("Failed to fetch TAX_MASTER LOV for taxPoid: {}", dto.getTaxPoid(), e);
-                    }
+                    dto.setTaxDet(getLovItemWithCache(cache, dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getChargeType() != null) {
+                    dto.setChargeTypeDet(getLovItemByCodeWithCache(codeCache, dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getFreightType() != null) {
+                    dto.setFreightTypeDet(getLovItemByCodeWithCache(codeCache, dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getChargeBasisOn() != null) {
+                    dto.setChargeBasisOnDet(getLovItemByCodeWithCache(codeCache, dto.getChargeBasisOn(), "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid));
                 }
             } catch (Exception e) {
                 log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);

@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class ContainerDetailDto {
     private Long detRowId;
     private Long mateTransactionPoid;
-    private LovItem mateTransactionDet; // LOV: SHIP_MATE_HDR
     private String containerNo;
     private String equipmentShipperOwn;
     private String cargoDescription;
