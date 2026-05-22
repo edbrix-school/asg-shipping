@@ -21,29 +21,31 @@ public interface ExportManifestBlService {
     
     ExportManifestBlResponse updateExportBl(Long transactionPoid, ExportManifestBlRequest request);
     
+    ExportManifestUpdateResponse updateExportBlCombined(Long transactionPoid, ExportManifestUpdateRequest request);
+    
     void deleteExportBl(Long transactionPoid);
 
     // General Cargo Details Operations
     List<GeneralCargoDetailDto> getGeneralCargoDetails(Long transactionPoid);
-    List<GeneralCargoDetailDto> bulkSaveGeneralCargoDetails(Long transactionPoid, BulkSaveRequest<GeneralCargoDetailDto> request);
+    List<GeneralCargoDetailDto> updateGeneralCargoDetails(Long transactionPoid, List<GeneralCargoDetailDto> request);
 
     // Container Details Operations
     List<ContainerDetailDto> getContainerDetails(Long transactionPoid);
-    List<ContainerDetailDto> bulkSaveContainerDetails(Long transactionPoid, BulkSaveRequest<ContainerDetailDto> request);
+    List<ContainerDetailDto> updateContainerDetails(Long transactionPoid, List<ContainerDetailDto> request);
 
     // Cargo Description and Marks Operations
     List<CargoDescriptionDto> getCargoDescription(Long transactionPoid);
-    List<CargoDescriptionDto> bulkSaveCargoDescription(Long transactionPoid, BulkSaveRequest<CargoDescriptionDto> request);
+    List<CargoDescriptionDto> updateCargoDescription(Long transactionPoid, List<CargoDescriptionDto> request);
     ExportManifestCargoContainerResponse getCargoContainerDetails(Long transactionPoid);
     
     List<CargoMarksDto> getCargoMarks(Long transactionPoid);
     
-    List<CargoMarksDto> bulkSaveCargoMarks(Long transactionPoid, BulkSaveRequest<CargoMarksDto> request);
+    List<CargoMarksDto> updateCargoMarks(Long transactionPoid, List<CargoMarksDto> request);
 
     // Charge Details Operations
     Map<String, Object> getChargeDetails(Long transactionPoid);
     
-    Map<String, Object> bulkSaveChargeDetails(Long transactionPoid, BulkSaveRequest<ChargeDetailDto> request);
+    Map<String, Object> updateChargeDetails(Long transactionPoid, List<ChargeDetailDto> request);
 
     // Special Operations
     Map<String, Object> loadBooking(Long transactionPoid, LoadBookingRequest request);

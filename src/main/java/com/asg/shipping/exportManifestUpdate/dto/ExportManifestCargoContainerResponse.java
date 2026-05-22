@@ -10,4 +10,5 @@ import java.util.List;
 public class ExportManifestCargoContainerResponse {
     private List<ContainerDetailDto> containerDetails;
     private List<CargoDescriptionDto> cargoDescription;
+    private List<CargoMarksDto> cargoMarks;
 }
