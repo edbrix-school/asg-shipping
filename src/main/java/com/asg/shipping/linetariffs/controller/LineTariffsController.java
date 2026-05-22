@@ -9,6 +9,9 @@ import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.linetariffs.service.LineTariffsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -47,6 +50,7 @@ public class LineTariffsController {
     private static final String DOC_ID = "100-050";
 
     private final LineTariffsService lineTariffsService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/search")
@@ -122,6 +126,7 @@ public class LineTariffsController {
 
         log.info("Getting line tariff with id: {}", id);
         LineTariffDto tariff = lineTariffsService.getLineTariff(id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         log.info("Successfully retrieved line tariff with id: {}", id);
         return ApiResponse.success("Line tariff retrieved successfully", tariff);
     }

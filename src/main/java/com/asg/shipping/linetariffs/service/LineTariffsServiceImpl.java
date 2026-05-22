@@ -115,8 +115,6 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         long tariffCountForLine = tariffHdrRepository.findLatestByLinePoidAndGroupPoid(tariff.getLinePoid(), groupPoid).size();
         dto.setPeriodFromEditable(tariffCountForLine != 1);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
-
         log.info("Successfully retrieved line tariff with id: {}", id);
         return dto;
     }
