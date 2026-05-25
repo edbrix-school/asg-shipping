@@ -389,6 +389,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
                 .blPoid(blPoid)
                 .transactionPoid(transactionPoid)
                 .build();
+        final boolean[] dataFound = {false};
 
         try {
             String sql = "{call PRODUCTION.PROC_LOV_AFTER_BRWS_100_143(?,?,?,?,?,?,?,?)}";
@@ -405,8 +406,9 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
                 try (ResultSet rs = (ResultSet) cs.getObject(8)) {
                     if (rs == null || !rs.next()) {
-                        throw new ValidationException("No auto-population data found for BL number: " + blNumber);
+                        return null;
                     }
+                    dataFound[0] = true;
 
                     response.setConsigneePoid(getLongOrNull(rs, "CONSIGNEE_POID"));
                     response.setIssueType(rs.getString("ISSUE_TYPE"));
@@ -432,8 +434,17 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
+            if (isNoDataFoundException(e)) {
+                log.info("No BL auto-population data returned for BL: {}", blNumber);
+                return null;
+            }
             log.error("Error calling PROC_LOV_AFTER_BRWS_100_143 for BL: {}", blNumber, e);
             throw new ValidationException("Error auto-populating BL details: " + e.getMessage());
+        }
+
+        if (!dataFound[0]) {
+            log.info("No BL auto-population data returned for BL: {}", blNumber);
+            return null;
         }
 
         enrichLovData(response);
@@ -453,6 +464,18 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             throw new ValidationException("BL number not found: " + blNumber);
         }
         return blPoid;
+    }
+
+    private boolean isNoDataFoundException(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && (message.contains("ORA-01403") || message.contains("no data found"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private void enrichLovData(ManifestCorrectorDto dto) {
