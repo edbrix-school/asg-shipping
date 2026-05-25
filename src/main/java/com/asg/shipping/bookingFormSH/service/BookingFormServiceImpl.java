@@ -7,10 +7,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
-import com.asg.common.lib.service.DocumentDeleteService;
-import com.asg.common.lib.service.DocumentSearchService;
-import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.service.*;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.bookingFormSH.dto.*;
 import com.asg.shipping.bookingFormSH.entity.*;
@@ -86,6 +83,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
+    private final LovDataService lovDataService;
 
     @PersistenceContext
     private final EntityManager entityManager;
@@ -1243,8 +1241,11 @@ public class BookingFormServiceImpl implements BookingFormService {
     }
 
     private void enrichLovDetails(BookingFormDto dto) {
-
-        setLov(dto.getQuotationTransactionPoid(), lovService::getQuotaionLov, dto::setQuotationTransactionPoidDet);
+        if (dto.getQuotationTransactionPoid() != null) {
+            dto.setQuotationTransactionPoidDet(
+                    lovDataService.getDetailsByPoidAndLovNameFast(dto.getQuotationTransactionPoid(), "SHIP_QUOTATION_EXPORT")
+            );
+        }
         setLov(dto.getVesselPoid(), lovService::getVesselMasterLov, dto::setVesselPoidDet);
         setLov(dto.getLinePoid(), lovService::getLineMasterLov, dto::setLinePoidDet);
         setLov(dto.getSalesmanPoid(), lovService::getSalesmanLov, dto::setSalesmanPoidDet);
@@ -1474,7 +1475,7 @@ public class BookingFormServiceImpl implements BookingFormService {
             }
             return result != null ? result : "TDR details uploaded successfully from Excel";
         } else {
-            return String.format("Successfully imported %d rows to temp table. Click 'Empty Container load' to process.", insertedCount);
+            return String.format("Successfully Imported");
         }
     }
 

@@ -129,5 +129,7 @@ public class ExportManifestBlRequest {
     private String printFreightDetails;
 
     private BigDecimal totalVolume;
+
+    private String originalBl;
 }
 

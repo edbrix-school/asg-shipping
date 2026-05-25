@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.shipping.common.dto.LovItem;
 
 import lombok.AllArgsConstructor;
@@ -44,7 +45,7 @@ public class BookingFormDto {
 	private Long notifyAddressPoid2;
 //	private LovItem notifyAddressPoid2Det; // LOV data
 	private Long quotationTransactionPoid;
-	private LovItem quotationTransactionPoidDet; // LOV data
+	private LovGetListDto quotationTransactionPoidDet; // LOV data
 	private Long vesselPoid;
 	private LovItem vesselPoidDet; // LOV data
 	private LocalDate vesselEtaDate;

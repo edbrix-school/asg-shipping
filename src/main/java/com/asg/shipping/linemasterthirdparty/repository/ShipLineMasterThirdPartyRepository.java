@@ -24,7 +24,7 @@ public interface ShipLineMasterThirdPartyRepository extends JpaRepository<ShipLi
     /**
      * Check if line code exists for the given group with LINE_TYPE = 'THIRD_PARTY' (excluding deleted records)
      */
-    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineCode = :lineCode AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.deleted = 'N'")
+    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineCode = :lineCode AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' ")
     boolean existsByLineCodeAndGroupPoidAndThirdParty(@Param("lineCode") String lineCode, @Param("groupPoid") Long groupPoid);
 
     /**
@@ -36,7 +36,7 @@ public interface ShipLineMasterThirdPartyRepository extends JpaRepository<ShipLi
     /**
      * Check if line name exists for the given group with LINE_TYPE = 'THIRD_PARTY' (excluding deleted records)
      */
-    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineName = :lineName AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' AND l.deleted = 'N'")
+    @Query("SELECT COUNT(l) > 0 FROM ShipLineMasterThirdParty l WHERE l.lineName = :lineName AND l.groupPoid = :groupPoid AND l.lineType = 'THIRD_PARTY' ")
     boolean existsByLineNameAndGroupPoidAndThirdParty(@Param("lineName") String lineName, @Param("groupPoid") Long groupPoid);
 
     /**

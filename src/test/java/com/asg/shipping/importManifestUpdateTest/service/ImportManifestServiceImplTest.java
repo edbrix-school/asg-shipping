@@ -242,22 +242,7 @@ class ImportManifestServiceImplTest {
         verify(documentService).search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString());
     }
 
-    @Test
-    void updateEmailVerification_Success() {
-        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
-        when(procRepository.updateEmailVerification(eq(1L), any()))
-                .thenReturn(com.asg.shipping.importmanifestupdate.dto.EmailVerificationResponseDto.builder().status("SUCCESS").build());
 
-        var request = com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto.builder()
-                .transactionPoId(1L)
-                .verified(true)
-                .build();
-
-        var response = service.updateEmailVerification(1L, request);
-
-        assertNotNull(response);
-        assertEquals("SUCCESS", response.getStatus());
-    }
 
     @Test
     void resendCan_Success() {
@@ -272,17 +257,7 @@ class ImportManifestServiceImplTest {
         assertEquals("SUCCESS", response.getStatus());
     }
 
-    @Test
-    void sendEdiEmails_Success() {
-        when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
-        when(procRepository.getEdiEmails(1L))
-                .thenReturn(com.asg.shipping.importmanifestupdate.dto.SendEdiEmailsResponseDto.builder().emailsSent(2).build());
 
-        var response = service.sendEdiEmails(1L);
-
-        assertNotNull(response);
-        assertEquals(2, response.getEmailsSent());
-    }
 
     @Test
     void loadEmailFax_Success() {

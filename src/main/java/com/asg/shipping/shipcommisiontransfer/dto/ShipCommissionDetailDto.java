@@ -3,6 +3,7 @@ package com.asg.shipping.shipcommisiontransfer.dto;
 
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.shipcommisiontransfer.enums.ActionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -45,4 +46,5 @@ public class ShipCommissionDetailDto {
     private BigDecimal commissionHandAmt;
     private BigDecimal commissionAdjAmt;
     private String shortLegSelected;
+    private ActionType actionType;
 }

@@ -1,5 +1,6 @@
 package com.asg.shipping.shipcommisiontransfer.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.shipcommisiontransfer.dto.*;
 
@@ -36,7 +37,7 @@ public interface ShipCommissionTransferService {
     /**
      * Delete Ship Commission Transfer (soft delete)
      */
-    void deleteShipCommissionTransfer(Long id);
+    void deleteShipCommissionTransfer(Long id, DeleteReasonDto deleteReasonDto);
 
     /**
      * Calculate commission amounts

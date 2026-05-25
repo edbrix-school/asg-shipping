@@ -2,6 +2,8 @@ package com.asg.shipping.linetariffs.controller;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
@@ -34,6 +36,9 @@ class LineTariffsControllerTest {
 
     @Mock
     private LineTariffsService lineTariffsService;
+
+    @Mock
+    private LoggingService loggingService;
 
     @InjectMocks
     private LineTariffsController controller;
@@ -140,13 +145,19 @@ class LineTariffsControllerTest {
 
     @Test
     void getLineTariff_Success() {
-        when(lineTariffsService.getLineTariff(1L)).thenReturn(testDto);
+        try (MockedStatic<com.asg.common.lib.security.util.UserContext> mockedUserContext =
+                     mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("100-050");
 
-        ResponseEntity<?> response = controller.getLineTariff(1L);
+            when(lineTariffsService.getLineTariff(1L)).thenReturn(testDto);
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).getLineTariff(1L);
+            ResponseEntity<?> response = controller.getLineTariff(1L);
+
+            assertNotNull(response);
+            assertEquals(200, response.getStatusCode().value());
+            verify(lineTariffsService).getLineTariff(1L);
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.VIEWED), eq("100-050"), eq("1"));
+        }
     }
 
     @Test

@@ -123,7 +123,6 @@ class LineTariffsServiceImplTest {
     void getLineTariff_Success() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
             when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
@@ -136,7 +135,7 @@ class LineTariffsServiceImplTest {
 
             assertNotNull(result);
             assertEquals(1L, result.getTransactionPoid());
-            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.VIEWED), eq("100-050"), eq("1"));
+            verify(loggingService, never()).createLogSummaryEntry(eq(LogDetailsEnum.VIEWED), anyString(), anyString());
         }
     }
 

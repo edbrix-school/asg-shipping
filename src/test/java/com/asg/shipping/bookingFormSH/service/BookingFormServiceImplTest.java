@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.eq;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -86,6 +88,9 @@ class BookingFormServiceImplTest {
     private LoggingService loggingService;
 
     @Mock
+    private LovDataService lovDataService;
+
+    @Mock
     private EntityManager entityManager;
 
     private MockedStatic<UserContext> userContext;
@@ -99,8 +104,8 @@ class BookingFormServiceImplTest {
         userContext.when(UserContext::getDocumentId).thenReturn("DOC123");
 
         service = new BookingFormServiceImpl(headerRepository, cargoRepo, chargesRepo, containerRepo, stuffingRepo,
-                globalAddressDetailsRepository,
-                lovService, documentDeleteService, documentService, jdbcTemplate, printService, dataSource, loggingService, entityManager);
+                globalAddressDetailsRepository, lovService, documentDeleteService, documentService, jdbcTemplate,
+                printService, dataSource, loggingService, lovDataService, entityManager);
     }
 
     @AfterEach
@@ -121,7 +126,7 @@ class BookingFormServiceImplTest {
 
         when(documentService.resolveOperator(req)).thenReturn("AND");
         when(documentService.resolveIsDeleted(req)).thenReturn("N");
-        when(documentService.resolveFilters(req)).thenReturn(List.of());
+        when(documentService.resolveDateFilters(eq(req), anyString(), any(), any())).thenReturn(List.of());
         when(documentService.search(any(), any(), any(), any(), any(), any(), any())).thenReturn(raw);
 
         Map<String, Object> result = service.searchBookingForm("DOC", req, pageable, null, null);
@@ -174,7 +179,6 @@ class BookingFormServiceImplTest {
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
 
-        when(lovService.getQuotaionLov(1L)).thenReturn(List.of(lovItem));
         when(lovService.getVesselMasterLov(2L)).thenReturn(List.of(lovItem));
         when(lovService.getLineMasterLov(3L)).thenReturn(List.of(lovItem));
         when(lovService.getSalesmanLov(4L)).thenReturn(List.of(lovItem));

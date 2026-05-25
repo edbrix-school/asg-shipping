@@ -27,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -453,6 +454,9 @@ public class ManifestCorrectorController {
         try {
             log.info("BL after browse auto-population request for BL: {}", blNumber);
             ManifestCorrectorBlAutoPopulateDto response = service.autoPopulateFromBlBrowse(blNumber, request);
+            if (response == null) {
+                return success("No BL details found", Collections.emptyList());
+            }
             return success("BL details loaded successfully", response);
         } catch (ValidationException ex) {
             return badRequest(ex.getMessage());

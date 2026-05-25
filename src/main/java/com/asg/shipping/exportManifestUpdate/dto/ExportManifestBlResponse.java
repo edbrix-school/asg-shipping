@@ -6,10 +6,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
-/**
- * Response DTO for Export Manifest BL Header
- */
+
 @Data
 public class ExportManifestBlResponse {
 
@@ -140,5 +139,8 @@ public class ExportManifestBlResponse {
     private String avoidCargoAlert;
     private Long agentPoid;
     private LovItem agentDet; // LOV: AGENT_MASTER
+
+    private List<GeneralCargoDetailDto> generalCargoDetails;
+
 }
 

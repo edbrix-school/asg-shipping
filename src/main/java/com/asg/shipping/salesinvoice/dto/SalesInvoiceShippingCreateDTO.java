@@ -50,6 +50,14 @@ public class SalesInvoiceShippingCreateDTO {
     private String invoiceTo;
     private LocalDate invoiceDeliveryDate;
 
+    private Long companyPoid;
+    private String blTypeInvoice;
+    private LocalDate dueDate;
+    private BigDecimal invAmount;
+
+    private String ffJobNo;
+    private String ffPjNo;
+
     private List<SalesInvoiceContainerDtlDto> containerDetails;
     private List<SalesInvoiceChargesDtlDto> chargesDetails;
 }

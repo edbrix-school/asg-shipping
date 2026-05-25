@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
@@ -26,6 +27,7 @@ import com.asg.shipping.shippingmanifestcorrector.repository.ShipBlReprintCharge
 import com.asg.shipping.shippingmanifestcorrector.repository.ShipBlReprintHdrRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,7 +44,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 import static com.asg.common.lib.security.util.UserContext.*;
@@ -54,6 +55,10 @@ import static com.asg.common.lib.security.util.UserContext.*;
 @RequiredArgsConstructor
 @Slf4j
 public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
+    private static final String ACTION_ISCREATED = "ISCREATED";
+    private static final String ACTION_ISUPDATED = "ISUPDATED";
+    private static final String ACTION_ISDELETED = "ISDELETED";
+    private static final String ACTION_NOCHANGES = "NOCHANGES";
 
     private final ShipBlReprintHdrRepository hdrRepository;
     private final ShipBlReprintChargeDtlRepository chargeDtlRepository;
@@ -131,9 +136,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         ShipBlReprintHdr saved = hdrRepository.saveAndFlush(entity);
 
-        handleReprintFlags(saved);
-
-        saveDetailTables(createDTO, saved.getTransactionPoid());
+        saveDetailTables(createDTO, saved);
 
         eventPublisher.publishEvent(new ManifestCorrectorSaveEvent(saved, Long.parseLong(saved.getBlNumber())));
 
@@ -157,17 +160,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         validateUpdateDTO(updateDTO);
 
-        boolean flagsChanged = checkFlagsChanged(entity, updateDTO);
-
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
 
         ShipBlReprintHdr saved = hdrRepository.saveAndFlush(entity);
 
-        if (flagsChanged) {
-            handleReprintFlags(saved);
-        }
-
-        updateDetailTables(updateDTO, saved.getTransactionPoid());
+        updateDetailTables(updateDTO, saved);
 
         callProcShipBlReprintAftSave(saved.getTransactionPoid(), Long.parseLong(saved.getBlNumber()));
 
@@ -392,6 +389,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
                 .blPoid(blPoid)
                 .transactionPoid(transactionPoid)
                 .build();
+        final boolean[] dataFound = {false};
 
         try {
             String sql = "{call PRODUCTION.PROC_LOV_AFTER_BRWS_100_143(?,?,?,?,?,?,?,?)}";
@@ -408,8 +406,9 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
                 try (ResultSet rs = (ResultSet) cs.getObject(8)) {
                     if (rs == null || !rs.next()) {
-                        throw new ValidationException("No auto-population data found for BL number: " + blNumber);
+                        return null;
                     }
+                    dataFound[0] = true;
 
                     response.setConsigneePoid(getLongOrNull(rs, "CONSIGNEE_POID"));
                     response.setIssueType(rs.getString("ISSUE_TYPE"));
@@ -435,8 +434,17 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         } catch (ValidationException e) {
             throw e;
         } catch (Exception e) {
+            if (isNoDataFoundException(e)) {
+                log.info("No BL auto-population data returned for BL: {}", blNumber);
+                return null;
+            }
             log.error("Error calling PROC_LOV_AFTER_BRWS_100_143 for BL: {}", blNumber, e);
             throw new ValidationException("Error auto-populating BL details: " + e.getMessage());
+        }
+
+        if (!dataFound[0]) {
+            log.info("No BL auto-population data returned for BL: {}", blNumber);
+            return null;
         }
 
         enrichLovData(response);
@@ -456,6 +464,18 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             throw new ValidationException("BL number not found: " + blNumber);
         }
         return blPoid;
+    }
+
+    private boolean isNoDataFoundException(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null && (message.contains("ORA-01403") || message.contains("no data found"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private void enrichLovData(ManifestCorrectorDto dto) {
@@ -861,46 +881,6 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     }
 
     /**
-     * Check if flags changed in update
-     */
-    private boolean checkFlagsChanged(ShipBlReprintHdr entity, ManifestCorrectorUpdateDTO dto) {
-        return !Objects.equals(entity.getDoReprint(), dto.getDoReprint()) ||
-               !Objects.equals(entity.getContainerReprint(), dto.getContainerReprint()) ||
-               !Objects.equals(entity.getReturnReprint(), dto.getReturnReprint()) ||
-               !Objects.equals(entity.getBlReprint(), dto.getBlReprint()) ||
-               !Objects.equals(entity.getDemRefund(), dto.getDemRefund());
-    }
-
-    /**
-     * Handle reprint flags - load charges/containers based on flags
-     */
-    private void handleReprintFlags(ShipBlReprintHdr entity) {
-        String blNumber = entity.getBlNumber();
-        if (blNumber == null || blNumber.trim().isEmpty()) {
-            return;
-        }
-
-        Long blPoid = Long.parseLong(blNumber);
-
-        // Clear existing details
-        chargeDtlRepository.deleteByTransactionPoid(entity.getTransactionPoid());
-        containerDtlRepository.deleteByTransactionPoid(entity.getTransactionPoid());
-
-        if ("Y".equals(entity.getDoReprint())) {
-            // Load charges for DO reprint
-            loadChargesForDoReprint(entity.getTransactionPoid(), blPoid);
-        } else if ("Y".equals(entity.getContainerReprint())) {
-            // Load containers and charges for container reprint
-            loadContainersForReprint(entity.getTransactionPoid(), blPoid);
-            loadChargesForContainerReprint(entity.getTransactionPoid(), blPoid);
-        } else if ("Y".equals(entity.getBlReprint())) {
-            // Load charges for BL reprint (EXPORT)
-            loadChargesForBlReprint(entity.getTransactionPoid(), blPoid);
-        }
-
-    }
-
-    /**
      * Load charges for DO reprint (PERBL basis)
      */
     private void loadChargesForDoReprint(Long transactionPoid, Long blPoid) {
@@ -1100,78 +1080,181 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     /**
      * Save detail tables from DTO
      */
-    private void saveDetailTables(ManifestCorrectorCreateDTO dto, Long transactionPoid) {
-        if (dto.getChargesDetails() != null && !dto.getChargesDetails().isEmpty()) {
-            Long detRowId = chargeDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
-            if (detRowId == null) detRowId = 0L;
+    private void saveDetailTables(ManifestCorrectorCreateDTO dto, ShipBlReprintHdr entity) {
+        populateDetailTables(
+                entity,
+                dto.getChargesDetails(),
+                dto.getContainerDetails(),
+                false
+        );
+    }
 
-            for (ManifestCorrectorChargeDtlDto chargeDto : dto.getChargesDetails()) {
-                detRowId++;
-                ShipBlReprintChargeDtl chargeDtl = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
-                ShipBlReprintChargeDtl saved = chargeDtlRepository.saveAndFlush(chargeDtl);
-                
-                // Log child table create
+    /**
+     * Update detail tables from DTO
+     */
+    private void updateDetailTables(ManifestCorrectorUpdateDTO dto, ShipBlReprintHdr entity) {
+        Long transactionPoid = entity.getTransactionPoid();
+        if (dto.getChargesDetails() != null) {
+            updateChargeDetails(transactionPoid, dto.getChargesDetails());
+        }
+
+        if (dto.getContainerDetails() != null) {
+            updateContainerDetails(transactionPoid, dto.getContainerDetails());
+        }
+    }
+
+    private void populateDetailTables(ShipBlReprintHdr entity,
+                                      List<ManifestCorrectorChargeDtlDto> chargesDetails,
+                                      List<ManifestCorrectorContainerDtlDto> containerDetails,
+                                      boolean logCreates) {
+        Long transactionPoid = entity.getTransactionPoid();
+        Long blPoid = parseLongSafely(entity.getBlNumber());
+
+        if (chargesDetails != null && !chargesDetails.isEmpty()) {
+            saveProvidedChargeDetails(transactionPoid, chargesDetails, logCreates);
+        } else if (blPoid != null) {
+            if ("Y".equals(entity.getDoReprint())) {
+                loadChargesForDoReprint(transactionPoid, blPoid);
+            } else if ("Y".equals(entity.getContainerReprint())) {
+                loadChargesForContainerReprint(transactionPoid, blPoid);
+            } else if ("Y".equals(entity.getBlReprint())) {
+                loadChargesForBlReprint(transactionPoid, blPoid);
+            }
+        }
+
+        if (containerDetails != null && !containerDetails.isEmpty()) {
+            saveProvidedContainerDetails(transactionPoid, containerDetails, logCreates);
+        } else if (blPoid != null && "Y".equals(entity.getContainerReprint())) {
+            loadContainersForReprint(transactionPoid, blPoid);
+        }
+    }
+
+    private void saveProvidedChargeDetails(Long transactionPoid,
+                                           List<ManifestCorrectorChargeDtlDto> chargesDetails,
+                                           boolean logCreates) {
+        Long detRowId = chargeDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
+        if (detRowId == null) detRowId = 0L;
+
+        for (ManifestCorrectorChargeDtlDto chargeDto : chargesDetails) {
+            detRowId++;
+            ShipBlReprintChargeDtl chargeDtl = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
+            ShipBlReprintChargeDtl saved = chargeDtlRepository.saveAndFlush(chargeDtl);
+
+            if (logCreates) {
                 String logDetail = String.format("Row Created on Manifest Corrector Charge Detail with detRowId: %s", saved.getDetRowId());
                 loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
+    }
 
-        if (dto.getContainerDetails() != null && !dto.getContainerDetails().isEmpty()) {
-            Long detRowId = containerDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
-            if (detRowId == null) detRowId = 0L;
+    private void saveProvidedContainerDetails(Long transactionPoid,
+                                              List<ManifestCorrectorContainerDtlDto> containerDetails,
+                                              boolean logCreates) {
+        Long detRowId = containerDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
+        if (detRowId == null) detRowId = 0L;
 
-            for (ManifestCorrectorContainerDtlDto containerDto : dto.getContainerDetails()) {
-                detRowId++;
-                ShipBlReprintContainerDtl containerDtl = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
-                ShipBlReprintContainerDtl saved = containerDtlRepository.saveAndFlush(containerDtl);
-                
-                // Log child table create
+        for (ManifestCorrectorContainerDtlDto containerDto : containerDetails) {
+            detRowId++;
+            ShipBlReprintContainerDtl containerDtl = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
+            ShipBlReprintContainerDtl saved = containerDtlRepository.saveAndFlush(containerDtl);
+
+            if (logCreates) {
                 String logDetail = String.format("Row Created on Manifest Corrector Container Detail with detRowId: %s", saved.getDetRowId());
                 loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
     }
 
-    /**
-     * Update detail tables from DTO
-     */
-    private void updateDetailTables(ManifestCorrectorUpdateDTO dto, Long transactionPoid) {
-        // Get existing details for logging deletions
-        List<ShipBlReprintChargeDtl> existingCharges = chargeDtlRepository.findByTransactionPoid(transactionPoid);
-        List<ShipBlReprintContainerDtl> existingContainers = containerDtlRepository.findByTransactionPoid(transactionPoid);
-        
-        // Log deletions
-        existingCharges.forEach(deleted -> loggingService.logDelete(deleted, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString()));
-        existingContainers.forEach(deleted -> loggingService.logDelete(deleted, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString()));
-        
-        // Delete existing details
-        chargeDtlRepository.deleteByTransactionPoid(transactionPoid);
-        containerDtlRepository.deleteByTransactionPoid(transactionPoid);
+    private void updateChargeDetails(Long transactionPoid, List<ManifestCorrectorChargeDtlDto> chargesDetails) {
+        List<ShipBlReprintChargeDtl> toUpdate = new ArrayList<>();
+        List<LogRequestDto<ShipBlReprintChargeDtl>> logRequests = new ArrayList<>();
 
-        // Save new details
-        if (dto.getChargesDetails() != null && !dto.getChargesDetails().isEmpty()) {
-            Long detRowId = 0L;
-            for (ManifestCorrectorChargeDtlDto chargeDto : dto.getChargesDetails()) {
-                detRowId++;
-                ShipBlReprintChargeDtl chargeDtl = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
-                ShipBlReprintChargeDtl saved = chargeDtlRepository.saveAndFlush(chargeDtl);
-                
-                // Log child table create
-                String logDetail = String.format("Row Created on Manifest Corrector Charge Detail with detRowId: %s", saved.getDetRowId());
-                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+        for (ManifestCorrectorChargeDtlDto chargeDto : chargesDetails) {
+            String action = resolveActionType(chargeDto.getActionType(), chargeDto.getDetRowId());
+            switch (action) {
+                case ACTION_NOCHANGES -> {
+                }
+                case ACTION_ISDELETED -> {
+                    Long detRowId = requireDetRowId(chargeDto.getDetRowId(), "Charge Detail");
+                    chargeDtlRepository.deleteById(new ShipBlReprintChargeDtlId(transactionPoid, detRowId));
+                    String logDetail = String.format("Row Deleted on Manifest Corrector Charge Detail with detRowId: %s", detRowId);
+                    loggingService.createLogSummaryEntry(getDocumentId(), transactionPoid.toString(), logDetail);
+                }
+                case ACTION_ISCREATED -> {
+                    Long maxDetRowId = chargeDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
+                    long detRowId = normalizeDetRowId(chargeDto.getDetRowId()) != null
+                            ? chargeDto.getDetRowId()
+                            : (maxDetRowId != null ? maxDetRowId + 1 : 1L);
+                    ShipBlReprintChargeDtl entity = mapper.mapChargeDtlFromDto(chargeDto, transactionPoid, detRowId);
+                    chargeDtlRepository.saveAndFlush(entity);
+                    String logDetail = String.format("Row Created on Manifest Corrector Charge Detail with detRowId: %s", detRowId);
+                    loggingService.createLogSummaryEntry(getDocumentId(), transactionPoid.toString(), logDetail);
+                }
+                case ACTION_ISUPDATED -> {
+                    Long detRowId = requireDetRowId(chargeDto.getDetRowId(), "Charge Detail");
+                    ShipBlReprintChargeDtl entity = chargeDtlRepository.findById(new ShipBlReprintChargeDtlId(transactionPoid, detRowId))
+                            .orElseThrow(() -> new ResourceNotFoundException("Charge Detail", "detRowId", detRowId.toString()));
+                    ShipBlReprintChargeDtl oldEntity = new ShipBlReprintChargeDtl();
+                    BeanUtils.copyProperties(entity, oldEntity);
+                    mapper.updateChargeDtlEntity(chargeDto, entity);
+                    toUpdate.add(entity);
+                    String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowId);
+                    logRequests.add(new LogRequestDto<>(oldEntity, entity, ShipBlReprintChargeDtl.class, getDocumentId(), transactionPoid.toString(), logDetail));
+                }
             }
         }
 
-        if (dto.getContainerDetails() != null && !dto.getContainerDetails().isEmpty()) {
-            Long detRowId = 0L;
-            for (ManifestCorrectorContainerDtlDto containerDto : dto.getContainerDetails()) {
-                detRowId++;
-                ShipBlReprintContainerDtl containerDtl = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
-                ShipBlReprintContainerDtl saved = containerDtlRepository.saveAndFlush(containerDtl);
-                
-                // Log child table create
-                String logDetail = String.format("Row Created on Manifest Corrector Container Detail with detRowId: %s", saved.getDetRowId());
-                loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+        if (!toUpdate.isEmpty()) {
+            chargeDtlRepository.saveAllAndFlush(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
+            }
+        }
+    }
+
+    private void updateContainerDetails(Long transactionPoid, List<ManifestCorrectorContainerDtlDto> containerDetails) {
+        List<ShipBlReprintContainerDtl> toUpdate = new ArrayList<>();
+        List<LogRequestDto<ShipBlReprintContainerDtl>> logRequests = new ArrayList<>();
+
+        for (ManifestCorrectorContainerDtlDto containerDto : containerDetails) {
+            String action = resolveActionType(containerDto.getActionType(), containerDto.getDetRowId());
+            switch (action) {
+                case ACTION_NOCHANGES -> {
+                }
+                case ACTION_ISDELETED -> {
+                    Long detRowId = requireDetRowId(containerDto.getDetRowId(), "Container Detail");
+                    containerDtlRepository.deleteById(new ShipBlReprintContainerDtlId(transactionPoid, detRowId));
+                    String logDetail = String.format("Row Deleted on Manifest Corrector Container Detail with detRowId: %s", detRowId);
+                    loggingService.createLogSummaryEntry(getDocumentId(), transactionPoid.toString(), logDetail);
+                }
+                case ACTION_ISCREATED -> {
+                    Long maxDetRowId = containerDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
+                    long detRowId = normalizeDetRowId(containerDto.getDetRowId()) != null
+                            ? containerDto.getDetRowId()
+                            : (maxDetRowId != null ? maxDetRowId + 1 : 1L);
+                    ShipBlReprintContainerDtl entity = mapper.mapContainerDtlFromDto(containerDto, transactionPoid, detRowId);
+                    containerDtlRepository.saveAndFlush(entity);
+                    String logDetail = String.format("Row Created on Manifest Corrector Container Detail with detRowId: %s", detRowId);
+                    loggingService.createLogSummaryEntry(getDocumentId(), transactionPoid.toString(), logDetail);
+                }
+                case ACTION_ISUPDATED -> {
+                    Long detRowId = requireDetRowId(containerDto.getDetRowId(), "Container Detail");
+                    ShipBlReprintContainerDtl entity = containerDtlRepository.findById(new ShipBlReprintContainerDtlId(transactionPoid, detRowId))
+                            .orElseThrow(() -> new ResourceNotFoundException("Container Detail", "detRowId", detRowId.toString()));
+                    ShipBlReprintContainerDtl oldEntity = new ShipBlReprintContainerDtl();
+                    BeanUtils.copyProperties(entity, oldEntity);
+                    mapper.updateContainerDtlEntity(containerDto, entity);
+                    toUpdate.add(entity);
+                    String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowId);
+                    logRequests.add(new LogRequestDto<>(oldEntity, entity, ShipBlReprintContainerDtl.class, getDocumentId(), transactionPoid.toString(), logDetail));
+                }
+            }
+        }
+
+        if (!toUpdate.isEmpty()) {
+            containerDtlRepository.saveAllAndFlush(toUpdate);
+            if (!logRequests.isEmpty()) {
+                loggingService.createLogBatch(logRequests);
             }
         }
     }
@@ -1215,6 +1298,36 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             log.error("Error calling PROC_SHIP_BL_REPRINT_AFT_SAVE", e);
             throw new ValidationException("Error in post-save processing: " + e.getMessage());
         }
+    }
+
+    private String resolveActionType(String actionType, Long detRowId) {
+        if (actionType == null || actionType.trim().isEmpty()) {
+            return normalizeDetRowId(detRowId) == null ? ACTION_ISCREATED : ACTION_ISUPDATED;
+        }
+
+        String normalized = actionType.trim().replace("_", "").replace(" ", "").toUpperCase();
+        return switch (normalized) {
+            case "CREATE", "CREATED", ACTION_ISCREATED -> ACTION_ISCREATED;
+            case "UPDATE", "UPDATED", ACTION_ISUPDATED -> ACTION_ISUPDATED;
+            case "DELETE", "DELETED", ACTION_ISDELETED -> ACTION_ISDELETED;
+            case "NOCHANGE", "NOCHANGES", "UNCHANGED" -> ACTION_NOCHANGES;
+            default -> ACTION_NOCHANGES;
+        };
+    }
+
+    private Long normalizeDetRowId(Long detRowId) {
+        if (detRowId == null || detRowId == 0L) {
+            return null;
+        }
+        return detRowId;
+    }
+
+    private Long requireDetRowId(Long detRowId, String detailName) {
+        Long normalizedDetRowId = normalizeDetRowId(detRowId);
+        if (normalizedDetRowId == null) {
+            throw new ValidationException(detailName + " detRowId is required for this action");
+        }
+        return normalizedDetRowId;
     }
 
     private Long getLongOrNull(ResultSet rs, String columnName) {

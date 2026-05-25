@@ -366,6 +366,7 @@ public class BookingFormMapper {
                 .email1(entity.getEmail1()!=null?entity.getEmail1():entity.getEmail2())
                 .mobile(entity.getMobile())
                 .poBox(entity.getPoBox())
+                .fax(entity.getFax())
                 .telephone(entity.getOffTel1()!=null?entity.getOffTel1():entity.getOffTel2())
                 .build();
     }

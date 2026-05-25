@@ -16,9 +16,14 @@ public class SalesInvoiceMapper {
      */
     public static void mapCreateDTOToEntity(SalesInvoiceShippingCreateDTO dto, ArShSalesInvoiceHdr entity, Long groupPoid, Long companyPoid) {
         entity.setGroupPoid(groupPoid);
-        entity.setCompanyPoid(companyPoid);
+        entity.setCompanyPoid(dto.getCompanyPoid() != null ? dto.getCompanyPoid() : companyPoid);
         entity.setTransactionDate(dto.getTransactionDate() != null ? dto.getTransactionDate() : DateUtil.getCurrentDateInUserTimeZone());
         entity.setInvDate(dto.getInvDate());
+        entity.setDueDate(dto.getDueDate());
+        entity.setInvAmount(dto.getInvAmount());
+        entity.setBlTypeInvoice(dto.getBlTypeInvoice());
+        entity.setFfJobNo(dto.getFfJobNo());
+        entity.setFfPjNo(dto.getFfPjNo());
         entity.setJobnoPoid(dto.getJobnoPoid());
         entity.setCustomerAddrPoid(dto.getCustomerAddrPoid());
         entity.setCurrencyCode(dto.getCurrencyCode());
@@ -51,6 +56,24 @@ public class SalesInvoiceMapper {
         }
         if (dto.getInvDate() != null) {
             entity.setInvDate(dto.getInvDate());
+        }
+        if (dto.getCompanyPoid() != null) {
+            entity.setCompanyPoid(dto.getCompanyPoid());
+        }
+        if (dto.getBlTypeInvoice() != null) {
+            entity.setBlTypeInvoice(dto.getBlTypeInvoice());
+        }
+        if (dto.getDueDate() != null) {
+            entity.setDueDate(dto.getDueDate());
+        }
+        if (dto.getInvAmount() != null) {
+            entity.setInvAmount(dto.getInvAmount());
+        }
+        if (dto.getFfJobNo() != null) {
+            entity.setFfJobNo(dto.getFfJobNo());
+        }
+        if (dto.getFfPjNo() != null) {
+            entity.setFfPjNo(dto.getFfPjNo());
         }
         if (dto.getJobnoPoid() != null) {
             entity.setJobnoPoid(dto.getJobnoPoid());
