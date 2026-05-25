@@ -6,12 +6,11 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService;
-import com.asg.shipping.importmanifestbl.service.ImportManifestService;
-import com.asg.shipping.importmanifestupdate.dto.LoadEmailFaxResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -124,7 +123,12 @@ public class ExportManifestUpdateController {
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(summary = "Update Export BL", description = "Updates an existing Export BL manifest header")
+    @PutMapping("/{id}")
+    @Operation(
+            summary = "Update Export BL and Details",
+            description = "Updates an existing Export BL manifest header and related details (general cargo, containers, cargo description, marks, charges)",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @Parameters({
             @Parameter(
                     name = "X-Document-Id",
@@ -143,12 +147,32 @@ public class ExportManifestUpdateController {
                     schema = @Schema(type = "string", example = "EDIT")
             )
     })
-    @PutMapping("/{transactionPoid}")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully updated Export BL record and details",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ExportManifestUpdateResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request data or validation error",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Export BL record not found",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
     public ResponseEntity<?> updateExportBl(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated Export BL details", required = true)
-            @Valid @RequestBody ExportManifestBlRequest request) {
-        return success("Export BL updated successfully", service.updateExportBl(transactionPoid, request));
+            @Parameter(description = "Transaction POID", required = true, example = "12345")
+            @PathVariable Long id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated Export BL and details", required = true)
+            @Valid @RequestBody ExportManifestUpdateRequest request) {
+        return success("Export BL and details updated successfully", service.updateExportBlCombined(id, request));
     }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
@@ -180,34 +204,7 @@ public class ExportManifestUpdateController {
 
     // ========== General Cargo Details Operations ==========
 
-    @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(summary = "Bulk Save General Cargo Details", description = "Bulk save general cargo details (create, update, delete in single transaction)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
-    @PostMapping("/{transactionPoid}/general-cargo-details/bulk-save")
-    public ResponseEntity<?> bulkSaveGeneralCargoDetails(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Bulk save request", required = true)
-            @Valid @RequestBody BulkSaveRequest<GeneralCargoDetailDto> request) {
-        return success("General cargo details saved successfully", 
-                service.bulkSaveGeneralCargoDetails(transactionPoid, request));
-    }
+
 
     // ========== Container Details Operations ==========
 
@@ -237,65 +234,11 @@ public class ExportManifestUpdateController {
         return success("Cargo and container details retrieved successfully", service.getCargoContainerDetails(transactionPoid));
     }
 
-    @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(summary = "Bulk Save Container Details", description = "Bulk save container details (create, update, delete in single transaction)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
-    @PostMapping("/{transactionPoid}/container-details/bulk-save")
-    public ResponseEntity<?> bulkSaveContainerDetails(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Bulk save request", required = true)
-            @Valid @RequestBody BulkSaveRequest<ContainerDetailDto> request) {
-        return success("Container details saved successfully", 
-                service.bulkSaveContainerDetails(transactionPoid, request));
-    }
+
 
     // ========== Cargo Description and Marks Operations ==========
 
-    @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(summary = "Bulk Save Cargo Description", description = "Bulk save cargo description (create, update, delete in single transaction)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
-    @PostMapping("/{transactionPoid}/cargo-description/bulk-save")
-    public ResponseEntity<?> bulkSaveCargoDescription(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Bulk save request", required = true)
-            @Valid @RequestBody BulkSaveRequest<CargoDescriptionDto> request) {
-        return success("Cargo description saved successfully", 
-                service.bulkSaveCargoDescription(transactionPoid, request));
-    }
+
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get Cargo Marks", description = "Retrieves all cargo marks details for an Export BL")
@@ -323,34 +266,7 @@ public class ExportManifestUpdateController {
         return success("Cargo marks retrieved successfully", service.getCargoMarks(transactionPoid));
     }
 
-    @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(summary = "Bulk Save Cargo Marks", description = "Bulk save cargo marks (create, update, delete in single transaction)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
-    @PostMapping("/{transactionPoid}/cargo-marks/bulk-save")
-    public ResponseEntity<?> bulkSaveCargoMarks(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Bulk save request", required = true)
-            @Valid @RequestBody BulkSaveRequest<CargoMarksDto> request) {
-        return success("Cargo marks saved successfully", 
-                service.bulkSaveCargoMarks(transactionPoid, request));
-    }
+
 
     // ========== Charge Details Operations ==========
 
@@ -380,34 +296,7 @@ public class ExportManifestUpdateController {
         return success("Charge details retrieved successfully", service.getChargeDetails(transactionPoid));
     }
 
-    @AllowedAction(UserRolesRightsEnum.EDIT)
-    @Operation(summary = "Bulk Save Charge Details", description = "Bulk save charge details (create, update, delete in single transaction)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
-    @PostMapping("/{transactionPoid}/charge-details/bulk-save")
-    public ResponseEntity<?> bulkSaveChargeDetails(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Bulk save request", required = true)
-            @Valid @RequestBody BulkSaveRequest<ChargeDetailDto> request) {
-        return success("Charge details saved successfully", 
-                service.bulkSaveChargeDetails(transactionPoid, request));
-    }
+
 
     // ========== Special Operations ==========
 

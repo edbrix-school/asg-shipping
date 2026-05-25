@@ -25,11 +25,14 @@ public class ChargeDetailDto {
     private String lastModifiedBy;
     private LocalDateTime lastModifiedDate;
     private String chargeType;
+    private LovItem chargeTypeDet;
     private String currencyCode;
     private String freightType;
+    private LovItem freightTypeDet;
     private String ediChargeCode;
     private Long arShReceiptTransactionPoid;
     private String chargeBasisOn;
+    private LovItem chargeBasisOnDet;
     private String printGroup;
     private Long receiptInvoicePoid;
     private LovItem receiptInvoiceDet; // LOV: MANIFEST_RECEIPT_INVOICE
@@ -54,5 +57,6 @@ public class ChargeDetailDto {
     private BigDecimal saleAmount; // quantity * perQuantityAmount
     private BigDecimal revenue; // saleAmount - buyAmount
     private String drilldownLinkInfo; // For display purposes
+    private String actionType;
 }
 
