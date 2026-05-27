@@ -10,6 +10,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class BlStatusResponseDto {
-    private String status;
+    private StatusDetails status;
     private Boolean hasDo;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class StatusDetails {
+        private String jobNo;
+        private String line;
+        private String vessel;
+        private String voyageNo;
+        private String port;
+        private String arrivalDt;
+        private String blNo;
+        private String doStatus;
+        private String canStatus;
+    }
 }

@@ -182,7 +182,60 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
         boolean hasDo = result != null && !result.equals("FALSE") && result.contains("D/O");
         log.info("BL status retrieved for transactionPoId: {}, hasDo: {}", transactionPoId, hasDo);
 
-        return BlStatusResponseDto.builder().status(result != null ? result : "NEW").hasDo(hasDo).build();
+        return BlStatusResponseDto.builder()
+                .status(parseBlStatus(result))
+                .hasDo(hasDo)
+                .build();
+    }
+
+    private BlStatusResponseDto.StatusDetails parseBlStatus(String rawStatus) {
+        if (rawStatus == null || rawStatus.isBlank() || "FALSE".equalsIgnoreCase(rawStatus)) {
+            return BlStatusResponseDto.StatusDetails.builder().build();
+        }
+
+        BlStatusResponseDto.StatusDetails.StatusDetailsBuilder builder = BlStatusResponseDto.StatusDetails.builder();
+        String[] segments = rawStatus.split("\\s*,\\s*---\\s*");
+
+        for (String segment : segments) {
+            String value = segment == null ? "" : segment.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+
+            if (value.startsWith("JobNo:")) {
+                builder.jobNo(extractValue(value, "JobNo:"));
+            } else if (value.startsWith("Line:")) {
+                builder.line(extractValue(value, "Line:"));
+            } else if (value.startsWith("Vessel:")) {
+                builder.vessel(extractValue(value, "Vessel:"));
+            } else if (value.startsWith("VoyageNo:")) {
+                builder.voyageNo(extractValue(value, "VoyageNo:"));
+            } else if (value.startsWith("Port:")) {
+                builder.port(extractValue(value, "Port:"));
+            } else if (value.startsWith("ArrivalDt:")) {
+                builder.arrivalDt(extractValue(value, "ArrivalDt:"));
+            } else if (value.startsWith("BLNO:")) {
+                builder.blNo(extractValue(value, "BLNO:"));
+            } else if (value.startsWith("D/O")) {
+                builder.doStatus(extractStatusText(value));
+            } else if (value.startsWith("CAN")) {
+                builder.canStatus(extractStatusText(value));
+            }
+        }
+
+        return builder.build();
+    }
+
+    private String extractValue(String text, String prefix) {
+        return text.substring(prefix.length()).trim();
+    }
+
+    private String extractStatusText(String text) {
+        int separatorIndex = text.indexOf('-');
+        if (separatorIndex < 0 || separatorIndex + 1 >= text.length()) {
+            return text.trim();
+        }
+        return text.substring(separatorIndex + 1).trim();
     }
 
     @Override

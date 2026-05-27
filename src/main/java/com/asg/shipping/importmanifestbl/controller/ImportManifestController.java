@@ -63,7 +63,7 @@ public class ImportManifestController {
             Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
             Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
         ImportManifestBlResponseDto response = importManifestService.createImportManifestBl(request, companyPoid, groupPoid);
-            return success("Import Manifest BL created successfully", response);
+            return com.asg.common.lib.dto.response.ApiResponse.success("Import Manifest BL created successfully", response);
 
     }
 
@@ -82,7 +82,7 @@ public class ImportManifestController {
     ) {
         ImportManifestBlDto response = importManifestService.getImportManifest(id);
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
-        return success("Import Manifest BL retrieved successfully", response);
+        return com.asg.common.lib.dto.response.ApiResponse.success("Import Manifest BL retrieved successfully", response);
     }
 
 
@@ -104,7 +104,7 @@ public class ImportManifestController {
             @Valid @RequestBody DeleteReasonDto deleteReasonDto
             ) {
         importManifestService.delete(transactionPoId,deleteReasonDto);
-            return success("Import Manifest BL deleted successfully", null);
+            return com.asg.common.lib.dto.response.ApiResponse.success("Import Manifest BL deleted successfully", null);
     }
     @PostMapping("/{transactionPoId}/save-emails")
     public ResponseEntity<SaveEmailsResponseDto> saveEmails(
@@ -152,7 +152,7 @@ public class ImportManifestController {
 
         ImportManifestBlResponseDto updated = importManifestService.updateImportManifestBl(id,dto);
 
-        return success("Import Manifest BL updated successfully", updated);
+        return com.asg.common.lib.dto.response.ApiResponse.success("Import Manifest BL updated successfully", updated);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -171,7 +171,7 @@ public class ImportManifestController {
             @Valid @RequestBody EmailVerificationRequestDto request
     ) {
             EmailVerificationResponseDto response = importManifestService.updateEmailVerification(request.getTransactionPoId(), request);
-            return success("Email verification updated successfully", response);
+            return com.asg.common.lib.dto.response.ApiResponse.success("Email verification updated successfully", response);
 
     }
 
@@ -191,7 +191,7 @@ public class ImportManifestController {
             @Valid @RequestBody ResendCanRequestDto request
     ) {
         ResendCanResponseDto response = importManifestService.resendCan(request.getTransactionPoId(), request.getUpdateDemurrage());
-        return success("CAN resent successfully", response);
+        return com.asg.common.lib.dto.response.ApiResponse.success("CAN resent successfully", response);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -210,7 +210,7 @@ public class ImportManifestController {
             @PathVariable Long id
     ) {
         SendEdiEmailsResponseDto response = importManifestService.sendEdiEmails(id);
-        return success("EDI emails retrieved successfully", response);
+        return com.asg.common.lib.dto.response.ApiResponse.success("EDI emails retrieved successfully", response);
     }
     @Operation(
             summary = "Load Email/Fax Data",
@@ -228,7 +228,7 @@ public class ImportManifestController {
             @RequestParam String addressType
     ) {
             LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(addressMasterPoid, addressType);
-            return success("Email/Fax data loaded successfully", response);
+            return com.asg.common.lib.dto.response.ApiResponse.success("Email/Fax data loaded successfully", response);
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -248,7 +248,7 @@ public class ImportManifestController {
             @PathVariable Long id
     ) {
             BlStatusResponseDto response = importManifestService.getBlStatus(id);
-            return success("BL status retrieved successfully", response);
+            return com.asg.common.lib.dto.response.ApiResponse.success("BL status retrieved successfully", response);
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -294,7 +294,7 @@ public class ImportManifestController {
             @RequestBody(required = false) FilterRequestDto filters
     ) {
             Map<String, Object> response = importManifestService.list(filters, pageable);
-            return success("Import Manifest BL list retrieved successfully", response);
+            return com.asg.common.lib.dto.response.ApiResponse.success("Import Manifest BL list retrieved successfully", response);
 
 }
     @Operation(
@@ -313,7 +313,7 @@ public class ImportManifestController {
             if (response == null) {
                 return notFound("No default values found for docId: " + UserContext.getDocumentId());
             }
-            return success("Default values retrieved successfully", response);
+            return com.asg.common.lib.dto.response.ApiResponse.success("Default values retrieved successfully", response);
 
     }
 
@@ -453,6 +453,6 @@ public class ImportManifestController {
                 .transactionDate(transactionDate)
                 .build();
         ChargeDefaultsResponseDto response = importManifestService.getChargeDefaults(request);
-        return success("Charge defaults retrieved successfully", response);
+        return com.asg.common.lib.dto.response.ApiResponse.success("Charge defaults retrieved successfully", response);
     }
 }
