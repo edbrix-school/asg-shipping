@@ -731,7 +731,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         result.put("payableGlPoid", null);
         result.put("payableGlDet", null);
         result.put("incomeGlPoid", null);
-        result.put("incomeGlDet", null);
 
         if (linePoid != null && blType != null) {
             String defaultPayableGl = callProcDemDenSetDefault(linePoid, blType);
@@ -747,11 +746,6 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             Long incomeGlPoid = getIncomeGlPoidFromParameter(groupPoid);
             if (incomeGlPoid != null) {
                 result.put("incomeGlPoid", incomeGlPoid);
-                try {
-                    result.put("incomeGlDet", lovService.getDetailsByPoidAndLovName(incomeGlPoid, "GL_MASTER_LEDGERS"));
-                } catch (Exception e) {
-                    log.warn("Failed to fetch GL_MASTER_LEDGERS LOV for income GL: {}", incomeGlPoid, e);
-                }
             }
         }
 
@@ -1017,6 +1011,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 "  AND D.MAINFEST_TRANSACTION_POID = V.MAINFEST_TRANSACTION_POID " +
                 "  AND D.CONTAINER_NO = V.CONTAINER_NO" +
                 ") " +
+                "AND NVL(V.DEMURRAGE_ACUTAL, 0) > 0 " +
                 "AND V.BL_TYPE = ? AND V.LINE_POID = ? AND V.COMPANY_POID = ? " +
                 "ORDER BY V.BL_NUMBER";
     }
