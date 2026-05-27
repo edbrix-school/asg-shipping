@@ -22,5 +22,12 @@ public class ExportManifestUpdateRequest {
 
     private List<CargoMarksDto> cargoMarks;
 
+    // Simple single-string alternatives — FE can pass just a plain text value
+    // and it will be saved as a single record in SHIP_BL_MANIFEST_CARGO_DTL.
+    // The list-based properties above remain available for the full row-level flow.
+    private String simpleCargoDescription;
+
+    private String simpleCargoMarks;
+
     private List<ChargeDetailDto> chargeDetails;
 }

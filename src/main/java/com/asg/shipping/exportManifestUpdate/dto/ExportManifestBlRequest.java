@@ -80,7 +80,7 @@ public class ExportManifestBlRequest {
 
     private String blPlaceDischareDesc;
 
-    private Long shipperPoid;
+    private BigDecimal shipperPoid;
 
     private Long shipperAddressPoid;
 
