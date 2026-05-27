@@ -53,7 +53,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     private final ExportShipBlManifestContainerDtlRepository containerDtlRepository;
     private final ExportShipBlManifestCargoDtlRepository cargoDtlRepository;
     private final ExportShipBlManifestChargesDtlRepository chargesDtlRepository;
-    private final ExportManifestBlCustomRepository customRepository;
+    private final ExportManifestBlCustomRepository customBLRepository;
     private final ExportManifestUpdateMapper mapper;
     private final DocumentSearchService documentSearchService;
     private final LovService lovService;
@@ -84,11 +84,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         // Retrieve and set general cargo details
         response.setGeneralCargoDetails(getGeneralCargoDetails(transactionPoid));
 
-        // Simple single-string view: all DESC / MARK rows joined into one string
-        List<CargoDescriptionDto> descList = getCargoDescription(transactionPoid);
-        List<CargoMarksDto> marksList = getCargoMarks(transactionPoid);
-        response.setSimpleCargoDescription(joinCargoDescriptions(descList));
-        response.setSimpleCargoMarks(joinCargoMarks(marksList));
+        // Simple single-string view: all DESC / MARK rows joined — query repo directly to avoid redundant validateHeaderExists
+        response.setSimpleCargoDescription(joinCargoDtlRows(
+                cargoDtlRepository.findCargoRowsByType(transactionPoid, "DESC")));
+        response.setSimpleCargoMarks(joinCargoDtlRows(
+                cargoDtlRepository.findCargoRowsByType(transactionPoid, "MARK")));
 
         return response;
     }
@@ -144,7 +144,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Validate BL number uniqueness
         if (request.getBlNumber() != null && !request.getBlNumber().trim().isEmpty()) {
-            String status = customRepository.validateBlNumberDuplicate(
+            String status = customBLRepository.validateBlNumberDuplicate(
                     request.getBlNumber().trim(), "NEWRECORD", "INSERTING");
             if (status == null || !status.startsWith("SUCCESS")) {
                 throw new RuntimeException("Export BL number already exists: " + request.getBlNumber());
@@ -209,7 +209,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Validate BL number uniqueness if changed
         if (request.getBlNumber() != null && !request.getBlNumber().trim().equals(entity.getBlNumber())) {
-            String status = customRepository.validateBlNumberDuplicate(
+            String status = customBLRepository.validateBlNumberDuplicate(
                     request.getBlNumber().trim(), entity.getBlNumber(), "UPDATING");
             if (status == null || !status.startsWith("SUCCESS")) {
                 throw new RuntimeException("Export BL number already exists: " + request.getBlNumber());
@@ -357,6 +357,16 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     // ========== Simple single-string join helpers ==========
 
+    /** Joins entity rows directly — used when repo is queried inline (avoids redundant service call overhead). */
+    private String joinCargoDtlRows(List<ExportShipBlManifestCargoDtl> entities) {
+        if (entities == null || entities.isEmpty()) return null;
+        return entities.stream()
+                .map(ExportShipBlManifestCargoDtl::getCargoDescription)
+                .filter(s -> s != null && !s.isEmpty())
+                .collect(Collectors.joining(" "));
+    }
+
+    /** Joins DTO list — used when the list is already fetched (e.g. getCargoContainerDetails). */
     private String joinCargoDescriptions(List<CargoDescriptionDto> list) {
         if (list == null || list.isEmpty()) return null;
         return list.stream()
@@ -549,7 +559,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoDescriptionDto> getCargoDescription(Long transactionPoid) {
         log.info("Getting cargo description for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findByTransactionPoidAndDescriptionTypeOrderByDetRowId(transactionPoid, "DESC");
+        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findCargoRowsByType(transactionPoid, "DESC");
         return mapper.mapCargoDescriptionListToDto(entities);
     }
 
@@ -605,7 +615,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         response.setCargoMarks(marksList);
         response.setContainerDetails(getContainerDetails(transactionPoid));
 
-        // Simple single-string view: all rows joined into one string
+        // Simple single-string view: reuse already-fetched entities, no extra DB call
         response.setSimpleCargoDescription(joinCargoDescriptions(descList));
         response.setSimpleCargoMarks(joinCargoMarks(marksList));
 
@@ -617,7 +627,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoMarksDto> getCargoMarks(Long transactionPoid) {
         log.info("Getting cargo marks for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findByTransactionPoidAndDescriptionTypeOrderByDetRowId(transactionPoid, "MARK");
+        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findCargoRowsByType(transactionPoid, "MARK");
         return mapper.mapCargoMarksListToDto(entities);
     }
 
@@ -787,7 +797,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     		throw new RuntimeException("BL already printed");
     	}
     	
-    	String jrxmlFile=customRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
+    	String jrxmlFile= customBLRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
     	Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-140");
 		JasperReport mainReport = printService.load("Shipping/"+jrxmlFile);
 		params.put("DRAFT_ORIGINAL", request.getDraftOriginal());
@@ -821,7 +831,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         validateHeaderExists(transactionPoid);
         Long userPoid = UserContext.getUserPoid();
         
-        customRepository.exportEdi(transactionPoid, userPoid);
+        customBLRepository.exportEdi(transactionPoid, userPoid);
     }
 
     @Override
@@ -840,7 +850,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         if (request.getBlNumber() != null && !request.getBlNumber().trim().isEmpty()) {
             String oldBlNumber = transactionPoid != null ? 
                     hdrRepository.findById(transactionPoid).map(ExportShipBlManifestHdr::getBlNumber).orElse(null) : null;
-            String status = customRepository.validateBlNumberDuplicate(
+            String status = customBLRepository.validateBlNumberDuplicate(
                     request.getBlNumber().trim(), oldBlNumber != null ? oldBlNumber : "NEWRECORD", 
                     transactionPoid != null ? "UPDATING" : "INSERTING");
             if (status == null || !status.startsWith("SUCCESS")) {
@@ -861,7 +871,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long companyPoid = UserContext.getCompanyPoid();
         Long userPoid = UserContext.getUserPoid();
         
-        customRepository.processAfterSave(groupPoid, companyPoid, transactionPoid, null, "AUTOSUMWEIGHTPEXPORT", userPoid);
+        customBLRepository.processAfterSave(groupPoid, companyPoid, transactionPoid, null, "AUTOSUMWEIGHTPEXPORT", userPoid);
     }
 
     @Override
@@ -874,7 +884,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long companyPoid = UserContext.getCompanyPoid();
         Long userPoid = UserContext.getUserPoid();
         
-        String status = customRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
+        String status = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
         
         BlStatusResponse response = new BlStatusResponse();
         response.setStatus(status);
@@ -889,7 +899,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         Long actualTransactionPoid = transactionPoid != null ? transactionPoid : 0L; // Use 0 for new records
         
-        customRepository.processQuotationAfterBrowse(
+        customBLRepository.processQuotationAfterBrowse(
                 getGroupPoid(),
                 getCompanyPoid(),
                 getUserPoid(),
