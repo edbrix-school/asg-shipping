@@ -20,5 +20,6 @@ public class LoadChargeDataResponseDTO {
     private List<SalesInvoiceChargesDtlDto> charges;
     private BigDecimal demurrageAmount;
     private List<SalesInvoiceChargesDtlDto> lateCharges;
+    private List<SalesInvoiceContainerDtlDto> containers;
 }
 
