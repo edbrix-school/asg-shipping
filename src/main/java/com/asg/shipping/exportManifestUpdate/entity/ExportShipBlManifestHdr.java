@@ -51,7 +51,7 @@ public class ExportShipBlManifestHdr extends BaseEntity {
     private String agentReference;
 
     @Column(name = "SHIPPER_POID")
-    private Long shipperPoid;
+    private BigDecimal shipperPoid;
 
     @Column(name = "SHIPPER_ADDRESS_POID")
     private Long shipperAddressPoid;

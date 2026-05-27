@@ -44,82 +44,43 @@ public class ExportManifestUpdateController {
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get Export BL by ID", description = "Retrieves a single Export BL manifest header with all related information")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @GetMapping("/{transactionPoid}")
     public ResponseEntity<?> getExportBlById(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Export BL retrieved successfully", service.getExportBlById(transactionPoid));
+        try {
+            return success("Export BL retrieved successfully", service.getExportBlById(transactionPoid));
+        } catch (Exception e) {
+            log.error("Error retrieving Export BL with ID: {}", transactionPoid, e);
+            return error("Error retrieving Export BL: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Search Export BLs", description = "Searches and retrieves a paginated list of Export BL manifests")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @PostMapping("/list")
     public ResponseEntity<?> searchExportBls(
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters) {
-        return success("Export BL list fetched successfully", service.searchExportBls(filters, pageable));
+        try {
+            return success("Export BL list fetched successfully", service.searchExportBls(filters, pageable));
+        } catch (Exception e) {
+            log.error("Error searching Export BLs", e);
+            return error("Error fetching Export BL list: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(summary = "Create Export BL", description = "Creates a new Export BL manifest header")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (CREATE).",
-                    example = "CREATE",
-                    required = true,
-                    schema = @Schema(type = "string", example = "CREATE")
-            )
-    })
     @PostMapping
     public ResponseEntity<?> createExportBl(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Export BL details", required = true)
             @Valid @RequestBody ExportManifestBlRequest request) {
-        return success("Export BL created successfully", service.createExportBl(request));
+        try {
+            return success("Export BL created successfully", service.createExportBl(request));
+        } catch (Exception e) {
+            log.error("Error creating Export BL", e);
+            return error("Error creating Export BL: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -129,24 +90,6 @@ public class ExportManifestUpdateController {
             description = "Updates an existing Export BL manifest header and related details (general cargo, containers, cargo description, marks, charges)",
             security = @SecurityRequirement(name = "bearerAuth")
     )
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -156,457 +99,251 @@ public class ExportManifestUpdateController {
                             schema = @Schema(implementation = ExportManifestUpdateResponse.class)
                     )
             ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Invalid request data or validation error",
-                    content = @Content(mediaType = "application/json")
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Export BL record not found",
-                    content = @Content(mediaType = "application/json")
-            )
+            @ApiResponse(responseCode = "400", description = "Invalid request data or validation error",
+                    content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "404", description = "Export BL record not found",
+                    content = @Content(mediaType = "application/json"))
     })
     public ResponseEntity<?> updateExportBl(
             @Parameter(description = "Transaction POID", required = true, example = "12345")
             @PathVariable Long id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated Export BL and details", required = true)
             @Valid @RequestBody ExportManifestUpdateRequest request) {
-        return success("Export BL and details updated successfully", service.updateExportBlCombined(id, request));
+        try {
+            return success("Export BL and details updated successfully", service.updateExportBlCombined(id, request));
+        } catch (Exception e) {
+            log.error("Error updating Export BL with ID: {}", id, e);
+            return error("Error updating Export BL: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)
     @Operation(summary = "Delete Export BL", description = "Soft deletes an Export BL manifest")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (DELETE).",
-                    example = "DELETE",
-                    required = true,
-                    schema = @Schema(type = "string", example = "DELETE")
-            )
-    })
     @DeleteMapping("/{transactionPoid}")
     public ResponseEntity<?> deleteExportBl(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        service.deleteExportBl(transactionPoid);
-        return success("Export BL deleted successfully");
+        try {
+            service.deleteExportBl(transactionPoid);
+            return success("Export BL deleted successfully");
+        } catch (Exception e) {
+            log.error("Error deleting Export BL with ID: {}", transactionPoid, e);
+            return error("Error deleting Export BL: " + e.getMessage(), 500);
+        }
     }
 
-    // ========== General Cargo Details Operations ==========
-
-
-
-    // ========== Container Details Operations ==========
+    // ========== Cargo / Container Details ==========
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(summary = "Get Cargo and Container Details", description = "Retrieves container details and cargo description for an Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
+    @Operation(summary = "Get Cargo and Container Details", description = "Retrieves container details and cargo description/marks for an Export BL")
     @GetMapping("/{transactionPoid}/cargo-container-details")
     public ResponseEntity<?> getCargoContainerDetails(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Cargo and container details retrieved successfully", service.getCargoContainerDetails(transactionPoid));
+        try {
+            return success("Cargo and container details retrieved successfully", service.getCargoContainerDetails(transactionPoid));
+        } catch (Exception e) {
+            log.error("Error retrieving cargo/container details for ID: {}", transactionPoid, e);
+            return error("Error retrieving cargo/container details: " + e.getMessage(), 500);
+        }
     }
-
-
-
-    // ========== Cargo Description and Marks Operations ==========
-
-
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get Cargo Marks", description = "Retrieves all cargo marks details for an Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @GetMapping("/{transactionPoid}/cargo-marks")
     public ResponseEntity<?> getCargoMarks(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Cargo marks retrieved successfully", service.getCargoMarks(transactionPoid));
+        try {
+            return success("Cargo marks retrieved successfully", service.getCargoMarks(transactionPoid));
+        } catch (Exception e) {
+            log.error("Error retrieving cargo marks for ID: {}", transactionPoid, e);
+            return error("Error retrieving cargo marks: " + e.getMessage(), 500);
+        }
     }
 
-
-
-    // ========== Charge Details Operations ==========
+    // ========== Charge Details ==========
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get Charge Details", description = "Retrieves all charge details for an Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @GetMapping("/{transactionPoid}/charge-details")
     public ResponseEntity<?> getChargeDetails(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("Charge details retrieved successfully", service.getChargeDetails(transactionPoid));
+        try {
+            return success("Charge details retrieved successfully", service.getChargeDetails(transactionPoid));
+        } catch (Exception e) {
+            log.error("Error retrieving charge details for ID: {}", transactionPoid, e);
+            return error("Error retrieving charge details: " + e.getMessage(), 500);
+        }
     }
-
-
 
     // ========== Special Operations ==========
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Load Booking Data", description = "Loads booking data from MATE (pending mate bookings) into the Export BL")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
     @PostMapping("/{transactionPoid}/load-booking")
     public ResponseEntity<?> loadBooking(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Load booking request", required = true)
             @Valid @RequestBody LoadBookingRequest request) {
-        return success("Booking data loaded successfully", service.loadBooking(transactionPoid, request));
+        try {
+            return success("Booking data loaded successfully", service.loadBooking(transactionPoid, request));
+        } catch (UnsupportedOperationException e) {
+            log.warn("Load booking not yet implemented for ID: {}", transactionPoid);
+            return error("Load booking is not yet implemented", 501);
+        } catch (Exception e) {
+            log.error("Error loading booking for ID: {}", transactionPoid, e);
+            return error("Error loading booking: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Generate BL Print", description = "Generates BL print (original or draft)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @PostMapping("/{transactionPoid}/generate-bl-print")
     public ResponseEntity<?> generateBlPrint(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate BL print request", required = true)
             @Valid @RequestBody GenerateBlPrintRequest request) {
-    	 try {
-    		 String docId=UserContext.getDocumentId();
-             byte[] pdf = service.generateBlPrint(transactionPoid, request,docId);
-             return ResponseEntity.ok()
-                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                             "attachment; filename=bl-print-" + transactionPoid + ".pdf")
-                     .contentType(MediaType.APPLICATION_PDF)
-                     .body(pdf);
-         } catch (Exception e) {
-             log.error("Failed to generate PDF for BL Print: {}", transactionPoid, e);
-             return error("Failed to generate PDF: " + e.getMessage(), 500);
-         }
+        try {
+            String docId = UserContext.getDocumentId();
+            byte[] pdf = service.generateBlPrint(transactionPoid, request, docId);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=bl-print-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate BL Print for ID: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Generate Manifest", description = "Generates cargo manifest or freight manifest")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @PostMapping("/{transactionPoid}/generate-manifest")
     public ResponseEntity<?> generateManifest(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Generate manifest request", required = true)
             @Valid @RequestBody GenerateManifestRequest request) {
         try {
-        	String docId=UserContext.getDocumentId();
-			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-			String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-" : "freight-manifest-";
-			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=" + fileName + transactionPoid + ".pdf")
-					.contentType(MediaType.APPLICATION_PDF).body(pdf);
-		} catch (Exception e) {
-			log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
-		}
+            String docId = UserContext.getDocumentId();
+            byte[] pdf = service.generateManifest(transactionPoid, request, docId);
+            String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE")
+                    ? "cargo-manifest-" : "freight-manifest-";
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=" + fileName + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate manifest for ID: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Generate Detention/Storage Report", description = "Generates detention/storage report")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @PostMapping("/{transactionPoid}/generate-detention-storage")
     public ResponseEntity<?> generateDetentionStorage(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-    	try {
-   		 String docId=UserContext.getDocumentId();
-            byte[] pdf = service.generateDetentionStorage(transactionPoid,docId);
+        try {
+            String docId = UserContext.getDocumentId();
+            byte[] pdf = service.generateDetentionStorage(transactionPoid, docId);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=detention-storage-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
-            log.error("Failed to generate PDF for detention or port storage: {}", transactionPoid, e);
+            log.error("Failed to generate detention/storage report for ID: {}", transactionPoid, e);
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Export EDI", description = "Exports BL data to EDI format")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
     @PostMapping("/{transactionPoid}/export-edi")
     public ResponseEntity<?> exportEdi(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        service.exportEdi(transactionPoid);
-        return success("EDI exported successfully");
+        try {
+            service.exportEdi(transactionPoid);
+            return success("EDI exported successfully");
+        } catch (Exception e) {
+            log.error("Error exporting EDI for ID: {}", transactionPoid, e);
+            return error("Error exporting EDI: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(summary = "Validate Export BL", description = "Validates Export BL before save")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
-    @PostMapping("/{transactionPoid}/validate")
+    @Operation(summary = "Validate Export BL",
+            description = "Validates Export BL before save. Pass transactionPoid as query param for existing records, omit for new records.")
+    @PostMapping("/validate")
     public ResponseEntity<?> validate(
-            @Parameter(description = "Transaction POID (optional for new records)", required = false) 
-            @PathVariable(required = false) Long transactionPoid,
+            @Parameter(description = "Transaction POID (optional — omit for new records)")
+            @RequestParam(required = false) Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Export BL request to validate", required = true)
             @Valid @RequestBody ExportManifestBlRequest request) {
-        return success("Validation completed", service.validate(transactionPoid, request));
+        try {
+            return success("Validation completed", service.validate(transactionPoid, request));
+        } catch (Exception e) {
+            log.error("Error validating Export BL", e);
+            return error("Error validating Export BL: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Post-Save Processing", description = "Post-save processing (called after successful save)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (EDIT).",
-                    example = "EDIT",
-                    required = true,
-                    schema = @Schema(type = "string", example = "EDIT")
-            )
-    })
     @PostMapping("/{transactionPoid}/after-save")
     public ResponseEntity<?> afterSave(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        service.afterSave(transactionPoid);
-        return success("Post-save processing completed");
+        try {
+            service.afterSave(transactionPoid);
+            return success("Post-save processing completed");
+        } catch (Exception e) {
+            log.error("Error in after-save processing for ID: {}", transactionPoid, e);
+            return error("Error in post-save processing: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get BL Status", description = "Gets BL status information")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @GetMapping("/{transactionPoid}/bl-status")
     public ResponseEntity<?> getBlStatus(
             @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
-        return success("BL status retrieved successfully", service.getBlStatus(transactionPoid));
+        try {
+            return success("BL status retrieved successfully", service.getBlStatus(transactionPoid));
+        } catch (Exception e) {
+            log.error("Error retrieving BL status for ID: {}", transactionPoid, e);
+            return error("Error retrieving BL status: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(summary = "Quotation After Browse", description = "Processes after quotation LOV browse (auto-populates fields from quotation)")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
-    @PostMapping("/{transactionPoid}/quotation-after-browse")
+    @Operation(summary = "Quotation After Browse",
+            description = "Processes after quotation LOV browse. Pass transactionPoid as query param for existing records, omit for new records.")
+    @PostMapping("/quotation-after-browse")
     public ResponseEntity<?> quotationAfterBrowse(
-            @Parameter(description = "Transaction POID (optional for new records)", required = false)
-            @PathVariable(required = false) Long transactionPoid,
+            @Parameter(description = "Transaction POID (optional — omit for new records)")
+            @RequestParam(required = false) Long transactionPoid,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Quotation after browse request", required = true)
             @Valid @RequestBody QuotationAfterBrowseRequest request) {
-        return success("Quotation data loaded successfully", 
-                service.quotationAfterBrowse(transactionPoid, request));
+        try {
+            return success("Quotation data loaded successfully",
+                    service.quotationAfterBrowse(transactionPoid, request));
+        } catch (Exception e) {
+            log.error("Error processing quotation after browse", e);
+            return error("Error processing quotation after browse: " + e.getMessage(), 500);
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(summary = "Get Address Details", description = "Retrieves address details for a customer by address master POID and address type")
-    @Parameters({
-            @Parameter(
-                    name = "X-Document-Id",
-                    in = ParameterIn.HEADER,
-                    description = "Document identifier required for auditing purposes.",
-                    example = "100-352",
-                    required = true,
-                    schema = @Schema(type = "string", example = "100-352")
-            ),
-            @Parameter(
-                    name = "X-Action-Requested",
-                    in = ParameterIn.HEADER,
-                    description = "Action requested must match this endpoint's @AllowedAction (VIEW).",
-                    example = "VIEW",
-                    required = true,
-                    schema = @Schema(type = "string", example = "VIEW")
-            )
-    })
     @GetMapping("/address-details")
     public ResponseEntity<?> getAddressDetails(
             @Parameter(description = "Address Master POID", required = true) @RequestParam Long addressMasterPoid,
-            @Parameter(description = "Address Type", required = false) @RequestParam(required = false, defaultValue = "CAN") String addressType) {
-        return success("Address details retrieved successfully", service.getAddressDetails(addressMasterPoid, addressType));
+            @Parameter(description = "Address Type") @RequestParam(required = false, defaultValue = "CAN") String addressType) {
+        try {
+            return success("Address details retrieved successfully", service.getAddressDetails(addressMasterPoid, addressType));
+        } catch (Exception e) {
+            log.error("Error retrieving address details for master POID: {}", addressMasterPoid, e);
+            return error("Error retrieving address details: " + e.getMessage(), 500);
+        }
     }
 }
-

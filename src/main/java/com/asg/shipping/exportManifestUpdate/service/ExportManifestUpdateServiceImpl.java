@@ -77,13 +77,19 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
         
         ExportManifestBlResponse response = mapper.mapToResponse(entity);
-        
+
         // Enrich with LOV data
         enrichHeaderWithLovData(response, entity);
-        
+
         // Retrieve and set general cargo details
         response.setGeneralCargoDetails(getGeneralCargoDetails(transactionPoid));
-        
+
+        // Simple single-string view: all DESC / MARK rows joined into one string
+        List<CargoDescriptionDto> descList = getCargoDescription(transactionPoid);
+        List<CargoMarksDto> marksList = getCargoMarks(transactionPoid);
+        response.setSimpleCargoDescription(joinCargoDescriptions(descList));
+        response.setSimpleCargoMarks(joinCargoMarks(marksList));
+
         return response;
     }
 
@@ -276,58 +282,121 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     @Override
     public ExportManifestUpdateResponse updateExportBlCombined(Long transactionPoid, ExportManifestUpdateRequest request) {
         log.info("Updating Export BL combined for ID: {}", transactionPoid);
-        
+
+        // --- Simple string saves run FIRST so subsequent list fetches reflect the new data ---
+        String simpleCargoDescResponse = null;
+        if (request.getSimpleCargoDescription() != null) {
+            simpleCargoDescResponse = saveSimpleCargoDescription(transactionPoid, request.getSimpleCargoDescription());
+        }
+
+        String simpleCargoMarksResponse = null;
+        if (request.getSimpleCargoMarks() != null) {
+            simpleCargoMarksResponse = saveSimpleCargoMarks(transactionPoid, request.getSimpleCargoMarks());
+        }
+
+        // --- Header ---
         ExportManifestBlResponse headerResponse = null;
         if (request.getHeader() != null) {
             headerResponse = updateExportBl(transactionPoid, request.getHeader());
         } else {
             headerResponse = getExportBlById(transactionPoid);
         }
-        
+
+        // --- General cargo ---
         List<GeneralCargoDetailDto> generalCargoResponse = null;
         if (request.getGeneralCargoDetails() != null) {
             generalCargoResponse = updateGeneralCargoDetails(transactionPoid, request.getGeneralCargoDetails());
         } else {
             generalCargoResponse = getGeneralCargoDetails(transactionPoid);
         }
-        
+
+        // --- Container details ---
         List<ContainerDetailDto> containerResponse = null;
         if (request.getContainerDetails() != null) {
             containerResponse = updateContainerDetails(transactionPoid, request.getContainerDetails());
         } else {
             containerResponse = getContainerDetails(transactionPoid);
         }
-        
+
+        // --- Cargo description list (fetch reflects simple save above if list not provided) ---
         List<CargoDescriptionDto> cargoDescResponse = null;
         if (request.getCargoDescription() != null) {
             cargoDescResponse = updateCargoDescription(transactionPoid, request.getCargoDescription());
         } else {
             cargoDescResponse = getCargoDescription(transactionPoid);
         }
-        
+
+        // --- Cargo marks list (fetch reflects simple save above if list not provided) ---
         List<CargoMarksDto> cargoMarksResponse = null;
         if (request.getCargoMarks() != null) {
             cargoMarksResponse = updateCargoMarks(transactionPoid, request.getCargoMarks());
         } else {
             cargoMarksResponse = getCargoMarks(transactionPoid);
         }
-        
+
+        // --- Charge details ---
         Map<String, Object> chargeResponse = null;
         if (request.getChargeDetails() != null) {
             chargeResponse = updateChargeDetails(transactionPoid, request.getChargeDetails());
         } else {
             chargeResponse = getChargeDetails(transactionPoid);
         }
-        
+
         ExportManifestUpdateResponse response = new ExportManifestUpdateResponse();
         response.setHeader(headerResponse);
         response.setGeneralCargoDetails(generalCargoResponse);
         response.setContainerDetails(containerResponse);
         response.setCargoDescription(cargoDescResponse);
         response.setCargoMarks(cargoMarksResponse);
+        response.setSimpleCargoDescription(simpleCargoDescResponse);
+        response.setSimpleCargoMarks(simpleCargoMarksResponse);
         response.setChargeDetails(chargeResponse);
-        
+
         return response;
+    }
+
+    // ========== Simple single-string join helpers ==========
+
+    private String joinCargoDescriptions(List<CargoDescriptionDto> list) {
+        if (list == null || list.isEmpty()) return null;
+        return list.stream()
+                .map(CargoDescriptionDto::getCargoDescription)
+                .filter(s -> s != null && !s.isEmpty())
+                .collect(Collectors.joining(" "));
+    }
+
+    private String joinCargoMarks(List<CargoMarksDto> list) {
+        if (list == null || list.isEmpty()) return null;
+        return list.stream()
+                .map(CargoMarksDto::getCargoDescription)
+                .filter(s -> s != null && !s.isEmpty())
+                .collect(Collectors.joining(" "));
+    }
+
+    // ========== Simple single-string save helpers ==========
+
+    private String saveSimpleCargoDescription(Long transactionPoid, String text) {
+        log.info("Saving simple cargo description for Export BL: {}", transactionPoid);
+        cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "DESC");
+        ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
+        entity.setTransactionPoid(transactionPoid);
+        entity.setDetRowId(1L);
+        entity.setDescriptionType("DESC");
+        entity.setCargoDescription(text);
+        cargoDtlRepository.save(entity);
+        return text;
+    }
+
+    private String saveSimpleCargoMarks(Long transactionPoid, String text) {
+        log.info("Saving simple cargo marks for Export BL: {}", transactionPoid);
+        cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "MARK");
+        ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
+        entity.setTransactionPoid(transactionPoid);
+        entity.setDetRowId(1L);
+        entity.setDescriptionType("MARK");
+        entity.setCargoDescription(text);
+        cargoDtlRepository.save(entity);
+        return text;
     }
 
     @Override
@@ -527,10 +596,19 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     @Transactional(readOnly = true)
     public ExportManifestCargoContainerResponse getCargoContainerDetails(Long transactionPoid) {
         log.info("Getting cargo and container details for Export BL: {}", transactionPoid);
+
+        List<CargoDescriptionDto> descList = getCargoDescription(transactionPoid);
+        List<CargoMarksDto> marksList = getCargoMarks(transactionPoid);
+
         ExportManifestCargoContainerResponse response = new ExportManifestCargoContainerResponse();
-        response.setCargoDescription(getCargoDescription(transactionPoid));
-        response.setCargoMarks(getCargoMarks(transactionPoid));
+        response.setCargoDescription(descList);
+        response.setCargoMarks(marksList);
         response.setContainerDetails(getContainerDetails(transactionPoid));
+
+        // Simple single-string view: all rows joined into one string
+        response.setSimpleCargoDescription(joinCargoDescriptions(descList));
+        response.setSimpleCargoMarks(joinCargoMarks(marksList));
+
         return response;
     }
 
@@ -887,7 +965,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
             // Customers (Shipper, Consignee, Notify, Booking Party)
             if (entity.getShipperPoid() != null) {
                 dto.setShipperDet(lovService.getLovItemByPoid(
-                        entity.getShipperPoid(), "CUSTOMER_MASTER", groupPoid, companyPoid, userPoid));
+                        entity.getShipperPoid().longValue(), "CUSTOMER_MASTER", groupPoid, companyPoid, userPoid));
             }
             if (entity.getShipperAddressPoid() != null) {
                 dto.setShipperAddressDet(lovService.getLovItemByPoid(
@@ -1036,15 +1114,27 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long groupPoid = getGroupPoid();
         Long companyPoid = getCompanyPoid();
         Long userPoid = getUserPoid();
-        Map<String, Map<Long, LovItem>> cache = new HashMap<>();
+        Map<String, Map<Long, LovItem>> poidCache = new HashMap<>();
+        Map<String, Map<String, LovItem>> codeCache = new HashMap<>();
 
         for (ContainerDetailDto dto : dtos) {
             try {
+                // POID-based LOVs
                 if (dto.getComodityPoid() != null) {
-                    dto.setComodityDet(getLovItemWithCache(cache, dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
+                    dto.setComodityDet(getLovItemWithCache(poidCache, dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
                 }
                 if (dto.getDestinationPortPoid() != null) {
-                    dto.setDestinationPortDet(getLovItemWithCache(cache, dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
+                    dto.setDestinationPortDet(getLovItemWithCache(poidCache, dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                // CODE-based LOVs
+                if (dto.getEquipmentIsoType() != null) {
+                    dto.setEquipmentIsoTypeDet(getLovItemByCodeWithCache(codeCache, dto.getEquipmentIsoType(), "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getImcoClassType() != null) {
+                    dto.setImcoClassTypeDet(getLovItemByCodeWithCache(codeCache, dto.getImcoClassType(), "IMCO_CLASS", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getOogType() != null) {
+                    dto.setOogTypeDet(getLovItemByCodeWithCache(codeCache, dto.getOogType(), "OOG_TYPE", groupPoid, companyPoid, userPoid));
                 }
             } catch (Exception e) {
                 log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);

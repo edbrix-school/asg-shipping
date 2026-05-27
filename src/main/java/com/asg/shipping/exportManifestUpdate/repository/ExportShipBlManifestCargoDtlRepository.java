@@ -29,5 +29,12 @@ public interface ExportShipBlManifestCargoDtlRepository extends JpaRepository<Ex
             @Param("transactionPoid") Long transactionPoid,
             @Param("descriptionType") String descriptionType,
             @Param("detRowIds") List<Long> detRowIds);
+
+    @Modifying
+    @Query("DELETE FROM ExportShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid " +
+           "AND d.descriptionType = :descriptionType")
+    void deleteAllByTransactionPoidAndDescriptionType(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("descriptionType") String descriptionType);
 }
 
