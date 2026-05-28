@@ -929,6 +929,68 @@ class BookingFormServiceImplTest {
     }
 
     // ============================================================
+    // searchContainerInventory
+    // ============================================================
+
+    @Test
+    void searchContainerInventory_withLoadFullIsNullFilter() {
+        Pageable pageable = PageRequest.of(0, 40);
+
+        when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
+                .thenReturn(List.of(new java.util.HashMap<>(Map.of("CONTAINER_NO", "TEMU123", "LINE_POID", 103))));
+        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Long.class)))
+                .thenReturn(5L);
+
+        Map<String, Object> result = service.searchContainerInventory("DOC123", null, null, 103L, pageable);
+
+        assertNotNull(result);
+        // verify LOAD_FULL IS NULL is in the query
+        verify(jdbcTemplate).queryForList(
+                argThat(sql -> sql.contains("LOAD_FULL IS NULL") && sql.contains("LINE_POID = ?")),
+                any(Object[].class));
+        verify(jdbcTemplate).queryForObject(
+                argThat(sql -> sql.contains("LOAD_FULL IS NULL") && sql.contains("LINE_POID = ?")),
+                any(Object[].class), eq(Long.class));
+    }
+
+    @Test
+    void searchContainerInventory_withContainerNoFilter() {
+        Pageable pageable = PageRequest.of(0, 40);
+
+        when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Long.class))).thenReturn(0L);
+
+        Map<String, Object> result = service.searchContainerInventory("DOC123", "TEMU123", null, 103L, pageable);
+        assertNotNull(result);
+    }
+
+    @Test
+    void searchContainerInventory_totalNullReturnsZero() {
+        Pageable pageable = PageRequest.of(0, 40);
+
+        when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Long.class))).thenReturn(null);
+
+        Map<String, Object> result = service.searchContainerInventory("DOC123", null, null, 103L, pageable);
+        assertNotNull(result);
+    }
+
+    // ============================================================
+    // importFileWithTransaction
+    // ============================================================
+
+    @Test
+    void importFileWithTransaction_emptyFile_throwsValidationException() {
+        org.springframework.mock.web.MockMultipartFile emptyFile =
+                new org.springframework.mock.web.MockMultipartFile(
+                        "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        new byte[0]);
+
+        assertThrows(ValidationException.class, () ->
+                service.importFileWithTransaction(emptyFile, TX_POID, GROUP_POID, COMPANY_POID, USER_POID));
+    }
+
+    // ============================================================
     // Print methods
     // ============================================================
 

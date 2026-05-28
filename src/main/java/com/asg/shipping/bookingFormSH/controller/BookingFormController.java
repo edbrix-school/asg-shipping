@@ -177,9 +177,11 @@ public class BookingFormController {
 
             ExcelFileData data = excelExportService.generateExcel("100-311", String.valueOf(transactionPoid), null,
                     "VGMCustXLFile.xlsx");
+            String fileName = "VGMCustXLFile_" + transactionPoid + ".xlsx";
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + data.getFileName())
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM).body(data.getContent());
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(data.getContent());
         } catch (Exception e) {
             log.error("Failed to generate Excel", e);
             return error("Failed to generate Excel: " + e.getMessage(), 500);
@@ -384,7 +386,7 @@ public class BookingFormController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=Stuffing_Advice_Template.xlsx")
+                        "attachment; filename=Stuffing_Advice_" + id + ".xlsx")
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excel);

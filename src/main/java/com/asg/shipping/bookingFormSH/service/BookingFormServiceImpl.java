@@ -142,6 +142,8 @@ public class BookingFormServiceImpl implements BookingFormService {
             params.add(linePoid);
         }
 
+        conditions.add("LOAD_FULL IS NULL");
+
         if (!conditions.isEmpty()) {
             where.append(" WHERE ").append(String.join(" AND ", conditions));
         }
@@ -1475,7 +1477,7 @@ public class BookingFormServiceImpl implements BookingFormService {
             }
             return result != null ? result : "TDR details uploaded successfully from Excel";
         } else {
-            return String.format("Successfully Imported");
+            return "Records Loaded...";
         }
     }
 

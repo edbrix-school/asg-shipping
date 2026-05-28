@@ -239,8 +239,8 @@ class BookingFormControllerTest {
 
         mockMvc.perform(get("/v1/booking-form-sh/excel/vgmCustXLGenerateXL/476"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=VGMCustXLFile.xlsx"))
-                .andExpect(content().contentType(MediaType.APPLICATION_OCTET_STREAM));
+                .andExpect(header().string("Content-Disposition", "attachment; filename=VGMCustXLFile_476.xlsx"))
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
 
         verify(excelExportService).generateExcel(eq("100-311"), eq("476"), eq(null), eq("VGMCustXLFile.xlsx"));
     }
@@ -329,6 +329,51 @@ class BookingFormControllerTest {
                 .andExpect(status().isInternalServerError());
 
         verify(bookingFormService).cntReturnBookingPrintFormAll(21L, "Y");
+    }
+
+    /* ---------------- STUFFING ADVICE DOWNLOAD ---------------- */
+
+    @Test
+    void downloadStuffingAdvice_Success() throws Exception {
+        byte[] excelContent = "Excel Content".getBytes();
+        when(bookingFormService.exportStuffingAdviceExcel(21L)).thenReturn(excelContent);
+
+        mockMvc.perform(get("/v1/booking-form-sh/download-stuffing-advice/21"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=Stuffing_Advice_21.xlsx"))
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+
+        verify(bookingFormService).exportStuffingAdviceExcel(21L);
+    }
+
+    /* ---------------- CONTAINER INVENTORY SEARCH ---------------- */
+
+    @Test
+    void searchContainerInventory_Success() throws Exception {
+        Map<String, Object> response = Map.of("content", List.of(), "totalElements", 5);
+        when(bookingFormService.searchContainerInventory(eq("DOC123"), isNull(), isNull(), eq(103L), any(Pageable.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/v1/booking-form-sh/container-inventory/search")
+                        .param("linePoid", "103"))
+                .andExpect(status().isOk());
+
+        verify(bookingFormService).searchContainerInventory(eq("DOC123"), isNull(), isNull(), eq(103L), any(Pageable.class));
+    }
+
+    @Test
+    void searchContainerInventory_WithFilters() throws Exception {
+        Map<String, Object> response = Map.of("content", List.of(), "totalElements", 2);
+        when(bookingFormService.searchContainerInventory(eq("DOC123"), eq("TEMU123"), eq("20DV"), eq(103L), any(Pageable.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/v1/booking-form-sh/container-inventory/search")
+                        .param("linePoid", "103")
+                        .param("containerNo", "TEMU123")
+                        .param("isoType", "20DV"))
+                .andExpect(status().isOk());
+
+        verify(bookingFormService).searchContainerInventory(eq("DOC123"), eq("TEMU123"), eq("20DV"), eq(103L), any(Pageable.class));
     }
 
     /* ---------------- HELPER METHODS ---------------- */
