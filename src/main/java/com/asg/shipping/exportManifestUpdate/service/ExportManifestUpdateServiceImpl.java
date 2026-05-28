@@ -444,6 +444,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
                     case ISCREATED:
+                        if (dto.getComodityPoid() == null && (dto.getCargoDescription() == null || dto.getCargoDescription().isBlank())) break;
                         detRowId = generalDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestGeneralDtl newEntity = mapper.mapGeneralCargoToEntity(dto, transactionPoid, detRowId, userId);
                         generalDtlRepository.save(newEntity);
@@ -506,6 +507,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
                     case ISCREATED:
+                        if (dto.getContainerNo() == null || dto.getContainerNo().isBlank()) break;
                         detRowId = containerDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestContainerDtl newEntity = mapper.mapContainerToEntity(dto, transactionPoid, detRowId, userId);
                         containerDtlRepository.save(newEntity);
@@ -705,6 +707,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
                     case ISCREATED:
+                        if (dto.getChargePoid() == null) break;
                         detRowId = chargesDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestChargesDtl newEntity = mapper.mapChargeToEntity(dto, transactionPoid, detRowId, userId);
                         chargesDtlRepository.save(newEntity);
