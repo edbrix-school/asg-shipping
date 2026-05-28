@@ -261,6 +261,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         return actionType != null ? actionType : ActionType.NOCHANGES;
     }
 
+
     @Override
     public ExportManifestUpdateResponse updateExportBlCombined(Long transactionPoid, ExportManifestUpdateRequest request) {
         log.info("Updating Export BL combined for ID: {}", transactionPoid);
@@ -507,7 +508,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
                     case ISCREATED:
-                        if (dto.getContainerNo() == null || dto.getContainerNo().isBlank()) break;
                         detRowId = containerDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestContainerDtl newEntity = mapper.mapContainerToEntity(dto, transactionPoid, detRowId, userId);
                         containerDtlRepository.save(newEntity);
