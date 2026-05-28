@@ -27,6 +27,14 @@ public interface ExportShipBlManifestCargoDtlRepository extends JpaRepository<Ex
             @Param("transactionPoid") Long transactionPoid,
             @Param("descriptionType") String descriptionType);
 
+    @Query(value = "SELECT CARGO_DESCRIPTION FROM SHIP_BL_MANIFEST_CARGO_DTL " +
+                   "WHERE TRANSACTION_POID = :transactionPoid " +
+                   "AND DESCRIPTION_TYPE = :descriptionType " +
+                   "ORDER BY DET_ROW_ID", nativeQuery = true)
+    List<String> findDescriptionStringsByType(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("descriptionType") String descriptionType);
+
     @Query("SELECT COALESCE(MAX(d.detRowId), 0) + 1 FROM ExportShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid AND d.descriptionType = :descriptionType")
     Long getNextDetRowId(@Param("transactionPoid") Long transactionPoid, @Param("descriptionType") String descriptionType);
 
