@@ -257,29 +257,8 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         }
     }
 
-    private String resolveAction(String actionType) {
-        if (actionType == null || actionType.trim().isEmpty()) {
-            return "ACTION_NOCHANGES";
-        }
-        String upperAction = actionType.trim().toUpperCase();
-        switch (upperAction) {
-            case "INSERT":
-            case "CREATE":
-            case "ISCREATED":          // "isCreated" from FE (after toUpperCase)
-            case "ACTION_ISCREATED":
-                return "ACTION_ISCREATED";
-            case "UPDATE":
-            case "EDIT":
-            case "ISUPDATED":          // "isUpdated" from FE (after toUpperCase)
-            case "ACTION_ISUPDATED":
-                return "ACTION_ISUPDATED";
-            case "DELETE":
-            case "ISDELETED":          // "isDeleted" from FE (after toUpperCase)
-            case "ACTION_ISDELETED":
-                return "ACTION_ISDELETED";
-            default:
-                return "ACTION_NOCHANGES";
-        }
+    private ActionType resolveAction(ActionType actionType) {
+        return actionType != null ? actionType : ActionType.NOCHANGES;
     }
 
     @Override
@@ -298,9 +277,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         }
 
         // --- Header ---
+        // With @JsonUnwrapped, header is always non-null but fields may all be null if FE sent nothing.
+        // Use voyageTransactionPoid as a meaningful presence check.
         ExportManifestBlResponse headerResponse = null;
-        if (request.getHeader() != null) {
-            headerResponse = updateExportBl(transactionPoid, request.getHeader());
+        ExportManifestBlRequest headerReq = request.getHeader();
+        if (headerReq != null && headerReq.getVoyageTransactionPoid() != null) {
+            headerResponse = updateExportBl(transactionPoid, headerReq);
         } else {
             headerResponse = getExportBlById(transactionPoid);
         }
@@ -454,19 +436,19 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (GeneralCargoDetailDto dto : request) {
-                String action = resolveAction(dto.getActionType());
+                ActionType action = resolveAction(dto.getActionType());
                 Long detRowId = dto.getDetRowId();
-                
+
                 switch (action) {
-                    case "ACTION_ISDELETED":
+                    case ISDELETED:
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
-                    case "ACTION_ISCREATED":
+                    case ISCREATED:
                         detRowId = generalDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestGeneralDtl newEntity = mapper.mapGeneralCargoToEntity(dto, transactionPoid, detRowId, userId);
                         generalDtlRepository.save(newEntity);
                         break;
-                    case "ACTION_ISUPDATED":
+                    case ISUPDATED:
                         if (detRowId != null) {
                             ExportShipBlManifestGeneralDtl entity = generalDtlRepository.findById(new ExportShipBlManifestGeneralDtlId(transactionPoid, detRowId))
                                 .orElseThrow(() -> new RuntimeException("General cargo detail not found"));
@@ -516,19 +498,19 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (ContainerDetailDto dto : request) {
-                String action = resolveAction(dto.getActionType());
+                ActionType action = resolveAction(dto.getActionType());
                 Long detRowId = dto.getDetRowId();
-                
+
                 switch (action) {
-                    case "ACTION_ISDELETED":
+                    case ISDELETED:
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
-                    case "ACTION_ISCREATED":
+                    case ISCREATED:
                         detRowId = containerDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestContainerDtl newEntity = mapper.mapContainerToEntity(dto, transactionPoid, detRowId, userId);
                         containerDtlRepository.save(newEntity);
                         break;
-                    case "ACTION_ISUPDATED":
+                    case ISUPDATED:
                         if (detRowId != null) {
                             ExportShipBlManifestContainerDtl entity = containerDtlRepository.findById(new ExportShipBlManifestContainerDtlId(transactionPoid, detRowId))
                                 .orElseThrow(() -> new RuntimeException("Container detail not found"));
@@ -578,20 +560,20 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (CargoDescriptionDto dto : request) {
-                String action = resolveAction(dto.getActionType());
+                ActionType action = resolveAction(dto.getActionType());
                 Long detRowId = dto.getDetRowId();
-                
+
                 switch (action) {
-                    case "ACTION_ISDELETED":
+                    case ISDELETED:
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
-                    case "ACTION_ISCREATED":
+                    case ISCREATED:
                         detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "DESC");
                         ExportShipBlManifestCargoDtl newEntity = mapper.mapCargoDescriptionToEntity(dto, transactionPoid, detRowId, userId);
                         newEntity.setDescriptionType("DESC");
                         cargoDtlRepository.save(newEntity);
                         break;
-                    case "ACTION_ISUPDATED":
+                    case ISUPDATED:
                         if (detRowId != null) {
                             ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "DESC"))
                                 .orElseThrow(() -> new RuntimeException("Cargo description detail not found"));
@@ -648,20 +630,20 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (CargoMarksDto dto : request) {
-                String action = resolveAction(dto.getActionType());
+                ActionType action = resolveAction(dto.getActionType());
                 Long detRowId = dto.getDetRowId();
-                
+
                 switch (action) {
-                    case "ACTION_ISDELETED":
+                    case ISDELETED:
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
-                    case "ACTION_ISCREATED":
+                    case ISCREATED:
                         detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "MARK");
                         ExportShipBlManifestCargoDtl newEntity = mapper.mapCargoMarksToEntity(dto, transactionPoid, detRowId, userId);
                         newEntity.setDescriptionType("MARK");
                         cargoDtlRepository.save(newEntity);
                         break;
-                    case "ACTION_ISUPDATED":
+                    case ISUPDATED:
                         if (detRowId != null) {
                             ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "MARK"))
                                 .orElseThrow(() -> new RuntimeException("Cargo marks detail not found"));
@@ -715,19 +697,19 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (ChargeDetailDto dto : request) {
-                String action = resolveAction(dto.getActionType());
+                ActionType action = resolveAction(dto.getActionType());
                 Long detRowId = dto.getDetRowId();
-                
+
                 switch (action) {
-                    case "ACTION_ISDELETED":
+                    case ISDELETED:
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
-                    case "ACTION_ISCREATED":
+                    case ISCREATED:
                         detRowId = chargesDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestChargesDtl newEntity = mapper.mapChargeToEntity(dto, transactionPoid, detRowId, userId);
                         chargesDtlRepository.save(newEntity);
                         break;
-                    case "ACTION_ISUPDATED":
+                    case ISUPDATED:
                         if (detRowId != null) {
                             ExportShipBlManifestChargesDtl entity = chargesDtlRepository.findById(new ExportShipBlManifestChargesDtlId(transactionPoid, detRowId))
                                 .orElseThrow(() -> new RuntimeException("Charge detail not found"));

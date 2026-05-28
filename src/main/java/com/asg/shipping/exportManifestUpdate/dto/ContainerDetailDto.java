@@ -74,6 +74,6 @@ public class ContainerDetailDto {
     private String hsDescription;
     private BigDecimal amountPerDayAfterFree;
     private LocalDate actualDischargeDate;
-    private String actionType;
+    private ActionType actionType;
 }
 
