@@ -84,11 +84,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         // Retrieve and set general cargo details
         response.setGeneralCargoDetails(getGeneralCargoDetails(transactionPoid));
 
-        // Simple single-string view: all DESC / MARK rows joined — query repo directly to avoid redundant validateHeaderExists
-        response.setSimpleCargoDescription(joinCargoDtlRows(
-                cargoDtlRepository.findCargoRowsByType(transactionPoid, "DESC")));
-        response.setSimpleCargoMarks(joinCargoDtlRows(
-                cargoDtlRepository.findCargoRowsByType(transactionPoid, "MARK")));
+        // Simple single-string view: all DESC / MARK rows joined via native query on string column
+        response.setSimpleCargoDescription(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "DESC")));
+        response.setSimpleCargoMarks(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
 
         return response;
     }
@@ -265,13 +265,16 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         switch (upperAction) {
             case "INSERT":
             case "CREATE":
+            case "ISCREATED":          // "isCreated" from FE (after toUpperCase)
             case "ACTION_ISCREATED":
                 return "ACTION_ISCREATED";
             case "UPDATE":
             case "EDIT":
+            case "ISUPDATED":          // "isUpdated" from FE (after toUpperCase)
             case "ACTION_ISUPDATED":
                 return "ACTION_ISUPDATED";
             case "DELETE":
+            case "ISDELETED":          // "isDeleted" from FE (after toUpperCase)
             case "ACTION_ISDELETED":
                 return "ACTION_ISDELETED";
             default:
@@ -357,11 +360,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     // ========== Simple single-string join helpers ==========
 
-    /** Joins entity rows directly — used when repo is queried inline (avoids redundant service call overhead). */
-    private String joinCargoDtlRows(List<ExportShipBlManifestCargoDtl> entities) {
-        if (entities == null || entities.isEmpty()) return null;
-        return entities.stream()
-                .map(ExportShipBlManifestCargoDtl::getCargoDescription)
+    /** Joins raw description strings fetched via native query — most reliable approach. */
+    private String joinDescriptionStrings(List<String> rows) {
+        if (rows == null || rows.isEmpty()) return null;
+        return rows.stream()
                 .filter(s -> s != null && !s.isEmpty())
                 .collect(Collectors.joining(" "));
     }
@@ -388,24 +390,28 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     private String saveSimpleCargoDescription(Long transactionPoid, String text) {
         log.info("Saving simple cargo description for Export BL: {}", transactionPoid);
         cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "DESC");
-        ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
-        entity.setTransactionPoid(transactionPoid);
-        entity.setDetRowId(1L);
-        entity.setDescriptionType("DESC");
-        entity.setCargoDescription(text);
-        cargoDtlRepository.save(entity);
+        if (text != null && !text.trim().isEmpty()) {
+            ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
+            entity.setTransactionPoid(transactionPoid);
+            entity.setDetRowId(1L);
+            entity.setDescriptionType("DESC");
+            entity.setCargoDescription(text);
+            cargoDtlRepository.save(entity);
+        }
         return text;
     }
 
     private String saveSimpleCargoMarks(Long transactionPoid, String text) {
         log.info("Saving simple cargo marks for Export BL: {}", transactionPoid);
         cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "MARK");
-        ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
-        entity.setTransactionPoid(transactionPoid);
-        entity.setDetRowId(1L);
-        entity.setDescriptionType("MARK");
-        entity.setCargoDescription(text);
-        cargoDtlRepository.save(entity);
+        if (text != null && !text.trim().isEmpty()) {
+            ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
+            entity.setTransactionPoid(transactionPoid);
+            entity.setDetRowId(1L);
+            entity.setDescriptionType("MARK");
+            entity.setCargoDescription(text);
+            cargoDtlRepository.save(entity);
+        }
         return text;
     }
 
@@ -615,9 +621,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         response.setCargoMarks(marksList);
         response.setContainerDetails(getContainerDetails(transactionPoid));
 
-        // Simple single-string view: reuse already-fetched entities, no extra DB call
-        response.setSimpleCargoDescription(joinCargoDescriptions(descList));
-        response.setSimpleCargoMarks(joinCargoMarks(marksList));
+        // Simple single-string view: native query on string column — most reliable
+        response.setSimpleCargoDescription(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "DESC")));
+        response.setSimpleCargoMarks(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
 
         return response;
     }
