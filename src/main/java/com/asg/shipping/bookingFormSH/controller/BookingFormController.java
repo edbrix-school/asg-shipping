@@ -386,7 +386,7 @@ public class BookingFormController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=Stuffing_Advice_Template.xlsx")
+                        "attachment; filename=Stuffing_Advice_" + id + ".xlsx")
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excel);
