@@ -24,6 +24,7 @@ import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionDtlRepo
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionHdrRepository;
 import com.asg.shipping.shipcommisiontransfer.util.ShipCommissionTransferMapper;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.ParameterMode;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
@@ -399,26 +400,34 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
     @Override
     @Transactional
-    public List<Object[]> getCommissionPending(Long companyPoid, Long voyageTransactionPoid, CommissionPendingRequestDTO request) {
+    public List<Object[]> getCommissionPending( Long voyageTransactionPoid, CommissionPendingRequestDTO request) {
         log.info("Fetching commission pending for voyageTransactionPoid: {}", voyageTransactionPoid);
 
         StoredProcedureQuery query = entityManager
-                .createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING");
+                .createStoredProcedureQuery("PROC_SHIP_COMMISSION_RECORD_FETCH");
 
+        query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, jakarta.persistence.ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, jakarta.persistence.ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_exchageRage", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_DOC_ID", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("P_BL_POID", Long.class, jakarta.persistence.ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_FrtBuyActual", Double.class, jakarta.persistence.ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_Short_Leg_Selected", String.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_VOYAGE_TRANSACTION_POID", Long.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_EXCHANGE", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_RECORD_TYPE", String.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_FRT_BUY_ACTUAL", Double.class, jakarta.persistence.ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_SHORT_LEG_SELECTED", String.class, jakarta.persistence.ParameterMode.IN);
         query.registerStoredProcedureParameter("OUTDATA", void.class, jakarta.persistence.ParameterMode.REF_CURSOR);
 
-        query.setParameter("P_COMPANY_POID", companyPoid);
-        query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoid);
-        query.setParameter("p_exchageRage", request.getExchangeRate() != null ? request.getExchangeRate() : 0.0);
+        query.setParameter("P_LOGIN_GROUP_POID", UserContext.getGroupPoid());
+        query.setParameter("P_COMPANY_POID", UserContext.getCompanyPoid());
+        query.setParameter("P_LOGIN_USER_POID", UserContext.getUserPoid());
+        query.setParameter("P_DOC_ID", UserContext.getDocumentId());
         query.setParameter("P_BL_POID", request.getBlPoid() != null ? request.getBlPoid() : 0L);
-        query.setParameter("p_FrtBuyActual", request.getFrtBuyActual() != null ? request.getFrtBuyActual() : 0.0);
-        query.setParameter("p_Short_Leg_Selected", request.getShortLegSelected() != null ? request.getShortLegSelected() : "N");
+        query.setParameter("P_VOYAGE_TRANSACTION_POID", voyageTransactionPoid);
+        query.setParameter("P_EXCHANGE", request.getExchangeRate() != null ? request.getExchangeRate() : 1.0);
+        query.setParameter("P_RECORD_TYPE", request.getRecordType() != null ? request.getRecordType() : "ALL");
+        query.setParameter("P_FRT_BUY_ACTUAL", request.getFrtBuyActual() != null ? request.getFrtBuyActual() : 0.0);
+        query.setParameter("P_SHORT_LEG_SELECTED", request.getShortLegSelected() != null ? request.getShortLegSelected() : "N");
 
         query.execute();
 

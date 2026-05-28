@@ -65,5 +65,5 @@ public interface ShipCommissionTransferService {
 
     List<Object[]> getCommissionByVoyage(Long voyageTransactionPoid, Long transactionPoid);
 
-    List<Object[]> getCommissionPending(Long companyPoid, Long voyageTransactionPoid, CommissionPendingRequestDTO request);
+    List<Object[]> getCommissionPending(Long voyageTransactionPoid, CommissionPendingRequestDTO request);
 }
