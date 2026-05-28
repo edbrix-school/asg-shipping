@@ -17,6 +17,6 @@ public class CargoMarksDto {
     private LocalDateTime createdDate;
     private String lastModifiedBy;
     private LocalDateTime lastModifiedDate;
-    private String actionType;
+    private ActionType actionType;
 }
 

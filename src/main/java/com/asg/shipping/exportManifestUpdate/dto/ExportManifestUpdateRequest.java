@@ -1,17 +1,20 @@
 package com.asg.shipping.exportManifestUpdate.dto;
 
-import jakarta.validation.Valid;
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import lombok.Data;
 
 import java.util.List;
 
 /**
- * Combined Request DTO for Export Manifest BL and Details
+ * Combined Request DTO for Export Manifest BL and Details.
+ *
+ * The FE sends all header fields flat at the root level (not nested under "header").
+ * @JsonUnwrapped tells Jackson to map those root-level fields into the ExportManifestBlRequest object.
  */
 @Data
 public class ExportManifestUpdateRequest {
 
-    @Valid
+    @JsonUnwrapped
     private ExportManifestBlRequest header;
 
     private List<GeneralCargoDetailDto> generalCargoDetails;

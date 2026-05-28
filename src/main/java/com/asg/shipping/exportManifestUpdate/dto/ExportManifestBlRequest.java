@@ -131,5 +131,12 @@ public class ExportManifestBlRequest {
     private BigDecimal totalVolume;
 
     private String originalBl;
+
+    // Additional fields sent by FE at root level
+    private String blOrginalPrint;   // "Y"/"N" — preferred over originalBl
+    private String holdCanDo;        // "Y"/"N"
+    private String holdReason;       // e.g. "5"
+    private String blStatus;         // "OPEN" / "CLOSED" etc.
+    private String releasedStatus;   // "NONE" etc.
 }
 
