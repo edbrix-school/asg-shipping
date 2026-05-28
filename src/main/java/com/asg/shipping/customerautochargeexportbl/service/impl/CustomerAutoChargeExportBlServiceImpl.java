@@ -109,6 +109,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
     }
 
     @Override
+    @Transactional
     public CustomerAutoChargeExportBLDto createCustomerAutoChargeExportBL(CustomerAutoChargeExportBLCreateDTO createDTO) {
         log.info("Creating customer auto charge export BL");
 
