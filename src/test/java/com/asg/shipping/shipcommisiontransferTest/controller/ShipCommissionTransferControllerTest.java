@@ -275,7 +275,7 @@ class ShipCommissionTransferControllerTest {
 
             List<Object[]> mockResult = List.of(new Object[]{"BL-001", 1000.0}, new Object[]{"BL-002", 2000.0});
 
-            when(commissionTransferService.getCommissionPending(eq(20L), eq(100L), any(CommissionPendingRequestDTO.class)))
+            when(commissionTransferService.getCommissionPending( eq(100L), any(CommissionPendingRequestDTO.class)))
                     .thenReturn(mockResult);
 
             mockMvc.perform(post("/v1/ship-commission-transfer/pending/100")
@@ -292,7 +292,7 @@ class ShipCommissionTransferControllerTest {
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
 
-            when(commissionTransferService.getCommissionPending(eq(20L), eq(100L), any(CommissionPendingRequestDTO.class)))
+            when(commissionTransferService.getCommissionPending(eq(100L), any(CommissionPendingRequestDTO.class)))
                     .thenReturn(List.of());
 
             mockMvc.perform(post("/v1/ship-commission-transfer/pending/100")
@@ -308,7 +308,7 @@ class ShipCommissionTransferControllerTest {
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
 
-            when(commissionTransferService.getCommissionPending(eq(20L), eq(100L), any(CommissionPendingRequestDTO.class)))
+            when(commissionTransferService.getCommissionPending( eq(100L), any(CommissionPendingRequestDTO.class)))
                     .thenThrow(new RuntimeException("DB error"));
 
             mockMvc.perform(post("/v1/ship-commission-transfer/pending/100")
