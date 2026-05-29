@@ -243,29 +243,74 @@ class VesselVoyageControllerTest {
     }
 
     @Test
-    void downloadExcel_success_filenameNonNull() {
-        Resource resource = mock(Resource.class);
-        when(resource.getFilename()).thenReturn("export.xlsx");
-        when(vesselVoyageService.downloadExcelExport(10L, "TYPE")).thenReturn(resource);
+    void downloadExcel_apmtDischarge_success() {
+        byte[] content = new byte[]{1, 2, 3};
+        when(vesselVoyageService.downloadExcelExport(10L, "apmt-discharge", "Discharge_list.xlsx"))
+                .thenReturn(content);
 
-        ResponseEntity<?> response = controller.downloadExcel(10L, "TYPE");
+        ResponseEntity<?> response = controller.downloadExcel(10L, "apmt-discharge");
 
         assertEquals(200, response.getStatusCode().value());
-        assertEquals("attachment; filename=\"export.xlsx\"", response.getHeaders().getFirst("Content-Disposition"));
-        assertSame(resource, response.getBody());
+        assertEquals("attachment; filename=\"Discharge_list.xlsx\"",
+                response.getHeaders().getFirst("Content-Disposition"));
+        assertEquals(MediaType.APPLICATION_OCTET_STREAM, response.getHeaders().getContentType());
+        assertArrayEquals(content, (byte[]) response.getBody());
     }
 
     @Test
-    void downloadExcel_success_filenameNull_usesDefault() {
-        Resource resource = mock(Resource.class);
-        when(resource.getFilename()).thenReturn(null);
-        when(vesselVoyageService.downloadExcelExport(10L, "TYPE")).thenReturn(resource);
+    void downloadExcel_transhipmentDischarge_success() {
+        byte[] content = new byte[]{4, 5, 6};
+        when(vesselVoyageService.downloadExcelExport(10L, "transhipment-discharge", "Transhipment_Discharge_list.xlsx"))
+                .thenReturn(content);
 
-        ResponseEntity<?> response = controller.downloadExcel(10L, "TYPE");
+        ResponseEntity<?> response = controller.downloadExcel(10L, "transhipment-discharge");
 
         assertEquals(200, response.getStatusCode().value());
-        assertEquals("attachment; filename=\"export.bin\"", response.getHeaders().getFirst("Content-Disposition"));
-        assertSame(resource, response.getBody());
+        assertEquals("attachment; filename=\"Transhipment_Discharge_list.xlsx\"",
+                response.getHeaders().getFirst("Content-Disposition"));
+        assertArrayEquals(content, (byte[]) response.getBody());
+    }
+
+    @Test
+    void downloadExcel_apmtGeneralVesselDischarge_success() {
+        byte[] content = new byte[]{7, 8, 9};
+        when(vesselVoyageService.downloadExcelExport(10L, "apmt-general-vessel-discharge", "APMTLISTGERN.xlsx"))
+                .thenReturn(content);
+
+        ResponseEntity<?> response = controller.downloadExcel(10L, "apmt-general-vessel-discharge");
+
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("attachment; filename=\"APMTLISTGERN.xlsx\"",
+                response.getHeaders().getFirst("Content-Disposition"));
+        assertArrayEquals(content, (byte[]) response.getBody());
+    }
+
+    @Test
+    void downloadExcel_ymlExportCsv_success() {
+        byte[] content = new byte[]{10, 11, 12};
+        when(vesselVoyageService.downloadExcelExport(10L, "yml-export-csv", "OA_Booking_csv_format.csv"))
+                .thenReturn(content);
+
+        ResponseEntity<?> response = controller.downloadExcel(10L, "yml-export-csv");
+
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("attachment; filename=\"OA_Booking_csv_format.csv\"",
+                response.getHeaders().getFirst("Content-Disposition"));
+        assertArrayEquals(content, (byte[]) response.getBody());
+    }
+
+    @Test
+    void downloadExcel_tbl_success() {
+        byte[] content = new byte[]{13, 14, 15};
+        when(vesselVoyageService.downloadExcelExport(10L, "tbl", "TBLManifestTemplate.xlsx"))
+                .thenReturn(content);
+
+        ResponseEntity<?> response = controller.downloadExcel(10L, "tbl");
+
+        assertEquals(200, response.getStatusCode().value());
+        assertEquals("attachment; filename=\"TBLManifestTemplate.xlsx\"",
+                response.getHeaders().getFirst("Content-Disposition"));
+        assertArrayEquals(content, (byte[]) response.getBody());
     }
 
     @Test
