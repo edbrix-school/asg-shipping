@@ -91,17 +91,17 @@ public class ShipMateHdr extends BaseEntity {
 	@Column(name = "COMODITY_POID")
 	private Long comodityPoid;
 
-	@Column(name = "TOTAL_VOLUME", precision = 20, scale = 3)
-	private BigDecimal totalVolume;
+	@Column(name = "TOTAL_VOLUME")
+	private Double totalVolume;
 
-	@Column(name = "TOTAL_WEIGHT", precision = 20, scale = 3)
-	private BigDecimal totalWeight;
+	@Column(name = "TOTAL_WEIGHT")
+	private Double totalWeight;
 
 	@Column(name = "UNIT_PACK", length = 6)
 	private String unitPack;
 
 	@Column(name = "TOTAL_NO_OF_PACKS", precision = 7, scale = 2)
-	private BigDecimal totalNoOfPacks;
+	private Double totalNoOfPacks;
 
 	@Column(name = "PLACE_OF_RECIEPT_POID")
 	private Long placeOfRecieptPoid;
