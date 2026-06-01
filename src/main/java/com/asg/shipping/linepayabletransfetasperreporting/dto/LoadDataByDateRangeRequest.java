@@ -28,4 +28,11 @@ public class LoadDataByDateRangeRequest {
 
     @NotNull(message = "Report end date is required")
     private LocalDate reportEndDate;
+
+    /**
+     * Charge filter passed to PROC_SHIP_REPORT_LINE_DATEWISE.
+     * Legacy values are ALL, FRTTHC, and OTHERS.
+     */
+    @Builder.Default
+    private String chargeFilter = "ALL";
 }

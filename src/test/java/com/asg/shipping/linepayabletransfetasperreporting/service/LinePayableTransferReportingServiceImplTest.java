@@ -293,6 +293,7 @@ class LinePayableTransferReportingServiceImplTest {
                 .blType("IMPORT")
                 .reportStartDate(LocalDate.of(2024, 1, 1))
                 .reportEndDate(LocalDate.of(2024, 1, 31))
+                .chargeFilter("FRTTHC")
                 .build();
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
@@ -328,6 +329,7 @@ class LinePayableTransferReportingServiceImplTest {
             assertNotNull(result);
             assertEquals(1, result.size());
             verify(dtlRepository).deleteByTransactionPoid(1L);
+            verify(cs).setString(7, "FRTTHC");
         }
     }
 
@@ -462,6 +464,7 @@ class LinePayableTransferReportingServiceImplTest {
                 .blType("IMPORT")
                 .reportStartDate(LocalDate.of(2024, 1, 1))
                 .reportEndDate(LocalDate.of(2024, 1, 31))
+                .chargeFilter("OTHERS")
                 .build();
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
@@ -490,6 +493,7 @@ class LinePayableTransferReportingServiceImplTest {
 
             assertNotNull(result);
             assertEquals(1, result.size());
+            verify(cs).setString(7, "OTHERS");
         }
     }
 

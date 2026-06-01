@@ -265,7 +265,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 cs.setString(4, request.getBlType());
                 cs.setDate(5, Date.valueOf(request.getReportStartDate()));
                 cs.setDate(6, Date.valueOf(request.getReportEndDate()));
-                cs.setString(7, "ALL");
+                cs.setString(7, resolveChargeFilter(request.getChargeFilter()));
                 cs.registerOutParameter(8, Types.REF_CURSOR);
                 cs.execute();
 
@@ -405,7 +405,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 cs.setString(4, request.getBlType());
                 cs.setDate(5, Date.valueOf(request.getReportStartDate()));
                 cs.setDate(6, Date.valueOf(request.getReportEndDate()));
-                cs.setString(7, "ALL");
+                cs.setString(7, resolveChargeFilter(request.getChargeFilter()));
                 cs.registerOutParameter(8, Types.REF_CURSOR);
                 cs.execute();
 
@@ -493,6 +493,13 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     }
 
     // ==================== Private Helper Methods ====================
+
+    private String resolveChargeFilter(String chargeFilter) {
+        if (chargeFilter == null || chargeFilter.isBlank()) {
+            return "ALL";
+        }
+        return chargeFilter.trim().toUpperCase(Locale.ROOT);
+    }
 
     /**
      * Generate DOC_REF using company code and sequence
