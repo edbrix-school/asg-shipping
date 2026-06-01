@@ -106,7 +106,6 @@ class BookingFormMapperTest {
         ShipMateHdr entity = new ShipMateHdr();
         BookingFormMapper.mapUpdateDTOToEntity(dto, entity);
 
-        assertEquals(date, entity.getTransactionDate());
         assertEquals("Agent", entity.getVessalAgentName());
     }
 

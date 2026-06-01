@@ -180,6 +180,10 @@ public class BookingFormServiceImpl implements BookingFormService {
                 .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
+        if ("Y".equals(entity.getDeleted())) {
+            throw new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString());
+        }
+
         // Load detail tables
         List<ShipMateCargoDtl> cargoDetails = cargoDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipMateChargesDtl> chargesDetails = chargesDtlRepository.findByTransactionPoidOrderByDetRowId(id);
