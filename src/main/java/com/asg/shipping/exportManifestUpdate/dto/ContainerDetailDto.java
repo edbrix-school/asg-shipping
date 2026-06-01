@@ -19,6 +19,7 @@ public class ContainerDetailDto {
     private String cargoDescription;
     private String equipmentSealNo;
     private String equipmentIsoType;
+    private LovItem equipmentIsoTypeDet; // LOV: CONTAINER_TYPE_MASTER (CODE)
     private String equipmentType;
     private String equipmentSize;
     private BigDecimal quantity;
@@ -51,6 +52,7 @@ public class ContainerDetailDto {
     private String isRefer;
     private String referType;
     private String imcoClassType;
+    private LovItem imcoClassTypeDet; // LOV: IMCO_CLASS (CODE)
     private String guaranteeFlag;
     private String guaranteedBy;
     private Long extraFreeDays;
@@ -60,6 +62,7 @@ public class ContainerDetailDto {
     private String oogF;
     private String oogA;
     private String oogType;
+    private LovItem oogTypeDet; // LOV: OOG_TYPE (CODE)
     private String imcoClassActual;
     private LocalDate displayCollectedDate;
     private BigDecimal totalDaysCollected;
@@ -71,6 +74,6 @@ public class ContainerDetailDto {
     private String hsDescription;
     private BigDecimal amountPerDayAfterFree;
     private LocalDate actualDischargeDate;
-    private String actionType;
+    private ActionType actionType;
 }
 

@@ -91,13 +91,7 @@ public class DayCloseServiceImpl implements DayCloseService {
     public DayCloseDto createDayClose(DayCloseDto dto, Long groupPoid, Long companyPoid, Long userPoid) {
 
         DayCloseHdrDto header = dto.getHeader();
-
-        if (header.getTransactionDate() != null
-                && hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(header.getTransactionDate(), groupPoid,
-                companyPoid) > 0) {
-
-            throw new ValidationException("Transaction date already closed: " + header.getTransactionDate());
-        }
+        validateDuplicateTransactionDate(header.getTransactionDate(), groupPoid, companyPoid, null);
 
         validateAmounts(dto);
 
@@ -138,6 +132,8 @@ public class DayCloseServiceImpl implements DayCloseService {
     public DayCloseDto updateDayClose(DayCloseDto request, Long transactionPoid, Long groupPoid, Long companyPoid,
                                       Long userPoid) {
 
+        validateDuplicateTransactionDate(request.getHeader().getTransactionDate(), groupPoid, companyPoid,
+                transactionPoid);
         validateAmounts(request);
 
         ArShDayEndCloseHdr existingData = hdrRepo.findById(transactionPoid).orElseThrow(() -> new ResourceNotFoundException("Day close Shipping", TRANSACTIONPOID, transactionPoid));
@@ -358,6 +354,22 @@ public class DayCloseServiceImpl implements DayCloseService {
         entity.setCurrencyType(dto.getCurrencyType());
         entity.setNoOfTran(dto.getNoOfTran());
         entity.setCashAmount(dto.getCashAmount());
+    }
+
+    private void validateDuplicateTransactionDate(LocalDate transactionDate, Long groupPoid, Long companyPoid,
+                                                  Long excludeTransactionPoid) {
+        if (transactionDate == null) {
+            return;
+        }
+
+        Long count = (excludeTransactionPoid == null)
+                ? hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(transactionDate, groupPoid, companyPoid)
+                : hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoidExcludingTransactionPoid(
+                        transactionDate, groupPoid, companyPoid, excludeTransactionPoid);
+
+        if (count != null && count > 0) {
+            throw new ValidationException("Transaction date already closed: " + transactionDate);
+        }
     }
 
     @Override

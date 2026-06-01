@@ -249,7 +249,9 @@ class ImportManifestBlControllerTest {
     @Test
     void getBlStatus_Success() {
         var response = com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto.builder()
-                .status("NEW")
+                .status(com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto.StatusDetails.builder()
+                        .jobNo("NEW")
+                        .build())
                 .build();
 
         when(service.getBlStatus(1L)).thenReturn(response);

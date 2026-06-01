@@ -17,6 +17,10 @@ import java.math.BigDecimal;
 @Builder
 public class ContainerTypeUpdateDTO {
 
+    @NotBlank(message = "Container type code is required")
+    @Size(max = 20, message = "Container type code must not exceed 20 characters")
+    private String containerTypeCode;
+
     @NotBlank(message = "Container type name is required")
     @Size(max = 100, message = "Container type name must not exceed 100 characters")
     private String containerTypeName;
@@ -29,15 +33,12 @@ public class ContainerTypeUpdateDTO {
     @Size(max = 100, message = "Container type ISO name must not exceed 100 characters")
     private String containerTypeIsoName;
 
-    @DecimalMin(value = "0.0", inclusive = false, message = "Cargo weight must be positive")
-    private BigDecimal containerCargoWeight;
+    private Integer containerCargoWeight;
 
-    @DecimalMin(value = "0.0", inclusive = false, message = "Tare weight must be positive")
-    private BigDecimal containerTareWeight;
+    private Integer containerTareWeight;
 
     @NotNull(message = "TEU factor is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "TEU factor must be positive")
-    private BigDecimal containerTeuFactor;
+    private Integer containerTeuFactor;
 
     @NotBlank(message = "Container type category is required")
     @Size(max = 20, message = "Container type category must not exceed 20 characters")
@@ -51,7 +52,6 @@ public class ContainerTypeUpdateDTO {
     @Pattern(regexp = "^[YN]$", message = "Active must be Y or N")
     private String active;
 
-    @Positive(message = "Sequence number must be positive")
     private Integer seqno;
 }
 

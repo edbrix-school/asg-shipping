@@ -405,46 +405,71 @@ class ShipCommissionTransferServiceImplTest {
 
     @Test
     void testGetCommissionPending_Success() {
+
         CommissionPendingRequestDTO request = new CommissionPendingRequestDTO();
         request.setExchangeRate(1.5);
         request.setBlPoid(50L);
         request.setFrtBuyActual(200.0);
         request.setShortLegSelected("Y");
+        request.setRecordType("ALL");
 
-        List<Object[]> expectedRows = List.of(new Object[]{"row1"}, new Object[]{"row2"});
+        List<Object[]> expectedRows =
+                List.of(new Object[]{"row1"}, new Object[]{"row2"});
 
-        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING")).thenReturn(storedProcedureQuery);
-        when(storedProcedureQuery.getResultList()).thenReturn(expectedRows);
+        when(entityManager.createStoredProcedureQuery(
+                "PROC_SHIP_COMMISSION_RECORD_FETCH"))
+                .thenReturn(storedProcedureQuery);
 
-        List<Object[]> result = service.getCommissionPending(20L, 100L, request);
+        when(storedProcedureQuery.getResultList())
+                .thenReturn(expectedRows);
+
+        List<Object[]> result =
+                service.getCommissionPending(100L, request);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(storedProcedureQuery).setParameter("P_COMPANY_POID", 20L);
-        verify(storedProcedureQuery).setParameter("P_VOYAGE_TRANSACTION_POID", 100L);
-        verify(storedProcedureQuery).setParameter("p_exchageRage", 1.5);
+
+        verify(storedProcedureQuery).setParameter("P_LOGIN_GROUP_POID", null);
+        verify(storedProcedureQuery).setParameter("P_COMPANY_POID", null);
+        verify(storedProcedureQuery).setParameter("P_LOGIN_USER_POID", null);
+        verify(storedProcedureQuery).setParameter("P_DOC_ID", null);
+
         verify(storedProcedureQuery).setParameter("P_BL_POID", 50L);
-        verify(storedProcedureQuery).setParameter("p_FrtBuyActual", 200.0);
-        verify(storedProcedureQuery).setParameter("p_Short_Leg_Selected", "Y");
+        verify(storedProcedureQuery).setParameter("P_VOYAGE_TRANSACTION_POID", 100L);
+        verify(storedProcedureQuery).setParameter("P_EXCHANGE", 1.5d);
+        verify(storedProcedureQuery).setParameter("P_RECORD_TYPE", "ALL");
+        verify(storedProcedureQuery).setParameter("P_FRT_BUY_ACTUAL", 200.0d);
+        verify(storedProcedureQuery).setParameter("P_SHORT_LEG_SELECTED", "Y");
+
         verify(storedProcedureQuery).execute();
     }
 
     @Test
     void testGetCommissionPending_WithNullRequestFields_UsesDefaults() {
         CommissionPendingRequestDTO request = new CommissionPendingRequestDTO();
-        // all fields null — should fall back to defaults
 
-        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING")).thenReturn(storedProcedureQuery);
-        when(storedProcedureQuery.getResultList()).thenReturn(List.of());
+        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_RECORD_FETCH"))
+                .thenReturn(storedProcedureQuery);
 
-        List<Object[]> result = service.getCommissionPending(20L, 100L, request);
+        when(storedProcedureQuery.getResultList())
+                .thenReturn(List.of());
+
+        List<Object[]> result = service.getCommissionPending(100L, request);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(storedProcedureQuery).setParameter("p_exchageRage", 0.0);
+
+        verify(storedProcedureQuery).setParameter("P_LOGIN_GROUP_POID", null);
+        verify(storedProcedureQuery).setParameter("P_COMPANY_POID", null);
+        verify(storedProcedureQuery).setParameter("P_LOGIN_USER_POID", null);
+        verify(storedProcedureQuery).setParameter("P_DOC_ID", null);
+
         verify(storedProcedureQuery).setParameter("P_BL_POID", 0L);
-        verify(storedProcedureQuery).setParameter("p_FrtBuyActual", 0.0);
-        verify(storedProcedureQuery).setParameter("p_Short_Leg_Selected", "N");
+        verify(storedProcedureQuery).setParameter("P_VOYAGE_TRANSACTION_POID", 100L);
+        verify(storedProcedureQuery).setParameter("P_EXCHANGE", 1.0d);
+        verify(storedProcedureQuery).setParameter("P_RECORD_TYPE", "ALL");
+        verify(storedProcedureQuery).setParameter("P_FRT_BUY_ACTUAL", 0.0d);
+        verify(storedProcedureQuery).setParameter("P_SHORT_LEG_SELECTED", "N");
     }
 
     @Test
@@ -454,11 +479,12 @@ class ShipCommissionTransferServiceImplTest {
         request.setBlPoid(0L);
         request.setFrtBuyActual(0.0);
         request.setShortLegSelected("N");
+        request.setRecordType("ALL");
 
-        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_PENDING")).thenReturn(storedProcedureQuery);
+        when(entityManager.createStoredProcedureQuery("PROC_SHIP_COMMISSION_RECORD_FETCH")).thenReturn(storedProcedureQuery);
         when(storedProcedureQuery.getResultList()).thenReturn(List.of());
 
-        List<Object[]> result = service.getCommissionPending(20L, 100L, request);
+        List<Object[]> result = service.getCommissionPending( 100L, request);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());

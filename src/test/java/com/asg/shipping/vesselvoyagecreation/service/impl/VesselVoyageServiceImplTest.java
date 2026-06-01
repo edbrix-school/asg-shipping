@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
@@ -27,6 +28,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import net.sf.jasperreports.engine.JasperReport;
+import com.asg.common.lib.dto.excel.ExcelFileData;
 
 import javax.sql.DataSource;
 import java.nio.file.Files;
@@ -70,6 +72,9 @@ class VesselVoyageServiceImplTest {
 
     @Mock
     private PrintService printService;
+
+    @Mock
+    private ExcelExportService excelExportService;
 
     @Mock
     private DataSource dataSource;
@@ -259,6 +264,39 @@ class VesselVoyageServiceImplTest {
 
             String status = service.uploadAndProcessEdi(123L, file);
             assertEquals("REPROCESSED", status);
+        }
+    }
+
+    @Test
+    void downloadExcelExport_apmtDischarge_callsExcelServiceWithCorrectDocId() {
+        byte[] expected = new byte[]{1, 2, 3};
+        com.asg.common.lib.dto.excel.ExcelFileData fileData =
+                com.asg.common.lib.dto.excel.ExcelFileData.builder()
+                        .content(expected)
+                        .fileName("Discharge_list.xlsx")
+                        .build();
+
+        try (MockedStatic<UserContext> mocked = mockStatic(UserContext.class)) {
+            mocked.when(UserContext::getCompanyPoid).thenReturn(2L);
+            mocked.when(UserContext::getUserPoid).thenReturn(3L);
+
+            when(excelExportService.generateExcel(
+                    eq("100-291"), eq("418537"), anyMap(), eq("Discharge_list.xlsx")))
+                    .thenReturn(fileData);
+
+            byte[] result = service.downloadExcelExport(418537L, "apmt-discharge", "Discharge_list.xlsx");
+            assertArrayEquals(expected, result);
+        }
+    }
+
+    @Test
+    void downloadExcelExport_unsupportedType_throwsIllegalArgument() {
+        try (MockedStatic<UserContext> mocked = mockStatic(UserContext.class)) {
+            mocked.when(UserContext::getCompanyPoid).thenReturn(2L);
+            mocked.when(UserContext::getUserPoid).thenReturn(3L);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> service.downloadExcelExport(418537L, "unknown-type", "export.xlsx"));
         }
     }
 

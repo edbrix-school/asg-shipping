@@ -63,6 +63,10 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final DataSource dataSource;
     private final PrintService printService;
     private final DocumentDeleteService documentDeleteService;
+    
+    // Container quantity tracking variables for demurrage calculations
+    private BigDecimal totalQtyValidate20 = BigDecimal.ZERO;
+    private BigDecimal totalQtyValidate40 = BigDecimal.ZERO;
 
     @Override
     @Transactional(readOnly = true)
@@ -257,7 +261,25 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 invoice.getTransactionPoid()
         );
 
-        BigDecimal demurrageAmount = calculateDemurrageAmountFromContainers(id);
+        // Load container demurrage data first
+        List<SalesInvoiceContainerDtlDto> containerDemurrageData = executeLoadContainerDemurrageQuery(
+                request.getBlPoid(),
+                invoice.getTransactionPoid(),
+                request.getBlTypeInvoice()
+        );
+
+        // Calculate demurrage amount and track container quantities based on actual container data
+        BigDecimal demurrageAmount = createDemurrageDettention(containerDemurrageData, request.getBlPoid());
+
+        // Load demurrage/detention charge with tax information
+        List<SalesInvoiceChargesDtlDto> demurrageCharges = loadDemurrageCharges(
+                demurrageAmount,
+                request.getBlTypeInvoice(),
+                companyPoid
+        );
+        if (!demurrageCharges.isEmpty()) {
+            charges.addAll(demurrageCharges);
+        }
 
         List<SalesInvoiceChargesDtlDto> lateCharges = loadLateCollectionCharges(
                 request.getBlPoid(),
@@ -269,6 +291,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 .charges(charges)
                 .demurrageAmount(demurrageAmount)
                 .lateCharges(lateCharges)
+                .containers(containerDemurrageData)
                 .build();
     }
 
@@ -1306,6 +1329,162 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 .taxPoid(rs.getLong("TAX_POID"))
                 .amountSelect("Y")
                 .build(), freightType, transactionPoid, blPoid);
+    }
+
+    /**
+     * Calculate demurrage/detention amount from container list and track container quantities by size
+     * Mirrors legacy implementation: iterates through provided container details
+     * 1. Accumulates total demurrage charge amounts for containers with non-zero charges
+     * 2. Tracks container quantities by size (20ft vs 40ft) using GET_CONTAINER_TYPE function
+     * Returns total demurrage amount
+     * 
+     * This method uses the actual container data passed from loadChargeData rather than fetching from DB
+     */
+    private BigDecimal createDemurrageDettention(List<SalesInvoiceContainerDtlDto> containerList, Long blPoid) {
+        log.info("Creating demurrage/detention calculation from container list with {} containers", 
+                containerList != null ? containerList.size() : 0);
+        
+        // Initialize counters (matching legacy FtotalQtyValidate20 and FtotalQtyValidate40)
+        totalQtyValidate20 = BigDecimal.ZERO;
+        totalQtyValidate40 = BigDecimal.ZERO;
+        
+        BigDecimal FTotalRcpAmount = BigDecimal.ZERO;
+        
+        // If no containers provided, return zero
+        if (containerList == null || containerList.isEmpty()) {
+            log.warn("No containers provided for demurrage calculation");
+            return FTotalRcpAmount;
+        }
+        
+        try {
+            // Iterate through provided container list (already filtered for this BL)
+            for (SalesInvoiceContainerDtlDto containerDtl : containerList) {
+                BigDecimal TotalRcpAmount = BigDecimal.ZERO;
+                
+                // Extract demurrage amount if present
+                if (blPoid.equals(containerDtl.getBlPoid()) && containerDtl.getDmChargeAmt() != null) {
+                    TotalRcpAmount = containerDtl.getDmChargeAmt();
+                }
+                
+                // Accumulate only if amount is non-zero (matching legacy logic)
+                if ((TotalRcpAmount != null) && (TotalRcpAmount.compareTo(BigDecimal.ZERO) != 0)) {
+                    FTotalRcpAmount = FTotalRcpAmount.add(TotalRcpAmount);
+                    
+                    // Determine container size and track quantities
+                    String equipmentIsoType = containerDtl.getEquipmentIsoType();
+                    if (equipmentIsoType != null && !equipmentIsoType.isEmpty()) {
+                        String containerSizeQuery = "SELECT GET_CONTAINER_TYPE(?, 'SIZE') FROM DUAL";
+                        try {
+                            String containerSize = jdbcTemplate.queryForObject(
+                                containerSizeQuery,
+                                String.class,
+                                equipmentIsoType
+                            );
+                            
+                            BigDecimal FaddDecimal = BigDecimal.ONE;
+                            if (containerSize != null) {
+                                if ("20".equalsIgnoreCase(containerSize.trim())) {
+                                    totalQtyValidate20 = totalQtyValidate20.add(FaddDecimal);
+                                    log.debug("Added 20ft container: {}, DmChargeAmt: {}, running total 20ft: {}", 
+                                        containerDtl.getContainerNo(), TotalRcpAmount, totalQtyValidate20);
+                                } else {
+                                    // Default to 40ft for any other size
+                                    totalQtyValidate40 = totalQtyValidate40.add(FaddDecimal);
+                                    log.debug("Added 40ft container: {}, DmChargeAmt: {}, running total 40ft: {}", 
+                                        containerDtl.getContainerNo(), TotalRcpAmount, totalQtyValidate40);
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.warn("Could not determine container size for equipment type: {}", equipmentIsoType, e);
+                        }
+                    }
+                }
+            }
+            
+            log.info("Demurrage/detention calculation complete - Total Amount: {}, 20ft Qty: {}, 40ft Qty: {}",
+                    FTotalRcpAmount, totalQtyValidate20, totalQtyValidate40);
+        } catch (Exception e) {
+            log.error("Error calculating demurrage/detention from container list", e);
+        }
+        
+        return FTotalRcpAmount;
+    }
+    
+    /**
+     * Get total quantity of 20ft containers from last demurrage calculation
+     */
+    public BigDecimal getTotalQtyValidate20() {
+        return totalQtyValidate20;
+    }
+    
+    /**
+     * Get total quantity of 40ft containers from last demurrage calculation
+     */
+    public BigDecimal getTotalQtyValidate40() {
+        return totalQtyValidate40;
+    }
+
+    /**
+     * Load demurrage/detention charge with tax information
+     * Queries GLOBAL_PARAMETERS for demurrage charge based on BL type:
+     * 1. IMPORT BL - uses SHDEMURRAGE parameter
+     * 2. EXPORT BL - uses SHDETTENTION parameter
+     * Then retrieves associated tax information and creates charge entry
+     */
+    private List<SalesInvoiceChargesDtlDto> loadDemurrageCharges(BigDecimal demurrageAmount, String blTypeInvoice, Long companyPoid) {
+        List<SalesInvoiceChargesDtlDto> result = new ArrayList<>();
+        
+        if (demurrageAmount == null || demurrageAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return result;
+        }
+        
+        log.info("Loading demurrage charge with amount: {}, BL Type: {}", demurrageAmount, blTypeInvoice);
+        
+        String parameterType = "IMPORT".equalsIgnoreCase(blTypeInvoice) ? "SHDEMURRAGE" : "SHDETTENTION";
+        
+        String sql = "SELECT PARAMETER_VALUE, " +
+                "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                "   AND CHARGE_POID=PARAMETER_VALUE)) TAX_POID, " +
+                "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                "   AND CHARGE_POID=PARAMETER_VALUE)) TAX_PERCENTAGE, " +
+                "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
+                "FROM GLOBAL_PARAMETERS WHERE PARAMETER_KEYID_TYPE = ?";
+        
+        try {
+            result = jdbcTemplate.query(sql, (rs, rowNum) -> {
+                Long chargePoid = rs.getLong("PARAMETER_VALUE");
+                Long taxPoid = getLongOrNull(rs, "TAX_POID");
+                BigDecimal taxPercentage = getBigDecimalOrNull(rs, "TAX_PERCENTAGE");
+                String taxApplicable = rs.getString("TAX_APPLICABLE");
+                
+                BigDecimal taxAmount = BigDecimal.ZERO;
+                if (taxPoid != null && taxPercentage != null && "Y".equalsIgnoreCase(taxApplicable)) {
+                    taxAmount = demurrageAmount.multiply(taxPercentage.divide(new BigDecimal("100")));
+                }
+                
+                return SalesInvoiceChargesDtlDto.builder()
+                        .chargePoid(chargePoid)
+                        .chargesDetRowId(0L)
+                        .amount(demurrageAmount)
+                        .amountSelect("Y")
+                        .chargeType("LOCAL")
+                        .chargeNewRecord("Y")
+                        .taxPoid(taxPoid)
+                        .taxPercentage(taxPercentage)
+                        .taxAmount(taxAmount)
+                        .build();
+            }, companyPoid, parameterType);
+        } catch (Exception e) {
+            log.warn("Could not load demurrage charges", e);
+        }
+        
+        return result;
     }
 
     /**

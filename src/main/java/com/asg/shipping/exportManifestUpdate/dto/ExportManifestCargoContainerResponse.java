@@ -11,4 +11,8 @@ public class ExportManifestCargoContainerResponse {
     private List<ContainerDetailDto> containerDetails;
     private List<CargoDescriptionDto> cargoDescription;
     private List<CargoMarksDto> cargoMarks;
+
+    // Simple single-string view — first record from each list (for simple-save consumers)
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
 }

@@ -19,6 +19,22 @@ public interface ExportShipBlManifestCargoDtlRepository extends JpaRepository<Ex
     List<ExportShipBlManifestCargoDtl> findByTransactionPoidAndDescriptionTypeOrderByDetRowId(
             Long transactionPoid, String descriptionType);
 
+    @Query(value = "SELECT * FROM SHIP_BL_MANIFEST_CARGO_DTL " +
+                   "WHERE TRANSACTION_POID = :transactionPoid " +
+                   "AND DESCRIPTION_TYPE = :descriptionType " +
+                   "ORDER BY DET_ROW_ID", nativeQuery = true)
+    List<ExportShipBlManifestCargoDtl> findCargoRowsByType(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("descriptionType") String descriptionType);
+
+    @Query(value = "SELECT CARGO_DESCRIPTION FROM SHIP_BL_MANIFEST_CARGO_DTL " +
+                   "WHERE TRANSACTION_POID = :transactionPoid " +
+                   "AND DESCRIPTION_TYPE = :descriptionType " +
+                   "ORDER BY DET_ROW_ID", nativeQuery = true)
+    List<String> findDescriptionStringsByType(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("descriptionType") String descriptionType);
+
     @Query("SELECT COALESCE(MAX(d.detRowId), 0) + 1 FROM ExportShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid AND d.descriptionType = :descriptionType")
     Long getNextDetRowId(@Param("transactionPoid") Long transactionPoid, @Param("descriptionType") String descriptionType);
 
@@ -29,5 +45,12 @@ public interface ExportShipBlManifestCargoDtlRepository extends JpaRepository<Ex
             @Param("transactionPoid") Long transactionPoid,
             @Param("descriptionType") String descriptionType,
             @Param("detRowIds") List<Long> detRowIds);
+
+    @Modifying
+    @Query("DELETE FROM ExportShipBlManifestCargoDtl d WHERE d.transactionPoid = :transactionPoid " +
+           "AND d.descriptionType = :descriptionType")
+    void deleteAllByTransactionPoidAndDescriptionType(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("descriptionType") String descriptionType);
 }
 

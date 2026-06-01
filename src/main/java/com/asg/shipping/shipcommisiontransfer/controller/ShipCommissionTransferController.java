@@ -212,9 +212,9 @@ public class ShipCommissionTransferController {
             @PathVariable @NotNull @Positive Long voyageTransactionPoid,
             @RequestBody(required = false) CommissionPendingRequestDTO request) {
         try {
-            Long companyPoid = UserContext.getCompanyPoid();
+
             if (request == null) request = new CommissionPendingRequestDTO();
-            List<Object[]> result = commissionTransferService.getCommissionPending(companyPoid, voyageTransactionPoid, request);
+            List<Object[]> result = commissionTransferService.getCommissionPending(voyageTransactionPoid, request);
             return success("Commission pending data fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Error: " + e.getMessage());

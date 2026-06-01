@@ -129,6 +129,15 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         // Create header entity
         ShipLineTariffHdr tariff = new ShipLineTariffHdr();
+
+        // Auto-generate docRef if not provided (matching legacy RTN_GLOBAL_SEQ_NO behaviour)
+        if (dto.getDocRef() == null || dto.getDocRef().trim().isEmpty()) {
+            Long companyPoid = UserContext.getCompanyPoid();
+            String companyCode = tariffHdrRepository.findCompanyCodeByPoid(companyPoid);
+            String generatedDocRef = tariffHdrRepository.generateDocRef(companyCode);
+            dto.setDocRef(generatedDocRef);
+        }
+
         mapper.mapCreateDTOToEntity(dto, tariff, groupPoid);
 
         // Additional validation just before save to prevent race conditions
@@ -775,10 +784,17 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             Map<Long, ShipLineTariffImpPayDtl> payableByContainerType = payables.stream()
                     .filter(p -> p.getContainerTypePoid() != null)
                     .collect(Collectors.toMap(ShipLineTariffImpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
+            long maxDetRowId = payables.stream().map(ShipLineTariffImpPayDtl::getDetRowId).filter(java.util.Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
             for (ShipLineTariffImpDtl col : collectables) {
                 if (col.getContainerTypePoid() == null) continue;
                 ShipLineTariffImpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
-                if (pay == null) continue;
+                if (pay == null) {
+                    pay = new ShipLineTariffImpPayDtl();
+                    pay.setTransactionPoid(id);
+                    pay.setDetRowId(++maxDetRowId);
+                    pay.setContainerTypePoid(col.getContainerTypePoid());
+                    payableByContainerType.put(col.getContainerTypePoid(), pay);
+                }
                 pay.setFreeDays(col.getFreeDays());
                 pay.setSlab1Tilldays(col.getSlab1Tilldays()); pay.setSlab1Rate(col.getSlab1Rate());
                 pay.setSlab2Tilldays(col.getSlab2Tilldays()); pay.setSlab2Rate(col.getSlab2Rate());
@@ -795,10 +811,17 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             Map<Long, ShipLineTariffExpPayDtl> payableByContainerType = payables.stream()
                     .filter(p -> p.getContainerTypePoid() != null)
                     .collect(Collectors.toMap(ShipLineTariffExpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
+            long maxDetRowId = payables.stream().map(ShipLineTariffExpPayDtl::getDetRowId).filter(java.util.Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
             for (ShipLineTariffExpDtl col : collectables) {
                 if (col.getContainerTypePoid() == null) continue;
                 ShipLineTariffExpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
-                if (pay == null) continue;
+                if (pay == null) {
+                    pay = new ShipLineTariffExpPayDtl();
+                    pay.setTransactionPoid(id);
+                    pay.setDetRowId(++maxDetRowId);
+                    pay.setContainerTypePoid(col.getContainerTypePoid());
+                    payableByContainerType.put(col.getContainerTypePoid(), pay);
+                }
                 pay.setFreeDays(col.getFreeDays());
                 pay.setSlab1Tilldays(col.getSlab1Tilldays()); pay.setSlab1Rate(col.getSlab1Rate());
                 pay.setSlab2Tilldays(col.getSlab2Tilldays()); pay.setSlab2Rate(col.getSlab2Rate());

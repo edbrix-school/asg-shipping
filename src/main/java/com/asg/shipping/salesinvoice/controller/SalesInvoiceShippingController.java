@@ -266,46 +266,46 @@ public class SalesInvoiceShippingController {
      * Load container demurrage data
      * POST /v1/sales-invoice-shipping/{id}/load-container-demurrage
      */
-    @AllowedAction(UserRolesRightsEnum.VIEW)
-    @Operation(
-            summary = "Load Container Demurrage Data (DocId: 300-102)",
-            description = "Load container demurrage/detention data for a BL. Calculates demurrage amounts based on container movements and tariff configurations.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Container demurrage data loaded successfully"),
-                    @ApiResponse(responseCode = "400", description = "Invalid request data"),
-                    @ApiResponse(responseCode = "404", description = "Sales Invoice not found"),
-                    @ApiResponse(responseCode = "500", description = "Internal server error")
-            }
-    )
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(
-            required = true,
-            description = "BL POID and BL Type for loading container demurrage data",
-            content = @Content(
-                    schema = @Schema(implementation = LoadContainerDemurrageRequestDTO.class),
-                    examples = @ExampleObject(
-                            name = "Load Container Demurrage Example",
-                            value = """
-                                    {
-                                      "blPoid": 456,
-                                      "blTypeInvoice": "IMPORT"
-                                    }
-                                    """
-                    )
-            )
-    )
-    @PostMapping("/{id}/load-container-demurrage")
-    public ResponseEntity<?> loadContainerDemurrage(
-            @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
-            @PathVariable Long id,
-            @Valid @RequestBody LoadContainerDemurrageRequestDTO request) {
-        try {
-            log.info("Load container demurrage request for invoice id: {}", id);
-            LoadContainerDemurrageResponseDTO result = service.loadContainerDemurrageData(id, request);
-            return success("Container demurrage data loaded successfully", result);
-        } catch (Exception e) {
-            return internalServerError("Error loading container demurrage data: " + e.getMessage());
-        }
-    }
+//     @AllowedAction(UserRolesRightsEnum.VIEW)
+//     @Operation(
+//             summary = "Load Container Demurrage Data (DocId: 300-102)",
+//             description = "Load container demurrage/detention data for a BL. Calculates demurrage amounts based on container movements and tariff configurations.",
+//             responses = {
+//                     @ApiResponse(responseCode = "200", description = "Container demurrage data loaded successfully"),
+//                     @ApiResponse(responseCode = "400", description = "Invalid request data"),
+//                     @ApiResponse(responseCode = "404", description = "Sales Invoice not found"),
+//                     @ApiResponse(responseCode = "500", description = "Internal server error")
+//             }
+//     )
+//     @io.swagger.v3.oas.annotations.parameters.RequestBody(
+//             required = true,
+//             description = "BL POID and BL Type for loading container demurrage data",
+//             content = @Content(
+//                     schema = @Schema(implementation = LoadContainerDemurrageRequestDTO.class),
+//                     examples = @ExampleObject(
+//                             name = "Load Container Demurrage Example",
+//                             value = """
+//                                     {
+//                                       "blPoid": 456,
+//                                       "blTypeInvoice": "IMPORT"
+//                                     }
+//                                     """
+//                     )
+//             )
+//     )
+//     @PostMapping("/{id}/load-container-demurrage")
+//     public ResponseEntity<?> loadContainerDemurrage(
+//             @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
+//             @PathVariable Long id,
+//             @Valid @RequestBody LoadContainerDemurrageRequestDTO request) {
+//         try {
+//             log.info("Load container demurrage request for invoice id: {}", id);
+//             LoadContainerDemurrageResponseDTO result = service.loadContainerDemurrageData(id, request);
+//             return success("Container demurrage data loaded successfully", result);
+//         } catch (Exception e) {
+//             return internalServerError("Error loading container demurrage data: " + e.getMessage());
+//         }
+//     }
 
     /**
      * Load charge data
@@ -313,8 +313,8 @@ public class SalesInvoiceShippingController {
      */
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
-            summary = "Load Charge Data (DocId: 300-102)",
-            description = "Load charge data from BL Manifest charges, including late collection charges and demurrage amounts.",
+            summary = "Load Charge and container Data (DocId: 300-102)",
+            description = "Load charge and container data from BL Manifest charges, including late collection charges and demurrage amounts.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Charge data loaded successfully"),
                     @ApiResponse(responseCode = "400", description = "Invalid request data"),
@@ -338,7 +338,7 @@ public class SalesInvoiceShippingController {
                     )
             )
     )
-    @PostMapping("/{id}/load-charge-data")
+    @PostMapping("/{id}/load-container-charge-data")
     public ResponseEntity<?> loadChargeData(
             @Parameter(description = "Sales Invoice Transaction POID", required = true, example = "12345")
             @PathVariable Long id,

@@ -46,6 +46,17 @@ public interface ShipContainerTypeMasterRepository extends JpaRepository<ShipCon
     boolean existsByContainerTypeName(@Param("name") String name);
 
     /**
+     * Check if container type code exists excluding a specific POID (for updates)
+     */
+    @Query("SELECT COUNT(c) > 0 FROM ShipContainerTypeMaster c " +
+           "WHERE c.containerTypeCode = :code " +
+           "AND c.containerTypePoid != :excludePoid AND (c.deleted IS NULL OR c.deleted != 'Y')")
+    boolean existsByContainerTypeCodeExcludingPoid(
+            @Param("code") String code,
+            @Param("excludePoid") Long excludePoid
+    );
+
+    /**
      * Check if container type name exists for the given group excluding a specific POID (for updates)
      */
     @Query("SELECT COUNT(c) > 0 FROM ShipContainerTypeMaster c " +

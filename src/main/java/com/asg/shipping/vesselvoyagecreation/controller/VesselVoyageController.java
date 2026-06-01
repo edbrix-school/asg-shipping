@@ -277,10 +277,19 @@ public class VesselVoyageController {
 	public ResponseEntity<?> downloadExcel(@PathVariable Long voyagePoid, @PathVariable String type) {
 		log.info("Action={} | Download Excel export | voyagePoid={} type={}", UserContext.getActionRequested(),
 				voyagePoid, type);
-		Resource resource = vesselVoyageService.downloadExcelExport(voyagePoid, type);
-		String filename = resource.getFilename() != null ? resource.getFilename() : "export.bin";
-		return ResponseEntity.status(HttpStatus.OK)
-				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"").body(resource);
+		String filename = switch (type.toLowerCase()) {
+			case "apmt-discharge"               -> "Discharge_list.xlsx";
+			case "transhipment-discharge"        -> "Transhipment_Discharge_list.xlsx";
+			case "apmt-general-vessel-discharge" -> "APMTLISTGERN.xlsx";
+			case "yml-export-csv"                -> "OA_Booking_csv_format.csv";
+			case "tbl"                           -> "TBLManifestTemplate.xlsx";
+			default -> "export.xlsx";
+		};
+		byte[] content = vesselVoyageService.downloadExcelExport(voyagePoid, type, filename);
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+				.contentType(MediaType.APPLICATION_OCTET_STREAM)
+				.body(content);
 	}
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
