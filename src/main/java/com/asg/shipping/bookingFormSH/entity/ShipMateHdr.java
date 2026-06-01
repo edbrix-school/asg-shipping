@@ -100,7 +100,7 @@ public class ShipMateHdr extends BaseEntity {
 	@Column(name = "UNIT_PACK", length = 6)
 	private String unitPack;
 
-	@Column(name = "TOTAL_NO_OF_PACKS", precision = 7, scale = 2)
+	@Column(name = "TOTAL_NO_OF_PACKS")
 	private Double totalNoOfPacks;
 
 	@Column(name = "PLACE_OF_RECIEPT_POID")
@@ -130,7 +130,7 @@ public class ShipMateHdr extends BaseEntity {
 	@Column(name = "MATE_LOAD_DATE")
 	private LocalDate mateLoadDate;
 
-	@Column(name = "MATE_LOAD_NO", precision = 25, scale = 0)
+	@Column(name = "MATE_LOAD_NO")
 	private Long mateLoadNo;
 
 	@Column(name = "MATE_LOAD_VOYAGE_POID")
