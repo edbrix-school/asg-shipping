@@ -258,6 +258,20 @@ public class StoredProcedureRepository {
         q.execute();
     }
 
+    /**
+     * Dynamically calls a named procedure with (companyPoid, voyagePoid, userPoid) signature.
+     * Used for Excel file generation procedures looked up from GLOBAL_DOC_MASTER.
+     */
+    public void callExcelGenerationProc(String procName, Long companyPoid, Long voyagePoid, Long userPoid) {
+        entityManager.createNativeQuery(
+                "BEGIN " + procName + "(:companyPoid, :voyagePoid, :userPoid); END;"
+        )
+        .setParameter("companyPoid", companyPoid)
+        .setParameter("voyagePoid", voyagePoid)
+        .setParameter("userPoid", userPoid)
+        .executeUpdate();
+    }
+
     public String findTdrDocRef(Long voyagePoid) {
         @SuppressWarnings("unchecked")
         List<String> result = entityManager.createNativeQuery(
@@ -265,6 +279,19 @@ public class StoredProcedureRepository {
                 "WHERE VOYAGE_POID = :voyagePoid AND NVL(DELETED,'N') = 'N' AND REF_TYPE = 'TDR'"
         ).setParameter("voyagePoid", voyagePoid).getResultList();
         return (result == null || result.isEmpty()) ? "NO_TDR" : result.get(0);
+    }
+
+    /**
+     * Looks up the stored procedure name configured for a given doc ID in GLOBAL_DOC_MASTER.
+     * Legacy DownloadCustomExcelFile used this to find which procedure generates the Excel file.
+     */
+    public String findExcelProcedureForDocId(String docId) {
+        @SuppressWarnings("unchecked")
+        List<String> result = entityManager.createNativeQuery(
+                "SELECT REPORT_PROC_NAME FROM GLOBAL_DOC_MASTER " +
+                "WHERE DOC_ID = :docId AND NVL(DELETED,'N') = 'N' AND ROWNUM = 1"
+        ).setParameter("docId", docId).getResultList();
+        return (result == null || result.isEmpty()) ? null : result.get(0);
     }
 }
 

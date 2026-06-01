@@ -68,7 +68,7 @@ public interface VesselVoyageService {
      */
     void ediMovesLoadDischarge(Long voyagePoid, String ediDateValue);
 
-    Resource downloadExcelExport(Long voyagePoid, String type);
+    byte[] downloadExcelExport(Long voyagePoid, String type, String outputFileName);
 
     Resource downloadManifestReport(Long voyagePoid, String freightCargo, String importExport);
 

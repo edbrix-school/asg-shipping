@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.DateUtil;
@@ -65,6 +66,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private final VoyageBillsRepository voyageBillsRepository;
     private final LoggingService loggingService;
     private final PrintService printService;
+    private final ExcelExportService excelExportService;
     private final DataSource dataSource;
 
     @Value("${vvc.edi.upload-dir:./uploads/edi}")
@@ -596,27 +598,19 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     }
 
     @Override
-    public Resource downloadExcelExport(Long voyagePoid, String type) {
-        // Functional implementation: serve files from a configured exports folder.
-        // Generation is assumed to be handled by DB procedures / report server job, similar to legacy.
-        Path dir = Path.of(exportsDir, String.valueOf(voyagePoid));
+    public byte[] downloadExcelExport(Long voyagePoid, String type, String outputFileName) {
         String t = type == null ? "" : type.toLowerCase();
-
-        try {
-            return switch (t) {
-                case "apmt-discharge" -> readSingle(dir, "Discharge_list.xlsx");
-                case "transhipment-discharge" -> readSingle(dir, "Transhipment_Discharge_list.xlsx");
-                case "apmt-general-vessel-discharge" -> readSingle(dir, "APMTLISTGERN.xlsx");
-                case "yml-export-csv" -> readSingle(dir, "OA_Booking_csv_format.csv");
-                case "tbl" -> readZip(dir, Map.of(
-                        "TBLManifestTemplate.xlsx", "TBLManifestTemplate.xlsx",
-                        "TBLLIST.xlsx", "TBLLIST.xlsx"
-                ), "TBL_Export_" + voyagePoid + ".zip");
-                default -> throw new IllegalArgumentException("Unsupported export type: " + type);
-            };
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Unable to read export file(s): " + e.getMessage());
-        }
+        String docKeyPoid = String.valueOf(voyagePoid);
+        String docId = switch (t) {
+            case "apmt-discharge"               -> "100-291";
+            case "transhipment-discharge"        -> "100-459";
+            case "apmt-general-vessel-discharge" -> "100-369";
+            case "yml-export-csv"                -> "100-300";
+            case "tbl"                           -> "100-425";
+            default -> throw new IllegalArgumentException("Unsupported export type: " + type);
+        };
+        log.info("Excel export | voyagePoid={} type={} docId={}", voyagePoid, type, docId);
+        return excelExportService.generateExcel(docId, docKeyPoid, Map.of(), outputFileName).getContent();
     }
 
     @Override
