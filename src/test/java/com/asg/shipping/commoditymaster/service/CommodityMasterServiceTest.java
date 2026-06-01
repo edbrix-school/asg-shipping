@@ -25,8 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -162,14 +161,14 @@ class CommodityMasterServiceTest {
 
             when(documentSearchService.resolveOperator(filterRequest)).thenReturn("AND");
             when(documentSearchService.resolveIsDeleted(filterRequest)).thenReturn("N");
-            when(documentSearchService.resolveFilters(filterRequest)).thenReturn(java.util.Collections.emptyList());
+            when(documentSearchService.resolveDateFilters(eq(filterRequest), eq("TRANSACTION_DATE"), isNull(), isNull())).thenReturn(java.util.Collections.emptyList());
             when(documentSearchService.search(anyString(), any(), anyString(), any(), anyString(), anyString(), anyString()))
                     .thenReturn(new com.asg.common.lib.dto.RawSearchResult(
                             java.util.Collections.emptyList(), 
                             java.util.Collections.emptyMap(), 
                             0L));
 
-            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, pageable);
+            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, null, null, pageable);
 
             assertNotNull(result);
             verify(documentSearchService).search(eq("100-001"), any(), eq("AND"), 
@@ -190,14 +189,14 @@ class CommodityMasterServiceTest {
 
             when(documentSearchService.resolveOperator(filterRequest)).thenReturn("OR");
             when(documentSearchService.resolveIsDeleted(filterRequest)).thenReturn("N");
-            when(documentSearchService.resolveFilters(filterRequest)).thenReturn(java.util.List.of(filter));
+            when(documentSearchService.resolveDateFilters(eq(filterRequest), eq("TRANSACTION_DATE"), isNull(), isNull())).thenReturn(java.util.List.of(filter));
             when(documentSearchService.search(anyString(), any(), anyString(), any(), anyString(), anyString(), anyString()))
                     .thenReturn(new com.asg.common.lib.dto.RawSearchResult(
                             java.util.Collections.emptyList(), 
                             java.util.Collections.emptyMap(), 
                             0L));
 
-            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, pageable);
+            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, null, null, pageable);
 
             assertNotNull(result);
             verify(documentSearchService).search(eq("100-001"), any(), eq("OR"), 
