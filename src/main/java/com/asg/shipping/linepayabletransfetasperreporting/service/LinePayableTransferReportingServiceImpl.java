@@ -19,6 +19,8 @@ import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportT
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferDtlRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferHdrRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.util.LinePayableTransferReportingMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -54,6 +56,9 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     private final LoggingService loggingService;
     private final JdbcTemplate jdbcTemplate;
     private final LinePayableTransferReportingMapper mapper;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private static final String DOC_ID = "100-432";
 
@@ -123,19 +128,11 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         ShipLineReportTransferHdr entity = new ShipLineReportTransferHdr();
         mapper.mapCreateDTOToEntity(createDTO, entity, groupPoid, companyPoid);
 
-        // Generate DOC_REF if not provided
-        if (entity.getDocRef() == null || entity.getDocRef().trim().isEmpty()) {
-            String docRef = generateDocRef(companyPoid);
-            entity.setDocRef(docRef);
-        } else {
-            // Validate DOC_REF uniqueness
-            if (hdrRepository.existsByDocRef(entity.getDocRef(), null)) {
-                throw new ValidationException("DOC_REF already exists: " + entity.getDocRef());
-            }
-        }
-
         // Save entity (generates TRANSACTION_POID via IDENTITY)
         ShipLineReportTransferHdr saved = hdrRepository.save(entity);
+        hdrRepository.flush();
+        // Bypass Hibernate L1 cache to get trigger-generated values (TRANSACTION_POID, DOC_REF)
+        entityManager.refresh(saved);
 
         // If line, BL type, and dates are provided, load data via stored procedure
         if (saved.getLinePoid() != null && saved.getBlType() != null
@@ -180,13 +177,6 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
         // Update entity
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
-
-        // Validate DOC_REF uniqueness if changed
-        if (updateDTO.getDocRef() != null && !updateDTO.getDocRef().equals(entity.getDocRef())) {
-            if (hdrRepository.existsByDocRef(updateDTO.getDocRef(), transactionPoid)) {
-                throw new ValidationException("DOC_REF already exists: " + updateDTO.getDocRef());
-            }
-        }
 
         ShipLineReportTransferHdr saved = hdrRepository.save(entity);
 
