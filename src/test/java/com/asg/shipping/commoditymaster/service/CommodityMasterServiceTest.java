@@ -169,7 +169,7 @@ class CommodityMasterServiceTest {
                             java.util.Collections.emptyMap(), 
                             0L));
 
-            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, pageable);
+            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, any(), any(), pageable);
 
             assertNotNull(result);
             verify(documentSearchService).search(eq("100-001"), any(), eq("AND"), 
@@ -197,7 +197,7 @@ class CommodityMasterServiceTest {
                             java.util.Collections.emptyMap(), 
                             0L));
 
-            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, pageable);
+            Map<String, Object> result = commodityMasterService.listCommodities("100-001", filterRequest, any(), any(), pageable);
 
             assertNotNull(result);
             verify(documentSearchService).search(eq("100-001"), any(), eq("OR"), 

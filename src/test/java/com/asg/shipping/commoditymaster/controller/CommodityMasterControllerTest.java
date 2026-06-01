@@ -161,14 +161,14 @@ class CommodityMasterControllerTest {
             result.put("content", java.util.Collections.emptyList());
             result.put("totalElements", 0);
 
-            when(commodityService.listCommodities(eq("100-001"), any(), any()))
+            when(commodityService.listCommodities(eq("100-001"), any(), any(), any(), any()))
                     .thenReturn(result);
 
-            ResponseEntity<?> response = controller.getCommodities(pageable, filterRequest);
+            ResponseEntity<?> response = controller.getCommodities(pageable, filterRequest, null, null);
 
             assertNotNull(response);
             assertEquals(200, response.getStatusCode().value());
-            verify(commodityService).listCommodities(eq("100-001"), any(), any());
+            verify(commodityService).listCommodities(eq("100-001"), any(), any(), any(), any());
         }
     }
 
@@ -181,10 +181,10 @@ class CommodityMasterControllerTest {
                 org.springframework.data.domain.PageRequest.of(0, 20);
             java.util.Map<String, Object> result = new java.util.HashMap<>();
 
-            when(commodityService.listCommodities(eq("100-001"), any(), any()))
+            when(commodityService.listCommodities(eq("100-001"), any(), any(), any(), any()))
                     .thenReturn(result);
 
-            ResponseEntity<?> response = controller.getCommodities(pageable, null);
+            ResponseEntity<?> response = controller.getCommodities(pageable, null, null, null);
 
             assertNotNull(response);
             assertEquals(200, response.getStatusCode().value());
@@ -199,10 +199,10 @@ class CommodityMasterControllerTest {
             org.springframework.data.domain.Pageable pageable = 
                 org.springframework.data.domain.PageRequest.of(0, 20);
 
-            when(commodityService.listCommodities(eq("100-001"), any(), any()))
+            when(commodityService.listCommodities(eq("100-001"), any(), any(), any(), any()))
                     .thenThrow(new RuntimeException("Database error"));
 
-            ResponseEntity<?> response = controller.getCommodities(pageable, null);
+            ResponseEntity<?> response = controller.getCommodities(pageable, null, null, null);
 
             assertNotNull(response);
             assertEquals(500, response.getStatusCode().value());
