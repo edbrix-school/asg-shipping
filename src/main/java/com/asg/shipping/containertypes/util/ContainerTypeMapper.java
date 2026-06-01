@@ -81,7 +81,7 @@ public class ContainerTypeMapper {
      */
     public void mapUpdateDTOToEntity(ContainerTypeUpdateDTO dto, ShipContainerTypeMaster entity, Long groupPoid, Long userPoid) {
         entity.setGroupPoid(groupPoid);
-        // Note: containerTypeCode is not updateable
+        entity.setContainerTypeCode(dto.getContainerTypeCode());
         entity.setContainerTypeName(dto.getContainerTypeName());
         entity.setContainerTypeSize(dto.getContainerTypeSize());
         entity.setContainerTypeIsoName(dto.getContainerTypeIsoName());
