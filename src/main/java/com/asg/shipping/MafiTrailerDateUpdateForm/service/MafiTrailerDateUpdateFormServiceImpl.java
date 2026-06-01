@@ -1,5 +1,6 @@
 package com.asg.shipping.MafiTrailerDateUpdateForm.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -8,6 +9,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -39,6 +41,7 @@ import java.util.stream.Collectors;
 public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpdateFormService {
 
     private final DocumentSearchService documentService;
+    private final DocumentDeleteService documentDeleteService;
     private final ShipBlMafiHdrRepository headerRepository;
     private final ShipBlMafiDtlRepository detailRepository;
     private final ShipReadOnlyRepository readOnlyRepository;
@@ -198,4 +201,26 @@ public class MafiTrailerDateUpdateFormServiceImpl implements MafiTrailerDateUpda
         log.info("get LOR MafiTrailerUpdateForm completed for docId={} count={}", docId, page.getNumber());
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
+
+    @Override
+    @Transactional
+    public void delete(Long transactionPoid, DeleteReasonDto deleteReasonDto) {
+        log.info("Deleting Mafi trailer entry with transactionPoid: {}", transactionPoid);
+
+        ShipBlMafiHdr shipBlMafiHdr = headerRepository
+                .findByTransactionPoidAndDeleted(transactionPoid, "N")
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Mafi trailer entry not found for transactionPoid: " + transactionPoid));
+
+        documentDeleteService.deleteDocument(
+                transactionPoid,
+                "SHIP_BL_MAFI_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                shipBlMafiHdr.getTransactionDate()
+        );
+
+        log.info("Successfully deleted Mafi trailer entry with transactionPoid: {}", transactionPoid);
+    }
+
 }
