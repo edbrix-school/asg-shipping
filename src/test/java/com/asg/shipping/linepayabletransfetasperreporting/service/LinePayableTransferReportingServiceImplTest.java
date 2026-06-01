@@ -16,7 +16,9 @@ import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportT
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferDtlRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferHdrRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.util.LinePayableTransferReportingMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -66,6 +68,9 @@ class LinePayableTransferReportingServiceImplTest {
     @Mock
     private LinePayableTransferReportingMapper mapper;
 
+    @Mock
+    private EntityManager entityManager;
+
     @InjectMocks
     private LinePayableTransferReportingServiceImpl service;
 
@@ -78,6 +83,8 @@ class LinePayableTransferReportingServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(service, "entityManager", entityManager);
+
         testEntity = ShipLineReportTransferHdr.builder()
                 .transactionPoid(1L)
                 .groupPoid(1L)
@@ -160,6 +167,8 @@ class LinePayableTransferReportingServiceImplTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
         when(hdrRepository.existsByDocRef(anyString(), any())).thenReturn(false);
         when(hdrRepository.save(any())).thenReturn(testEntity);
+        doNothing().when(hdrRepository).flush();
+        doNothing().when(entityManager).refresh(any());
         when(mapper.mapToDto(any())).thenReturn(testDto);
         when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
         when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
@@ -169,6 +178,8 @@ class LinePayableTransferReportingServiceImplTest {
 
         assertNotNull(result);
         verify(hdrRepository).save(any());
+        verify(hdrRepository).flush();
+        verify(entityManager).refresh(any());
     }
 
     @Test
