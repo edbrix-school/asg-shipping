@@ -212,18 +212,20 @@ class BookingFormServiceImplTest {
 
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(hdr));
+        // enrichCargoDetails guards on chargesDetails == null, so provide non-null charges list
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(chargesDtl));
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(containerDtl));
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(stuffingDtl));
 
         when(lovService.getChargeMasterLov(5L)).thenReturn(List.of(lovItem));
-        when(lovService.getPortMasterLov(6L)).thenReturn(List.of(lovItem));
+        when(lovService.getPortMasterLov(anyLong())).thenReturn(List.of(lovItem));
         when(lovService.getCommodityMasterLov(7L)).thenReturn(List.of(lovItem));
-        when(lovService.getPortMasterLov(8L)).thenReturn(List.of(lovItem));
 
         BookingFormDto result = service.getBookingForm(TX_POID);
         assertNotNull(result);
+        assertEquals(1, result.getChargesDetails().size());
+        assertEquals(1, result.getContainerDetails().size());
     }
 
     @Test
@@ -1025,6 +1027,82 @@ class BookingFormServiceImplTest {
 
         byte[] result = service.cntReturnBookingPrintFormAll(TX_POID, "STAMP");
         assertNotNull(result);
+    }
+
+    // ============================================================
+    // exportStuffingAdviceExcel
+    // ============================================================
+
+    @Test
+    void exportStuffingAdviceExcel_notFound_throwsResourceNotFound() {
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> service.exportStuffingAdviceExcel(TX_POID));
+    }
+
+    @Test
+    void exportStuffingAdviceExcel_emptyStuffing_returnsExcel() {
+        ShipMateHdr hdr = savedHdr();
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(lovService.getLineMasterLov(any())).thenReturn(List.of());
+        when(lovService.getPortMasterLov(any())).thenReturn(List.of());
+
+        byte[] result = service.exportStuffingAdviceExcel(TX_POID);
+        assertNotNull(result);
+        assertTrue(result.length > 0);
+    }
+
+    @Test
+    void exportStuffingAdviceExcel_withStuffingRows_nullNumericFields_doesNotThrow() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setLinePoid(3L);
+        hdr.setPortOfDischargePoid(9L);
+        hdr.setBookingIssueNo("BK001");
+        hdr.setVessalAgentName("VESSEL");
+        hdr.setVoyageNo("V001");
+
+        ShipMateStuffingDtl dtl = new ShipMateStuffingDtl();
+        dtl.setContainerNo("CONT001");
+        dtl.setEquipmentSealNo("SEAL1");
+        dtl.setEquipmentIsoType("20GP");
+        dtl.setMarks("MARK1");
+        dtl.setColourCode("RED");
+        dtl.setQtyOfBundles(null);   // null — must not throw
+        dtl.setWeightTonnes(null);   // null — must not throw
+
+        LovItem lovItem = buildLovItem(3L, "MSC", "MSC LINE");
+        LovItem portItem = buildLovItem(9L, "DXB", "DUBAI PORT");
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(dtl));
+        when(lovService.getLineMasterLov(3L)).thenReturn(List.of(lovItem));
+        when(lovService.getPortMasterLov(9L)).thenReturn(List.of(portItem));
+
+        byte[] result = service.exportStuffingAdviceExcel(TX_POID);
+        assertNotNull(result);
+        assertTrue(result.length > 0);
+    }
+
+    @Test
+    void exportStuffingAdviceExcel_withStuffingRows_withNumericValues_returnsExcel() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setLinePoid(3L);
+        hdr.setPortOfDischargePoid(9L);
+
+        ShipMateStuffingDtl dtl = new ShipMateStuffingDtl();
+        dtl.setContainerNo("CONT001");
+        dtl.setMarks("MARK1");
+        dtl.setQtyOfBundles(new java.math.BigDecimal("10.500"));
+        dtl.setWeightTonnes(new java.math.BigDecimal("5.250"));
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(dtl));
+        when(lovService.getLineMasterLov(3L)).thenReturn(List.of());
+        when(lovService.getPortMasterLov(9L)).thenReturn(List.of());
+
+        byte[] result = service.exportStuffingAdviceExcel(TX_POID);
+        assertNotNull(result);
+        assertTrue(result.length > 0);
     }
 
     // ============================================================
