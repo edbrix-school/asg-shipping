@@ -224,5 +224,7 @@ public class LinePrincipalMasterUpdateDTO {
     @Valid
     @Schema(description = "PIC Details")
     private List<PicDetailDto> picDetails;
+
+    private String lineColor;
 }
 
