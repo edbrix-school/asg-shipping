@@ -367,13 +367,14 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
-    void copySlabsToPayable_NoMatchingContainerType_SkipsUpdate() {
+    void copySlabsToPayable_NoMatchingContainerType_CreatesNewPayableRow() {
         ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
         col.setContainerTypePoid(1L);
         col.setFreeDays(5);
 
         ShipLineTariffImpPayDtl pay = ShipLineTariffImpPayDtl.builder()
                 .containerTypePoid(2L) // different container type
+                .detRowId(1L)
                 .build();
 
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
@@ -381,7 +382,9 @@ class LineTariffsServiceImplTest {
 
         service.copySlabsToPayable(1L, "DMG");
 
-        verify(impPayDtlRepository, never()).save(any());
+        // new payable row created for containerTypePoid=1 since no match existed
+        verify(impPayDtlRepository).save(argThat(p ->
+                p.getContainerTypePoid().equals(1L) && p.getFreeDays() == 5));
     }
 
     @Test

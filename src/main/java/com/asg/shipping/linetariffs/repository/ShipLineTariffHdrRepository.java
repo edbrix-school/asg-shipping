@@ -60,6 +60,12 @@ public interface ShipLineTariffHdrRepository extends JpaRepository<ShipLineTarif
     @Query(value = "BEGIN COPY_LINE_TARIFF(:transactionPoid); END;", nativeQuery = true)
     void callCopyLineTariff(@Param("transactionPoid") Long transactionPoid);
 
+    @Query(value = "SELECT RTN_GLOBAL_SEQ_NO('PDA_PORT_TARIFF', :companyCode, NULL) FROM DUAL", nativeQuery = true)
+    String generateDocRef(@Param("companyCode") String companyCode);
+
+    @Query(value = "SELECT COMPANY_CODE FROM GLOBAL_COMPANY_MASTER WHERE COMPANY_POID = :companyPoid", nativeQuery = true)
+    String findCompanyCodeByPoid(@Param("companyPoid") Long companyPoid);
+
     @Query("SELECT t FROM ShipLineTariffHdr t WHERE t.linePoid = :linePoid AND t.groupPoid = :groupPoid AND t.deleted = 'N' ORDER BY t.transactionPoid DESC")
     List<ShipLineTariffHdr> findLatestByLinePoidAndGroupPoid(@Param("linePoid") Long linePoid, @Param("groupPoid") Long groupPoid);
 }
