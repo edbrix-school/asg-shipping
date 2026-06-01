@@ -88,6 +88,8 @@ public class LinePrincipalMasterCreateDTO {
     @Schema(description = "Sequence Number", example = "1")
     private Integer seqno;
 
+    private String lineColor;
+
     @Pattern(regexp = "Y|N", message = "THC Pay and Collect must be 'Y' or 'N'")
     @Size(max = 1, message = "THC Pay and Collect cannot exceed 1 character")
     @Schema(description = "THC Pay and Collect", example = "Y", allowableValues = {"Y", "N"})

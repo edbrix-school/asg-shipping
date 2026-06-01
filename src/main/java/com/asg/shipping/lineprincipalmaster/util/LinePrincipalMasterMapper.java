@@ -79,6 +79,7 @@ public class LinePrincipalMasterMapper {
                 .lineCategory(entity.getLineCategory())
                 .billTo(entity.getBillTo())
                 .reportingType(entity.getReportingType())
+                .lineColor(entity.getLineColor())
                 .reportingDay(entity.getReportingDay())
                 .reportDescription(entity.getReportDescription())
                 .createdBy(entity.getCreatedBy())
@@ -138,6 +139,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineCategory(dto.getLineCategory());
         entity.setBillTo(dto.getBillTo());
         entity.setReportingType(dto.getReportingType());
+        entity.setLineColor(dto.getLineColor());
         entity.setReportingDay(dto.getReportingDay());
         entity.setReportDescription(dto.getReportDescription());
 
@@ -210,6 +212,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineCategory(dto.getLineCategory());
         entity.setBillTo(dto.getBillTo());
         entity.setReportingType(dto.getReportingType());
+        entity.setLineColor(dto.getLineColor());
         entity.setReportingDay(dto.getReportingDay());
         entity.setReportDescription(dto.getReportDescription());
 
