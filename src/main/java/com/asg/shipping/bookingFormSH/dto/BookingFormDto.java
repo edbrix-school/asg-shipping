@@ -1,6 +1,6 @@
 package com.asg.shipping.bookingFormSH.dto;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,10 +55,10 @@ public class BookingFormDto {
 	private LovItem salesmanPoidDet; // LOV data
 	private Long comodityPoid;
 	private LovItem comodityPoidDet; // LOV data
-	private BigDecimal totalVolume;
-	private BigDecimal totalWeight;
+	private Double totalVolume;
+	private Double totalWeight;
 	private String unitPack;
-	private BigDecimal totalNoOfPacks;
+	private Double totalNoOfPacks;
 	private Long placeOfRecieptPoid;
 	private LovItem placeOfRecieptPoidDet; // LOV data
 	private Long placeOfDelieveryPoid;

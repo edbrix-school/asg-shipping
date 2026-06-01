@@ -99,9 +99,7 @@ public class BookingFormMapper {
      * Map UpdateDTO to Header Entity
      */
     public static void mapUpdateDTOToEntity(BookingFormUpdateDTO dto, ShipMateHdr entity) {
-        if (dto.getTransactionDate() != null) {
-            entity.setTransactionDate(dto.getTransactionDate());
-        }
+        // transactionDate is intentionally excluded from update — it must never change after creation.
         if (dto.getVessalAgentName() != null) {
             entity.setVessalAgentName(dto.getVessalAgentName());
         }
