@@ -225,5 +225,7 @@ public class LinePrincipalMasterDto {
 
     @Schema(description = "Deleted Flag (Y/N)")
     private String deleted;
+
+    private String lineColor;
 }
 
