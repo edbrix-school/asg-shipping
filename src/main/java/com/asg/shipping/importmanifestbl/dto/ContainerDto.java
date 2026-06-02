@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.*;
 
@@ -18,6 +19,7 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private String sealNumber;
 
     private String equipmentIsoType;
+    private LovItem equipmentIsoTypeDet;
     private String shortDescription;
     private Long commodityPoid;
 

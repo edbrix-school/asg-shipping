@@ -81,6 +81,8 @@ public class ImportManifestUpdateOpsDto {
 
     // Detail lists using request DTOs
     private List<GeneralCargoRequestDto> generalCargoDetails;
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
     private List<CargoDescriptionRequestDto> cargoDescriptions;
     private List<ContainerRequestDto> containers;
     private List<ChargeRequestDto> chargeDetails;

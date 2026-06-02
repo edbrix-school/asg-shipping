@@ -9,6 +9,8 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.common.service.LovService;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
@@ -36,8 +38,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +63,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     private final ImportManifestBlProcRepository procRepository;
     private final AddressDetailsRepository addressDetailsRepository;
     private final LoggingService loggingService;
+    private final LovService lovService;
     private final DocumentDeleteService documentDeleteService;
     private final BlManifestValidationService blManifestValidationService;
 
@@ -144,6 +149,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         ImportManifestBlRequestDto dto = mapper.mapToDto(entity);
 
         loadDetailTables(dto, id);
+        enrichLovData(dto);
+        dto.setSimpleCargoDescription(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "DESC", "DESCRIPTION"));
+        dto.setSimpleCargoMarks(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "MARK", "MARKS"));
 
         log.info("Successfully retrieved Import Manifest BL with id: {}", id);
         return dto;
@@ -519,75 +527,13 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         }
 
         // Cargo Descriptions
-        if (dto.getCargoDescriptions() != null) {
-            List<ShipBlManifestCargoDtl> toSave = new ArrayList<>();
-            List<ShipBlManifestCargoDtl> toUpdate = new ArrayList<>();
-            List<ShipBlManifestCargoDtlId> toDelete = new ArrayList<>();
-            List<LogRequestDto<ShipBlManifestCargoDtl>> logRequests = new ArrayList<>();
-
-            Long maxDetRowId = cargoDtlRepository.getMaxDetRowId(transactionPoid);
-
-            for (CargoDescriptionRequestDto detailDto : dto.getCargoDescriptions()) {
-                String action = resolveAction(detailDto.getActionType());
-                switch (action) {
-                    case ACTION_NOCHANGES -> {
-                    }
-                    case ACTION_ISCREATED -> {
-                        ShipBlManifestCargoDtl entity = mapper.mapCargoDtlFromDto(detailDto, transactionPoid);
-                        entity.setId(new ShipBlManifestCargoDtlId(transactionPoid, ++maxDetRowId,
-                                detailDto.getDescriptionType()));
-                        toSave.add(entity);
-                    }
-                    case ACTION_ISUPDATED -> {
-                        ShipBlManifestCargoDtl existing = cargoDtlRepository
-                                .findById(new ShipBlManifestCargoDtlId(transactionPoid, detailDto.getDetRowId(),
-                                        detailDto.getDescriptionType()))
-                                .orElseThrow(() -> new ResourceNotFoundException("Cargo Description Detail", "detRowId",
-                                        detailDto.getDetRowId()));
-                        ShipBlManifestCargoDtl oldEntity = new ShipBlManifestCargoDtl();
-                        BeanUtils.copyProperties(existing, oldEntity);
-                        if (detailDto.getCargoDescription() != null)
-                            existing.setCargoDescription(detailDto.getCargoDescription());
-                        if (detailDto.getRecordOrder() != null)
-                            existing.setRecordOrder(detailDto.getRecordOrder());
-                        toUpdate.add(existing);
-
-                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid,
-                                detailDto.getDetRowId());
-                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipBlManifestCargoDtl.class, docId,
-                                docKeyPoid, logDetail));
-                    }
-                    case ACTION_ISDELETED -> {
-                        if (detailDto.getDetRowId() != null) {
-                            toDelete.add(new ShipBlManifestCargoDtlId(transactionPoid, detailDto.getDetRowId(),
-                                    detailDto.getDescriptionType()));
-                        }
-                    }
-                }
-            }
-
-            if (!toSave.isEmpty()) {
-                List<ShipBlManifestCargoDtl> saved = cargoDtlRepository.saveAll(toSave);
-                saved.forEach(e -> {
-                    String logDetail = String.format("Row Created on Cargo Description Detail with detRowId: %s",
-                            e.getId().getDetRowId());
-                    loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-                });
-            }
-
-            if (!toUpdate.isEmpty()) {
-                cargoDtlRepository.saveAll(toUpdate);
-                if (!logRequests.isEmpty()) {
-                    loggingService.createLogBatch(logRequests);
-                }
-
-            }
-
-            if (!toDelete.isEmpty()) {
-                List<ShipBlManifestCargoDtl> entitiesToDelete = cargoDtlRepository.findAllById(toDelete);
-                cargoDtlRepository.deleteAllInBatch(entitiesToDelete);
-                entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
-            }
+        if (hasCargoInputForType(dto, "DESC", "DESCRIPTION")) {
+            replaceSimpleCargoRows(transactionPoid, resolveSimpleCargoDescription(dto),
+                    "DESC", docId, docKeyPoid);
+        }
+        if (hasCargoInputForType(dto, "MARK", "MARKS")) {
+            replaceSimpleCargoRows(transactionPoid, resolveSimpleCargoMarks(dto),
+                    "MARK", docId, docKeyPoid);
         }
 
         // Containers
@@ -1035,6 +981,8 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                 generalDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setCargoDescriptions(mapper.mapCargoDtlListToDto(
                 cargoDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        dto.setSimpleCargoDescription(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "DESC", "DESCRIPTION"));
+        dto.setSimpleCargoMarks(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "MARK", "MARKS"));
         dto.setContainers(mapper.mapContainerDtlListToDto(
                 containerDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setChargeDetails(mapper.mapChargesDtlListToDto(
@@ -1046,6 +994,148 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         dto.setMafiDetails(mapper.mapMafiDtlListToDto(
                 mafiDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         return dto;
+    }
+
+    private void enrichLovData(ImportManifestBlRequestDto dto) {
+        if (dto == null) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+        Map<String, Map<Long, LovItem>> poidCache = new HashMap<>();
+        Map<String, Map<String, LovItem>> codeCache = new HashMap<>();
+
+        enrichGeneralCargoLovData(dto.getGeneralCargoDetails(), poidCache, groupPoid, companyPoid, userPoid);
+        enrichContainerLovData(dto.getContainers(), poidCache, codeCache, groupPoid, companyPoid, userPoid);
+        enrichChargeLovData(dto.getChargeDetails(), poidCache, codeCache, groupPoid, companyPoid, userPoid);
+        enrichPartBlLovData(dto.getPartBls(), poidCache, groupPoid, companyPoid, userPoid);
+    }
+
+    private void enrichGeneralCargoLovData(List<GeneralCargoRequestDto> dtos,
+            Map<String, Map<Long, LovItem>> cache, Long groupPoid, Long companyPoid, Long userPoid) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+        for (GeneralCargoRequestDto dto : dtos) {
+            try {
+                if (dto.getComodityPoid() != null) {
+                    dto.setComodityDet(getLovItemWithCache(cache, dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getDestinationPortPoid() != null) {
+                    dto.setDestinationPortDet(getLovItemWithCache(cache, dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private void enrichContainerLovData(List<ContainerRequestDto> dtos,
+            Map<String, Map<Long, LovItem>> poidCache,
+            Map<String, Map<String, LovItem>> codeCache,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+        for (ContainerRequestDto dto : dtos) {
+            try {
+                if (dto.getComodityPoid() != null) {
+                    dto.setComodityDet(getLovItemWithCache(poidCache, dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getDestinationPortPoid() != null) {
+                    dto.setDestinationPortDet(getLovItemWithCache(poidCache, dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getEquipmentIsoType() != null) {
+                    dto.setEquipmentIsoTypeDet(getLovItemByCodeWithCache(codeCache, dto.getEquipmentIsoType(), "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getImcoClassType() != null) {
+                    dto.setImcoClassTypeDet(getLovItemByCodeWithCache(codeCache, dto.getImcoClassType(), "IMCO_CLASS", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getOogType() != null) {
+                    dto.setOogTypeDet(getLovItemByCodeWithCache(codeCache, dto.getOogType(), "OOG_TYPE", groupPoid, companyPoid, userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private void enrichChargeLovData(List<ChargeRequestDto> dtos,
+            Map<String, Map<Long, LovItem>> poidCache,
+            Map<String, Map<String, LovItem>> codeCache,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+        for (ChargeRequestDto dto : dtos) {
+            try {
+                if (dto.getChargePoid() != null) {
+                    dto.setChargeDet(getLovItemWithCache(poidCache, dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getChargeType() != null) {
+                    dto.setChargeTypeDet(getLovItemByCodeWithCache(codeCache, dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getCurrencyCode() != null) {
+                    dto.setCurrencyCodeDet(getLovItemByCodeWithCache(codeCache, dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getFreightType() != null) {
+                    dto.setFreightTypeDet(getLovItemByCodeWithCache(codeCache, dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getChargeBasisOn() != null) {
+                    dto.setBasisDet(getLovItemByCodeWithCache(codeCache, dto.getChargeBasisOn(), "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getPaidAtPortPoid() != null) {
+                    dto.setPaidAtPortDet(getLovItemWithCache(poidCache, dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getTaxPoid() != null) {
+                    dto.setTaxDet(getLovItemWithCache(poidCache, dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid, userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private void enrichPartBlLovData(List<PartBlRequestDto> dtos,
+            Map<String, Map<Long, LovItem>> poidCache,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+        for (PartBlRequestDto dto : dtos) {
+            try {
+                if (dto.getComodityPoid() != null) {
+                    dto.setComodityDet(getLovItemWithCache(poidCache, dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getContainerNo() != null && !dto.getContainerNo().trim().isEmpty()) {
+                    dto.setContainerNoDet(new LovItem(null, dto.getContainerNo(), dto.getContainerNo(), dto.getContainerNo(), null, null));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for part BL detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private LovItem getLovItemWithCache(Map<String, Map<Long, LovItem>> cache, Long poid, String lovName,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        if (poid == null || lovName == null) {
+            return new LovItem();
+        }
+        Map<Long, LovItem> innerCache = cache.computeIfAbsent(lovName, k -> new HashMap<>());
+        return innerCache.computeIfAbsent(poid,
+                key -> lovService.getLovItemByPoid(key, lovName, groupPoid, companyPoid, userPoid));
+    }
+
+    private LovItem getLovItemByCodeWithCache(Map<String, Map<String, LovItem>> cache, String code, String lovName,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        if (code == null || code.trim().isEmpty() || lovName == null) {
+            return new LovItem();
+        }
+        Map<String, LovItem> innerCache = cache.computeIfAbsent(lovName, k -> new HashMap<>());
+        return innerCache.computeIfAbsent(code.trim(),
+                key -> lovService.getLovItemByCode(key, lovName, groupPoid, companyPoid, userPoid));
     }
 
     private void validateMandatoryFieldsForUpdate(ImportManifestBlUpdateDTO dto) {
@@ -1061,6 +1151,72 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         if (dto.getBlType() == null) {
             throw new ValidationException(BlManifestValidationMessages.BL_TYPE_REQUIRED);
         }
+    }
+
+    private String joinCargoDescriptionsByType(List<CargoDescriptionRequestDto> rows, String... types) {
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        String result = rows.stream()
+                .filter(row -> row.getDescriptionType() != null
+                        && java.util.Arrays.stream(types).anyMatch(t -> t.equalsIgnoreCase(row.getDescriptionType())))
+                .map(CargoDescriptionRequestDto::getCargoDescription)
+                .filter(value -> value != null && !value.trim().isEmpty())
+                .collect(Collectors.joining(" "));
+        return result.isEmpty() ? null : result;
+    }
+
+    private String resolveSimpleCargoDescription(ImportManifestBlUpdateDTO dto) {
+        if (dto.getSimpleCargoDescription() != null && !dto.getSimpleCargoDescription().trim().isEmpty()) {
+            return dto.getSimpleCargoDescription().trim();
+        }
+        return joinCargoDescriptionsByType(dto.getCargoDescriptions(), "DESC", "DESCRIPTION");
+    }
+
+    private String resolveSimpleCargoMarks(ImportManifestBlUpdateDTO dto) {
+        if (dto.getSimpleCargoMarks() != null && !dto.getSimpleCargoMarks().trim().isEmpty()) {
+            return dto.getSimpleCargoMarks().trim();
+        }
+        return joinCargoDescriptionsByType(dto.getCargoDescriptions(), "MARK", "MARKS");
+    }
+
+    private boolean hasCargoInputForType(ImportManifestBlUpdateDTO dto, String... types) {
+        if (dto.getCargoDescriptions() != null) {
+            boolean hasLegacyRows = dto.getCargoDescriptions().stream()
+                    .anyMatch(row -> row.getDescriptionType() != null
+                            && java.util.Arrays.stream(types)
+                            .anyMatch(type -> type.equalsIgnoreCase(row.getDescriptionType())));
+            if (hasLegacyRows) {
+                return true;
+            }
+        }
+
+        if (types.length == 0) {
+            return false;
+        }
+
+        return switch (types[0].toUpperCase()) {
+            case "DESC", "DESCRIPTION" -> dto.getSimpleCargoDescription() != null;
+            case "MARK", "MARKS" -> dto.getSimpleCargoMarks() != null;
+            default -> false;
+        };
+    }
+
+    private void replaceSimpleCargoRows(Long transactionPoid, String text, String descriptionType,
+            String docId, String docKeyPoid) {
+        cargoDtlRepository.deleteByIdTransactionPoidAndIdDescriptionType(transactionPoid, descriptionType);
+
+        if (text == null || text.trim().isEmpty()) {
+            return;
+        }
+
+        Long nextDetRowId = cargoDtlRepository.getMaxDetRowId(transactionPoid) + 1;
+        ShipBlManifestCargoDtl entity = new ShipBlManifestCargoDtl();
+        entity.setId(new ShipBlManifestCargoDtlId(transactionPoid, nextDetRowId, descriptionType));
+        entity.setCargoDescription(text.trim());
+        cargoDtlRepository.save(entity);
+        loggingService.createLogSummaryEntry(docId, docKeyPoid,
+                String.format("Row Created on Cargo Description Detail with detRowId: %s", nextDetRowId));
     }
 
     private boolean hasAnyEdiChange(ImportManifestBlUpdateDTO dto) {

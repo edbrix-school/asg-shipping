@@ -5,6 +5,8 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.common.service.LovService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
@@ -59,6 +61,9 @@ import javax.sql.DataSource;
 @RequiredArgsConstructor
 public class ImportManifestServiceImpl implements ImportManifestService {
 
+    private static final String CARGO_TYPE_DESCRIPTION = "DESC";
+    private static final String CARGO_TYPE_MARKS = "MARKS";
+
     private final ShipBlManifestHdrRepository headerRepository;
     private final ImportManifestBlProcRepository procRepository;
     private final AddressDetailsRepository addressDetailsRepository;
@@ -81,6 +86,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     private final ApplicationEventPublisher eventPublisher;
     private final BlManifestValidationService blManifestValidationService;
     private final ShipChargeMasterRepository chargeMasterRepository;
+    private final LovService lovService;
     private static final String ACTION_ISCREATED = "ACTION_ISCREATED";
     private static final String ACTION_ISUPDATED = "ACTION_ISUPDATED";
     private static final String ACTION_ISDELETED = "ACTION_ISDELETED";
@@ -105,6 +111,8 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
         ImportManifestBlRequestDto updateDto = updateService.getImportManifestBl(transactionPoId);
 
+        dto.setSimpleCargoDescription(getCargoDescriptionByType(updateDto.getCargoDescriptions(), CARGO_TYPE_DESCRIPTION, "DESCRIPTION"));
+        dto.setSimpleCargoMarks(getCargoDescriptionByType(updateDto.getCargoDescriptions(), CARGO_TYPE_MARKS, "MARKS"));
         dto.setDescriptionsAndMarks(ImportManifestMapper.mapToDescriptionAndMarks(updateDto.getCargoDescriptions()));
         dto.setOtherNotifies(ImportManifestMapper.mapToOtherNotifies(updateDto));
         dto.setGeneralCargoDetails(ImportManifestMapper.mapToGeneralCargoDetails(updateDto.getGeneralCargoDetails()));
@@ -114,6 +122,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         dto.setPartBls(ImportManifestMapper.mapToPartBls(updateDto.getPartBls()));
         dto.setMafiDetails(ImportManifestMapper.mapToMafiDetails(updateDto.getMafiDetails()));
         dto.setAddressDetails(ImportManifestMapper.mapToAddressDetails(updateDto.getNotifyParties()));
+        enrichContainerLovData(dto.getContainers());
 
         log.info("Successfully retrieved Import Manifest BL with id: {}", transactionPoId);
         return dto;
@@ -251,7 +260,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
         List<String> logEntries = new ArrayList<>();
         saveGeneralCargoDetails(dto.getGeneralCargoDetails(), transactionPoid, logEntries);
-        saveCargoDescriptions(dto.getDescriptionsAndMarks(), transactionPoid, logEntries);
+        saveCargoDescriptions(buildSimpleCargoDescriptions(dto), transactionPoid, logEntries);
         saveContainers(dto.getContainers(), transactionPoid, logEntries);
         saveChargeDetails(dto.getCharges(), transactionPoid, logEntries);
         savePartBls(dto.getPartBls(), transactionPoid, logEntries);
@@ -604,6 +613,26 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
     }
 
+    private List<DescriptionAndMarksDto> buildSimpleCargoDescriptions(ImportManifestBlDto dto) {
+        List<DescriptionAndMarksDto> details = new ArrayList<>();
+        if (dto.getSimpleCargoDescription() != null) {
+            details.add(DescriptionAndMarksDto.builder()
+                    .descriptionType(CARGO_TYPE_DESCRIPTION)
+                    .cargoDescription(dto.getSimpleCargoDescription())
+                    .build());
+        }
+        if (dto.getSimpleCargoMarks() != null) {
+            details.add(DescriptionAndMarksDto.builder()
+                    .descriptionType(CARGO_TYPE_MARKS)
+                    .cargoDescription(dto.getSimpleCargoMarks())
+                    .build());
+        }
+        if (details.isEmpty() && dto.getDescriptionsAndMarks() != null) {
+            details.addAll(dto.getDescriptionsAndMarks());
+        }
+        return details;
+    }
+
     private void saveContainers(List<ContainerDto> containers, Long transactionPoid, List<String> logEntries) {
         if (containers == null)
             return;
@@ -734,7 +763,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         String docKeyPoid = transactionPoid.toString();
 
         updateGeneralCargo(dto.getGeneralCargoDetails(), transactionPoid, docId, docKeyPoid);
-        updateCargoDescriptions(dto.getDescriptionsAndMarks(), transactionPoid, docId, docKeyPoid);
+        updateCargoDescriptions(buildSimpleCargoDescriptions(dto), transactionPoid, docId, docKeyPoid);
         updateContainers(dto.getContainers(), transactionPoid, docId, docKeyPoid);
         updateCharges(dto.getCharges(), transactionPoid, docId, docKeyPoid);
         updatePartBls(dto.getPartBls(), transactionPoid, docId, docKeyPoid);
@@ -1037,6 +1066,27 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
     }
 
+    private String getCargoDescriptionByType(List<CargoDescriptionRequestDto> cargoDescriptions, String... types) {
+        if (cargoDescriptions == null) {
+            return null;
+        }
+        return cargoDescriptions.stream()
+                .filter(dto -> {
+                    if (dto.getDescriptionType() == null) {
+                        return false;
+                    }
+                    for (String type : types) {
+                        if (type.equalsIgnoreCase(dto.getDescriptionType())) {
+                            return true;
+                        }
+                    }
+                    return false;
+                })
+                .map(CargoDescriptionRequestDto::getCargoDescription)
+                .findFirst()
+                .orElse(null);
+    }
+
     private <T, ID> void processUpdates(JpaRepository<T, ID> repository, List<T> entities, List<LogRequestDto<T>> logRequests) {
         if (!entities.isEmpty()) {
             repository.saveAll(entities);
@@ -1077,6 +1127,28 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 detailDto.setAddressPoid(headerDto.getOtherNotifies().getNotify2Poid());
             } else if ("NOTIFY3".equalsIgnoreCase(detailDto.getAddressType()) && headerDto.getOtherNotifies() != null) {
                 detailDto.setAddressPoid(headerDto.getOtherNotifies().getNotify3Poid());
+            }
+        }
+    }
+
+    private void enrichContainerLovData(List<ContainerDto> containers) {
+        if (containers == null || containers.isEmpty()) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        for (ContainerDto container : containers) {
+            if (container.getEquipmentIsoType() != null) {
+                LovItem lov = lovService.getLovItemByCode(
+                        container.getEquipmentIsoType(),
+                        "CONTAINER_TYPE_MASTER",
+                        groupPoid,
+                        companyPoid,
+                        userPoid);
+                container.setEquipmentIsoTypeDet(lov);
             }
         }
     }
