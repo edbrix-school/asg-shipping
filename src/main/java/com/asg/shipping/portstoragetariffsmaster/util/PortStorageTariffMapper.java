@@ -121,8 +121,12 @@ public class PortStorageTariffMapper {
         entity.setTariffType(dto.getTariffType());
         entity.setPeriodFrom(dto.getPeriodFrom());
         entity.setPeriodTo(dto.getPeriodTo());
-        entity.setTransactionDate(dto.getTransactionDate());
-        entity.setDocRef(dto.getDocRef());
+        if (dto.getTransactionDate() != null) {
+            entity.setTransactionDate(dto.getTransactionDate());
+        }
+        if (dto.getDocRef() != null) {
+            entity.setDocRef(dto.getDocRef());
+        }
         entity.setCompanyPoid(companyPoid);
 
     }
