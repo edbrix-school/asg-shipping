@@ -725,7 +725,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             for (ContainerTypeDetailDto containerType : dto.getContainerTypes()) {
                 try {
                     if (containerType.getContainerTypePoid() != null) {
-                        containerType.setContainerTypeDet(lovService.getLovItemByPoid(containerType.getContainerTypePoid(), "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid));
+                        containerType.setContainerTypeDet(lovService.getLovItemByPoid(containerType.getContainerTypePoid(), "LINE_CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid));
                     }
                 } catch (Exception e) {
                     log.warn("Failed to fetch LOV data for container type", e);
