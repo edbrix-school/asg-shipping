@@ -73,6 +73,9 @@ public class ImportManifestBlDto {
     private String holdReason;
     private String holdRemarks;
 
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
+
     private List<DescriptionAndMarksDto> descriptionsAndMarks;
     private List<MafiDetailsDto> mafiDetails;
     private OtherNotifyDto otherNotifies;

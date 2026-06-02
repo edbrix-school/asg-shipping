@@ -10,6 +10,11 @@ public class ImportManifestMapper {
     private ImportManifestMapper() {
     }
 
+    private static final String CARGO_TYPE_DESCRIPTION = "DESC";
+    private static final String CARGO_TYPE_MARKS = "MARKS";
+    private static final String CONTAINER_OWN_CUSTOMER = "C";
+    private static final String CONTAINER_OWN_SHIPPER = "S";
+
     public static ImportManifestBlDto mapToDto(ImportManifestBlRequestDto dto) {
         if (dto == null) {
             return null;
@@ -58,7 +63,6 @@ public class ImportManifestMapper {
                 .manualCanSend(dto.getManuallyCanSend())
                 .holdReason(dto.getHoldReason())
                 .holdRemarks(dto.getHoldRemarks())
-
                 .descriptionsAndMarks(mapToDescriptionAndMarks(dto.getCargoDescriptions()))
                 .generalCargoDetails(mapToGeneralCargoDetails(dto.getGeneralCargoDetails()))
                 .containers(mapToContainers(dto.getContainers()))
@@ -75,6 +79,7 @@ public class ImportManifestMapper {
         return ImportManifestBlDto.builder()
                 .transactionPoid(entity.getTransactionPoid())
                 .docId(entity.getDocRef())
+                .transactionDate(entity.getTransactionDate())
                 .vesselVoyagePoid(entity.getVoyageTransactionPoid())
                 .blNumber(entity.getBlNumber())
                 .blType(entity.getBlType())
@@ -199,7 +204,7 @@ public class ImportManifestMapper {
         return containers.stream()
                 .map(dto -> ContainerDto.builder()
                         .detRowId(dto.getDetRowId())
-                        .socType(dto.getEquipmentShipperOwn())
+                        .socType(decodeContainerOwnership(dto.getEquipmentShipperOwn()))
                         .containerNumber(dto.getContainerNo())
                         .sealNumber(dto.getEquipmentSealNo())
                         .equipmentIsoType(dto.getEquipmentIsoType())
@@ -319,6 +324,25 @@ public class ImportManifestMapper {
                 .toList();
     }
 
+    public static List<DescriptionAndMarksDto> mapToDescriptionAndMarks(String simpleCargoDescription,
+            String simpleCargoMarks) {
+        if (simpleCargoDescription == null && simpleCargoMarks == null) {
+            return List.of();
+        }
+        return List.of(
+                DescriptionAndMarksDto.builder()
+                        .descriptionType(CARGO_TYPE_DESCRIPTION)
+                        .cargoDescription(simpleCargoDescription)
+                        .build(),
+                DescriptionAndMarksDto.builder()
+                        .descriptionType(CARGO_TYPE_MARKS)
+                        .cargoDescription(simpleCargoMarks)
+                        .build())
+                .stream()
+                .filter(dto -> dto.getCargoDescription() != null)
+                .toList();
+    }
+
     public static List<DescriptionAndMarksDto> mapToDescriptionAndMarks(
             List<CargoDescriptionRequestDto> cargoDescriptions) {
         if (cargoDescriptions == null || cargoDescriptions.isEmpty()) {
@@ -326,7 +350,7 @@ public class ImportManifestMapper {
         }
         return cargoDescriptions.stream()
                 .map(dto -> DescriptionAndMarksDto.builder()
-                        .marksDescription(dto.getDescriptionType())
+                        .descriptionType(dto.getDescriptionType())
                         .cargoDescription(dto.getCargoDescription())
                         .build())
                 .toList();
@@ -447,7 +471,7 @@ public class ImportManifestMapper {
             id.setDetRowId(dto.getDetRowId());
         entity.setId(id);
 
-        entity.setEquipmentShipperOwn(dto.getSocType());
+        entity.setEquipmentShipperOwn(encodeContainerOwnership(dto.getSocType()));
         entity.setContainerNo(dto.getContainerNumber());
         entity.setEquipmentSealNo(dto.getSealNumber());
         entity.setEquipmentIsoType(dto.getEquipmentIsoType());
@@ -586,6 +610,28 @@ public class ImportManifestMapper {
         entity.setRemarks(dto.getRemarks());
 
         return entity;
+    }
+
+    private static String encodeContainerOwnership(String socType) {
+        if (socType == null) {
+            return null;
+        }
+        return switch (socType.trim().toUpperCase()) {
+            case "COC", "C" -> CONTAINER_OWN_CUSTOMER;
+            case "SOC", "S" -> CONTAINER_OWN_SHIPPER;
+            default -> socType.isEmpty() ? null : socType.substring(0, 1).toUpperCase();
+        };
+    }
+
+    private static String decodeContainerOwnership(String equipmentShipperOwn) {
+        if (equipmentShipperOwn == null) {
+            return null;
+        }
+        return switch (equipmentShipperOwn.trim().toUpperCase()) {
+            case CONTAINER_OWN_CUSTOMER -> "COC";
+            case CONTAINER_OWN_SHIPPER -> "SOC";
+            default -> equipmentShipperOwn;
+        };
     }
 
 }
