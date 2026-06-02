@@ -181,17 +181,19 @@ public class ShipMateContainerDtl extends BaseEntity {
 		if (vgmEdi == null) {
 			vgmEdi = "N";
 		}
-		// Trim and clean container number (from trigger logic)
+		// Trim and clean container number - store null instead of empty string
 		if (containerNo != null) {
 			containerNo = containerNo.trim().replace(" ", "");
+			if (containerNo.isEmpty()) containerNo = null;
 		}
 	}
 
 	@PreUpdate
 	protected void onUpdate() {
-		// Trim and clean container number (from trigger logic)
+		// Trim and clean container number - store null instead of empty string
 		if (containerNo != null) {
 			containerNo = containerNo.trim().replace(" ", "");
+			if (containerNo.isEmpty()) containerNo = null;
 		}
 	}
 }

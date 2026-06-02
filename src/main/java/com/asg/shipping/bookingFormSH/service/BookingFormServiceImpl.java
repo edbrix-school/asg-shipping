@@ -303,6 +303,12 @@ public class BookingFormServiceImpl implements BookingFormService {
                 .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
+        boolean hasContainers = containerDtlRepository
+                .existsByTransactionPoidWithContainerAndNoReturn(id);
+        if (hasContainers) {
+            throw new ValidationException("Cannot delete: Mate receipt has containers assigned. Please remove containers before deleting.");
+        }
+
         documentDeleteService.deleteDocument(id, "SHIP_MATE_HDR",
                 "TRANSACTION_POID", deleteReason, entity.getTransactionDate());
     }
