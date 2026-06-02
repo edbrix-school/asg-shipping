@@ -180,10 +180,6 @@ public class BookingFormServiceImpl implements BookingFormService {
                 .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
-        if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString());
-        }
-
         // Load detail tables
         List<ShipMateCargoDtl> cargoDetails = cargoDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipMateChargesDtl> chargesDetails = chargesDtlRepository.findByTransactionPoidOrderByDetRowId(id);
@@ -456,6 +452,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         titleStyle.setFont(titleFont);
         titleStyle.setAlignment(HorizontalAlignment.CENTER);
         titleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        applyThickBorders(titleStyle);
 
         XSSFCellStyle yellowBoldLeft = workbook.createCellStyle();
         yellowBoldLeft.setFont(boldFont);
@@ -555,10 +552,10 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         Row row1 = sheet.createRow(r);
         row1.setHeightInPoints(16);
+        for (int i = 0; i < 8; i++) row1.createCell(i).setCellStyle(yellowBoldCenter);
         String dateStr = "DATE: " + new java.text.SimpleDateFormat("d/M/yyyy").format(new java.util.Date());
-        Cell dateCell = row1.createCell(4);
-        dateCell.setCellValue(dateStr);
-        dateCell.setCellStyle(yellowBoldCenter);
+        row1.getCell(4).setCellValue(dateStr);
+        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 3));
         sheet.addMergedRegion(new CellRangeAddress(r, r, 4, 7));
         r++;
 
@@ -604,9 +601,9 @@ public class BookingFormServiceImpl implements BookingFormService {
         sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
         String lineName = "";
         if (entity.getLinePoid() != null) {
-            List<LovItem> portList = lovService.getPortMasterLov(entity.getLinePoid());
-            if (!portList.isEmpty()) {
-                lineName = nvl(portList.get(0).getDescription());
+            List<LovItem> lineList = lovService.getLineMasterLov(entity.getLinePoid());
+            if (!lineList.isEmpty()) {
+                lineName = nvl(lineList.get(0).getDescription());
             }
         }
         Cell lineCell = row6.createCell(3);
@@ -690,21 +687,21 @@ public class BookingFormServiceImpl implements BookingFormService {
             c3.setCellStyle(dataStyle);
 
             Cell c4 = row.createCell(4);
-            c4.setCellValue(nvl(dtl.getMarks()));
-            marks = dtl.getMarks();
+            marks = nvl(dtl.getMarks());
+            c4.setCellValue(marks);
             c4.setCellStyle(dataStyle);
 
             Cell c5 = row.createCell(5);
             c5.setCellValue(nvl(dtl.getColourCode()));
             c5.setCellStyle(dataStyle);
 
-            double bundles = Double.parseDouble(nvl(dtl.getQtyOfBundles()));
+            double bundles = dtl.getQtyOfBundles() != null ? dtl.getQtyOfBundles().doubleValue() : 0.0;
             Cell c6 = row.createCell(6);
             c6.setCellValue(bundles);
-            c6.setCellStyle(dataStyle);
+            c6.setCellStyle(decimalStyle);
             totalBundles += bundles;
 
-            double weight = Double.parseDouble(nvl(dtl.getWeightTonnes()));
+            double weight = dtl.getWeightTonnes() != null ? dtl.getWeightTonnes().doubleValue() : 0.0;
             Cell c7 = row.createCell(7);
             c7.setCellValue(weight);
             c7.setCellStyle(decimalStyle);
@@ -714,11 +711,8 @@ public class BookingFormServiceImpl implements BookingFormService {
         Row totalRow = sheet.createRow(r++);
         totalRow.setHeightInPoints(16);
 
-        totalRow.createCell(0).setCellStyle(dataStyle);
-        totalRow.createCell(1).setCellStyle(dataStyle);
-        totalRow.createCell(2).setCellStyle(dataStyle);
-        totalRow.createCell(3).setCellStyle(dataStyle);
-        totalRow.createCell(4).setCellStyle(dataStyle);
+        for (int i = 0; i < 5; i++) totalRow.createCell(i).setCellStyle(yellowBoldCenter);
+        sheet.addMergedRegion(new CellRangeAddress(r - 1, r - 1, 0, 4));
 
         Cell totalLabel = totalRow.createCell(5);
         totalLabel.setCellValue("TOTAL");
