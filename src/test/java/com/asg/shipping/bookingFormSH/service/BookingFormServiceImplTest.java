@@ -229,12 +229,20 @@ class BookingFormServiceImplTest {
     }
 
     @Test
-    void getBookingForm_deleted_throwsResourceNotFound() {
+    void getBookingForm_deleted_returnsDto() {
         ShipMateHdr hdr = new ShipMateHdr();
         hdr.setDeleted("Y");
+        hdr.setTransactionPoid(TX_POID);
         when(headerRepository.findByTransactionPoid(any()))
                 .thenReturn(Optional.of(hdr));
-        assertThrows(ResourceNotFoundException.class, () -> service.getBookingForm(TX_POID));
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+
+        BookingFormDto result = service.getBookingForm(TX_POID);
+        assertNotNull(result);
+        assertEquals("Y", result.getDeleted());
     }
 
     @Test
