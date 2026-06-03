@@ -80,6 +80,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
         // Enrich with LOV data
         enrichHeaderWithLovData(response, entity);
+        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(transactionPoid));
 
         // Retrieve and set general cargo details
         response.setGeneralCargoDetails(getGeneralCargoDetails(transactionPoid));
@@ -95,13 +96,13 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchExportBls(FilterRequestDto filters, Pageable pageable) {
+    public Map<String, Object> searchExportBls(FilterRequestDto filters, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info("Searching Export BLs with filters: {}", filters);
-        
+
         // Resolve filter components from FilterRequestDto
         String operator = documentSearchService.resolveOperator(filters);
         String isDeleted = documentSearchService.resolveIsDeleted(filters);
-        List<FilterDto> filterList = documentSearchService.resolveFilters(filters);
+        List<FilterDto> filterList = documentSearchService.resolveDateFilters(filters, "TRANSACTION_DATE", startDate, endDate);
         
         // Call DocumentSearchService.search with docId "100-352"
         // This will use the document configuration from the database (SQL query, display fields, etc.)
@@ -190,7 +191,8 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Enrich with LOV data
         enrichHeaderWithLovData(response, saved);
-        
+        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(saved.getTransactionPoid()));
+
         return response;
     }
 
@@ -245,7 +247,8 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Enrich with LOV data
         enrichHeaderWithLovData(response, saved);
-        
+        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(saved.getTransactionPoid()));
+
         return response;
     }
 
@@ -336,6 +339,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         response.setCargoMarks(cargoMarksResponse);
         response.setSimpleCargoDescription(simpleCargoDescResponse);
         response.setSimpleCargoMarks(simpleCargoMarksResponse);
+        response.setDisplayTopInfoExportBLS(headerResponse != null ? headerResponse.getDisplayTopInfoExportBLS() : resolveDisplayTopInfoExportBLS(transactionPoid));
         response.setChargeDetails(chargeResponse);
 
         return response;
@@ -878,11 +882,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long userPoid = UserContext.getUserPoid();
         
         String status = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
-        
+
         BlStatusResponse response = new BlStatusResponse();
         response.setStatus(status);
-        response.setDisplayInfo(status); // Can be enhanced with more detailed status info
-        
+        response.setDisplayInfo(status);
+        response.setStatusDetails(parseBlStatus(status));
+
         return response;
     }
 
@@ -906,6 +911,65 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         result.put("fieldsUpdated", Arrays.asList("salesmanPoid", "portOfLoadingPoid", "portOfDischargePoid"));
         
         return result;
+    }
+
+    private String resolveDisplayTopInfoExportBLS(Long transactionPoid) {
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        try {
+            String result = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
+            if (result == null || result.isBlank() || "FALSE".equalsIgnoreCase(result)) {
+                return "NEW";
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to fetch display top info for Export BL: {}", transactionPoid, e);
+            return "NEW";
+        }
+    }
+
+    private BlStatusResponse.StatusDetails parseBlStatus(String rawStatus) {
+        if (rawStatus == null || rawStatus.isBlank() || "FALSE".equalsIgnoreCase(rawStatus)) {
+            return BlStatusResponse.StatusDetails.builder().build();
+        }
+
+        BlStatusResponse.StatusDetails.StatusDetailsBuilder builder = BlStatusResponse.StatusDetails.builder();
+        String[] tokens = rawStatus.split(",");
+
+        for (String token : tokens) {
+            String value = token == null ? "" : token.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+
+            value = value.replaceFirst("^-+\\s*", "");
+
+            if (value.startsWith("JobNo:")) {
+                builder.jobNo(extractStatusValue(value, "JobNo:"));
+            } else if (value.startsWith("Line:")) {
+                builder.line(extractStatusValue(value, "Line:"));
+            } else if (value.startsWith("Vessel:")) {
+                builder.vessel(extractStatusValue(value, "Vessel:"));
+            } else if (value.startsWith("VoyageNo:")) {
+                builder.voyageNo(extractStatusValue(value, "VoyageNo:"));
+            } else if (value.startsWith("ArrivalDt:")) {
+                builder.arrivalDt(extractStatusValue(value, "ArrivalDt:"));
+            } else if (value.startsWith("SailDt:")) {
+                builder.sailDt(extractStatusValue(value, "SailDt:"));
+            } else if (value.startsWith("BLNO:")) {
+                builder.blNo(extractStatusValue(value, "BLNO:"));
+            } else if (!value.contains(":")) {
+                builder.jobStatus(value);
+            }
+        }
+
+        return builder.build();
+    }
+
+    private String extractStatusValue(String text, String prefix) {
+        return text.substring(prefix.length()).trim();
     }
 
     // ========== LOV Enrichment Methods ==========
@@ -1215,4 +1279,3 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         return mapper.mapAddressToDto(addressList.getFirst());
     }
 }
-

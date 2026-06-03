@@ -25,6 +25,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 import static com.asg.common.lib.dto.response.ApiResponse.error;
 
@@ -60,9 +62,13 @@ public class ExportManifestUpdateController {
     @PostMapping("/list")
     public ResponseEntity<?> searchExportBls(
             @ParameterObject Pageable pageable,
-            @RequestBody(required = false) FilterRequestDto filters) {
+            @RequestBody(required = false) FilterRequestDto filters,
+            @RequestParam(required = false)
+            @Parameter(description = "Start date (inclusive) for TRANSACTION_DATE filter") LocalDate startDate,
+            @RequestParam(required = false)
+            @Parameter(description = "End date (inclusive) for TRANSACTION_DATE filter") LocalDate endDate) {
         try {
-            return success("Export BL list fetched successfully", service.searchExportBls(filters, pageable));
+            return success("Export BL list fetched successfully", service.searchExportBls(filters, startDate, endDate, pageable));
         } catch (Exception e) {
             log.error("Error searching Export BLs", e);
             return error("Error fetching Export BL list: " + e.getMessage(), 500);

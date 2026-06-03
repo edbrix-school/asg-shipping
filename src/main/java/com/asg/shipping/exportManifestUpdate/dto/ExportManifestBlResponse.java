@@ -69,6 +69,7 @@ public class ExportManifestBlResponse {
     private LovItem portOfDischargeDet; // LOV: PORT_MASTER
     private String remarks;
     private String blStatus;
+    private String displayTopInfoExportBLS;
     private String blOrginalPrint;
     private LocalDate blOrginalDate;
     private String blPrintedBy;
@@ -147,4 +148,3 @@ public class ExportManifestBlResponse {
     private String simpleCargoMarks;
 
 }
-
