@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Response DTO for Sales Invoice Shipping header
@@ -78,5 +79,8 @@ public class SalesInvoiceShippingDto {
     // Detail records
     private List<SalesInvoiceContainerDtlDto> containerDetails;
     private List<SalesInvoiceChargesDtlDto> chargesDetails;
+    
+    // Manifest details
+    private Map<String, Object> manifestDetails;
 }
 

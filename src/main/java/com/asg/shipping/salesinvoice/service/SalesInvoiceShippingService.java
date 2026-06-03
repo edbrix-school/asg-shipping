@@ -52,5 +52,12 @@ public interface SalesInvoiceShippingService {
     byte[] printCustomerAutoCharge(Long transactionPoid, Long blPoid) throws Exception;
 
     byte[] print(Long transactionPoid, Long blPoid) throws Exception;
+
+    /**
+     * Get manifest details based on BL POID - opens Export or Import Manifest
+     * @param blPoid BL POID to get manifest for
+     * @return Map containing manifest type and redirect information
+     */
+    Map<String, Object> getManifestDetails(Long blPoid);
 }
 
