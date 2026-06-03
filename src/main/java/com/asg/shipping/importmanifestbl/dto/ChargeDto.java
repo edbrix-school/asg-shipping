@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.*;
 
@@ -18,8 +19,11 @@ public class ChargeDto implements BlManifestValidationService.ChargeValidatable 
     private String chargeType;
     private Long chargeTypePoid;
     private String basisPoid;
+    private LovItem chargeDet;
+    private LovItem basisDet;
 
     private String currencyCode;
+    private LovItem currencyCodeDet;
     private Long rate;
 
     private Long quantity;
@@ -35,9 +39,13 @@ public class ChargeDto implements BlManifestValidationService.ChargeValidatable 
 
     private String freightType;
     private Long paidAtPortPoid;
+    private LovItem paidAtPortDet;
+    private Long receiptInvoicePoid;
+    private LovItem receiptInvoiceDet;
 
     private String chargeDescription;
     private Long taxPoid;
+    private LovItem taxDet;
     private Long discountPercentage;
 
     private LocalDateTime demurrageChargesTillDate;

@@ -39,6 +39,7 @@ public class ChargeRequestDto implements BlManifestValidationService.ChargeValid
     private Long reprintTransactionPoid;
     private String invoiceType;
     private String autoCanInvoiceNo;
+    private LovItem receiptInvoiceDet;
     private String chargeDescription;
     private Long taxPoid;
     private LovItem taxDet;
