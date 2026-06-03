@@ -848,12 +848,25 @@ class BookingFormServiceImplTest {
         hdr.setDeleted("N");
         hdr.setTransactionDate(null);
 
-        when(headerRepository.findByTransactionPoid(TX_POID))
-                .thenReturn(Optional.of(hdr));
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(containerRepo.existsByTransactionPoidWithContainerAndNoReturn(TX_POID)).thenReturn(false);
 
         service.deleteBookingForm(TX_POID, null);
 
         verify(documentDeleteService).deleteDocument(eq(TX_POID), eq("SHIP_MATE_HDR"), eq("TRANSACTION_POID"), eq(null), eq(null));
+    }
+
+    @Test
+    void deleteBookingForm_withContainers_throwsValidationException() {
+        ShipMateHdr hdr = new ShipMateHdr();
+        hdr.setDeleted("N");
+        hdr.setTransactionDate(null);
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(containerRepo.existsByTransactionPoidWithContainerAndNoReturn(TX_POID)).thenReturn(true);
+
+        assertThrows(ValidationException.class, () -> service.deleteBookingForm(TX_POID, null));
+        verify(documentDeleteService, never()).deleteDocument(any(), any(), any(), any(), any());
     }
 
     @Test
