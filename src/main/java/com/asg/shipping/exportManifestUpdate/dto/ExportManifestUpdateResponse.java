@@ -26,5 +26,7 @@ public class ExportManifestUpdateResponse {
 
     private String simpleCargoMarks;
 
+    private String displayTopInfoExportBLS;
+
     private Map<String, Object> chargeDetails;
 }
