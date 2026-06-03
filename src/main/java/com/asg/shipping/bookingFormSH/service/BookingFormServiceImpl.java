@@ -421,15 +421,24 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional
-    public void transferBookingWithContainers(Long oldTransactionPoid) {
+    public void transferBookingWithContainers(Long oldTransactionPoid, Long splitBookingNo) {
         Long groupPoid = UserContext.getGroupPoid();
         Long companyPoid = UserContext.getCompanyPoid();
         Long userPoid = UserContext.getUserPoid();
+
         ShipMateHdr entity = headerRepository
                 .findByTransactionPoid(oldTransactionPoid)
-                .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, oldTransactionPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, oldTransactionPoid.toString()));
 
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, oldTransactionPoid, entity.getSplitBookingNo(), ALLOCATESPLITBOOKING, userPoid);
+        // Use splitBookingNo from request if provided, else fall back to DB value
+        Long resolvedSplitBookingNo = splitBookingNo != null ? splitBookingNo : entity.getSplitBookingNo();
+
+        if (resolvedSplitBookingNo == null) {
+            throw new ValidationException("Split Booking No is required for transfer. Please provide splitBookingNo.");
+        }
+
+        // Proc params: P_DOC_KEY_POID(3)=splitBookingNo(target), P_DET_ROW_ID(4)=transactionPoid(source)
+        callProcShipBlPageSaveAfter(groupPoid, companyPoid, resolvedSplitBookingNo, oldTransactionPoid, ALLOCATESPLITBOOKING, userPoid);
     }
 
     @Override
@@ -882,25 +891,32 @@ public class BookingFormServiceImpl implements BookingFormService {
     /**
      * Call PROC_SHIP_BL_PAGE_SAVE_AFTER stored procedure
      */
-    private void callProcShipBlPageSaveAfter(Long groupPoid, Long companyPoid, Long transactionPoid,
-                                             Long splitBookingNo, String actionType, Long userPoid) {
+    /**
+     * Proc signature: PROC_SHIP_BL_PAGE_SAVE_AFTER(GROUP, COMPANY, P_DOC_KEY_POID, P_DET_ROW_ID, UPDATE_TYPE, LOGIN_USER)
+     * For ALLOCATESPLITBOOKING:
+     *   P_DOC_KEY_POID (param3) = splitBookingNo  → TARGET booking (0 = auto-create new split)
+     *   P_DET_ROW_ID   (param4) = sourceTransactionPoid → SOURCE booking (where IS_SPLIT='Y' containers live)
+     */
+    private void callProcShipBlPageSaveAfter(Long groupPoid, Long companyPoid, Long docKeyPoid,
+                                             Long detRowId, String actionType, Long userPoid) {
         try {
             String sql = "{call PROC_SHIP_BL_PAGE_SAVE_AFTER(?, ?, ?, ?, ?, ?)}";
             jdbcTemplate.execute((ConnectionCallback<Void>) connection -> {
                 CallableStatement cs = connection.prepareCall(sql);
                 cs.setLong(1, groupPoid);
                 cs.setLong(2, companyPoid);
-                cs.setLong(3, splitBookingNo != null ? splitBookingNo : 0L);
-                cs.setLong(4, transactionPoid);
+                cs.setLong(3, docKeyPoid != null ? docKeyPoid : 0L);  // P_DOC_KEY_POID = target splitBookingNo
+                cs.setLong(4, detRowId);                               // P_DET_ROW_ID   = source transactionPoid
                 cs.setString(5, actionType != null ? actionType : ALLOCATESPLITBOOKING);
-                cs.setString(6, String.valueOf(userPoid));
+                cs.setLong(6, userPoid);                               // must be numeric, not string
                 cs.execute();
                 cs.close();
                 return null;
             });
-            log.debug("Successfully called PROC_SHIP_BL_PAGE_SAVE_AFTER for transaction: {}", transactionPoid);
+            log.debug("Successfully called PROC_SHIP_BL_PAGE_SAVE_AFTER - docKeyPoid: {}, detRowId: {}", docKeyPoid, detRowId);
         } catch (Exception e) {
-            log.error("Error calling PROC_SHIP_BL_PAGE_SAVE_AFTER for transaction: {}", transactionPoid, e);
+            log.error("Error calling PROC_SHIP_BL_PAGE_SAVE_AFTER - docKeyPoid: {}, detRowId: {}", docKeyPoid, detRowId, e);
+            throw new ValidationException("Transfer failed: " + e.getMessage());
         }
     }
 
