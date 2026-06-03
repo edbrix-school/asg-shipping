@@ -9,6 +9,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
 import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportTransferDtl;
@@ -69,6 +70,9 @@ class LinePayableTransferReportingServiceImplTest {
     private LinePayableTransferReportingMapper mapper;
 
     @Mock
+    private LovDataService lovDataService;
+
+    @Mock
     private EntityManager entityManager;
 
     @InjectMocks
@@ -84,6 +88,8 @@ class LinePayableTransferReportingServiceImplTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(service, "entityManager", entityManager);
+        when(lovDataService.getDetailsByPoidsAndLovName(any(), any())).thenReturn(Collections.emptyMap());
+        when(lovDataService.getDetailsByCodesAndLovName(any(), any())).thenReturn(Collections.emptyMap());
 
         testEntity = ShipLineReportTransferHdr.builder()
                 .transactionPoid(1L)
