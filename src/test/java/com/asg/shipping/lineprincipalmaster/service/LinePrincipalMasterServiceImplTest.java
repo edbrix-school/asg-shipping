@@ -18,6 +18,9 @@ import com.asg.shipping.lineprincipalmaster.entity.ShipLineMaster;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtl;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtl;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterUserRoleDtl;
+import com.asg.shipping.common.entity.GlobalAddressMaster;
+import com.asg.shipping.common.repository.GlobalAddressDetailsRepository;
+import com.asg.shipping.common.repository.GlobalAddressMasterRepository;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterChargeDtlRepository;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterPicDtlRepository;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterRepository;
@@ -215,6 +218,12 @@ class LinePrincipalMasterServiceImplTest {
     @Mock
     private JdbcTemplate jdbcTemplate;
 
+    @Mock
+    private GlobalAddressMasterRepository addressMasterRepository;
+
+    @Mock
+    private GlobalAddressDetailsRepository addressDetailsRepository;
+
     @InjectMocks
     private LinePrincipalMasterServiceImpl service;
 
@@ -320,6 +329,10 @@ class LinePrincipalMasterServiceImplTest {
         when(containerTypeRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
         when(userRoleDtlRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
         when(picDtlRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
+        GlobalAddressMaster addressMaster = new GlobalAddressMaster();
+        addressMaster.setAddressMasterPoid(99L);
+        when(addressMasterRepository.existsByAddressNameIgnoreCaseAndGroupPoid(anyString(), anyLong())).thenReturn(false);
+        when(addressMasterRepository.save(any(GlobalAddressMaster.class))).thenReturn(addressMaster);
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class);
              MockedStatic<com.asg.common.lib.utility.ASGHelperUtils> mockedHelper = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
@@ -366,6 +379,10 @@ class LinePrincipalMasterServiceImplTest {
         when(containerTypeRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
         when(userRoleDtlRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
         when(picDtlRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
+        GlobalAddressMaster addressMaster = new GlobalAddressMaster();
+        addressMaster.setAddressMasterPoid(99L);
+        when(addressMasterRepository.existsByAddressNameIgnoreCaseAndGroupPoid(anyString(), anyLong())).thenReturn(false);
+        when(addressMasterRepository.save(any(GlobalAddressMaster.class))).thenReturn(addressMaster);
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class);
              MockedStatic<com.asg.common.lib.utility.ASGHelperUtils> mockedHelper = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
