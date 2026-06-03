@@ -13,6 +13,7 @@ public class ChargeOtherDto {
     private Long detRowId;
     private Long chargePoid;
     private String chargeType;
+    private LovItem chargeTypeDet;
     private String basis;
     private Long chargeTypePoid;
     private LovItem chargeDet;
