@@ -537,6 +537,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                             if (dto.getNoOfPacks() != null) entity.setNoOfPacks(dto.getNoOfPacks());
                             if (dto.getPackUnit() != null) entity.setPackUnit(dto.getPackUnit());
                             if (dto.getDestinationPortPoid() != null) entity.setDestinationPortPoid(dto.getDestinationPortPoid());
+                            if (dto.getMateTransactionPoid() != null) entity.setMateTransactionPoid(dto.getMateTransactionPoid());
+                            if (dto.getMateTransactionPoid() != null) entity.setMateTransactionPoid(dto.getMateTransactionPoid());
+                            if (dto.getExtraFreeDays() != null) entity.setExtraFreeDays(dto.getExtraFreeDays());
+                            if (dto.getExtraFreeDaysPrnpls() != null) entity.setExtraFreeDaysPrnpls(dto.getExtraFreeDaysPrnpls());
                             containerDtlRepository.save(entity);
                         }
                         break;
