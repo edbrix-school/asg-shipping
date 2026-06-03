@@ -147,4 +147,6 @@ public class ExportManifestBlResponse {
     private String simpleCargoDescription;
     private String simpleCargoMarks;
 
+    private BlStatusResponse.StatusDetails statusDetails;
+
 }

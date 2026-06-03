@@ -91,6 +91,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         response.setSimpleCargoMarks(joinDescriptionStrings(
                 cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
 
+        Long userPoid = UserContext.getUserPoid();
+        String status = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
+        response.setStatusDetails(parseBlStatus(status));
+
         return response;
     }
 
