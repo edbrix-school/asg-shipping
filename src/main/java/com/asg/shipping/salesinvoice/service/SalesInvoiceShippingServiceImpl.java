@@ -1981,4 +1981,44 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         return date != null ? date.toLocalDate() : null;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getManifestDetails(Long blPoid) {
+        log.info("Getting manifest details for BL POID: {}", blPoid);
+
+        try {
+            // Get BL Type from SHIP_BL_MANIFEST_HDR
+            String query = "SELECT BL_TYPE FROM SHIP_BL_MANIFEST_HDR WHERE TRANSACTION_POID = ?";
+
+            String blType = jdbcTemplate.queryForObject(query, String.class, blPoid);
+
+            String documentId;
+            String docname;
+
+            if ("EXPORT".equalsIgnoreCase(blType)) {
+                documentId = "100-104";
+                docname = "Export Manifest - BL";
+            } else {
+                documentId = "100-102";
+                docname = "Import Manifest - BL";
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("documentId", documentId);
+            response.put("docname", docname);
+
+            log.info("Successfully retrieved manifest details for BL POID: {}, DocumentId: {}, Docname: {}",
+                    blPoid, documentId, docname);
+
+            return response;
+
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            log.error("BL not found with POID: {}", blPoid);
+            throw new ValidationException("BL not found with POID: " + blPoid);
+        } catch (Exception e) {
+            log.error("Error getting manifest details for BL POID: {}", blPoid, e);
+            throw new RuntimeException("Failed to get manifest details: " + e.getMessage());
+        }
+    }
+
 }

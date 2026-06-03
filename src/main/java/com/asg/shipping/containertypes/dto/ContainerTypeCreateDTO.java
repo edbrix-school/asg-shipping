@@ -1,5 +1,6 @@
 package com.asg.shipping.containertypes.dto;
 
+import com.asg.shipping.containertypes.validator.DecimalPrecision;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,12 +34,15 @@ public class ContainerTypeCreateDTO {
     @Size(max = 100, message = "Container type ISO name must not exceed 100 characters")
     private String containerTypeIsoName;
 
-    private Integer containerCargoWeight;
+    @DecimalPrecision(scale = 3, message = "Container cargo weight must not exceed 3 decimal places")
+    private BigDecimal containerCargoWeight;
 
-    private Integer containerTareWeight;
+    @DecimalPrecision(scale = 3, message = "Container tare weight must not exceed 3 decimal places")
+    private BigDecimal containerTareWeight;
 
     @NotNull(message = "TEU factor is required")
-    private Integer containerTeuFactor;
+    @DecimalPrecision(scale = 3, message = "TEU factor must not exceed 3 decimal places")
+    private BigDecimal containerTeuFactor;
 
     @NotBlank(message = "Container type category is required")
     @Size(max = 20, message = "Container type category must not exceed 20 characters")
