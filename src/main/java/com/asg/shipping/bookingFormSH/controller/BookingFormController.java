@@ -336,9 +336,10 @@ public class BookingFormController {
     )
     @PostMapping("/transfer/{transactionPoid}")
     public ResponseEntity<?> transferBooking(
-            @PathVariable Long transactionPoid) {
-        log.info("Transfer poid: " + transactionPoid);
-        bookingFormService.transferBookingWithContainers(transactionPoid);
+            @PathVariable Long transactionPoid,
+            @RequestParam(required = false) Long splitBookingNo) {
+        log.info("Transfer poid: {}, splitBookingNo: {}", transactionPoid, splitBookingNo);
+        bookingFormService.transferBookingWithContainers(transactionPoid, splitBookingNo);
         return success("Container Transferred Successfully");
     }
 
