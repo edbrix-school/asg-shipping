@@ -22,6 +22,7 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private LovItem equipmentIsoTypeDet;
     private String shortDescription;
     private Long commodityPoid;
+    private LovItem commodityDet;
 
     private Long cbm;
     private Long grossWeight;

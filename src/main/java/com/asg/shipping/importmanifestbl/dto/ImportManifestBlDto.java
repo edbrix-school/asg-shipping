@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,13 +23,20 @@ public class ImportManifestBlDto {
     private LocalDate transactionDate;
 
     private Long vesselVoyagePoid;
+    private LovItem vesselVoyagePoidDet;
     private String blNumber;
     private String blType;
+    private LovItem blTypeDet;
+    private String blIssueType;
+    private LovItem blIssueTypeDet;
     private String cargo;
+    private LovItem cargoDet;
     private Long originalBlsCount;
     private String freight;
     private Long quotationPoid;
+    private LovItem quotationDet;
     private Long salesmanPoid;
+    private LovItem salesmanDet;
     private String issueType;
 
     private String bookedByPrincipal;
@@ -40,18 +48,24 @@ public class ImportManifestBlDto {
 
     private String consigneeName;
     private Long consigneePoid;
+    private LovItem consigneeDet;
 
     private String manifestEmailVerified;
     private String noRecentShipmentVerified;
 
     private Long bookingCustomerPoid;
+    private LovItem bookingCustomerDet;
     private String ediAddress;
 
     private String preCarried;
     private Long loadPortPoid;
+    private LovItem loadPortDet;
     private Long receiptPortPoid;
+    private LovItem receiptPortDet;
     private Long deliveryPortPoid;
+    private LovItem deliveryPortDet;
     private Long dischargePortPoid;
+    private LovItem dischargePortDet;
 
     private Long commodityPoid;
 
@@ -63,6 +77,7 @@ public class ImportManifestBlDto {
 
     private String notifyName;
     private Long notify1Poid;
+    private LovItem notify1Det;
 
     private String notifyEdiAddress;
     private List<AddressDetailsDto> addressDetails;
@@ -71,6 +86,7 @@ public class ImportManifestBlDto {
     private String manualCanSend;
 
     private String holdReason;
+    private LovItem holdReasonDet;
     private String holdRemarks;
 
     private String simpleCargoDescription;

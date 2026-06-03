@@ -684,7 +684,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 if (dto.getLinePortRefnos() != null) {
                     for (String code : dto.getLinePortRefnos()) {
                         try {
-                            com.asg.shipping.common.dto.LovItem item = lovService.getLovItemByCode(code.trim(), "TRADELANE", groupPoid, companyPoid, userPoid);
+                            com.asg.shipping.common.dto.LovItem item = lovService.getLovItemByCode(code.trim(), "TRADELANE_MASTER", groupPoid, companyPoid, userPoid);
                             if (item != null) {
                                 tradelaneDets.add(item);
                             }
