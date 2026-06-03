@@ -133,6 +133,30 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         List<ShipLineMasterPicDtl> picDetails = picDtlRepository.findByLinePoidOrderByDetRowId(id);
         dto.setPicDetails(mapper.mapPicDetailsToDto(picDetails));
 
+        // Fetch address type map
+        if (line.getAddressPoid() != null) {
+            List<GlobalAddressDetails> addressDetails = addressDetailsRepository.findByAddressMasterPoid(line.getAddressPoid());
+            if (!addressDetails.isEmpty()) {
+                Map<String, List<AddressDetailsDTO>> byType = addressDetails.stream()
+                        .filter(a -> a.getAddressType() != null)
+                        .collect(Collectors.groupingBy(
+                                GlobalAddressDetails::getAddressType,
+                                Collectors.mapping(mapper::mapToAddressDetailsDto, Collectors.toList())
+                        ));
+                AddressTypeMapDTO addressTypeMap = new AddressTypeMapDTO();
+                addressTypeMap.setMain(byType.get("MAIN"));
+                addressTypeMap.setFinance(byType.get("FINANCE"));
+                addressTypeMap.setSales(byType.get("SALES"));
+                addressTypeMap.setOperation(byType.get("OPERATIONS"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
+                addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
+                addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
+                addressTypeMap.setCan(byType.get("CAN"));
+                dto.setAddressTypeMap(addressTypeMap);
+            }
+        }
+
         // Enrich with LOV data
         enrichDtoWithLovData(dto, line, groupPoid);
 
