@@ -68,6 +68,7 @@ public class ImportManifestBlDto {
     private LovItem dischargePortDet;
 
     private Long commodityPoid;
+    private LovItem commodityDet;
 
     private BigDecimal grossWeight;
     private BigDecimal cbm;

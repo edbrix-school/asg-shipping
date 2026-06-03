@@ -23,6 +23,8 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private String shortDescription;
     private Long commodityPoid;
     private LovItem commodityDet;
+    private String imcoType;
+    private LovItem imcoTypeDet;
 
     private Long cbm;
     private Long grossWeight;
@@ -54,7 +56,6 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private Long collectionAmount;
     private Long collectionDays;
 
-    private String imcoType;
     private String imcoNumber;
     private String imcoClassDescription;
 
@@ -64,6 +65,7 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private String rfTemperature;
 
     private String oogType;
+    private LovItem oogTypeDet;
     private String oogBack;
     private String oogLeftWidth;
     private String oogRightWidth;
