@@ -52,7 +52,7 @@ public class ShipRemunerationMasterMapper {
         entity.setActive(StringUtils.isNotBlank(dto.getActive()) ? dto.getActive() : "Y");
         entity.setSeqNo(dto.getSeqNo());
         entity.setRemunBasedOn(dto.getRemunBasedOn());
-        entity.setRemunChargeCodePoid(String.valueOf(dto.getRemunChargeCodePoid()));
+        entity.setRemunChargeCodePoid(null != dto.getRemunChargeCodePoid() ? String.valueOf(dto.getRemunChargeCodePoid()) : null);
         entity.setGlPoid(dto.getGlPoid());
         entity.setRemunBookedByUsed(dto.getRemunBookedByUsed());
 
@@ -71,7 +71,7 @@ public class ShipRemunerationMasterMapper {
         entity.setActive(StringUtils.isNotBlank(dto.getActive()) ? dto.getActive() : entity.getActive());
         entity.setSeqNo(dto.getSeqNo());
         entity.setRemunBasedOn(dto.getRemunBasedOn());
-        entity.setRemunChargeCodePoid(String.valueOf(dto.getRemunChargeCodePoid()));
+        entity.setRemunChargeCodePoid(null != dto.getRemunChargeCodePoid() ? String.valueOf(dto.getRemunChargeCodePoid()) : null);
         entity.setGlPoid(dto.getGlPoid());
         entity.setRemunBookedByUsed(dto.getRemunBookedByUsed());
 
