@@ -234,6 +234,30 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setPicDetails(mapper.mapPicDetailsToDto(savedPicDetails));
         enrichDtoWithLovData(result, resolvedLine, groupPoid);
 
+        // Populate addressTypeMap
+        if (resolvedLine.getAddressPoid() != null) {
+            List<GlobalAddressDetails> addressDetails = addressDetailsRepository.findByAddressMasterPoid(resolvedLine.getAddressPoid());
+            if (!addressDetails.isEmpty()) {
+                Map<String, List<com.asg.common.lib.dto.AddressDetailsDTO>> byType = addressDetails.stream()
+                        .filter(a -> a.getAddressType() != null)
+                        .collect(Collectors.groupingBy(
+                                GlobalAddressDetails::getAddressType,
+                                Collectors.mapping(mapper::mapToAddressDetailsDto, Collectors.toList())
+                        ));
+                com.asg.common.lib.dto.AddressTypeMapDTO addressTypeMap = new com.asg.common.lib.dto.AddressTypeMapDTO();
+                addressTypeMap.setMain(byType.get("MAIN"));
+                addressTypeMap.setFinance(byType.get("FINANCE"));
+                addressTypeMap.setSales(byType.get("SALES"));
+                addressTypeMap.setOperation(byType.get("OPERATIONS"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
+                addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
+                addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
+                addressTypeMap.setCan(byType.get("CAN"));
+                result.setAddressTypeMap(addressTypeMap);
+            }
+        }
+
         log.info("Successfully created line with id: {}", resolvedLinePoid);
         return result;
     }
@@ -296,6 +320,30 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         List<ShipLineMasterPicDtl> updatedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setPicDetails(mapper.mapPicDetailsToDto(updatedPicDetails));
         enrichDtoWithLovData(result, saved, groupPoid);
+
+        // Populate addressTypeMap
+        if (saved.getAddressPoid() != null) {
+            List<GlobalAddressDetails> addressDetails = addressDetailsRepository.findByAddressMasterPoid(saved.getAddressPoid());
+            if (!addressDetails.isEmpty()) {
+                Map<String, List<com.asg.common.lib.dto.AddressDetailsDTO>> byType = addressDetails.stream()
+                        .filter(a -> a.getAddressType() != null)
+                        .collect(Collectors.groupingBy(
+                                GlobalAddressDetails::getAddressType,
+                                Collectors.mapping(mapper::mapToAddressDetailsDto, Collectors.toList())
+                        ));
+                com.asg.common.lib.dto.AddressTypeMapDTO addressTypeMap = new com.asg.common.lib.dto.AddressTypeMapDTO();
+                addressTypeMap.setMain(byType.get("MAIN"));
+                addressTypeMap.setFinance(byType.get("FINANCE"));
+                addressTypeMap.setSales(byType.get("SALES"));
+                addressTypeMap.setOperation(byType.get("OPERATIONS"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
+                addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
+                addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
+                addressTypeMap.setCan(byType.get("CAN"));
+                result.setAddressTypeMap(addressTypeMap);
+            }
+        }
 
         log.info("Successfully updated line with id: {}", id);
         return result;
