@@ -595,7 +595,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     billDetail.put("checkall", "Y");
                     billDetail.put("description", firstBillwiseAccount.get("REMARKS"));
                     billDetail.put("billRefType", "AGAINST");
-                    billDetail.put("billRefno", dynResult.get("DOC_REF")); // doc_ref from dynamic query
+                    billDetail.put("billRefno", firstBillwiseAccount.get("BILL_REF")); // preserve original bill reference
                     billDetail.put("containerNo", container.getContainerNo());
                     billDetail.put("billwiseBalance", "0"); // Always 0 in complex scenario
                     
