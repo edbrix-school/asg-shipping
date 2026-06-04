@@ -1,6 +1,7 @@
 package com.asg.shipping.exportManifestUpdate.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -215,6 +216,9 @@ public class ExportManifestUpdateController {
                             "attachment; filename=bl-print-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
+        } catch (ValidationException e) {
+            log.warn("Validation failed for BL Print {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
         } catch (Exception e) {
             log.error("Failed to generate BL Print for ID: {}", transactionPoid, e);
             return error("Failed to generate PDF: " + e.getMessage(), 500);

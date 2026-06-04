@@ -5,7 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.response.ApiResponse;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
-import com.asg.shipping.exceptions.ValidationException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestBl.dto.*;
 import com.asg.shipping.exportManifestBl.service.ExportManifestBlService;
