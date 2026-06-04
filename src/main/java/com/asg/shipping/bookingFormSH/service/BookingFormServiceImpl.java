@@ -144,6 +144,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         conditions.add("LOAD_FULL IS NULL");
         conditions.add("LOAD_EMPTY IS NULL");
+        conditions.add("EMPTY_OUT IS NULL");
 
         if (!conditions.isEmpty()) {
             where.append(" WHERE ").append(String.join(" AND ", conditions));
