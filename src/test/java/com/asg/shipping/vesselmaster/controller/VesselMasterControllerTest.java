@@ -1,7 +1,10 @@
 package com.asg.shipping.vesselmaster.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.vesselmaster.dto.VesselMasterCreateDTO;
 import com.asg.shipping.vesselmaster.dto.VesselMasterDto;
 import com.asg.shipping.vesselmaster.dto.VesselMasterUpdateDTO;
@@ -46,6 +49,9 @@ class VesselMasterControllerTest {
     @Mock
     private VesselMasterService vesselService;
 
+    @Mock
+    private LoggingService loggingService;
+
     @InjectMocks
     private VesselMasterController controller;
 
@@ -62,6 +68,7 @@ class VesselMasterControllerTest {
         mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
         mockedUserContext.when(UserContext::getUserPoid).thenReturn(200L);
         mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(300L);
+        mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-008");
 
         PageableHandlerMethodArgumentResolver pageableResolver = new PageableHandlerMethodArgumentResolver();
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -219,11 +226,13 @@ class VesselMasterControllerTest {
     @Test
     void getVessel_Success() throws Exception {
         when(vesselService.getVessel(1L)).thenReturn(vesselDto);
+        doNothing().when(loggingService).createLogSummaryEntry(any(LogDetailsEnum.class), anyString(), anyString());
 
         mockMvc.perform(get("/v1/vessel-master/1"))
                 .andExpect(status().isOk());
 
         verify(vesselService).getVessel(1L);
+        verify(loggingService).createLogSummaryEntry(LogDetailsEnum.VIEWED, "100-008", "1");
     }
 
     @Test
@@ -262,12 +271,37 @@ class VesselMasterControllerTest {
 
     @Test
     void deleteVessel_Success() throws Exception {
-        doNothing().when(vesselService).deleteVessel(1L);
+        doNothing().when(vesselService).deleteVessel(eq(1L), any());
 
         mockMvc.perform(delete("/v1/vessel-master/1"))
                 .andExpect(status().isOk());
 
-        verify(vesselService).deleteVessel(1L);
+        verify(vesselService).deleteVessel(eq(1L), any());
+    }
+
+    @Test
+    void deleteVessel_WithDeleteReason_Success() throws Exception {
+        DeleteReasonDto deleteReasonDto = new DeleteReasonDto();
+        deleteReasonDto.setDeleteReason("Test deletion");
+        
+        doNothing().when(vesselService).deleteVessel(eq(1L), any(DeleteReasonDto.class));
+
+        mockMvc.perform(delete("/v1/vessel-master/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(deleteReasonDto)))
+                .andExpect(status().isOk());
+
+        verify(vesselService).deleteVessel(eq(1L), any(DeleteReasonDto.class));
+    }
+
+    @Test
+    void deleteVessel_WithNullDeleteReason_Success() throws Exception {
+        doNothing().when(vesselService).deleteVessel(eq(1L), isNull());
+
+        mockMvc.perform(delete("/v1/vessel-master/1"))
+                .andExpect(status().isOk());
+
+        verify(vesselService).deleteVessel(eq(1L), isNull());
     }
 
     @Test
