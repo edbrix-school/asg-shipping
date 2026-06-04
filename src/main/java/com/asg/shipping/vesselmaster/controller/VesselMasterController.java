@@ -1,7 +1,11 @@
 package com.asg.shipping.vesselmaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.vesselmaster.dto.*;
 import com.asg.shipping.vesselmaster.service.VesselMasterService;
@@ -36,6 +40,7 @@ import java.util.Map;
 public class VesselMasterController {
 
     private final VesselMasterService vesselService;
+    private final LoggingService loggingService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/list")
@@ -146,6 +151,7 @@ public class VesselMasterController {
         log.info("Getting vessel with id: {}", id);
         VesselMasterDto vessel = vesselService.getVessel(id);
         log.info("Successfully retrieved vessel with id: {}", id);
+        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         return ApiResponse.success("Vessel retrieved successfully", vessel);
     }
 
@@ -344,9 +350,11 @@ public class VesselMasterController {
     })
     public ResponseEntity<?> deleteVessel(
             @Parameter(description = "Vessel POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Parameter(description = "Delete reason data", required = false)
+            @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Deleting vessel with id: {}", id);
-        vesselService.deleteVessel(id);
+        vesselService.deleteVessel(id, deleteReasonDto);
         log.info("Successfully deleted vessel with id: {}", id);
         return ApiResponse.success("Vessel deleted successfully");
     }
