@@ -200,9 +200,11 @@ class BookingFormControllerTest {
 
     @Test
     void processEmptyContainerLoad_Success() throws Exception {
-        when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("Success");
+        when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("Successfully uploaded Empty containers");
 
-        mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load")).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Successfully uploaded Empty containers"));
 
         verify(bookingFormService).processEmptyContainerLoad(1L);
     }
