@@ -232,7 +232,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setUserRoles(mapper.mapUserRoleDetailsToDto(savedUserRoles));
         List<ShipLineMasterPicDtl> savedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(resolvedLinePoid);
         result.setPicDetails(mapper.mapPicDetailsToDto(savedPicDetails));
-        //enrichDtoWithLovData(result, resolvedLine, groupPoid);
+        enrichDtoWithLovData(result, resolvedLine, groupPoid);
 
         // Populate addressTypeMap
         if (resolvedLine.getAddressPoid() != null) {
@@ -319,7 +319,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setUserRoles(mapper.mapUserRoleDetailsToDto(updatedUserRoles));
         List<ShipLineMasterPicDtl> updatedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setPicDetails(mapper.mapPicDetailsToDto(updatedPicDetails));
-        //enrichDtoWithLovData(result, saved, groupPoid);
+        enrichDtoWithLovData(result, saved, groupPoid);
 
         // Populate addressTypeMap
         if (saved.getAddressPoid() != null) {
