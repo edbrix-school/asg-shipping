@@ -5,6 +5,7 @@ import javax.sql.DataSource;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.PrintService;
@@ -32,7 +33,6 @@ import java.util.stream.Collectors;
 
 import net.sf.jasperreports.engine.JasperReport;
 
-import com.asg.shipping.exceptions.ValidationException;
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
