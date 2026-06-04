@@ -107,6 +107,12 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         SalesInvoiceShippingDto dto = SalesInvoiceMapper.mapToDto(entity);
 
         loadDetailTables(dto, id);
+        
+        // Add manifest details if BL POID is available
+        if (dto.getBlPoid() != null) {
+            Map<String, Object> manifestDetails = getManifestDetails(dto.getBlPoid());
+            dto.setManifestDetails(manifestDetails);
+        }
 //        enrichLovData(dto);
 
         log.info("Successfully retrieved Sales Invoice with id: {}", id);
