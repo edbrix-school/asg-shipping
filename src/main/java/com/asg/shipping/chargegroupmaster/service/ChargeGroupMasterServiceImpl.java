@@ -49,11 +49,11 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
     @Override
     public ChargeGroupMasterResponseDto create(ChargeGroupMasterRequestDto request) {
 
-        repository.findByChargeGroupCode(request.getChargeGroupCode())
+        repository.findByChargeGroupCodeIgnoreCase(request.getChargeGroupCode())
                 .ifPresent(e -> {
                     throw new IllegalArgumentException("Charge Group Code already exists");
                 });
-        repository.findByChargeGroupName(request.getChargeGroupName())
+        repository.findByChargeGroupNameIgnoreCase(request.getChargeGroupName())
                 .ifPresent(e -> {
                     throw new IllegalArgumentException("Charge Group Name already exists");
                 });
