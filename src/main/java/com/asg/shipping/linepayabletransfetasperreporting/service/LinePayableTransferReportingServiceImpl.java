@@ -5,12 +5,14 @@ package com.asg.shipping.linepayabletransfetasperreporting.service;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
@@ -19,6 +21,8 @@ import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportT
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferDtlRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferHdrRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.util.LinePayableTransferReportingMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -54,8 +58,17 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     private final LoggingService loggingService;
     private final JdbcTemplate jdbcTemplate;
     private final LinePayableTransferReportingMapper mapper;
+    private final LovDataService lovDataService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private static final String DOC_ID = "100-432";
+
+    private static final String LOV_LINE_MASTER = "LINE_MASTER";
+    private static final String LOV_ALL_BL_NUMBER = "ALLBLNUMBER";
+    private static final String LOV_CHARGE_MASTER = "CHARGE_MASTER";
+    private static final String LOV_CURRENCY = "CURRENCY";
 
     @Override
     @Transactional(readOnly = true)
@@ -123,19 +136,11 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         ShipLineReportTransferHdr entity = new ShipLineReportTransferHdr();
         mapper.mapCreateDTOToEntity(createDTO, entity, groupPoid, companyPoid);
 
-        // Generate DOC_REF if not provided
-        if (entity.getDocRef() == null || entity.getDocRef().trim().isEmpty()) {
-            String docRef = generateDocRef(companyPoid);
-            entity.setDocRef(docRef);
-        } else {
-            // Validate DOC_REF uniqueness
-            if (hdrRepository.existsByDocRef(entity.getDocRef(), null)) {
-                throw new ValidationException("DOC_REF already exists: " + entity.getDocRef());
-            }
-        }
-
         // Save entity (generates TRANSACTION_POID via IDENTITY)
         ShipLineReportTransferHdr saved = hdrRepository.save(entity);
+        hdrRepository.flush();
+        // Bypass Hibernate L1 cache to get trigger-generated values (TRANSACTION_POID, DOC_REF)
+        entityManager.refresh(saved);
 
         // If line, BL type, and dates are provided, load data via stored procedure
         if (saved.getLinePoid() != null && saved.getBlType() != null
@@ -180,13 +185,6 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
         // Update entity
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
-
-        // Validate DOC_REF uniqueness if changed
-        if (updateDTO.getDocRef() != null && !updateDTO.getDocRef().equals(entity.getDocRef())) {
-            if (hdrRepository.existsByDocRef(updateDTO.getDocRef(), transactionPoid)) {
-                throw new ValidationException("DOC_REF already exists: " + updateDTO.getDocRef());
-            }
-        }
 
         ShipLineReportTransferHdr saved = hdrRepository.save(entity);
 
@@ -275,7 +273,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 cs.setString(4, request.getBlType());
                 cs.setDate(5, Date.valueOf(request.getReportStartDate()));
                 cs.setDate(6, Date.valueOf(request.getReportEndDate()));
-                cs.setString(7, "ALL");
+                cs.setString(7, resolveChargeFilter(request.getChargeFilter()));
                 cs.registerOutParameter(8, Types.REF_CURSOR);
                 cs.execute();
 
@@ -415,7 +413,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 cs.setString(4, request.getBlType());
                 cs.setDate(5, Date.valueOf(request.getReportStartDate()));
                 cs.setDate(6, Date.valueOf(request.getReportEndDate()));
-                cs.setString(7, "ALL");
+                cs.setString(7, resolveChargeFilter(request.getChargeFilter()));
                 cs.registerOutParameter(8, Types.REF_CURSOR);
                 cs.execute();
 
@@ -503,6 +501,13 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     }
 
     // ==================== Private Helper Methods ====================
+
+    private String resolveChargeFilter(String chargeFilter) {
+        if (chargeFilter == null || chargeFilter.isBlank()) {
+            return "ALL";
+        }
+        return chargeFilter.trim().toUpperCase(Locale.ROOT);
+    }
 
     /**
      * Generate DOC_REF using company code and sequence
@@ -655,74 +660,63 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         dto.setDetails(mapper.mapDtlListToDto(details));
     }
 
-    /**
-     * Enrich DTO with LOV data
-     */
     private void enrichLovData(LinePayableTransferReportingDto dto) {
-        // Enrich line
+        // --- Header ---
         if (dto.getLinePoid() != null) {
-            enrichLineData(dto.getLinePoid(), (name, code) -> {
-                dto.setLineName(name);
-                dto.setLineCode(code);
-            });
-        }
-
-        // Enrich detail records
-        if (dto.getDetails() != null) {
-            for (LinePayableTransferReportingDtlDto detail : dto.getDetails()) {
-                if (detail.getChargePoid() != null) {
-                    enrichChargeData(detail.getChargePoid(), (name, code) -> {
-                        detail.setChargeDescription(name);
-                        detail.setChargeCode(code);
-                    });
-                }
-                if (detail.getCurrencyCode() != null) {
-                    enrichCurrencyData(detail.getCurrencyCode(), (name) -> {
-                        detail.setCurrencyName(name);
-                    });
-                }
+            Map<Long, LovGetListDto> lineMap = lovDataService.getDetailsByPoidsAndLovName(
+                    List.of(dto.getLinePoid()), LOV_LINE_MASTER);
+            LovGetListDto lineLov = lineMap.get(dto.getLinePoid());
+            if (lineLov != null) {
+                dto.setLineDet(lineLov);
+                dto.setLineName(lineLov.getDescription());
+                dto.setLineCode(lineLov.getCode());
             }
         }
-    }
 
-    // Helper interfaces for enrichment
-    @FunctionalInterface
-    private interface EnrichmentCallback {
-        void apply(String name, String code);
-    }
+        if (dto.getDetails() == null || dto.getDetails().isEmpty()) return;
 
-    @FunctionalInterface
-    private interface EnrichmentCallbackSingle {
-        void apply(String name);
-    }
+        // --- Gather distinct IDs/codes from all detail rows ---
+        List<Long> mainfestPoids = dto.getDetails().stream()
+                .map(LinePayableTransferReportingDtlDto::getMainfestTransactionPoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-    private void enrichLineData(Long poid, EnrichmentCallback callback) {
-        String sql = "SELECT LINE_NAME, LINE_CODE FROM SHIP_LINE_MASTER WHERE LINE_POID = ?";
-        try {
-            Map<String, Object> result = jdbcTemplate.queryForMap(sql, poid);
-            callback.apply((String) result.get("LINE_NAME"), (String) result.get("LINE_CODE"));
-        } catch (Exception e) {
-            log.warn("Could not enrich line data for POID: {}", poid);
-        }
-    }
+        List<Long> chargePoids = dto.getDetails().stream()
+                .map(LinePayableTransferReportingDtlDto::getChargePoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-    private void enrichChargeData(Long poid, EnrichmentCallback callback) {
-        String sql = "SELECT CHARGE_DESCRIPTION, CHARGE_CODE FROM GLOBAL_CHARGE_MASTER WHERE CHARGE_POID = ?";
-        try {
-            Map<String, Object> result = jdbcTemplate.queryForMap(sql, poid);
-            callback.apply((String) result.get("CHARGE_DESCRIPTION"), (String) result.get("CHARGE_CODE"));
-        } catch (Exception e) {
-            log.warn("Could not enrich charge data for POID: {}", poid);
-        }
-    }
+        List<String> currencyCodes = dto.getDetails().stream()
+                .map(LinePayableTransferReportingDtlDto::getCurrencyCode)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-    private void enrichCurrencyData(String currencyCode, EnrichmentCallbackSingle callback) {
-        String sql = "SELECT CURRENCY_NAME FROM GLOBAL_CURRENCY_MASTER WHERE CURRENCY_CODE = ?";
-        try {
-            String currencyName = jdbcTemplate.queryForObject(sql, String.class, currencyCode);
-            callback.apply(currencyName);
-        } catch (Exception e) {
-            log.warn("Could not enrich currency data for code: {}", currencyCode);
+        // --- Single batch call per LOV type ---
+        Map<Long, LovGetListDto> mainfestMap = lovDataService.getDetailsByPoidsAndLovName(mainfestPoids, LOV_ALL_BL_NUMBER);
+        Map<Long, LovGetListDto> chargeMap = lovDataService.getDetailsByPoidsAndLovName(chargePoids, LOV_CHARGE_MASTER);
+        Map<String, LovGetListDto> currencyMap = lovDataService.getDetailsByCodesAndLovName(currencyCodes, LOV_CURRENCY);
+
+        // --- Apply to each detail ---
+        for (LinePayableTransferReportingDtlDto detail : dto.getDetails()) {
+            if (detail.getMainfestTransactionPoid() != null) {
+                LovGetListDto lov = mainfestMap.get(detail.getMainfestTransactionPoid());
+                if (lov != null) {
+                    detail.setMainfestDet(lov);
+                    detail.setBlNumber(lov.getCode());
+                }
+            }
+            if (detail.getChargePoid() != null) {
+                LovGetListDto lov = chargeMap.get(detail.getChargePoid());
+                if (lov != null) {
+                    detail.setChargeDet(lov);
+                    detail.setChargeDescription(lov.getDescription());
+                    detail.setChargeCode(lov.getCode());
+                }
+            }
+            if (detail.getCurrencyCode() != null) {
+                LovGetListDto lov = currencyMap.get(detail.getCurrencyCode());
+                if (lov != null) {
+                    detail.setCurrencyDet(lov);
+                    detail.setCurrencyName(lov.getDescription());
+                }
+            }
         }
     }
 

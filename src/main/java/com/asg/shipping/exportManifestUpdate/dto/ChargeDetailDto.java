@@ -57,6 +57,6 @@ public class ChargeDetailDto {
     private BigDecimal saleAmount; // quantity * perQuantityAmount
     private BigDecimal revenue; // saleAmount - buyAmount
     private String drilldownLinkInfo; // For display purposes
-    private String actionType;
+    private ActionType actionType;
 }
 

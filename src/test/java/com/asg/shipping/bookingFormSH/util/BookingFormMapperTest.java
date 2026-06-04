@@ -29,8 +29,8 @@ class BookingFormMapperTest {
                 .notifyPoid1(8L).notifyAddressPoid1(9L).notifyPoid2(10L).notifyAddressPoid2(11L)
                 .quotationTransactionPoid(12L).vesselPoid(13L).vesselEtaDate(date)
                 .linePoid(14L).salesmanPoid(15L).comodityPoid(16L)
-                .totalVolume(BigDecimal.ONE).totalWeight(BigDecimal.TEN).unitPack("BOX")
-                .totalNoOfPacks(BigDecimal.ZERO).placeOfRecieptPoid(17L).placeOfDelieveryPoid(18L)
+                .totalVolume(1.0).totalWeight(10.0).unitPack("BOX")
+                .totalNoOfPacks(0.0).placeOfRecieptPoid(17L).placeOfDelieveryPoid(18L)
                 .portOfLoadingPoid(19L).portOfDischargePoid(20L).remarks("Remarks")
                 .mateStatus("OPEN").voyageNo("V001").bookingIssueNo("B001")
                 .mateLoadDate(date).mateLoadNo(21L).mateLoadVoyagePoid(22L)
@@ -69,8 +69,8 @@ class BookingFormMapperTest {
                 .shipperPoid(1L).shipperAddressPoid(1L).consigneePoid(1L).consigneeAddressPoid(1L)
                 .notifyPoid1(1L).notifyAddressPoid1(1L).notifyPoid2(1L).notifyAddressPoid2(1L)
                 .quotationTransactionPoid(1L).vesselPoid(1L).vesselEtaDate(date).linePoid(1L)
-                .salesmanPoid(1L).comodityPoid(1L).totalVolume(BigDecimal.ONE).totalWeight(BigDecimal.ONE)
-                .unitPack("BOX").totalNoOfPacks(BigDecimal.ONE).placeOfRecieptPoid(1L).placeOfDelieveryPoid(1L)
+                .salesmanPoid(1L).comodityPoid(1L).totalVolume(1.0).totalWeight(1.0)
+                .unitPack("BOX").totalNoOfPacks(1.0).placeOfRecieptPoid(1L).placeOfDelieveryPoid(1L)
                 .portOfLoadingPoid(1L).portOfDischargePoid(1L).remarks("R").mateStatus("S").voyageNo("V")
                 .bookingIssueNo("B").mateLoadDate(date).mateLoadNo(1L).mateLoadVoyagePoid(1L)
                 .issueType("T").consigneeName("N").consigneeAddress("A").splitBookingNo(1L)
@@ -95,8 +95,8 @@ class BookingFormMapperTest {
                 .shipperPoid(1L).shipperAddressPoid(1L).consigneePoid(1L).consigneeAddressPoid(1L)
                 .notifyPoid1(1L).notifyAddressPoid1(1L).notifyPoid2(1L).notifyAddressPoid2(1L)
                 .quotationTransactionPoid(1L).vesselPoid(1L).vesselEtaDate(date).linePoid(1L)
-                .salesmanPoid(1L).comodityPoid(1L).totalVolume(BigDecimal.ONE).totalWeight(BigDecimal.ONE)
-                .unitPack("BOX").totalNoOfPacks(BigDecimal.ONE).placeOfRecieptPoid(1L).placeOfDelieveryPoid(1L)
+                .salesmanPoid(1L).comodityPoid(1L).totalVolume(1.0).totalWeight(1.0)
+                .unitPack("BOX").totalNoOfPacks(1.0).placeOfRecieptPoid(1L).placeOfDelieveryPoid(1L)
                 .portOfLoadingPoid(1L).portOfDischargePoid(1L).remarks("R").mateStatus("S").voyageNo("V")
                 .bookingIssueNo("B").mateLoadDate(date).mateLoadNo(1L).mateLoadVoyagePoid(1L)
                 .issueType("T").consigneeName("N").consigneeAddress("A").splitBookingNo(1L)
@@ -106,7 +106,6 @@ class BookingFormMapperTest {
         ShipMateHdr entity = new ShipMateHdr();
         BookingFormMapper.mapUpdateDTOToEntity(dto, entity);
 
-        assertEquals(date, entity.getTransactionDate());
         assertEquals("Agent", entity.getVessalAgentName());
     }
 

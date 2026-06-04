@@ -279,12 +279,16 @@ class ImportManifestServiceImplTest {
     void getBlStatus_Success() {
         when(repository.findById(1L)).thenReturn(Optional.of(mockEntity));
         when(procRepository.getBlStatus(1L))
-                .thenReturn(com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto.builder().status("NEW").build());
+                .thenReturn(com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto.builder()
+                        .status(com.asg.shipping.importmanifestupdate.dto.BlStatusResponseDto.StatusDetails.builder()
+                                .jobNo("NEW")
+                                .build())
+                        .build());
 
         var response = service.getBlStatus(1L);
 
         assertNotNull(response);
-        assertEquals("NEW", response.getStatus());
+        assertEquals("NEW", response.getStatus().getJobNo());
     }
 
     @Test

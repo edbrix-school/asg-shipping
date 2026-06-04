@@ -1,5 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.dto;
 
+import com.asg.common.lib.dto.AddressTypeMapDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -58,6 +59,10 @@ public class LinePrincipalMasterCreateDTO {
     @Schema(description = "Address POID", example = "400")
     private Long addressPoid;
 
+    @Valid
+    @Schema(description = "Address information")
+    private AddressTypeMapDTO addressTypeMap;
+
     @Schema(description = "Company POID", example = "600")
     private Long companyPoid;
 
@@ -87,6 +92,8 @@ public class LinePrincipalMasterCreateDTO {
 
     @Schema(description = "Sequence Number", example = "1")
     private Integer seqno;
+
+    private String lineColor;
 
     @Pattern(regexp = "Y|N", message = "THC Pay and Collect must be 'Y' or 'N'")
     @Size(max = 1, message = "THC Pay and Collect cannot exceed 1 character")

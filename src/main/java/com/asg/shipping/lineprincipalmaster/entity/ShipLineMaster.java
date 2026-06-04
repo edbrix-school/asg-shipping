@@ -174,6 +174,9 @@ public class ShipLineMaster extends BaseEntity {
     @Column(name = "REPORTING_TYPE", length = 50)
     private String reportingType;
 
+    @Column(name = "LINE_COLOUR", length = 20)
+    private String lineColor;
+
     @Column(name = "REPORTING_DAY", length = 50)
     private String reportingDay;
 

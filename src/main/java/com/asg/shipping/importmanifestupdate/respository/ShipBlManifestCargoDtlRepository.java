@@ -15,7 +15,12 @@ public interface ShipBlManifestCargoDtlRepository  extends JpaRepository<ShipBlM
     List<ShipBlManifestCargoDtl>
     findByIdTransactionPoidOrderByIdDetRowId(Long transactionPoid);
 
+    List<ShipBlManifestCargoDtl>
+    findByIdTransactionPoidAndIdDescriptionTypeOrderByIdDetRowId(Long transactionPoid, String descriptionType);
+
     void deleteByIdTransactionPoid(Long transactionPoid);
+
+    void deleteByIdTransactionPoidAndIdDescriptionType(Long transactionPoid, String descriptionType);
 
     @Query("""
         SELECT COALESCE(MAX(d.id.detRowId), 0)

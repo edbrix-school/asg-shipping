@@ -20,7 +20,7 @@ public class ExportManifestBlResponse {
     private LovItem voyageTransactionDet; // LOV: VESSAL_VOYAGE
     private String blNumber;
     private String agentReference;
-    private Long shipperPoid;
+    private BigDecimal shipperPoid;
     private LovItem shipperDet; // LOV: CUSTOMER_MASTER
     private Long shipperAddressPoid;
     private LovItem shipperAddressDet; // LOV: CUSTOMER_MASTER
@@ -69,6 +69,7 @@ public class ExportManifestBlResponse {
     private LovItem portOfDischargeDet; // LOV: PORT_MASTER
     private String remarks;
     private String blStatus;
+    private String displayTopInfoExportBLS;
     private String blOrginalPrint;
     private LocalDate blOrginalDate;
     private String blPrintedBy;
@@ -142,5 +143,10 @@ public class ExportManifestBlResponse {
 
     private List<GeneralCargoDetailDto> generalCargoDetails;
 
-}
+    // Simple single-string view — first DESC / first MARK record for this BL
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
 
+    private BlStatusResponse.StatusDetails statusDetails;
+
+}

@@ -9,6 +9,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
 import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportTransferDtl;
@@ -16,7 +17,9 @@ import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportT
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferDtlRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.repository.ShipLineReportTransferHdrRepository;
 import com.asg.shipping.linepayabletransfetasperreporting.util.LinePayableTransferReportingMapper;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -66,6 +69,12 @@ class LinePayableTransferReportingServiceImplTest {
     @Mock
     private LinePayableTransferReportingMapper mapper;
 
+    @Mock
+    private LovDataService lovDataService;
+
+    @Mock
+    private EntityManager entityManager;
+
     @InjectMocks
     private LinePayableTransferReportingServiceImpl service;
 
@@ -78,6 +87,10 @@ class LinePayableTransferReportingServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(service, "entityManager", entityManager);
+        when(lovDataService.getDetailsByPoidsAndLovName(any(), any())).thenReturn(Collections.emptyMap());
+        when(lovDataService.getDetailsByCodesAndLovName(any(), any())).thenReturn(Collections.emptyMap());
+
         testEntity = ShipLineReportTransferHdr.builder()
                 .transactionPoid(1L)
                 .groupPoid(1L)
@@ -160,6 +173,8 @@ class LinePayableTransferReportingServiceImplTest {
         when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
         when(hdrRepository.existsByDocRef(anyString(), any())).thenReturn(false);
         when(hdrRepository.save(any())).thenReturn(testEntity);
+        doNothing().when(hdrRepository).flush();
+        doNothing().when(entityManager).refresh(any());
         when(mapper.mapToDto(any())).thenReturn(testDto);
         when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
         when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
@@ -169,6 +184,8 @@ class LinePayableTransferReportingServiceImplTest {
 
         assertNotNull(result);
         verify(hdrRepository).save(any());
+        verify(hdrRepository).flush();
+        verify(entityManager).refresh(any());
     }
 
     @Test
@@ -282,6 +299,7 @@ class LinePayableTransferReportingServiceImplTest {
                 .blType("IMPORT")
                 .reportStartDate(LocalDate.of(2024, 1, 1))
                 .reportEndDate(LocalDate.of(2024, 1, 31))
+                .chargeFilter("FRTTHC")
                 .build();
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
@@ -317,6 +335,7 @@ class LinePayableTransferReportingServiceImplTest {
             assertNotNull(result);
             assertEquals(1, result.size());
             verify(dtlRepository).deleteByTransactionPoid(1L);
+            verify(cs).setString(7, "FRTTHC");
         }
     }
 
@@ -451,6 +470,7 @@ class LinePayableTransferReportingServiceImplTest {
                 .blType("IMPORT")
                 .reportStartDate(LocalDate.of(2024, 1, 1))
                 .reportEndDate(LocalDate.of(2024, 1, 31))
+                .chargeFilter("OTHERS")
                 .build();
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
@@ -479,6 +499,7 @@ class LinePayableTransferReportingServiceImplTest {
 
             assertNotNull(result);
             assertEquals(1, result.size());
+            verify(cs).setString(7, "OTHERS");
         }
     }
 

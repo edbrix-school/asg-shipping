@@ -6,6 +6,8 @@ import com.asg.shipping.containertypes.dto.ContainerTypeUpdateDTO;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -15,6 +17,13 @@ import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
  */
 @Component
 public class ContainerTypeMapper {
+
+    /**
+     * Round BigDecimal to 3 decimal places
+     */
+    private BigDecimal roundToThreeDecimals(BigDecimal value) {
+        return value != null ? value.setScale(3, RoundingMode.HALF_UP) : null;
+    }
 
     /**
      * Convert Entity to DTO
@@ -56,9 +65,9 @@ public class ContainerTypeMapper {
         entity.setContainerTypeName(dto.getContainerTypeName());
         entity.setContainerTypeSize(dto.getContainerTypeSize());
         entity.setContainerTypeIsoName(dto.getContainerTypeIsoName());
-        entity.setContainerCargoWeight(dto.getContainerCargoWeight());
-        entity.setContainerTareWeight(dto.getContainerTareWeight());
-        entity.setContainerTeuFactor(dto.getContainerTeuFactor());
+        entity.setContainerCargoWeight(roundToThreeDecimals(dto.getContainerCargoWeight()));
+        entity.setContainerTareWeight(roundToThreeDecimals(dto.getContainerTareWeight()));
+        entity.setContainerTeuFactor(roundToThreeDecimals(dto.getContainerTeuFactor()));
         entity.setContainerTypeCategory(dto.getContainerTypeCategory());
         entity.setContainerGrpPoid(dto.getContainerGrpPoid());
         entity.setContainerApmtTypeCode(dto.getContainerApmtTypeCode());
@@ -81,13 +90,13 @@ public class ContainerTypeMapper {
      */
     public void mapUpdateDTOToEntity(ContainerTypeUpdateDTO dto, ShipContainerTypeMaster entity, Long groupPoid, Long userPoid) {
         entity.setGroupPoid(groupPoid);
-        // Note: containerTypeCode is not updateable
+        entity.setContainerTypeCode(dto.getContainerTypeCode());
         entity.setContainerTypeName(dto.getContainerTypeName());
         entity.setContainerTypeSize(dto.getContainerTypeSize());
         entity.setContainerTypeIsoName(dto.getContainerTypeIsoName());
-        entity.setContainerCargoWeight(dto.getContainerCargoWeight());
-        entity.setContainerTareWeight(dto.getContainerTareWeight());
-        entity.setContainerTeuFactor(dto.getContainerTeuFactor());
+        entity.setContainerCargoWeight(roundToThreeDecimals(dto.getContainerCargoWeight()));
+        entity.setContainerTareWeight(roundToThreeDecimals(dto.getContainerTareWeight()));
+        entity.setContainerTeuFactor(roundToThreeDecimals(dto.getContainerTeuFactor()));
         entity.setContainerTypeCategory(dto.getContainerTypeCategory());
         entity.setContainerGrpPoid(dto.getContainerGrpPoid());
         entity.setContainerApmtTypeCode(dto.getContainerApmtTypeCode());

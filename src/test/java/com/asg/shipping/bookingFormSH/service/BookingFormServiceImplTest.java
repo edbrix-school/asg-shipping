@@ -44,6 +44,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -212,27 +213,37 @@ class BookingFormServiceImplTest {
 
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(hdr));
+        // enrichCargoDetails now correctly guards on cargoDetails == null (bug fixed)
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(chargesDtl));
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(containerDtl));
         when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(stuffingDtl));
 
         when(lovService.getChargeMasterLov(5L)).thenReturn(List.of(lovItem));
-        when(lovService.getPortMasterLov(6L)).thenReturn(List.of(lovItem));
+        when(lovService.getPortMasterLov(anyLong())).thenReturn(List.of(lovItem));
         when(lovService.getCommodityMasterLov(7L)).thenReturn(List.of(lovItem));
-        when(lovService.getPortMasterLov(8L)).thenReturn(List.of(lovItem));
 
         BookingFormDto result = service.getBookingForm(TX_POID);
         assertNotNull(result);
+        assertEquals(1, result.getChargesDetails().size());
+        assertEquals(1, result.getContainerDetails().size());
     }
 
     @Test
-    void getBookingForm_deleted_throwsResourceNotFound() {
+    void getBookingForm_deleted_returnsDto() {
         ShipMateHdr hdr = new ShipMateHdr();
         hdr.setDeleted("Y");
+        hdr.setTransactionPoid(TX_POID);
         when(headerRepository.findByTransactionPoid(any()))
                 .thenReturn(Optional.of(hdr));
-        assertThrows(ResourceNotFoundException.class, () -> service.getBookingForm(TX_POID));
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+
+        BookingFormDto result = service.getBookingForm(TX_POID);
+        assertNotNull(result);
+        assertEquals("Y", result.getDeleted());
     }
 
     @Test
@@ -838,12 +849,25 @@ class BookingFormServiceImplTest {
         hdr.setDeleted("N");
         hdr.setTransactionDate(null);
 
-        when(headerRepository.findByTransactionPoid(TX_POID))
-                .thenReturn(Optional.of(hdr));
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(containerRepo.existsByTransactionPoidWithContainerAndNoReturn(TX_POID)).thenReturn(false);
 
         service.deleteBookingForm(TX_POID, null);
 
         verify(documentDeleteService).deleteDocument(eq(TX_POID), eq("SHIP_MATE_HDR"), eq("TRANSACTION_POID"), eq(null), eq(null));
+    }
+
+    @Test
+    void deleteBookingForm_withContainers_throwsValidationException() {
+        ShipMateHdr hdr = new ShipMateHdr();
+        hdr.setDeleted("N");
+        hdr.setTransactionDate(null);
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(containerRepo.existsByTransactionPoidWithContainerAndNoReturn(TX_POID)).thenReturn(true);
+
+        assertThrows(ValidationException.class, () -> service.deleteBookingForm(TX_POID, null));
+        verify(documentDeleteService, never()).deleteDocument(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -929,6 +953,68 @@ class BookingFormServiceImplTest {
     }
 
     // ============================================================
+    // searchContainerInventory
+    // ============================================================
+
+    @Test
+    void searchContainerInventory_withLoadFullIsNullFilter() {
+        Pageable pageable = PageRequest.of(0, 40);
+
+        when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
+                .thenReturn(List.of(new java.util.HashMap<>(Map.of("CONTAINER_NO", "TEMU123", "LINE_POID", 103))));
+        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Long.class)))
+                .thenReturn(5L);
+
+        Map<String, Object> result = service.searchContainerInventory("DOC123", null, null, 103L, pageable);
+
+        assertNotNull(result);
+        // verify LOAD_FULL IS NULL is in the query
+        verify(jdbcTemplate).queryForList(
+                argThat(sql -> sql.contains("LOAD_FULL IS NULL") && sql.contains("LINE_POID = ?")),
+                any(Object[].class));
+        verify(jdbcTemplate).queryForObject(
+                argThat(sql -> sql.contains("LOAD_FULL IS NULL") && sql.contains("LINE_POID = ?")),
+                any(Object[].class), eq(Long.class));
+    }
+
+    @Test
+    void searchContainerInventory_withContainerNoFilter() {
+        Pageable pageable = PageRequest.of(0, 40);
+
+        when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Long.class))).thenReturn(0L);
+
+        Map<String, Object> result = service.searchContainerInventory("DOC123", "TEMU123", null, 103L, pageable);
+        assertNotNull(result);
+    }
+
+    @Test
+    void searchContainerInventory_totalNullReturnsZero() {
+        Pageable pageable = PageRequest.of(0, 40);
+
+        when(jdbcTemplate.queryForList(anyString(), any(Object[].class))).thenReturn(List.of());
+        when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Long.class))).thenReturn(null);
+
+        Map<String, Object> result = service.searchContainerInventory("DOC123", null, null, 103L, pageable);
+        assertNotNull(result);
+    }
+
+    // ============================================================
+    // importFileWithTransaction
+    // ============================================================
+
+    @Test
+    void importFileWithTransaction_emptyFile_throwsValidationException() {
+        org.springframework.mock.web.MockMultipartFile emptyFile =
+                new org.springframework.mock.web.MockMultipartFile(
+                        "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        new byte[0]);
+
+        assertThrows(ValidationException.class, () ->
+                service.importFileWithTransaction(emptyFile, TX_POID, GROUP_POID, COMPANY_POID, USER_POID));
+    }
+
+    // ============================================================
     // Print methods
     // ============================================================
 
@@ -963,6 +1049,158 @@ class BookingFormServiceImplTest {
 
         byte[] result = service.cntReturnBookingPrintFormAll(TX_POID, "STAMP");
         assertNotNull(result);
+    }
+
+    // ============================================================
+    // transferBookingWithContainers
+    // ============================================================
+
+    @Test
+    void transferBookingWithContainers_success_withSplitBookingNoFromRequest() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(null); // DB has no splitBookingNo, but request provides one
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        mockJdbcCall("Ok");
+
+        assertDoesNotThrow(() -> service.transferBookingWithContainers(TX_POID, 913L));
+        verify(jdbcTemplate).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_success_withSplitBookingNoFromDb() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(828L); // DB has splitBookingNo, request passes null
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        mockJdbcCall("Ok");
+
+        assertDoesNotThrow(() -> service.transferBookingWithContainers(TX_POID, null));
+        verify(jdbcTemplate).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_requestOverridesDbValue() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(828L); // DB has 828, request sends 913 — request should win
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        mockJdbcCall("Ok");
+
+        assertDoesNotThrow(() -> service.transferBookingWithContainers(TX_POID, 913L));
+        verify(jdbcTemplate).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_noSplitBookingNo_throwsValidationException() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(null); // DB null, request null — must throw
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.transferBookingWithContainers(TX_POID, null));
+        assertTrue(ex.getMessage().contains("Split Booking No is required"));
+        verify(jdbcTemplate, never()).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_notFound_throwsResourceNotFoundException() {
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.transferBookingWithContainers(TX_POID, 913L));
+        verify(jdbcTemplate, never()).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_procThrowsException_throwsValidationException() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(913L);
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(jdbcTemplate.execute(any(ConnectionCallback.class)))
+                .thenThrow(new RuntimeException("ORA-00001: unique constraint violated"));
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.transferBookingWithContainers(TX_POID, 913L));
+        assertTrue(ex.getMessage().contains("Transfer failed"));
+    }
+
+    // ============================================================
+    // exportStuffingAdviceExcel
+    // ============================================================
+
+    @Test
+    void exportStuffingAdviceExcel_notFound_throwsResourceNotFound() {
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> service.exportStuffingAdviceExcel(TX_POID));
+    }
+
+    @Test
+    void exportStuffingAdviceExcel_emptyStuffing_returnsExcel() {
+        ShipMateHdr hdr = savedHdr();
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(lovService.getLineMasterLov(any())).thenReturn(List.of());
+        when(lovService.getPortMasterLov(any())).thenReturn(List.of());
+
+        byte[] result = service.exportStuffingAdviceExcel(TX_POID);
+        assertNotNull(result);
+        assertTrue(result.length > 0);
+    }
+
+    @Test
+    void exportStuffingAdviceExcel_withStuffingRows_nullNumericFields_doesNotThrow() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setLinePoid(3L);
+        hdr.setPortOfDischargePoid(9L);
+        hdr.setBookingIssueNo("BK001");
+        hdr.setVessalAgentName("VESSEL");
+        hdr.setVoyageNo("V001");
+
+        ShipMateStuffingDtl dtl = new ShipMateStuffingDtl();
+        dtl.setContainerNo("CONT001");
+        dtl.setEquipmentSealNo("SEAL1");
+        dtl.setEquipmentIsoType("20GP");
+        dtl.setMarks("MARK1");
+        dtl.setColourCode("RED");
+        dtl.setQtyOfBundles(null);   // null — must not throw
+        dtl.setWeightTonnes(null);   // null — must not throw
+
+        LovItem lovItem = buildLovItem(3L, "MSC", "MSC LINE");
+        LovItem portItem = buildLovItem(9L, "DXB", "DUBAI PORT");
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(dtl));
+        when(lovService.getLineMasterLov(3L)).thenReturn(List.of(lovItem));
+        when(lovService.getPortMasterLov(9L)).thenReturn(List.of(portItem));
+
+        byte[] result = service.exportStuffingAdviceExcel(TX_POID);
+        assertNotNull(result);
+        assertTrue(result.length > 0);
+    }
+
+    @Test
+    void exportStuffingAdviceExcel_withStuffingRows_withNumericValues_returnsExcel() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setLinePoid(3L);
+        hdr.setPortOfDischargePoid(9L);
+
+        ShipMateStuffingDtl dtl = new ShipMateStuffingDtl();
+        dtl.setContainerNo("CONT001");
+        dtl.setMarks("MARK1");
+        dtl.setQtyOfBundles(new java.math.BigDecimal("10.500"));
+        dtl.setWeightTonnes(new java.math.BigDecimal("5.250"));
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(dtl));
+        when(lovService.getLineMasterLov(3L)).thenReturn(List.of());
+        when(lovService.getPortMasterLov(9L)).thenReturn(List.of());
+
+        byte[] result = service.exportStuffingAdviceExcel(TX_POID);
+        assertNotNull(result);
+        assertTrue(result.length > 0);
     }
 
     // ============================================================

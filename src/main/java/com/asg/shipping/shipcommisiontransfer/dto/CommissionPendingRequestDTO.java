@@ -8,4 +8,6 @@ public class CommissionPendingRequestDTO {
     private Long blPoid;
     private Double frtBuyActual;
     private String shortLegSelected;
+    private String recordType;
+    private Long voyageTransactionPoid;
 }

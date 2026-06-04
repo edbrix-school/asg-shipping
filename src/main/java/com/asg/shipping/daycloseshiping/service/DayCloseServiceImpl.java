@@ -56,6 +56,11 @@ import java.util.Map;
 @Slf4j
 public class DayCloseServiceImpl implements DayCloseService {
 
+    private static final String RECEIPT_CHEQUE_CASH_MISMATCH =
+            "Receipt Total and Cheque, Cash total amount not match, Call for support.....";
+    private static final String RECEIPT_DENOMINATION_MISMATCH =
+            "Receipt total and Denomination total amount not match.....";
+
     private final ArShDayEndCloseHdrRepository hdrRepo;
     private final ArShDayEndCloseDtlRepository dtlRepo;
     private final GlobalCurrencyDenominationRepository denomRepo;
@@ -91,13 +96,7 @@ public class DayCloseServiceImpl implements DayCloseService {
     public DayCloseDto createDayClose(DayCloseDto dto, Long groupPoid, Long companyPoid, Long userPoid) {
 
         DayCloseHdrDto header = dto.getHeader();
-
-        if (header.getTransactionDate() != null
-                && hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(header.getTransactionDate(), groupPoid,
-                companyPoid) > 0) {
-
-            throw new ValidationException("Transaction date already closed: " + header.getTransactionDate());
-        }
+        validateDuplicateTransactionDate(header.getTransactionDate(), groupPoid, companyPoid, null);
 
         validateAmounts(dto);
 
@@ -138,6 +137,8 @@ public class DayCloseServiceImpl implements DayCloseService {
     public DayCloseDto updateDayClose(DayCloseDto request, Long transactionPoid, Long groupPoid, Long companyPoid,
                                       Long userPoid) {
 
+        validateDuplicateTransactionDate(request.getHeader().getTransactionDate(), groupPoid, companyPoid,
+                transactionPoid);
         validateAmounts(request);
 
         ArShDayEndCloseHdr existingData = hdrRepo.findById(transactionPoid).orElseThrow(() -> new ResourceNotFoundException("Day close Shipping", TRANSACTIONPOID, transactionPoid));
@@ -313,13 +314,16 @@ public class DayCloseServiceImpl implements DayCloseService {
         DayCloseHdrDto header = request.getHeader();
         List<DayCloseDenominationDto> details = request.getDenominations();
 
+        if (header == null) {
+            throw new ValidationException("Day close header is required.");
+        }
+
         BigDecimal cash = header.getCashAmount();
         BigDecimal cheque = header.getChequeAmount();
         BigDecimal total = header.getTotalAmount();
 
         if (cash != null && cheque != null && total != null && cash.add(cheque).compareTo(total) != 0) {
-
-            throw new ValidationException("Receipt Total and Cheque, Cash total amount not match.");
+            throw new ValidationException(RECEIPT_CHEQUE_CASH_MISMATCH);
         }
 
         if (details == null || details.isEmpty()) {
@@ -330,13 +334,13 @@ public class DayCloseServiceImpl implements DayCloseService {
                 BigDecimal::add);
 
         if (cash != null && denomTotal.compareTo(cash) != 0) {
-            throw new ValidationException("Receipt total and Denomination total amount not match.");
+            throw new ValidationException(RECEIPT_DENOMINATION_MISMATCH);
         }
     }
 
     private BigDecimal calculateDenominationAmount(DayCloseDenominationDto dto) {
 
-        if (dto == null || dto.getAction().equalsIgnoreCase("ISDELETED")) {
+        if (dto == null || (dto.getAction() != null && dto.getAction().equalsIgnoreCase("ISDELETED"))) {
             return BigDecimal.ZERO;
         }
 
@@ -358,6 +362,22 @@ public class DayCloseServiceImpl implements DayCloseService {
         entity.setCurrencyType(dto.getCurrencyType());
         entity.setNoOfTran(dto.getNoOfTran());
         entity.setCashAmount(dto.getCashAmount());
+    }
+
+    private void validateDuplicateTransactionDate(LocalDate transactionDate, Long groupPoid, Long companyPoid,
+                                                  Long excludeTransactionPoid) {
+        if (transactionDate == null) {
+            return;
+        }
+
+        Long count = (excludeTransactionPoid == null)
+                ? hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoid(transactionDate, groupPoid, companyPoid)
+                : hdrRepo.countByTransactionDateAndGroupPoidAndCompanyPoidExcludingTransactionPoid(
+                        transactionDate, groupPoid, companyPoid, excludeTransactionPoid);
+
+        if (count != null && count > 0) {
+            throw new ValidationException("Transaction date already closed: " + transactionDate);
+        }
     }
 
     @Override

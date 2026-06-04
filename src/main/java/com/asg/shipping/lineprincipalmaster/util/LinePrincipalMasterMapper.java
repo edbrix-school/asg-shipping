@@ -1,5 +1,8 @@
 package com.asg.shipping.lineprincipalmaster.util;
 
+import com.asg.common.lib.dto.AddressDetailsDTO;
+import com.asg.common.lib.dto.AddressTypeMapDTO;
+import com.asg.shipping.common.entity.GlobalAddressDetails;
 import com.asg.shipping.lineprincipalmaster.dto.*;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMaster;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterChargeDtl;
@@ -79,6 +82,7 @@ public class LinePrincipalMasterMapper {
                 .lineCategory(entity.getLineCategory())
                 .billTo(entity.getBillTo())
                 .reportingType(entity.getReportingType())
+                .lineColor(entity.getLineColor())
                 .reportingDay(entity.getReportingDay())
                 .reportDescription(entity.getReportDescription())
                 .createdBy(entity.getCreatedBy())
@@ -138,6 +142,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineCategory(dto.getLineCategory());
         entity.setBillTo(dto.getBillTo());
         entity.setReportingType(dto.getReportingType());
+        entity.setLineColor(dto.getLineColor());
         entity.setReportingDay(dto.getReportingDay());
         entity.setReportDescription(dto.getReportDescription());
 
@@ -210,6 +215,7 @@ public class LinePrincipalMasterMapper {
         entity.setLineCategory(dto.getLineCategory());
         entity.setBillTo(dto.getBillTo());
         entity.setReportingType(dto.getReportingType());
+        entity.setLineColor(dto.getLineColor());
         entity.setReportingDay(dto.getReportingDay());
         entity.setReportDescription(dto.getReportDescription());
 
@@ -423,6 +429,48 @@ public class LinePrincipalMasterMapper {
         picDtl.setRemarks(dto.getRemarks());
         picDtl.setLastModifiedBy(currentUser);
         picDtl.setLastModifiedDate(LocalDateTime.now());
+    }
+
+    public AddressDetailsDTO mapToAddressDetailsDto(GlobalAddressDetails entity) {
+        if (entity == null) return null;
+        List<String> emails = new ArrayList<>();
+        if (entity.getEmail1() != null) emails.add(entity.getEmail1());
+        if (entity.getEmail2() != null) emails.add(entity.getEmail2());
+        List<String> stateList = (entity.getState() != null && !entity.getState().isBlank())
+                ? java.util.Arrays.asList(entity.getState().split(","))
+                : null;
+        return AddressDetailsDTO.builder()
+                .addressPoid(entity.getAddressPoid() != null ? entity.getAddressPoid().toString() : null)
+                .addressType(entity.getAddressType())
+                .contactPerson(entity.getContactPerson())
+                .designation(entity.getDesignation())
+                .offTel1(entity.getOffTel1())
+                .offTel2(entity.getOffTel2())
+                .mobile(entity.getMobile())
+                .fax(entity.getFax())
+                .email(emails.isEmpty() ? null : emails)
+                .website(entity.getWebsite())
+                .poBox(entity.getPoBox())
+                .offNo(entity.getOffNo())
+                .bldg(entity.getBldg())
+                .road(entity.getRoad())
+                .area(entity.getAreaCity())
+                .city(entity.getCity())
+                .state(stateList)
+                .landMark(entity.getLandMark())
+                .verified(entity.getVerified())
+                .verifiedBy(entity.getVerifiedBy())
+                .verifiedDate(entity.getVerifiedDate() != null ? entity.getVerifiedDate().toInstant()
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate() : null)
+                .createdBy(entity.getCreatedBy())
+                .createdDate(entity.getCreatedDate() != null ? entity.getCreatedDate().toLocalDateTime() : null)
+                .lastModifiedBy(entity.getLastmodifiedBy())
+                .lastModifiedDate(entity.getLastmodifiedDate() != null ? entity.getLastmodifiedDate().toLocalDateTime() : null)
+                .whatsappNo(entity.getWhatsappNo())
+                .linkedIn(entity.getLinkedin())
+                .instagram(entity.getInstagram())
+                .facebook(entity.getFacebook())
+                .build();
     }
 
     private String resolveLinePortRefno(String singleCode, List<String> multiCodes) {

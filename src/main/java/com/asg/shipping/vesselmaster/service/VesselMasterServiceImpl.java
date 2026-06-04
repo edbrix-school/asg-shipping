@@ -1,8 +1,13 @@
 package com.asg.shipping.vesselmaster.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
@@ -13,6 +18,7 @@ import com.asg.shipping.vesselmaster.repository.ShipVesselMasterRepository;
 import com.asg.shipping.vesselmaster.util.VesselMasterMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +48,8 @@ public class VesselMasterServiceImpl implements VesselMasterService {
     private final DocumentSearchService documentSearchService;
     private final VesselMasterLovService vesselMasterLovService;
     private final VesselMasterMapper mapper;
+    private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
 
     @Override
     @Transactional(readOnly = true)
@@ -97,6 +105,11 @@ public class VesselMasterServiceImpl implements VesselMasterService {
         // Save main entity
         ShipVesselMaster saved = vesselRepository.save(vessel);
 
+        // Log creation
+        String docId = UserContext.getDocumentId();
+        String key = saved.getVesselPoid().toString();
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
+
         // Fetch and return with LOV data
         VesselMasterDto result = mapper.mapToDto(saved);
         enrichDtoWithLovData(result, saved, groupPoid);
@@ -118,12 +131,21 @@ public class VesselMasterServiceImpl implements VesselMasterService {
         ShipVesselMaster vessel = vesselRepository.findByVesselPoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Vessel", "vesselPoid", id.toString()));
 
+        // Create backup for logging
+        ShipVesselMaster oldVessel = new ShipVesselMaster();
+        BeanUtils.copyProperties(vessel, oldVessel);
+
         // Validate
         validateVesselUpdateDTO(dto, groupPoid, id);
 
         // Update main entity
         mapper.mapUpdateDTOToEntity(dto, vessel, groupPoid, userPoid, companyPoid);
         ShipVesselMaster saved = vesselRepository.save(vessel);
+
+        // Log changes
+        String docId = UserContext.getDocumentId();
+        String key = saved.getVesselPoid().toString();
+        loggingService.logChanges(oldVessel, saved, ShipVesselMaster.class, docId, key, LogDetailsEnum.MODIFIED, "VESSEL_POID");
 
         // Fetch and return with LOV data
         VesselMasterDto result = mapper.mapToDto(saved);
@@ -153,7 +175,7 @@ public class VesselMasterServiceImpl implements VesselMasterService {
 
     @Override
     @Transactional
-    public void deleteVessel(Long id) {
+    public void deleteVessel(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting vessel with id: {}", id);
 
         Long groupPoid = getGroupPoid();
@@ -165,12 +187,15 @@ public class VesselMasterServiceImpl implements VesselMasterService {
             return;
         }
 
-        vessel.setDeleted("Y");
-        vessel.setActive("N");
-        vessel.setLastModifiedBy(getCurrentUser());
-        vessel.setLastModifiedDate(LocalDateTime.now());
-
-        vesselRepository.save(vessel);
+        // Use DocumentDeleteService for consistent delete handling with logging
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_VESSEL_MASTER",
+                "VESSEL_POID",
+                deleteReasonDto,
+                null
+        );
+        
         log.info("Successfully deleted vessel with id: {}", id);
     }
 

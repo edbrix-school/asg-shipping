@@ -1,7 +1,9 @@
 package com.asg.shipping.lineprincipalmaster.dto;
 
+import com.asg.common.lib.dto.AddressTypeMapDTO;
 import com.asg.shipping.common.dto.LovItem;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -225,5 +227,11 @@ public class LinePrincipalMasterDto {
 
     @Schema(description = "Deleted Flag (Y/N)")
     private String deleted;
+
+    private String lineColor;
+
+    @Valid
+    @Schema(description = "Address information")
+    private AddressTypeMapDTO addressTypeMap;
 }
 

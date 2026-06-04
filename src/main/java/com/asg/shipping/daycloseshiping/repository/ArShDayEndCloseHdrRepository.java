@@ -24,6 +24,22 @@ public interface ArShDayEndCloseHdrRepository extends JpaRepository<ArShDayEndCl
     Long countByTransactionDateAndGroupPoidAndCompanyPoid(@Param("transactionDate") LocalDate transactionDate,
                                                           @Param("groupPoid") Long groupPoid, @Param("companyPoid") Long companyPoid);
 
+    @Query(value = """
+                SELECT COUNT(*)
+                FROM AR_SH_DAY_END_CLOSE_HDR
+                WHERE TRANSACTION_DATE = :transactionDate
+                  AND GROUP_POID = :groupPoid
+                  AND COMPANY_POID = :companyPoid
+                  AND TRANSACTION_POID <> :excludeTransactionPoid
+                  AND (DELETED IS NULL OR DELETED = 'N')
+                  AND (TOTAL_AMOUNT IS NULL OR TOTAL_AMOUNT >= 0)
+            """, nativeQuery = true)
+    Long countByTransactionDateAndGroupPoidAndCompanyPoidExcludingTransactionPoid(
+            @Param("transactionDate") LocalDate transactionDate,
+            @Param("groupPoid") Long groupPoid,
+            @Param("companyPoid") Long companyPoid,
+            @Param("excludeTransactionPoid") Long excludeTransactionPoid);
+
     Optional<ArShDayEndCloseHdr> findByTransactionPoidAndGroupPoid(Long id, Long groupPoid);
 
     @Query("""

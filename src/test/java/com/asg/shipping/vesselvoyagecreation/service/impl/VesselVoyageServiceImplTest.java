@@ -5,12 +5,15 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.exportManifestUpdate.dto.ActionType;
 import com.asg.shipping.vesselvoyagecreation.dto.*;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
+import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageTranshipDtlEntity;
 import com.asg.shipping.vesselvoyagecreation.repository.*;
 import com.asg.shipping.vesselvoyagecreation.util.FreightCargo;
 import com.asg.shipping.vesselvoyagecreation.util.ImportExport;
@@ -27,6 +30,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import net.sf.jasperreports.engine.JasperReport;
+import com.asg.common.lib.dto.excel.ExcelFileData;
 
 import javax.sql.DataSource;
 import java.nio.file.Files;
@@ -70,6 +74,9 @@ class VesselVoyageServiceImplTest {
 
     @Mock
     private PrintService printService;
+
+    @Mock
+    private ExcelExportService excelExportService;
 
     @Mock
     private DataSource dataSource;
@@ -263,6 +270,39 @@ class VesselVoyageServiceImplTest {
     }
 
     @Test
+    void downloadExcelExport_apmtDischarge_callsExcelServiceWithCorrectDocId() {
+        byte[] expected = new byte[]{1, 2, 3};
+        com.asg.common.lib.dto.excel.ExcelFileData fileData =
+                com.asg.common.lib.dto.excel.ExcelFileData.builder()
+                        .content(expected)
+                        .fileName("Discharge_list.xlsx")
+                        .build();
+
+        try (MockedStatic<UserContext> mocked = mockStatic(UserContext.class)) {
+            mocked.when(UserContext::getCompanyPoid).thenReturn(2L);
+            mocked.when(UserContext::getUserPoid).thenReturn(3L);
+
+            when(excelExportService.generateExcel(
+                    eq("100-291"), eq("418537"), anyMap(), eq("Discharge_list.xlsx")))
+                    .thenReturn(fileData);
+
+            byte[] result = service.downloadExcelExport(418537L, "apmt-discharge", "Discharge_list.xlsx");
+            assertArrayEquals(expected, result);
+        }
+    }
+
+    @Test
+    void downloadExcelExport_unsupportedType_throwsIllegalArgument() {
+        try (MockedStatic<UserContext> mocked = mockStatic(UserContext.class)) {
+            mocked.when(UserContext::getCompanyPoid).thenReturn(2L);
+            mocked.when(UserContext::getUserPoid).thenReturn(3L);
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> service.downloadExcelExport(418537L, "unknown-type", "export.xlsx"));
+        }
+    }
+
+    @Test
     void print_success_setsParamsAndCallsFillReport() throws Exception {
         when(printService.buildBaseParams(10L, "100-101")).thenReturn(new HashMap<>());
 
@@ -283,6 +323,76 @@ class VesselVoyageServiceImplTest {
         Map<String, Object> params = paramsCaptor.getValue();
         assertEquals(FreightCargo.FALSE.name(), params.get("P_FREIGHTCARGO"));
         assertEquals(ImportExport.EXPORT.name(), params.get("P_IMPORT_EXPORT"));
+    }
+
+    @Test
+    void updateTranshipments_isCreated_insertsNewRow() {
+        long voyagePoid = 417658L;
+
+        ShipVoyageTranshipDtlEntity existing = ShipVoyageTranshipDtlEntity.builder()
+                .transactionPoid(voyagePoid).detRowId(1L).containerNo("UNIU2071484").build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+        when(transhipDtlRepository.findMaxDetRowId(voyagePoid)).thenReturn(1L);
+
+        TranshipmentUpdateItem item = TranshipmentUpdateItem.builder()
+                .containerNo("BAXU2665632").status("FCL").isoCode("22G12")
+                .build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+
+        service.updateTranshipments(voyagePoid,
+                TranshipmentUpdateRequest.builder().items(List.of(item)).build());
+
+        ArgumentCaptor<ShipVoyageTranshipDtlEntity> captor =
+                ArgumentCaptor.forClass(ShipVoyageTranshipDtlEntity.class);
+        verify(transhipDtlRepository).save(captor.capture());
+        assertEquals(2L, captor.getValue().getDetRowId());
+        assertEquals("BAXU2665632", captor.getValue().getContainerNo());
+    }
+
+    @Test
+    void updateTranshipments_isUpdated_updatesExistingRow() {
+        long voyagePoid = 417658L;
+
+        ShipVoyageTranshipDtlEntity existing = ShipVoyageTranshipDtlEntity.builder()
+                .transactionPoid(voyagePoid).detRowId(2L).containerNo("BAXU2665630").status("FCL").build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+
+        TranshipmentUpdateItem item = TranshipmentUpdateItem.builder()
+                .detRowId(2L).containerNo("BAXU2665630").status("LCL").isoCode("22G99")
+                .build();
+
+        service.updateTranshipments(voyagePoid,
+                TranshipmentUpdateRequest.builder().items(List.of(item)).build());
+
+        verify(transhipDtlRepository).save(existing);
+        assertEquals("LCL", existing.getStatus());
+        assertEquals("22G99", existing.getIsoCode());
+    }
+
+    @Test
+    void updateTranshipments_isDeleted_deletesRow() {
+        long voyagePoid = 417658L;
+
+        ShipVoyageTranshipDtlEntity existing = ShipVoyageTranshipDtlEntity.builder()
+                .transactionPoid(voyagePoid).detRowId(17L).containerNo("BAXU2665632").build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+
+        TranshipmentUpdateItem item = TranshipmentUpdateItem.builder()
+                .actionType(ActionType.ISDELETED).detRowId(17L)
+                .build();
+
+        service.updateTranshipments(voyagePoid,
+                TranshipmentUpdateRequest.builder().items(List.of(item)).build());
+
+        verify(transhipDtlRepository).delete(existing);
     }
 }
 

@@ -312,8 +312,23 @@ public class ExportManifestUpdateMapper {
         if (request.getTotalVolume() != null) {
             entity.setTotalVolume(request.getTotalVolume());
         }
-        if (request.getOriginalBl() != null) {
+        // blOrginalPrint takes priority over originalBl
+        if (request.getBlOrginalPrint() != null) {
+            entity.setBlOrginalPrint(request.getBlOrginalPrint());
+        } else if (request.getOriginalBl() != null) {
             entity.setBlOrginalPrint(request.getOriginalBl());
+        }
+        if (request.getHoldCanDo() != null) {
+            entity.setHoldCanDo(request.getHoldCanDo());
+        }
+        if (request.getHoldReason() != null) {
+            entity.setHoldReason(request.getHoldReason());
+        }
+        if (request.getBlStatus() != null) {
+            entity.setBlStatus(request.getBlStatus());
+        }
+        if (request.getReleasedStatus() != null) {
+            entity.setReleasedStatus(request.getReleasedStatus());
         }
 
         // Set audit fields

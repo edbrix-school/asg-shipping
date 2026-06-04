@@ -5,12 +5,14 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.DateUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.exportManifestUpdate.dto.ActionType;
 import com.asg.shipping.vesselvoyagecreation.dto.*;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageTranshipDtlEntity;
@@ -65,6 +67,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private final VoyageBillsRepository voyageBillsRepository;
     private final LoggingService loggingService;
     private final PrintService printService;
+    private final ExcelExportService excelExportService;
     private final DataSource dataSource;
 
     @Value("${vvc.edi.upload-dir:./uploads/edi}")
@@ -405,53 +408,120 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         for (ShipVoyageTranshipDtlEntity e : existing) map.put(e.getDetRowId(), e);
 
         for (TranshipmentUpdateItem item : request.getItems()) {
-            ShipVoyageTranshipDtlEntity e = map.get(item.getDetRowId());
-            if (e == null)
-                throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
-            if (item.getContainerNo() != null) e.setContainerNo(item.getContainerNo());
-            e.setContainerType(item.getContainerType());
-            e.setSealNo(item.getSealNo());
-            e.setSealNo2(item.getSealNo2());
-            e.setSealNo3(item.getSealNo3());
-            e.setSealKindCode(item.getSealKindCode());
-            e.setSealKindCode1(item.getSealKindCode1());
-            e.setIsoCode(item.getIsoCode());
-            e.setStatus(item.getStatus());
-            e.setOrigin(item.getOrigin());
-            e.setPol(item.getPol());
-            e.setIsLoaded(item.getIsLoaded());
-            e.setLoadTransactionPoid(item.getLoadTransactionPoid());
-            e.setIsRefer(item.getIsRefer());
-            e.setRefferTemp(item.getRefferTemp());
-            e.setRefferHum(item.getRefferHum());
-            e.setRefferVent(item.getRefferVent());
-            e.setImcoClassActual(item.getImcoClassActual());
-            e.setImo(item.getImo());
-            e.setImoCode1(item.getImoCode1());
-            e.setUnNo1(item.getUnNo1());
-            e.setImoCode2(item.getImoCode2());
-            e.setUnNo2(item.getUnNo2());
-            e.setLoadWeightKg(item.getLoadWeightKg());
-            e.setWeightKg(item.getWeightKg());
-            e.setWeightTon(item.getWeightTon());
-            e.setOogH(item.getOogH());
-            e.setOogL(item.getOogL());
-            e.setOogLW(item.getOogLW());
-            e.setOogRW(item.getOogRW());
-            e.setOogB(item.getOogB());
-            e.setOogF(item.getOogF());
-            e.setOogA(item.getOogA());
-            e.setOogType(item.getOogType());
-            e.setHsCode(item.getHsCode());
-            e.setHsShortname(item.getHsShortname());
-            e.setSlot(item.getSlot());
-            e.setBlading(item.getBlading());
-            e.setOutboundVessel(item.getOutboundVessel());
-            e.setLoadOrigin(item.getLoadOrigin());
-            e.setLoadFinalDestination(item.getLoadFinalDestination());
+            ActionType action = item.getActionType();
+            if (action == null) {
+                action = (item.getDetRowId() == null) ? ActionType.ISCREATED : ActionType.ISUPDATED;
+            }
+
+            if (ActionType.ISCREATED == action) {
+                Long nextDetRowId = transhipDtlRepository.findMaxDetRowId(voyagePoid) + 1;
+                ShipVoyageTranshipDtlEntity newEntity = ShipVoyageTranshipDtlEntity.builder()
+                        .transactionPoid(voyagePoid)
+                        .detRowId(nextDetRowId)
+                        .containerNo(item.getContainerNo())
+                        .containerType(item.getContainerType())
+                        .sealNo(item.getSealNo())
+                        .sealNo2(item.getSealNo2())
+                        .sealNo3(item.getSealNo3())
+                        .sealKindCode(item.getSealKindCode())
+                        .sealKindCode1(item.getSealKindCode1())
+                        .isoCode(item.getIsoCode())
+                        .status(item.getStatus())
+                        .origin(item.getOrigin())
+                        .pol(item.getPol())
+                        .isLoaded(item.getIsLoaded())
+                        .loadTransactionPoid(item.getLoadTransactionPoid())
+                        .isRefer(item.getIsRefer())
+                        .refferTemp(item.getRefferTemp())
+                        .refferHum(item.getRefferHum())
+                        .refferVent(item.getRefferVent())
+                        .imcoClassActual(item.getImcoClassActual())
+                        .imo(item.getImo())
+                        .imoCode1(item.getImoCode1())
+                        .unNo1(item.getUnNo1())
+                        .imoCode2(item.getImoCode2())
+                        .unNo2(item.getUnNo2())
+                        .loadWeightKg(item.getLoadWeightKg())
+                        .weightKg(item.getWeightKg())
+                        .weightTon(item.getWeightTon())
+                        .oogH(item.getOogH())
+                        .oogL(item.getOogL())
+                        .oogLW(item.getOogLW())
+                        .oogRW(item.getOogRW())
+                        .oogB(item.getOogB())
+                        .oogF(item.getOogF())
+                        .oogA(item.getOogA())
+                        .oogType(item.getOogType())
+                        .hsCode(item.getHsCode())
+                        .hsShortname(item.getHsShortname())
+                        .slot(item.getSlot())
+                        .blading(item.getBlading())
+                        .outboundVessel(item.getOutboundVessel())
+                        .loadOrigin(item.getLoadOrigin())
+                        .loadFinalDestination(item.getLoadFinalDestination())
+                        .build();
+                transhipDtlRepository.save(newEntity);
+
+            } else if (ActionType.ISDELETED == action) {
+                if (item.getDetRowId() == null)
+                    throw new IllegalArgumentException("detRowId is required for isDeleted");
+                ShipVoyageTranshipDtlEntity e = map.get(item.getDetRowId());
+                if (e == null)
+                    throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
+                transhipDtlRepository.delete(e);
+
+            } else {
+                // isUpdated or default
+                if (item.getDetRowId() == null)
+                    throw new IllegalArgumentException("detRowId is required for update");
+                ShipVoyageTranshipDtlEntity e = map.get(item.getDetRowId());
+                if (e == null)
+                    throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
+                if (item.getContainerNo() != null) e.setContainerNo(item.getContainerNo());
+                e.setContainerType(item.getContainerType());
+                e.setSealNo(item.getSealNo());
+                e.setSealNo2(item.getSealNo2());
+                e.setSealNo3(item.getSealNo3());
+                e.setSealKindCode(item.getSealKindCode());
+                e.setSealKindCode1(item.getSealKindCode1());
+                e.setIsoCode(item.getIsoCode());
+                e.setStatus(item.getStatus());
+                e.setOrigin(item.getOrigin());
+                e.setPol(item.getPol());
+                e.setIsLoaded(item.getIsLoaded());
+                e.setLoadTransactionPoid(item.getLoadTransactionPoid());
+                e.setIsRefer(item.getIsRefer());
+                e.setRefferTemp(item.getRefferTemp());
+                e.setRefferHum(item.getRefferHum());
+                e.setRefferVent(item.getRefferVent());
+                e.setImcoClassActual(item.getImcoClassActual());
+                e.setImo(item.getImo());
+                e.setImoCode1(item.getImoCode1());
+                e.setUnNo1(item.getUnNo1());
+                e.setImoCode2(item.getImoCode2());
+                e.setUnNo2(item.getUnNo2());
+                e.setLoadWeightKg(item.getLoadWeightKg());
+                e.setWeightKg(item.getWeightKg());
+                e.setWeightTon(item.getWeightTon());
+                e.setOogH(item.getOogH());
+                e.setOogL(item.getOogL());
+                e.setOogLW(item.getOogLW());
+                e.setOogRW(item.getOogRW());
+                e.setOogB(item.getOogB());
+                e.setOogF(item.getOogF());
+                e.setOogA(item.getOogA());
+                e.setOogType(item.getOogType());
+                e.setHsCode(item.getHsCode());
+                e.setHsShortname(item.getHsShortname());
+                e.setSlot(item.getSlot());
+                e.setBlading(item.getBlading());
+                e.setOutboundVessel(item.getOutboundVessel());
+                e.setLoadOrigin(item.getLoadOrigin());
+                e.setLoadFinalDestination(item.getLoadFinalDestination());
+                transhipDtlRepository.save(e);
+            }
         }
 
-        transhipDtlRepository.saveAll(existing);
         return transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
     }
 
@@ -596,27 +666,19 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     }
 
     @Override
-    public Resource downloadExcelExport(Long voyagePoid, String type) {
-        // Functional implementation: serve files from a configured exports folder.
-        // Generation is assumed to be handled by DB procedures / report server job, similar to legacy.
-        Path dir = Path.of(exportsDir, String.valueOf(voyagePoid));
+    public byte[] downloadExcelExport(Long voyagePoid, String type, String outputFileName) {
         String t = type == null ? "" : type.toLowerCase();
-
-        try {
-            return switch (t) {
-                case "apmt-discharge" -> readSingle(dir, "Discharge_list.xlsx");
-                case "transhipment-discharge" -> readSingle(dir, "Transhipment_Discharge_list.xlsx");
-                case "apmt-general-vessel-discharge" -> readSingle(dir, "APMTLISTGERN.xlsx");
-                case "yml-export-csv" -> readSingle(dir, "OA_Booking_csv_format.csv");
-                case "tbl" -> readZip(dir, Map.of(
-                        "TBLManifestTemplate.xlsx", "TBLManifestTemplate.xlsx",
-                        "TBLLIST.xlsx", "TBLLIST.xlsx"
-                ), "TBL_Export_" + voyagePoid + ".zip");
-                default -> throw new IllegalArgumentException("Unsupported export type: " + type);
-            };
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Unable to read export file(s): " + e.getMessage());
-        }
+        String docKeyPoid = String.valueOf(voyagePoid);
+        String docId = switch (t) {
+            case "apmt-discharge"               -> "100-291";
+            case "transhipment-discharge"        -> "100-459";
+            case "apmt-general-vessel-discharge" -> "100-369";
+            case "yml-export-csv"                -> "100-300";
+            case "tbl"                           -> "100-425";
+            default -> throw new IllegalArgumentException("Unsupported export type: " + type);
+        };
+        log.info("Excel export | voyagePoid={} type={} docId={}", voyagePoid, type, docId);
+        return excelExportService.generateExcel(docId, docKeyPoid, Map.of(), outputFileName).getContent();
     }
 
     @Override

@@ -9,6 +9,7 @@ import java.util.Map;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,9 +20,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.MafiTrailerDateUpdateForm.dto.MafiTrailerDateUpdateFormRequest;
@@ -90,5 +93,27 @@ public class MafiTrailerDateUpdateFormController {
 			@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated Port details", required = true, content = @Content(mediaType = "application/json", schema = @Schema(implementation = MafiTrailerDateUpdateFormRequest.class))) @Valid @RequestBody MafiTrailerDateUpdateFormRequest request) {
         MafiTrailerDateUpdateFormResponse response=service.update(transactionPoid, request);
 		return success("Mafi Trailer date update form updated successfully", response);
+	}
+
+	@AllowedAction(UserRolesRightsEnum.DELETE)
+	@Operation(summary = "Delete a Mafi Trailer date update form", description = "Soft deletes a Mafi Trailer date update form record using document delete service", responses = {
+			@ApiResponse(responseCode = "200", description = "Mafi Trailer date update form deleted successfully"),
+			@ApiResponse(responseCode = "404", description = "Mafi Trailer date update form not found"),
+			@ApiResponse(responseCode = "401", description = "Unauthorized"),
+			@ApiResponse(responseCode = "500", description = "Internal server error") }, security = @SecurityRequirement(name = "bearerAuth"))
+	@DeleteMapping("/{transactionPoid}")
+	public ResponseEntity<?> delete(
+			@Parameter(description = "Transaction POID to be deleted", required = true, example = "1001") @PathVariable("transactionPoid") Long transactionPoid,
+			@Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
+		try {
+			service.delete(transactionPoid, deleteReasonDto);
+			return success("Mafi Trailer date update form deleted successfully");
+		} catch (ResourceNotFoundException e) {
+			log.error("Error deleting Mafi Trailer date update form with transactionPoid {}: {}", transactionPoid, e.getMessage());
+			return badRequest(e.getMessage());
+		} catch (Exception e) {
+			log.error("Error deleting Mafi Trailer date update form with transactionPoid {}: {}", transactionPoid, e.getMessage());
+			return badRequest("Failed to delete Mafi Trailer date update form: " + e.getMessage());
+		}
 	}
 }

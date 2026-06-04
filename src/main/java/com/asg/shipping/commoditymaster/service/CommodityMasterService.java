@@ -26,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -57,11 +58,11 @@ public class CommodityMasterService {
     private static final String SUCCESSFULLY_UPDATED_MSG = "Successfully updated commodity with id: {}";
     private static final String SUCCESSFULLY_DELETED_MSG = "Successfully deleted commodity with id: {}";
 
-    public Map<String, Object> listCommodities(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> listCommodities(String docId, FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info(LISTING_COMMODITIES_MSG, docId, pageable.getPageNumber(), pageable.getPageSize());
         String operator = documentSearchService.resolveOperator(request);
         String isDeleted = documentSearchService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentSearchService.resolveFilters(request);
+        List<FilterDto> filters = documentSearchService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
 
         RawSearchResult raw = documentSearchService.search(docId, filters, operator, pageable, isDeleted,
                 COMODITY_NAME_FIELD,
@@ -87,7 +88,7 @@ public class CommodityMasterService {
         mapper.mapCreateDTOToEntity(request, commodity, UserContext.getGroupPoid(), UserContext.getUserName());
         CommodityMaster saved = commodityMasterRepository.save(commodity);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), String.format("%s %s", LogDetailsEnum.CREATED, saved.getCommodityName()));
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), saved.getCommodityPoid().toString());
 
         log.info(SUCCESSFULLY_CREATED_MSG, saved.getCommodityPoid());
         return mapper.mapToDto(saved);
