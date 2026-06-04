@@ -44,6 +44,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -212,7 +213,7 @@ class BookingFormServiceImplTest {
 
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(hdr));
-        // enrichCargoDetails guards on chargesDetails == null, so provide non-null charges list
+        // enrichCargoDetails now correctly guards on cargoDetails == null (bug fixed)
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(chargesDtl));
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(containerDtl));
@@ -1048,6 +1049,82 @@ class BookingFormServiceImplTest {
 
         byte[] result = service.cntReturnBookingPrintFormAll(TX_POID, "STAMP");
         assertNotNull(result);
+    }
+
+    // ============================================================
+    // transferBookingWithContainers
+    // ============================================================
+
+    @Test
+    void transferBookingWithContainers_success_withSplitBookingNoFromRequest() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(null); // DB has no splitBookingNo, but request provides one
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        mockJdbcCall("Ok");
+
+        assertDoesNotThrow(() -> service.transferBookingWithContainers(TX_POID, 913L));
+        verify(jdbcTemplate).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_success_withSplitBookingNoFromDb() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(828L); // DB has splitBookingNo, request passes null
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        mockJdbcCall("Ok");
+
+        assertDoesNotThrow(() -> service.transferBookingWithContainers(TX_POID, null));
+        verify(jdbcTemplate).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_requestOverridesDbValue() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(828L); // DB has 828, request sends 913 — request should win
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        mockJdbcCall("Ok");
+
+        assertDoesNotThrow(() -> service.transferBookingWithContainers(TX_POID, 913L));
+        verify(jdbcTemplate).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_noSplitBookingNo_throwsValidationException() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(null); // DB null, request null — must throw
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.transferBookingWithContainers(TX_POID, null));
+        assertTrue(ex.getMessage().contains("Split Booking No is required"));
+        verify(jdbcTemplate, never()).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_notFound_throwsResourceNotFoundException() {
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.transferBookingWithContainers(TX_POID, 913L));
+        verify(jdbcTemplate, never()).execute(any(ConnectionCallback.class));
+    }
+
+    @Test
+    void transferBookingWithContainers_procThrowsException_throwsValidationException() {
+        ShipMateHdr hdr = savedHdr();
+        hdr.setSplitBookingNo(913L);
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(jdbcTemplate.execute(any(ConnectionCallback.class)))
+                .thenThrow(new RuntimeException("ORA-00001: unique constraint violated"));
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.transferBookingWithContainers(TX_POID, 913L));
+        assertTrue(ex.getMessage().contains("Transfer failed"));
     }
 
     // ============================================================

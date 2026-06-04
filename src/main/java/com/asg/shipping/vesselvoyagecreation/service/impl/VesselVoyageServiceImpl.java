@@ -12,6 +12,7 @@ import com.asg.common.lib.utility.DateUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.exportManifestUpdate.dto.ActionType;
 import com.asg.shipping.vesselvoyagecreation.dto.*;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageTranshipDtlEntity;
@@ -407,53 +408,120 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         for (ShipVoyageTranshipDtlEntity e : existing) map.put(e.getDetRowId(), e);
 
         for (TranshipmentUpdateItem item : request.getItems()) {
-            ShipVoyageTranshipDtlEntity e = map.get(item.getDetRowId());
-            if (e == null)
-                throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
-            if (item.getContainerNo() != null) e.setContainerNo(item.getContainerNo());
-            e.setContainerType(item.getContainerType());
-            e.setSealNo(item.getSealNo());
-            e.setSealNo2(item.getSealNo2());
-            e.setSealNo3(item.getSealNo3());
-            e.setSealKindCode(item.getSealKindCode());
-            e.setSealKindCode1(item.getSealKindCode1());
-            e.setIsoCode(item.getIsoCode());
-            e.setStatus(item.getStatus());
-            e.setOrigin(item.getOrigin());
-            e.setPol(item.getPol());
-            e.setIsLoaded(item.getIsLoaded());
-            e.setLoadTransactionPoid(item.getLoadTransactionPoid());
-            e.setIsRefer(item.getIsRefer());
-            e.setRefferTemp(item.getRefferTemp());
-            e.setRefferHum(item.getRefferHum());
-            e.setRefferVent(item.getRefferVent());
-            e.setImcoClassActual(item.getImcoClassActual());
-            e.setImo(item.getImo());
-            e.setImoCode1(item.getImoCode1());
-            e.setUnNo1(item.getUnNo1());
-            e.setImoCode2(item.getImoCode2());
-            e.setUnNo2(item.getUnNo2());
-            e.setLoadWeightKg(item.getLoadWeightKg());
-            e.setWeightKg(item.getWeightKg());
-            e.setWeightTon(item.getWeightTon());
-            e.setOogH(item.getOogH());
-            e.setOogL(item.getOogL());
-            e.setOogLW(item.getOogLW());
-            e.setOogRW(item.getOogRW());
-            e.setOogB(item.getOogB());
-            e.setOogF(item.getOogF());
-            e.setOogA(item.getOogA());
-            e.setOogType(item.getOogType());
-            e.setHsCode(item.getHsCode());
-            e.setHsShortname(item.getHsShortname());
-            e.setSlot(item.getSlot());
-            e.setBlading(item.getBlading());
-            e.setOutboundVessel(item.getOutboundVessel());
-            e.setLoadOrigin(item.getLoadOrigin());
-            e.setLoadFinalDestination(item.getLoadFinalDestination());
+            ActionType action = item.getActionType();
+            if (action == null) {
+                action = (item.getDetRowId() == null) ? ActionType.ISCREATED : ActionType.ISUPDATED;
+            }
+
+            if (ActionType.ISCREATED == action) {
+                Long nextDetRowId = transhipDtlRepository.findMaxDetRowId(voyagePoid) + 1;
+                ShipVoyageTranshipDtlEntity newEntity = ShipVoyageTranshipDtlEntity.builder()
+                        .transactionPoid(voyagePoid)
+                        .detRowId(nextDetRowId)
+                        .containerNo(item.getContainerNo())
+                        .containerType(item.getContainerType())
+                        .sealNo(item.getSealNo())
+                        .sealNo2(item.getSealNo2())
+                        .sealNo3(item.getSealNo3())
+                        .sealKindCode(item.getSealKindCode())
+                        .sealKindCode1(item.getSealKindCode1())
+                        .isoCode(item.getIsoCode())
+                        .status(item.getStatus())
+                        .origin(item.getOrigin())
+                        .pol(item.getPol())
+                        .isLoaded(item.getIsLoaded())
+                        .loadTransactionPoid(item.getLoadTransactionPoid())
+                        .isRefer(item.getIsRefer())
+                        .refferTemp(item.getRefferTemp())
+                        .refferHum(item.getRefferHum())
+                        .refferVent(item.getRefferVent())
+                        .imcoClassActual(item.getImcoClassActual())
+                        .imo(item.getImo())
+                        .imoCode1(item.getImoCode1())
+                        .unNo1(item.getUnNo1())
+                        .imoCode2(item.getImoCode2())
+                        .unNo2(item.getUnNo2())
+                        .loadWeightKg(item.getLoadWeightKg())
+                        .weightKg(item.getWeightKg())
+                        .weightTon(item.getWeightTon())
+                        .oogH(item.getOogH())
+                        .oogL(item.getOogL())
+                        .oogLW(item.getOogLW())
+                        .oogRW(item.getOogRW())
+                        .oogB(item.getOogB())
+                        .oogF(item.getOogF())
+                        .oogA(item.getOogA())
+                        .oogType(item.getOogType())
+                        .hsCode(item.getHsCode())
+                        .hsShortname(item.getHsShortname())
+                        .slot(item.getSlot())
+                        .blading(item.getBlading())
+                        .outboundVessel(item.getOutboundVessel())
+                        .loadOrigin(item.getLoadOrigin())
+                        .loadFinalDestination(item.getLoadFinalDestination())
+                        .build();
+                transhipDtlRepository.save(newEntity);
+
+            } else if (ActionType.ISDELETED == action) {
+                if (item.getDetRowId() == null)
+                    throw new IllegalArgumentException("detRowId is required for isDeleted");
+                ShipVoyageTranshipDtlEntity e = map.get(item.getDetRowId());
+                if (e == null)
+                    throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
+                transhipDtlRepository.delete(e);
+
+            } else {
+                // isUpdated or default
+                if (item.getDetRowId() == null)
+                    throw new IllegalArgumentException("detRowId is required for update");
+                ShipVoyageTranshipDtlEntity e = map.get(item.getDetRowId());
+                if (e == null)
+                    throw new ResourceNotFoundException("Transhipment row not found detRowId=" + item.getDetRowId());
+                if (item.getContainerNo() != null) e.setContainerNo(item.getContainerNo());
+                e.setContainerType(item.getContainerType());
+                e.setSealNo(item.getSealNo());
+                e.setSealNo2(item.getSealNo2());
+                e.setSealNo3(item.getSealNo3());
+                e.setSealKindCode(item.getSealKindCode());
+                e.setSealKindCode1(item.getSealKindCode1());
+                e.setIsoCode(item.getIsoCode());
+                e.setStatus(item.getStatus());
+                e.setOrigin(item.getOrigin());
+                e.setPol(item.getPol());
+                e.setIsLoaded(item.getIsLoaded());
+                e.setLoadTransactionPoid(item.getLoadTransactionPoid());
+                e.setIsRefer(item.getIsRefer());
+                e.setRefferTemp(item.getRefferTemp());
+                e.setRefferHum(item.getRefferHum());
+                e.setRefferVent(item.getRefferVent());
+                e.setImcoClassActual(item.getImcoClassActual());
+                e.setImo(item.getImo());
+                e.setImoCode1(item.getImoCode1());
+                e.setUnNo1(item.getUnNo1());
+                e.setImoCode2(item.getImoCode2());
+                e.setUnNo2(item.getUnNo2());
+                e.setLoadWeightKg(item.getLoadWeightKg());
+                e.setWeightKg(item.getWeightKg());
+                e.setWeightTon(item.getWeightTon());
+                e.setOogH(item.getOogH());
+                e.setOogL(item.getOogL());
+                e.setOogLW(item.getOogLW());
+                e.setOogRW(item.getOogRW());
+                e.setOogB(item.getOogB());
+                e.setOogF(item.getOogF());
+                e.setOogA(item.getOogA());
+                e.setOogType(item.getOogType());
+                e.setHsCode(item.getHsCode());
+                e.setHsShortname(item.getHsShortname());
+                e.setSlot(item.getSlot());
+                e.setBlading(item.getBlading());
+                e.setOutboundVessel(item.getOutboundVessel());
+                e.setLoadOrigin(item.getLoadOrigin());
+                e.setLoadFinalDestination(item.getLoadFinalDestination());
+                transhipDtlRepository.save(e);
+            }
         }
 
-        transhipDtlRepository.saveAll(existing);
         return transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
     }
 

@@ -331,6 +331,29 @@ class BookingFormControllerTest {
         verify(bookingFormService).cntReturnBookingPrintFormAll(21L, "Y");
     }
 
+    /* ---------------- TRANSFER ---------------- */
+
+    @Test
+    void transferBooking_success_withSplitBookingNo() throws Exception {
+        doNothing().when(bookingFormService).transferBookingWithContainers(eq(141519L), eq(913L));
+
+        mockMvc.perform(post("/v1/booking-form-sh/transfer/141519")
+                        .param("splitBookingNo", "913"))
+                .andExpect(status().isOk());
+
+        verify(bookingFormService).transferBookingWithContainers(eq(141519L), eq(913L));
+    }
+
+    @Test
+    void transferBooking_withoutSplitBookingNo_callsServiceWithNull() throws Exception {
+        doNothing().when(bookingFormService).transferBookingWithContainers(eq(141519L), isNull());
+
+        mockMvc.perform(post("/v1/booking-form-sh/transfer/141519"))
+                .andExpect(status().isOk());
+
+        verify(bookingFormService).transferBookingWithContainers(eq(141519L), isNull());
+    }
+
     /* ---------------- STUFFING ADVICE DOWNLOAD ---------------- */
 
     @Test

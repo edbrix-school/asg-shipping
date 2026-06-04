@@ -10,8 +10,10 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.exceptions.ResourceAlreadyExistsException;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.exportManifestUpdate.dto.ActionType;
 import com.asg.shipping.vesselvoyagecreation.dto.*;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
+import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageTranshipDtlEntity;
 import com.asg.shipping.vesselvoyagecreation.repository.*;
 import com.asg.shipping.vesselvoyagecreation.util.FreightCargo;
 import com.asg.shipping.vesselvoyagecreation.util.ImportExport;
@@ -321,6 +323,76 @@ class VesselVoyageServiceImplTest {
         Map<String, Object> params = paramsCaptor.getValue();
         assertEquals(FreightCargo.FALSE.name(), params.get("P_FREIGHTCARGO"));
         assertEquals(ImportExport.EXPORT.name(), params.get("P_IMPORT_EXPORT"));
+    }
+
+    @Test
+    void updateTranshipments_isCreated_insertsNewRow() {
+        long voyagePoid = 417658L;
+
+        ShipVoyageTranshipDtlEntity existing = ShipVoyageTranshipDtlEntity.builder()
+                .transactionPoid(voyagePoid).detRowId(1L).containerNo("UNIU2071484").build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+        when(transhipDtlRepository.findMaxDetRowId(voyagePoid)).thenReturn(1L);
+
+        TranshipmentUpdateItem item = TranshipmentUpdateItem.builder()
+                .containerNo("BAXU2665632").status("FCL").isoCode("22G12")
+                .build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+
+        service.updateTranshipments(voyagePoid,
+                TranshipmentUpdateRequest.builder().items(List.of(item)).build());
+
+        ArgumentCaptor<ShipVoyageTranshipDtlEntity> captor =
+                ArgumentCaptor.forClass(ShipVoyageTranshipDtlEntity.class);
+        verify(transhipDtlRepository).save(captor.capture());
+        assertEquals(2L, captor.getValue().getDetRowId());
+        assertEquals("BAXU2665632", captor.getValue().getContainerNo());
+    }
+
+    @Test
+    void updateTranshipments_isUpdated_updatesExistingRow() {
+        long voyagePoid = 417658L;
+
+        ShipVoyageTranshipDtlEntity existing = ShipVoyageTranshipDtlEntity.builder()
+                .transactionPoid(voyagePoid).detRowId(2L).containerNo("BAXU2665630").status("FCL").build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+
+        TranshipmentUpdateItem item = TranshipmentUpdateItem.builder()
+                .detRowId(2L).containerNo("BAXU2665630").status("LCL").isoCode("22G99")
+                .build();
+
+        service.updateTranshipments(voyagePoid,
+                TranshipmentUpdateRequest.builder().items(List.of(item)).build());
+
+        verify(transhipDtlRepository).save(existing);
+        assertEquals("LCL", existing.getStatus());
+        assertEquals("22G99", existing.getIsoCode());
+    }
+
+    @Test
+    void updateTranshipments_isDeleted_deletesRow() {
+        long voyagePoid = 417658L;
+
+        ShipVoyageTranshipDtlEntity existing = ShipVoyageTranshipDtlEntity.builder()
+                .transactionPoid(voyagePoid).detRowId(17L).containerNo("BAXU2665632").build();
+
+        when(transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid))
+                .thenReturn(List.of(existing));
+
+        TranshipmentUpdateItem item = TranshipmentUpdateItem.builder()
+                .actionType(ActionType.ISDELETED).detRowId(17L)
+                .build();
+
+        service.updateTranshipments(voyagePoid,
+                TranshipmentUpdateRequest.builder().items(List.of(item)).build());
+
+        verify(transhipDtlRepository).delete(existing);
     }
 }
 
