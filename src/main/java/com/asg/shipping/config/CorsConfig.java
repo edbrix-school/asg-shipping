@@ -25,7 +25,10 @@ public class CorsConfig {
             "http://localhost:3000",
             "http://localhost:3001",
             "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001"
+            "http://127.0.0.1:3001",
+            "https://erpdev.shippingbahrain.com",
+            "https://erpqa.shippingbahrain.com",
+            "https://erpuat.shippingbahrain.com"
         ));
         
         // Allow all HTTP methods
