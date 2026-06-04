@@ -13,7 +13,7 @@ import java.util.Map;
  */
 public interface SalesInvoiceShippingService {
 
-    Map<String, Object> searchSalesInvoice(String docId, FilterRequestDto request, Pageable pageable);
+    Map<String, Object> searchSalesInvoice(String docId, FilterRequestDto request, Pageable pageable, String startDate, String endDate);
 
     SalesInvoiceShippingDto getSalesInvoice(Long id);
 

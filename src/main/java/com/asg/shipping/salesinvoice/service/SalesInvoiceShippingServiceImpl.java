@@ -70,12 +70,39 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchSalesInvoice(String docId, FilterRequestDto request, Pageable pageable) {
-        log.info("Searching Sales Invoice with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
+    public Map<String, Object> searchSalesInvoice(String docId, FilterRequestDto request, Pageable pageable, String startDate, String endDate) {
+        log.info("Searching Sales Invoice with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        
+        // Parse date strings to LocalDate if provided
+        LocalDate startDateValue = null;
+        LocalDate endDateValue = null;
+        
+        if (startDate != null && !startDate.trim().isEmpty()) {
+            try {
+                startDateValue = LocalDate.parse(startDate.trim());
+            } catch (Exception e) {
+                log.warn("Invalid start date format: {}", startDate, e);
+            }
+        }
+        
+        if (endDate != null && !endDate.trim().isEmpty()) {
+            try {
+                endDateValue = LocalDate.parse(endDate.trim());
+            } catch (Exception e) {
+                log.warn("Invalid end date format: {}", endDate, e);
+            }
+        }
+        
+        // Use the proper resolveDateFilters method for date filtering
+        List<FilterDto> filters = documentService.resolveDateFilters(
+                request,
+                "INV_DATE",  // date field for filtering
+                startDateValue,
+                endDateValue
+        );
 
         RawSearchResult raw = documentService.search(
                 docId,
