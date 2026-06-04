@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselvoyagecreation.dto;
 
+import com.asg.shipping.exportManifestUpdate.dto.ActionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class TranshipmentUpdateItem {
+    private ActionType actionType;
     private Long detRowId;
     private String containerNo;
     private String containerType;
