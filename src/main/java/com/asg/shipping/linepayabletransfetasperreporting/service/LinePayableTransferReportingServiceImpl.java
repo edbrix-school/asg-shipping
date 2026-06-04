@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.*;
+import java.util.concurrent.CompletableFuture;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -443,6 +444,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             throw new ValidationException("Error loading data: " + e.getMessage());
         }
 
+        enrichDetailListWithLov(result);
         log.info("Loaded {} records before create", result.size());
         return result;
     }
@@ -496,6 +498,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             throw new ValidationException("Error processing weekly report: " + e.getMessage());
         }
 
+        enrichDetailListWithLov(result);
         log.info("Processed {} weekly records before create", result.size());
         return result;
     }
@@ -695,6 +698,60 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
         // --- Apply to each detail ---
         for (LinePayableTransferReportingDtlDto detail : dto.getDetails()) {
+            if (detail.getMainfestTransactionPoid() != null) {
+                LovGetListDto lov = mainfestMap.get(detail.getMainfestTransactionPoid());
+                if (lov != null) {
+                    detail.setMainfestDet(lov);
+                    detail.setBlNumber(lov.getCode());
+                }
+            }
+            if (detail.getChargePoid() != null) {
+                LovGetListDto lov = chargeMap.get(detail.getChargePoid());
+                if (lov != null) {
+                    detail.setChargeDet(lov);
+                    detail.setChargeDescription(lov.getDescription());
+                    detail.setChargeCode(lov.getCode());
+                }
+            }
+            if (detail.getCurrencyCode() != null) {
+                LovGetListDto lov = currencyMap.get(detail.getCurrencyCode());
+                if (lov != null) {
+                    detail.setCurrencyDet(lov);
+                    detail.setCurrencyName(lov.getDescription());
+                }
+            }
+        }
+    }
+
+    private void enrichDetailListWithLov(List<LinePayableTransferReportingDtlDto> details) {
+        if (details == null || details.isEmpty()) return;
+
+        List<Long> mainfestPoids = details.stream()
+                .map(LinePayableTransferReportingDtlDto::getMainfestTransactionPoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+        List<Long> chargePoids = details.stream()
+                .map(LinePayableTransferReportingDtlDto::getChargePoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+        List<String> currencyCodes = details.stream()
+                .map(LinePayableTransferReportingDtlDto::getCurrencyCode)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+        CompletableFuture<Map<Long, LovGetListDto>> mainfestFuture = CompletableFuture.supplyAsync(
+                () -> lovDataService.getDetailsByPoidsAndLovName(mainfestPoids, LOV_ALL_BL_NUMBER));
+        CompletableFuture<Map<Long, LovGetListDto>> chargeFuture = CompletableFuture.supplyAsync(
+                () -> lovDataService.getDetailsByPoidsAndLovName(chargePoids, LOV_CHARGE_MASTER));
+        CompletableFuture<Map<String, LovGetListDto>> currencyFuture = CompletableFuture.supplyAsync(
+                () -> lovDataService.getDetailsByCodesAndLovName(currencyCodes, LOV_CURRENCY));
+
+        CompletableFuture.allOf(mainfestFuture, chargeFuture, currencyFuture).join();
+
+        Map<Long, LovGetListDto> mainfestMap = mainfestFuture.join();
+        Map<Long, LovGetListDto> chargeMap = chargeFuture.join();
+        Map<String, LovGetListDto> currencyMap = currencyFuture.join();
+
+        for (LinePayableTransferReportingDtlDto detail : details) {
             if (detail.getMainfestTransactionPoid() != null) {
                 LovGetListDto lov = mainfestMap.get(detail.getMainfestTransactionPoid());
                 if (lov != null) {

@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 
 import net.sf.jasperreports.engine.JasperReport;
 
+import com.asg.shipping.exceptions.ValidationException;
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
@@ -797,9 +798,9 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     	Long companyPoid=UserContext.getCompanyPoid();
     	ExportShipBlManifestHdr entity = hdrRepository
                 .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
-                .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
+                .orElseThrow(() -> new ValidationException("Export BL not found with ID: " + transactionPoid));
     	if(entity.getBlOrginalPrint()!=null && entity.getBlOrginalPrint().equalsIgnoreCase("Y")) {
-    		throw new RuntimeException("BL already printed");
+    		throw new ValidationException("BL already printed");
     	}
     	
     	String jrxmlFile= customBLRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
