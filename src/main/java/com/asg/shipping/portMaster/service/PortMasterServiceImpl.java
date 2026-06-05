@@ -52,11 +52,11 @@ public class PortMasterServiceImpl implements PortMasterService {
 	public Map<String, Object> createPort(PortMasterRequest request) {
 
         Long groupPoid = UserContext.getGroupPoid();
-		repository.findByGroupPoidAndPortCode(groupPoid, request.getPortCode()).ifPresent(p -> {
+		repository.findByGroupPoidAndPortCodeIgnoreCase(groupPoid, request.getPortCode()).ifPresent(p -> {
 			throw new IllegalArgumentException("Port Code already exists");
 		});
 
-		repository.findByGroupPoidAndPortName(groupPoid, request.getPortName()).ifPresent(p -> {
+		repository.findByGroupPoidAndPortNameIgnoreCase(groupPoid, request.getPortName()).ifPresent(p -> {
 			throw new IllegalStateException("Port Name already exists");
 		});
 
@@ -92,7 +92,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 		if (!Objects.equals(entity.getPortCode(), request.getPortCode())) {
 
-			repository.findByPortCode(request.getPortCode())
+			repository.findByPortCodeIgnoreCase(request.getPortCode())
 					.filter(pm -> !Objects.equals(pm.getPortPoid(), entity.getPortPoid())).ifPresent(pm -> {
 						throw new IllegalArgumentException("Port Code already exists");
 					});
@@ -102,7 +102,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 
 		if (!Objects.equals(entity.getPortName(), request.getPortName())) {
 
-			repository.findByPortName(request.getPortName())
+			repository.findByPortNameIgnoreCase(request.getPortName())
 					.filter(pm -> !Objects.equals(pm.getPortPoid(), entity.getPortPoid())).ifPresent(pm -> {
 						throw new IllegalArgumentException("Port Name already exists");
 					});
