@@ -101,11 +101,9 @@ class PortMasterServiceImplTest {
 		PortMaster saved = new PortMaster();
 		saved.setPortPoid(99L);
 
-		when(repository.findByGroupPoidAndPortCode(100L, "P003"))
-				.thenReturn(Optional.empty()) // First call in validation
-				.thenReturn(Optional.of(saved)); // Second call after save
-
-		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortCodeIgnoreCase(100L, "P003")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortNameIgnoreCase(100L, "Port C")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortCode(100L, "P003")).thenReturn(Optional.of(saved));
 
 		Map<String, Object> result = service.createPort(request);
 
@@ -124,11 +122,9 @@ class PortMasterServiceImplTest {
 		PortMaster saved = new PortMaster();
 		saved.setPortPoid(99L);
 
-		when(repository.findByGroupPoidAndPortCode(100L, "P003"))
-				.thenReturn(Optional.empty())
-				.thenReturn(Optional.of(saved));
-
-		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortCodeIgnoreCase(100L, "P003")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortNameIgnoreCase(100L, "Port C")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortCode(100L, "P003")).thenReturn(Optional.of(saved));
 
 		Map<String, Object> result = service.createPort( request);
 
@@ -141,7 +137,7 @@ class PortMasterServiceImplTest {
 		PortMasterRequest request = new PortMasterRequest();
 		request.setPortCode("P001");
 
-		when(repository.findByGroupPoidAndPortCode(100L, "P001")).thenReturn(Optional.of(new PortMaster()));
+		when(repository.findByGroupPoidAndPortCodeIgnoreCase(100L, "P001")).thenReturn(Optional.of(new PortMaster()));
 
 		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
 		assertEquals("Port Code already exists", exception.getMessage());
@@ -153,9 +149,8 @@ class PortMasterServiceImplTest {
 		request.setPortCode("P010");
 		request.setPortName("Port A");
 
-		when(repository.findByGroupPoidAndPortCode(100L, "P010")).thenReturn(Optional.empty());
-
-		when(repository.findByGroupPoidAndPortName(100L, "Port A")).thenReturn(Optional.of(new PortMaster()));
+		when(repository.findByGroupPoidAndPortCodeIgnoreCase(100L, "P010")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortNameIgnoreCase(100L, "Port A")).thenReturn(Optional.of(new PortMaster()));
 
 		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
 		assertEquals("Port Name already exists", exception.getMessage());
@@ -167,14 +162,40 @@ class PortMasterServiceImplTest {
 		request.setPortCode("P003");
 		request.setPortName("Port C");
 
-		when(repository.findByGroupPoidAndPortCode(100L, "P003"))
-				.thenReturn(Optional.empty()) // Validation
-				.thenReturn(Optional.empty()); // After save
-
-		when(repository.findByGroupPoidAndPortName(100L, "Port C")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortCodeIgnoreCase(100L, "P003")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortNameIgnoreCase(100L, "Port C")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortCode(100L, "P003")).thenReturn(Optional.empty());
 
 		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort( request));
 		assertEquals("Port not found after save", exception.getMessage());
+	}
+
+	@Test
+	void createPort_PortCodeExists_CaseInsensitive_Throws() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("p001"); // lowercase
+
+		PortMaster existing = new PortMaster();
+		existing.setPortCode("P001"); // uppercase in DB
+		when(repository.findByGroupPoidAndPortCodeIgnoreCase(100L, "p001")).thenReturn(Optional.of(existing));
+
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort(request));
+		assertEquals("Port Code already exists", exception.getMessage());
+	}
+
+	@Test
+	void createPort_PortNameExists_CaseInsensitive_Throws() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("P010");
+		request.setPortName("port a"); // lowercase
+
+		PortMaster existing = new PortMaster();
+		existing.setPortName("PORT A"); // uppercase in DB
+		when(repository.findByGroupPoidAndPortCodeIgnoreCase(100L, "P010")).thenReturn(Optional.empty());
+		when(repository.findByGroupPoidAndPortNameIgnoreCase(100L, "port a")).thenReturn(Optional.of(existing));
+
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.createPort(request));
+		assertEquals("Port Name already exists", exception.getMessage());
 	}
 
 	@Test
@@ -206,9 +227,8 @@ class PortMasterServiceImplTest {
 		request.setPortName("Port B");
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
-
-		when(repository.findByPortCode("P002")).thenReturn(Optional.empty()); // Or return a port with same portPoid
-		when(repository.findByPortName("Port B")).thenReturn(Optional.empty());
+		when(repository.findByPortCodeIgnoreCase("P002")).thenReturn(Optional.empty());
+		when(repository.findByPortNameIgnoreCase("Port B")).thenReturn(Optional.empty());
 
 		ShipTradelaneResponse tradeLane = new ShipTradelaneResponse();
 		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
@@ -232,7 +252,7 @@ class PortMasterServiceImplTest {
 		existingSamePoid.setPortPoid(1L); // Same ID!
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
-		when(repository.findByPortCode("P002")).thenReturn(Optional.of(existingSamePoid)); 
+		when(repository.findByPortCodeIgnoreCase("P002")).thenReturn(Optional.of(existingSamePoid));
 
 		ShipTradelaneResponse tradeLane = new ShipTradelaneResponse();
 		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
@@ -256,7 +276,7 @@ class PortMasterServiceImplTest {
 		existingSamePoid.setPortPoid(1L); // Same ID!
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
-		when(repository.findByPortName("Port B")).thenReturn(Optional.of(existingSamePoid)); 
+		when(repository.findByPortNameIgnoreCase("Port B")).thenReturn(Optional.of(existingSamePoid));
 
 		ShipTradelaneResponse tradeLane = new ShipTradelaneResponse();
 		when(tradeLaneService.getById(any())).thenReturn(tradeLane);
@@ -294,8 +314,7 @@ class PortMasterServiceImplTest {
 		existing.setPortCode("NEW_CODE");
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
-
-		when(repository.findByPortCode("NEW_CODE")).thenReturn(Optional.of(existing));
+		when(repository.findByPortCodeIgnoreCase("NEW_CODE")).thenReturn(Optional.of(existing));
 
 		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort( 1L, request));
 		assertEquals("Port Code already exists", exception.getMessage());
@@ -312,10 +331,43 @@ class PortMasterServiceImplTest {
 		existing.setPortName("NEW_NAME");
 
 		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
-
-		when(repository.findByPortName("NEW_NAME")).thenReturn(Optional.of(existing));
+		when(repository.findByPortNameIgnoreCase("NEW_NAME")).thenReturn(Optional.of(existing));
 
 		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort( 1L, request));
+		assertEquals("Port Name already exists", exception.getMessage());
+	}
+
+	@Test
+	void updatePort_DuplicatePortCode_CaseInsensitive_Throws() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("new_code"); // lowercase
+		request.setPortName("Port A");
+
+		PortMaster existing = new PortMaster();
+		existing.setPortPoid(99L);
+		existing.setPortCode("NEW_CODE"); // uppercase in DB
+
+		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
+		when(repository.findByPortCodeIgnoreCase("new_code")).thenReturn(Optional.of(existing));
+
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort(1L, request));
+		assertEquals("Port Code already exists", exception.getMessage());
+	}
+
+	@Test
+	void updatePort_DuplicatePortName_CaseInsensitive_Throws() {
+		PortMasterRequest request = new PortMasterRequest();
+		request.setPortCode("P001");
+		request.setPortName("new name"); // lowercase
+
+		PortMaster existing = new PortMaster();
+		existing.setPortPoid(99L);
+		existing.setPortName("NEW NAME"); // uppercase in DB
+
+		when(repository.findById(new PortMasterId(100L, 1L))).thenReturn(Optional.of(entity));
+		when(repository.findByPortNameIgnoreCase("new name")).thenReturn(Optional.of(existing));
+
+		RuntimeException exception = assertThrows(RuntimeException.class, () -> service.updatePort(1L, request));
 		assertEquals("Port Name already exists", exception.getMessage());
 	}
 

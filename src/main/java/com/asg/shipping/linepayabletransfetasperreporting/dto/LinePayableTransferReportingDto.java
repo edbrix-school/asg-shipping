@@ -1,5 +1,6 @@
 package com.asg.shipping.linepayabletransfetasperreporting.dto;
 
+import com.asg.common.lib.dto.LovGetListDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,7 @@ public class LinePayableTransferReportingDto {
     private Long linePoid;
     private String lineName;
     private String lineCode;
+    private LovGetListDto lineDet;
     private String blType;
     private LocalDate reportStartDate;
     private LocalDate reportEndDate;

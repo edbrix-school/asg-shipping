@@ -200,9 +200,11 @@ class BookingFormControllerTest {
 
     @Test
     void processEmptyContainerLoad_Success() throws Exception {
-        when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("Success");
+        when(bookingFormService.processEmptyContainerLoad(1L)).thenReturn("Successfully uploaded Empty containers");
 
-        mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load")).andExpect(status().isOk());
+        mockMvc.perform(post("/v1/booking-form-sh/1/process-empty-container-load"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Successfully uploaded Empty containers"));
 
         verify(bookingFormService).processEmptyContainerLoad(1L);
     }
@@ -329,6 +331,29 @@ class BookingFormControllerTest {
                 .andExpect(status().isInternalServerError());
 
         verify(bookingFormService).cntReturnBookingPrintFormAll(21L, "Y");
+    }
+
+    /* ---------------- TRANSFER ---------------- */
+
+    @Test
+    void transferBooking_success_withSplitBookingNo() throws Exception {
+        doNothing().when(bookingFormService).transferBookingWithContainers(eq(141519L), eq(913L));
+
+        mockMvc.perform(post("/v1/booking-form-sh/transfer/141519")
+                        .param("splitBookingNo", "913"))
+                .andExpect(status().isOk());
+
+        verify(bookingFormService).transferBookingWithContainers(eq(141519L), eq(913L));
+    }
+
+    @Test
+    void transferBooking_withoutSplitBookingNo_callsServiceWithNull() throws Exception {
+        doNothing().when(bookingFormService).transferBookingWithContainers(eq(141519L), isNull());
+
+        mockMvc.perform(post("/v1/booking-form-sh/transfer/141519"))
+                .andExpect(status().isOk());
+
+        verify(bookingFormService).transferBookingWithContainers(eq(141519L), isNull());
     }
 
     /* ---------------- STUFFING ADVICE DOWNLOAD ---------------- */

@@ -42,13 +42,13 @@ public class ShipContainerTypeMaster extends BaseEntity {
     private String containerTypeIsoName;
 
     @Column(name = "CONTAINER_CARGO_WEIGHT")
-    private Integer containerCargoWeight;
+    private BigDecimal containerCargoWeight;
 
     @Column(name = "CONTAINER_TARE_WEIGHT")
-    private Integer containerTareWeight;
+    private BigDecimal containerTareWeight;
 
     @Column(name = "CONTAINER_TEU_FACTOR", nullable = false)
-    private Integer containerTeuFactor;
+    private BigDecimal containerTeuFactor;
 
     @Column(name = "CONTAINER_TYPE_CATEGORY", nullable = false, length = 20)
     private String containerTypeCategory;

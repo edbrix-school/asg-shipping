@@ -242,6 +242,8 @@ public class ImportManifestBlUpdateDTO {
     private List<ContainerRequestDto> containers;
 
     /* ================= DESCRIPTION & MARKS ================= */
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
     private List<CargoDescriptionRequestDto> cargoDescriptions;
 
     /* ================= MAFI ================= */

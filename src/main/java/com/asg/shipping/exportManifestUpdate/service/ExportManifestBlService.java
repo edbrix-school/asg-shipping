@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.exportManifestUpdate.dto.*;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,7 @@ public interface ExportManifestBlService {
     // Header Operations
     ExportManifestBlResponse getExportBlById(Long transactionPoid);
     
-    Map<String, Object> searchExportBls(FilterRequestDto filters, Pageable pageable);
+    Map<String, Object> searchExportBls(FilterRequestDto filters, LocalDate startDate, LocalDate endDate, Pageable pageable);
     
     ExportManifestBlResponse createExportBl(ExportManifestBlRequest request);
     

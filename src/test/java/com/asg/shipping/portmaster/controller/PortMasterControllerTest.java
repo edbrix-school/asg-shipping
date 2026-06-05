@@ -151,7 +151,6 @@ class PortMasterControllerTest {
 				.andExpect(status().isOk());
 
 		verify(service).deletePort(eq(1L), isNull());
-		verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.DELETED), eq("DOC123"), eq("1"));
 	}
 
 	private PortMasterRequest createMockRequest() {

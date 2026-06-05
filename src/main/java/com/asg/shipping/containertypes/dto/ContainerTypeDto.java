@@ -23,9 +23,9 @@ public class ContainerTypeDto {
     private String containerTypeName;
     private String containerTypeSize;
     private String containerTypeIsoName;
-    private Integer containerCargoWeight;
-    private Integer containerTareWeight;
-    private Integer containerTeuFactor;
+    private BigDecimal containerCargoWeight;
+    private BigDecimal containerTareWeight;
+    private BigDecimal containerTeuFactor;
     private String containerTypeCategory;
     private Long containerGrpPoid;
     private String containerApmtTypeCode;

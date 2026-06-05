@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.response.ApiResponse;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestBl.dto.*;
 import com.asg.shipping.exportManifestBl.service.ExportManifestBlService;
@@ -330,6 +331,9 @@ public class ExportManifestBlController {
 					.header(HttpHeaders.CONTENT_DISPOSITION,
 							"attachment; filename=bl-print-" + transactionPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (ValidationException e) {
+			log.warn("Validation failed for BL Print {}: {}", transactionPoid, e.getMessage());
+			return error(e.getMessage(), 400);
 		} catch (Exception e) {
 			log.error("Failed to generate PDF for BL Print: {}", transactionPoid, e);
 			return error("Failed to generate PDF: " + e.getMessage(), 500);

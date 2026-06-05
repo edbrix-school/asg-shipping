@@ -5,12 +5,14 @@ package com.asg.shipping.linepayabletransfetasperreporting.service;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.*;
+import java.util.concurrent.CompletableFuture;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -56,11 +59,17 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     private final LoggingService loggingService;
     private final JdbcTemplate jdbcTemplate;
     private final LinePayableTransferReportingMapper mapper;
+    private final LovDataService lovDataService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     private static final String DOC_ID = "100-432";
+
+    private static final String LOV_LINE_MASTER = "LINE_MASTER";
+    private static final String LOV_ALL_BL_NUMBER = "ALLBLNUMBER";
+    private static final String LOV_CHARGE_MASTER = "CHARGE_MASTER";
+    private static final String LOV_CURRENCY = "CURRENCY";
 
     @Override
     @Transactional(readOnly = true)
@@ -435,6 +444,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             throw new ValidationException("Error loading data: " + e.getMessage());
         }
 
+        enrichDetailListWithLov(result);
         log.info("Loaded {} records before create", result.size());
         return result;
     }
@@ -488,6 +498,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             throw new ValidationException("Error processing weekly report: " + e.getMessage());
         }
 
+        enrichDetailListWithLov(result);
         log.info("Processed {} weekly records before create", result.size());
         return result;
     }
@@ -652,74 +663,117 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         dto.setDetails(mapper.mapDtlListToDto(details));
     }
 
-    /**
-     * Enrich DTO with LOV data
-     */
     private void enrichLovData(LinePayableTransferReportingDto dto) {
-        // Enrich line
+        // --- Header ---
         if (dto.getLinePoid() != null) {
-            enrichLineData(dto.getLinePoid(), (name, code) -> {
-                dto.setLineName(name);
-                dto.setLineCode(code);
-            });
+            Map<Long, LovGetListDto> lineMap = lovDataService.getDetailsByPoidsAndLovName(
+                    List.of(dto.getLinePoid()), LOV_LINE_MASTER);
+            LovGetListDto lineLov = lineMap.get(dto.getLinePoid());
+            if (lineLov != null) {
+                dto.setLineDet(lineLov);
+                dto.setLineName(lineLov.getDescription());
+                dto.setLineCode(lineLov.getCode());
+            }
         }
 
-        // Enrich detail records
-        if (dto.getDetails() != null) {
-            for (LinePayableTransferReportingDtlDto detail : dto.getDetails()) {
-                if (detail.getChargePoid() != null) {
-                    enrichChargeData(detail.getChargePoid(), (name, code) -> {
-                        detail.setChargeDescription(name);
-                        detail.setChargeCode(code);
-                    });
+        if (dto.getDetails() == null || dto.getDetails().isEmpty()) return;
+
+        // --- Gather distinct IDs/codes from all detail rows ---
+        List<Long> mainfestPoids = dto.getDetails().stream()
+                .map(LinePayableTransferReportingDtlDto::getMainfestTransactionPoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+        List<Long> chargePoids = dto.getDetails().stream()
+                .map(LinePayableTransferReportingDtlDto::getChargePoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+        List<String> currencyCodes = dto.getDetails().stream()
+                .map(LinePayableTransferReportingDtlDto::getCurrencyCode)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+        // --- Single batch call per LOV type ---
+        Map<Long, LovGetListDto> mainfestMap = lovDataService.getDetailsByPoidsAndLovName(mainfestPoids, LOV_ALL_BL_NUMBER);
+        Map<Long, LovGetListDto> chargeMap = lovDataService.getDetailsByPoidsAndLovName(chargePoids, LOV_CHARGE_MASTER);
+        Map<String, LovGetListDto> currencyMap = lovDataService.getDetailsByCodesAndLovName(currencyCodes, LOV_CURRENCY);
+
+        // --- Apply to each detail ---
+        for (LinePayableTransferReportingDtlDto detail : dto.getDetails()) {
+            if (detail.getMainfestTransactionPoid() != null) {
+                LovGetListDto lov = mainfestMap.get(detail.getMainfestTransactionPoid());
+                if (lov != null) {
+                    detail.setMainfestDet(lov);
+                    detail.setBlNumber(lov.getCode());
                 }
-                if (detail.getCurrencyCode() != null) {
-                    enrichCurrencyData(detail.getCurrencyCode(), (name) -> {
-                        detail.setCurrencyName(name);
-                    });
+            }
+            if (detail.getChargePoid() != null) {
+                LovGetListDto lov = chargeMap.get(detail.getChargePoid());
+                if (lov != null) {
+                    detail.setChargeDet(lov);
+                    detail.setChargeDescription(lov.getDescription());
+                    detail.setChargeCode(lov.getCode());
+                }
+            }
+            if (detail.getCurrencyCode() != null) {
+                LovGetListDto lov = currencyMap.get(detail.getCurrencyCode());
+                if (lov != null) {
+                    detail.setCurrencyDet(lov);
+                    detail.setCurrencyName(lov.getDescription());
                 }
             }
         }
     }
 
-    // Helper interfaces for enrichment
-    @FunctionalInterface
-    private interface EnrichmentCallback {
-        void apply(String name, String code);
-    }
+    private void enrichDetailListWithLov(List<LinePayableTransferReportingDtlDto> details) {
+        if (details == null || details.isEmpty()) return;
 
-    @FunctionalInterface
-    private interface EnrichmentCallbackSingle {
-        void apply(String name);
-    }
+        List<Long> mainfestPoids = details.stream()
+                .map(LinePayableTransferReportingDtlDto::getMainfestTransactionPoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-    private void enrichLineData(Long poid, EnrichmentCallback callback) {
-        String sql = "SELECT LINE_NAME, LINE_CODE FROM SHIP_LINE_MASTER WHERE LINE_POID = ?";
-        try {
-            Map<String, Object> result = jdbcTemplate.queryForMap(sql, poid);
-            callback.apply((String) result.get("LINE_NAME"), (String) result.get("LINE_CODE"));
-        } catch (Exception e) {
-            log.warn("Could not enrich line data for POID: {}", poid);
-        }
-    }
+        List<Long> chargePoids = details.stream()
+                .map(LinePayableTransferReportingDtlDto::getChargePoid)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-    private void enrichChargeData(Long poid, EnrichmentCallback callback) {
-        String sql = "SELECT CHARGE_DESCRIPTION, CHARGE_CODE FROM GLOBAL_CHARGE_MASTER WHERE CHARGE_POID = ?";
-        try {
-            Map<String, Object> result = jdbcTemplate.queryForMap(sql, poid);
-            callback.apply((String) result.get("CHARGE_DESCRIPTION"), (String) result.get("CHARGE_CODE"));
-        } catch (Exception e) {
-            log.warn("Could not enrich charge data for POID: {}", poid);
-        }
-    }
+        List<String> currencyCodes = details.stream()
+                .map(LinePayableTransferReportingDtlDto::getCurrencyCode)
+                .filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-    private void enrichCurrencyData(String currencyCode, EnrichmentCallbackSingle callback) {
-        String sql = "SELECT CURRENCY_NAME FROM GLOBAL_CURRENCY_MASTER WHERE CURRENCY_CODE = ?";
-        try {
-            String currencyName = jdbcTemplate.queryForObject(sql, String.class, currencyCode);
-            callback.apply(currencyName);
-        } catch (Exception e) {
-            log.warn("Could not enrich currency data for code: {}", currencyCode);
+        CompletableFuture<Map<Long, LovGetListDto>> mainfestFuture = CompletableFuture.supplyAsync(
+                () -> lovDataService.getDetailsByPoidsAndLovName(mainfestPoids, LOV_ALL_BL_NUMBER));
+        CompletableFuture<Map<Long, LovGetListDto>> chargeFuture = CompletableFuture.supplyAsync(
+                () -> lovDataService.getDetailsByPoidsAndLovName(chargePoids, LOV_CHARGE_MASTER));
+        CompletableFuture<Map<String, LovGetListDto>> currencyFuture = CompletableFuture.supplyAsync(
+                () -> lovDataService.getDetailsByCodesAndLovName(currencyCodes, LOV_CURRENCY));
+
+        CompletableFuture.allOf(mainfestFuture, chargeFuture, currencyFuture).join();
+
+        Map<Long, LovGetListDto> mainfestMap = mainfestFuture.join();
+        Map<Long, LovGetListDto> chargeMap = chargeFuture.join();
+        Map<String, LovGetListDto> currencyMap = currencyFuture.join();
+
+        for (LinePayableTransferReportingDtlDto detail : details) {
+            if (detail.getMainfestTransactionPoid() != null) {
+                LovGetListDto lov = mainfestMap.get(detail.getMainfestTransactionPoid());
+                if (lov != null) {
+                    detail.setMainfestDet(lov);
+                    detail.setBlNumber(lov.getCode());
+                }
+            }
+            if (detail.getChargePoid() != null) {
+                LovGetListDto lov = chargeMap.get(detail.getChargePoid());
+                if (lov != null) {
+                    detail.setChargeDet(lov);
+                    detail.setChargeDescription(lov.getDescription());
+                    detail.setChargeCode(lov.getCode());
+                }
+            }
+            if (detail.getCurrencyCode() != null) {
+                LovGetListDto lov = currencyMap.get(detail.getCurrencyCode());
+                if (lov != null) {
+                    detail.setCurrencyDet(lov);
+                    detail.setCurrencyName(lov.getDescription());
+                }
+            }
         }
     }
 
