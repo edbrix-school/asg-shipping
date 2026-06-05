@@ -7,11 +7,14 @@ import com.asg.shipping.linecommission.dto.LineCommissionResponse;
 import com.asg.shipping.linecommission.dto.LineCommissionRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 public interface LineCommissionService {
-    Map<String, Object> listLineCommissions(String docId, FilterRequestDto filters, Pageable pageable);
+    Map<String, Object> listLineCommissions(String docId, FilterRequestDto filters, LocalDate startDate, LocalDate endDate, Pageable pageable);
+
+    byte[] print(Long transactionPoid) throws Exception;
 
     LineCommissionResponse getById(Long transactionPoid, Long groupPoid);
 
