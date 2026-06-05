@@ -23,8 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -81,7 +80,7 @@ class LineCommissionControllerTests {
         result.put("records", new Object[]{});
         result.put("totalElements", 0);
 
-        when(service.listLineCommissions(any(), any(), any()))
+        when(service.listLineCommissions(any(), any(), isNull(), isNull(), any()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/v1/line-commission/list")

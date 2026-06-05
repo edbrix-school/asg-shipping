@@ -9,12 +9,15 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
-import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
+import com.asg.shipping.containertypes.dto.ContainerTypeDto;
+import net.sf.jasperreports.engine.JasperReport;
+import javax.sql.DataSource;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
-import com.asg.shipping.containertypes.dto.ContainerTypeDto;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.linecommission.dto.ContainerRateDto;
 import com.asg.shipping.linecommission.dto.LineCommissionResponse;
@@ -70,17 +73,17 @@ public class LineCommissionServiceImpl implements LineCommissionService {
     private final EntityManager entityManager;
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
-
-
+    private final PrintService printService;
+    private final DataSource dataSource;
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> listLineCommissions(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> listLineCommissions(String docId, FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info("Listing line commissions with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
 
         // label/value based on list payload expectations
         RawSearchResult raw = documentService.search(
@@ -246,6 +249,13 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                 LocalDate.now()
         );
 
+    }
+
+    @Override
+    public byte[] print(Long transactionPoid) throws Exception {
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, UserContext.getDocumentId());
+        JasperReport mainReport = printService.load("Shipping/SH/Line_commision_Rpt.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
     @Override
