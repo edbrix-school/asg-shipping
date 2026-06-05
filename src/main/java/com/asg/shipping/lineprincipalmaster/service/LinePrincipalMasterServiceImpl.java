@@ -1084,6 +1084,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 "CAN", Optional.ofNullable(typeMap.getCan()).orElse(List.of())
         );
 
+        int counter = existingDetails.size() + 1;
+
         for (Map.Entry<String, List<AddressDetailsDTO>> entry : typedLists.entrySet()) {
             String type = entry.getKey();
             for (AddressDetailsDTO dto : entry.getValue()) {
@@ -1109,8 +1111,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                                 UserContext.getDocumentId(), entityId, logDetail);
                     }
                 } else if ("isCreated".equalsIgnoreCase(actionType)) {
-                    GlobalAddressDetails detail = buildAddressDetail(dto, master, type, currentUser);
-                    toSave.add(detail);
+                    GlobalAddressDetails detail = buildAddressDetail(dto, master, type, counter++, currentUser);
                     createdDetails.add(detail);
                 }
             }
@@ -1118,6 +1119,9 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
         if (!toSave.isEmpty()) {
             addressDetailsRepository.saveAll(toSave);
+        }
+        if (!createdDetails.isEmpty()) {
+            insertCreatedAddressDetails(createdDetails);
             createdDetails.forEach(detail -> {
                 String logDetail = String.format("Row Created on Address Detail with addressPoid: %s", detail.getAddressPoid());
                 loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId, logDetail);
@@ -1128,13 +1132,71 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         }
     }
 
-    private GlobalAddressDetails buildAddressDetail(AddressDetailsDTO dto, GlobalAddressMaster master, String type, String currentUser) {
+    private GlobalAddressDetails buildAddressDetail(AddressDetailsDTO dto, GlobalAddressMaster master, String type, int counter, String currentUser) {
         GlobalAddressDetails detail = new GlobalAddressDetails();
+        detail.setAddressPoid(resolveAddressDetailPoid(dto.getAddressPoid(), counter));
         detail.setAddressMasterPoid(master.getAddressMasterPoid());
         detail.setAddressType(type);
         detail.setCreatedBy(currentUser);
         applyAddressDetailFields(detail, dto);
         return detail;
+    }
+
+    private void insertCreatedAddressDetails(List<GlobalAddressDetails> details) {
+        String sql = """
+                INSERT INTO GLOBAL_ADDRESS_DETAILS (
+                    ADDRESS_POID, ADDRESS_MASTER_POID, ADDRESS_TYPE, OFF_TEL1, OFF_TEL2,
+                    CONTACT_PERSON, DESIGNATION, MOBILE, FAX, EMAIL1, EMAIL2, WEBSITE,
+                    PO_BOX, OFF_NO, BLDG, ROAD, AREA_CITY, STATE, COUNTRY_POID,
+                    LAND_MARK, CREATED_BY, CREATED_DATE, VERIFIED, VERIFIED_BY,
+                    VERIFIED_DATE, CITY, WHATSAPP_NO, LINKEDIN, INSTAGRAM, FACEBOOK
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, SYSDATE, ?, ?,
+                    ?, ?, ?, ?, ?, ?
+                )
+                """;
+
+        jdbcTemplate.batchUpdate(sql, details, details.size(), (ps, detail) -> {
+            ps.setObject(1, detail.getAddressPoid());
+            ps.setObject(2, detail.getAddressMasterPoid());
+            ps.setString(3, detail.getAddressType());
+            ps.setString(4, detail.getOffTel1());
+            ps.setString(5, detail.getOffTel2());
+            ps.setString(6, detail.getContactPerson());
+            ps.setString(7, detail.getDesignation());
+            ps.setString(8, detail.getMobile());
+            ps.setString(9, detail.getFax());
+            ps.setString(10, detail.getEmail1());
+            ps.setString(11, detail.getEmail2());
+            ps.setString(12, detail.getWebsite());
+            ps.setString(13, detail.getPoBox());
+            ps.setString(14, detail.getOffNo());
+            ps.setString(15, detail.getBldg());
+            ps.setString(16, detail.getRoad());
+            ps.setString(17, detail.getAreaCity());
+            ps.setString(18, detail.getState());
+            ps.setObject(19, detail.getCountryPoid());
+            ps.setString(20, detail.getLandMark());
+            ps.setString(21, detail.getCreatedBy());
+            ps.setString(22, detail.getVerified());
+            ps.setString(23, detail.getVerifiedBy());
+            ps.setTimestamp(24, detail.getVerifiedDate());
+            ps.setString(25, detail.getCity());
+            ps.setString(26, detail.getWhatsappNo());
+            ps.setString(27, detail.getLinkedin());
+            ps.setString(28, detail.getInstagram());
+            ps.setString(29, detail.getFacebook());
+        });
+    }
+
+    private Long resolveAddressDetailPoid(String addressPoid, int counter) {
+        if (StringUtils.isNotBlank(addressPoid)) {
+            return Long.valueOf(addressPoid);
+        }
+        return System.currentTimeMillis() + counter;
     }
 
     private void updateAddressDetail(GlobalAddressDetails entity, AddressDetailsDTO dto, String currentUser) {
