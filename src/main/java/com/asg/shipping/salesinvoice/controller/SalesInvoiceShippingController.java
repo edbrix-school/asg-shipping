@@ -69,9 +69,13 @@ public class SalesInvoiceShippingController {
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction (e.g., 'invoiceDate,asc')")
-            @RequestParam(required = false) String sort) {
+            @RequestParam(required = false) String sort,
+            @Parameter(description = "Start date for filtering (YYYY-MM-DD format)", example = "2025-01-01")
+            @RequestParam(required = false) String startDate,
+            @Parameter(description = "End date for filtering (YYYY-MM-DD format)", example = "2025-12-31")
+            @RequestParam(required = false) String endDate) {
 
-        log.info("Searching sales invoices with page: {}, size: {}, sort: {}", page, size, sort);
+        log.info("Searching sales invoices with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}", page, size, sort, startDate, endDate);
 
         Pageable pageable = createPageable(page, size, sort);
 
@@ -79,7 +83,9 @@ public class SalesInvoiceShippingController {
             Map<String, Object> result = service.searchSalesInvoice(
                     UserContext.getDocumentId(),
                     request,
-                    pageable
+                    pageable,
+                    startDate,
+                    endDate
             );
 
             log.info("Successfully retrieved sales invoices");

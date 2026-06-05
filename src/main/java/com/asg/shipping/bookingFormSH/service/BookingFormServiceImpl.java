@@ -143,6 +143,8 @@ public class BookingFormServiceImpl implements BookingFormService {
         }
 
         conditions.add("LOAD_FULL IS NULL");
+        conditions.add("LOAD_EMPTY IS NULL");
+        conditions.add("EMPTY_OUT IS NULL");
 
         if (!conditions.isEmpty()) {
             where.append(" WHERE ").append(String.join(" AND ", conditions));
@@ -178,10 +180,6 @@ public class BookingFormServiceImpl implements BookingFormService {
         ShipMateHdr entity = headerRepository
                 .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
-
-        if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString());
-        }
 
         // Load detail tables
         List<ShipMateCargoDtl> cargoDetails = cargoDtlRepository.findByTransactionPoidOrderByDetRowId(id);
@@ -306,6 +304,12 @@ public class BookingFormServiceImpl implements BookingFormService {
                 .findByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, id.toString()));
 
+        boolean hasContainers = containerDtlRepository
+                .existsByTransactionPoidWithContainerAndNoReturn(id);
+        if (hasContainers) {
+            throw new ValidationException("Cannot delete: Mate receipt has containers assigned. Please remove containers before deleting.");
+        }
+
         documentDeleteService.deleteDocument(id, "SHIP_MATE_HDR",
                 "TRANSACTION_POID", deleteReason, entity.getTransactionDate());
     }
@@ -381,7 +385,10 @@ public class BookingFormServiceImpl implements BookingFormService {
                 cs.execute();
                 String status = cs.getString(5);
                 cs.close();
-                return status;
+                if (status == null || status.toUpperCase().contains("ERROR") || !status.toUpperCase().contains("SUCCESS")) {
+                    return status;
+                }
+                return "Successfully uploaded Empty containers";
             });
         } catch (Exception e) {
             log.error("Error processing empty container load for transaction: {}", transactionPoid, e);
@@ -418,15 +425,24 @@ public class BookingFormServiceImpl implements BookingFormService {
 
     @Override
     @Transactional
-    public void transferBookingWithContainers(Long oldTransactionPoid) {
+    public void transferBookingWithContainers(Long oldTransactionPoid, Long splitBookingNo) {
         Long groupPoid = UserContext.getGroupPoid();
         Long companyPoid = UserContext.getCompanyPoid();
         Long userPoid = UserContext.getUserPoid();
+
         ShipMateHdr entity = headerRepository
                 .findByTransactionPoid(oldTransactionPoid)
-                .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, oldTransactionPoid));
+                .orElseThrow(() -> new ResourceNotFoundException(BOOKINGFORM, TRANSACTIONPOID, oldTransactionPoid.toString()));
 
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, oldTransactionPoid, entity.getSplitBookingNo(), ALLOCATESPLITBOOKING, userPoid);
+        // Use splitBookingNo from request if provided, else fall back to DB value
+        Long resolvedSplitBookingNo = splitBookingNo != null ? splitBookingNo : entity.getSplitBookingNo();
+
+        if (resolvedSplitBookingNo == null) {
+            throw new ValidationException("Split Booking No is required for transfer. Please provide splitBookingNo.");
+        }
+
+        // Proc params: P_DOC_KEY_POID(3)=splitBookingNo(target), P_DET_ROW_ID(4)=transactionPoid(source)
+        callProcShipBlPageSaveAfter(groupPoid, companyPoid, resolvedSplitBookingNo, oldTransactionPoid, ALLOCATESPLITBOOKING, userPoid);
     }
 
     @Override
@@ -440,10 +456,11 @@ public class BookingFormServiceImpl implements BookingFormService {
         XSSFWorkbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Stuffing Advice");
         XSSFColor yellow = new XSSFColor(new byte[]{(byte) 255, (byte) 255, (byte) 0}, null);
-        XSSFColor blue = new XSSFColor(new byte[]{(byte) 0, (byte) 255, (byte) 255}, null);
-        XSSFColor gray = new XSSFColor(new byte[]{(byte) 166, (byte) 166, (byte) 166}, null);
+        XSSFColor blue   = new XSSFColor(new byte[]{(byte) 0,   (byte) 255, (byte) 255}, null);
+        XSSFColor gray   = new XSSFColor(new byte[]{(byte) 166, (byte) 166, (byte) 166}, null);
 
         DataFormat dataFormat = workbook.createDataFormat();
+
         XSSFFont boldFont = workbook.createFont();
         boldFont.setBold(true);
 
@@ -451,10 +468,16 @@ public class BookingFormServiceImpl implements BookingFormService {
         titleFont.setBold(true);
         titleFont.setFontHeightInPoints((short) 16);
 
+        XSSFFont redBoldFont = workbook.createFont();
+        redBoldFont.setBold(true);
+        redBoldFont.setColor(IndexedColors.RED.getIndex());
+
+        // ---- styles ----
         XSSFCellStyle titleStyle = workbook.createCellStyle();
         titleStyle.setFont(titleFont);
         titleStyle.setAlignment(HorizontalAlignment.CENTER);
         titleStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        applyThickBorders(titleStyle);
 
         XSSFCellStyle yellowBoldLeft = workbook.createCellStyle();
         yellowBoldLeft.setFont(boldFont);
@@ -463,6 +486,12 @@ public class BookingFormServiceImpl implements BookingFormService {
         yellowBoldLeft.setAlignment(HorizontalAlignment.LEFT);
         yellowBoldLeft.setVerticalAlignment(VerticalAlignment.CENTER);
         applyThickBorders(yellowBoldLeft);
+
+        // blank yellow cell — used to fill unused cells in merged header rows so borders are continuous
+        XSSFCellStyle yellowBlank = workbook.createCellStyle();
+        yellowBlank.setFillForegroundColor(yellow);
+        yellowBlank.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        applyThickBorders(yellowBlank);
 
         XSSFCellStyle yellowBoldCenter = workbook.createCellStyle();
         yellowBoldCenter.setFont(boldFont);
@@ -517,14 +546,15 @@ public class BookingFormServiceImpl implements BookingFormService {
         grayStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         applyThinBorders(grayStyle);
 
+        XSSFCellStyle grayBlank = workbook.createCellStyle();
+        grayBlank.setFillForegroundColor(gray);
+        grayBlank.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        applyThinBorders(grayBlank);
+
         XSSFCellStyle plainBoldStyle = workbook.createCellStyle();
         plainBoldStyle.setFont(boldFont);
         plainBoldStyle.setAlignment(HorizontalAlignment.LEFT);
         plainBoldStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-
-        XSSFFont redBoldFont = workbook.createFont();
-        redBoldFont.setBold(true);
-        redBoldFont.setColor(IndexedColors.RED.getIndex());
 
         XSSFCellStyle noteStyle = workbook.createCellStyle();
         noteStyle.setFont(redBoldFont);
@@ -534,7 +564,8 @@ public class BookingFormServiceImpl implements BookingFormService {
         noteStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         applyThickBorders(noteStyle);
 
-        sheet.setColumnWidth(0, 8 * 256);
+        // ---- column widths ----
+        sheet.setColumnWidth(0, 8  * 256);
         sheet.setColumnWidth(1, 20 * 256);
         sheet.setColumnWidth(2, 12 * 256);
         sheet.setColumnWidth(3, 12 * 256);
@@ -544,127 +575,106 @@ public class BookingFormServiceImpl implements BookingFormService {
         sheet.setColumnWidth(7, 13 * 256);
 
         int r = 0;
+
+        // helper: fills ALL 8 cells in a row with a style so merged regions have continuous borders
+        java.util.function.BiConsumer<Row, XSSFCellStyle> fillRow = (row, style) -> {
+            for (int i = 0; i < 8; i++) row.createCell(i).setCellStyle(style);
+        };
+
+        // ROW 0 — STUFFING ADVICE title
         Row row0 = sheet.createRow(r);
         row0.setHeightInPoints(28);
-        Cell titleCell = row0.createCell(0);
-        titleCell.setCellValue("STUFFING ADVICE");
-        titleCell.setCellStyle(titleStyle);
+        fillRow.accept(row0, titleStyle);
+        row0.getCell(0).setCellValue("STUFFING ADVICE");
         sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 7));
         r++;
 
+        // ROW 1 — blank left | DATE right
         Row row1 = sheet.createRow(r);
         row1.setHeightInPoints(16);
+        fillRow.accept(row1, yellowBlank);
         String dateStr = "DATE: " + new java.text.SimpleDateFormat("d/M/yyyy").format(new java.util.Date());
-        Cell dateCell = row1.createCell(4);
-        dateCell.setCellValue(dateStr);
-        dateCell.setCellStyle(yellowBoldCenter);
+        row1.getCell(4).setCellValue(dateStr);
+        row1.getCell(4).setCellStyle(yellowBoldCenter);
+        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 3));
         sheet.addMergedRegion(new CellRangeAddress(r, r, 4, 7));
         r++;
 
+        // ROW 2 — AGENCY | BOOKING NO
         Row row2 = sheet.createRow(r);
         row2.setHeightInPoints(16);
-
-        Cell agencyCell = row2.createCell(0);
-        agencyCell.setCellValue("AGENCY: NATIONAL SHIPPING AGENCY");
-        agencyCell.setCellStyle(yellowBoldLeft);
+        fillRow.accept(row2, yellowBlank);
+        row2.getCell(0).setCellValue("AGENCY: NATIONAL SHIPPING AGENCY");
+        row2.getCell(0).setCellStyle(yellowBoldLeft);
+        row2.getCell(3).setCellValue("BOOKING NO :  " + nvl(entity.getBookingIssueNo()));
+        row2.getCell(3).setCellStyle(yellowBoldLeft);
         sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
-
-        Cell bookingCell = row2.createCell(3);
-        bookingCell.setCellValue("BOOKING NO :  " + nvl(entity.getBookingIssueNo()));
-        bookingCell.setCellStyle(yellowBoldLeft);
         sheet.addMergedRegion(new CellRangeAddress(r, r, 3, 7));
         r++;
 
-        sheet.createRow(r).setHeightInPoints(8);
+        // ROW 3 — VESSEL NAME | VOY NBR  (no spacer row)
+        Row row3 = sheet.createRow(r);
+        row3.setHeightInPoints(16);
+        fillRow.accept(row3, yellowBlank);
+        row3.getCell(0).setCellValue("VESSEL NAME: " + nvl(entity.getVessalAgentName()));
+        row3.getCell(0).setCellStyle(yellowBoldLeft);
+        row3.getCell(3).setCellValue("VOY NBR: " + nvl(entity.getVoyageNo()));
+        row3.getCell(3).setCellStyle(yellowBoldLeft);
+        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
+        sheet.addMergedRegion(new CellRangeAddress(r, r, 3, 7));
         r++;
 
+        // ROW 4 — ETA | LINE
         Row row4 = sheet.createRow(r);
         row4.setHeightInPoints(16);
-
-        Cell vesselCell = row4.createCell(0);
-        vesselCell.setCellValue("VESSEL NAME: " + nvl(entity.getVessalAgentName()));
-        vesselCell.setCellStyle(yellowBoldLeft);
-        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
-
-        Cell voyCell = row4.createCell(3);
-        voyCell.setCellValue("VOY NBR: " + nvl(entity.getVoyageNo()));
-        voyCell.setCellStyle(yellowBoldLeft);
-        sheet.addMergedRegion(new CellRangeAddress(r, r, 3, 7));
-        r++;
-        sheet.createRow(r).setHeightInPoints(8);
-        r++;
-
-        Row row6 = sheet.createRow(r);
-        row6.setHeightInPoints(16);
-
-        Cell etaCell = row6.createCell(0);
-        etaCell.setCellValue("ETA: " + nvl(entity.getVesselEtaDate()));
-        etaCell.setCellStyle(yellowBoldLeft);
-        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
+        fillRow.accept(row4, yellowBlank);
+        row4.getCell(0).setCellValue("ETA: " + nvl(entity.getVesselEtaDate()));
+        row4.getCell(0).setCellStyle(yellowBoldLeft);
         String lineName = "";
         if (entity.getLinePoid() != null) {
-            List<LovItem> portList = lovService.getPortMasterLov(entity.getLinePoid());
-            if (!portList.isEmpty()) {
-                lineName = nvl(portList.get(0).getDescription());
-            }
+            List<LovItem> lineList = lovService.getLineMasterLov(entity.getLinePoid());
+            if (!lineList.isEmpty()) lineName = nvl(lineList.get(0).getDescription());
         }
-        Cell lineCell = row6.createCell(3);
-        lineCell.setCellValue("LINE: " + nvl(lineName));
-        lineCell.setCellStyle(yellowBoldLeft);
+        row4.getCell(3).setCellValue("LINE: " + lineName);
+        row4.getCell(3).setCellStyle(yellowBoldLeft);
+        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
         sheet.addMergedRegion(new CellRangeAddress(r, r, 3, 7));
         r++;
-        sheet.createRow(r).setHeightInPoints(8);
-        r++;
 
-        Row row8 = sheet.createRow(r);
-        row8.setHeightInPoints(16);
-
-        Cell shipperCell = row8.createCell(0);
-        shipperCell.setCellValue("SHIPPER: " + nvl(entity.getShipperDetailsManually()));
-        shipperCell.setCellStyle(yellowBoldLeft);
-        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
+        // ROW 5 — SHIPPER | PORT OF DISCHARGE
+        Row row5 = sheet.createRow(r);
+        row5.setHeightInPoints(16);
+        fillRow.accept(row5, yellowBlank);
+        row5.getCell(0).setCellValue("SHIPPER: " + nvl(entity.getShipperDetailsManually()));
+        row5.getCell(0).setCellStyle(yellowBoldLeft);
         String portName = "";
         if (entity.getPortOfDischargePoid() != null) {
             List<LovItem> portList = lovService.getPortMasterLov(entity.getPortOfDischargePoid());
-            if (!portList.isEmpty()) {
-                portName = nvl(portList.get(0).getDescription());
-            }
+            if (!portList.isEmpty()) portName = nvl(portList.get(0).getDescription());
         }
-        Cell portCell = row8.createCell(3);
-        portCell.setCellValue("PORT OF DISCHARGE :" + nvl(portName));
-        portCell.setCellStyle(yellowBoldLeft);
+        row5.getCell(3).setCellValue("PORT OF DISCHARGE: " + portName);
+        row5.getCell(3).setCellStyle(yellowBoldLeft);
+        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 2));
         sheet.addMergedRegion(new CellRangeAddress(r, r, 3, 7));
         r++;
 
-        sheet.createRow(r).setHeightInPoints(8);
-        r++;
-
+        // ROW 6 — table column headers
         String[] columns = {
-                "S/N",
-                "CONTAINER NBR",
-                "SEAL NBR",
-                "CONT SIZE",
-                "MARKS\n(ALBA order no)",
-                "COLOUR CODE",
-                "QTY OF\nBUNDLES",
-                "WEIGHT\nTONNES"
+                "S/N", "CONTAINER NBR", "SEAL NBR", "CONT SIZE",
+                "MARKS\n(ALBA order no)", "COLOUR CODE", "QTY OF\nBUNDLES", "WEIGHT\nTONNES"
         };
-
         Row headerRow = sheet.createRow(r);
         headerRow.setHeightInPoints(40);
         for (int i = 0; i < columns.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(columns[i]);
-            if (i == 0 || i == 1 || i == 2 || i == 7) {
-                cell.setCellStyle(blueHeaderStyle);
-            } else {
-                cell.setCellStyle(yellowHeaderStyle);
-            }
+            cell.setCellStyle((i == 0 || i == 1 || i == 2 || i == 7) ? blueHeaderStyle : yellowHeaderStyle);
         }
         r++;
 
+        // data rows
         double totalBundles = 0;
-        double totalWeight = 0;
+        double totalWeight  = 0;
         int serialNo = 1;
         String marks = "";
 
@@ -672,95 +682,62 @@ public class BookingFormServiceImpl implements BookingFormService {
             Row row = sheet.createRow(r++);
             row.setHeightInPoints(16);
 
-            Cell c0 = row.createCell(0);
-            c0.setCellValue(serialNo++);
-            c0.setCellStyle(dataStyle);
+            Cell c0 = row.createCell(0); c0.setCellValue(serialNo++);               c0.setCellStyle(dataStyle);
+            Cell c1 = row.createCell(1); c1.setCellValue(nvl(dtl.getContainerNo())); c1.setCellStyle(dataStyle);
+            Cell c2 = row.createCell(2); c2.setCellValue(nvl(dtl.getEquipmentSealNo())); c2.setCellStyle(dataStyle);
+            Cell c3 = row.createCell(3); c3.setCellValue(nvl(dtl.getEquipmentIsoType())); c3.setCellStyle(dataStyle);
 
-            Cell c1 = row.createCell(1);
-            c1.setCellValue(nvl(dtl.getContainerNo()));
-            c1.setCellStyle(dataStyle);
+            marks = nvl(dtl.getMarks());
+            Cell c4 = row.createCell(4); c4.setCellValue(marks);                    c4.setCellStyle(dataStyle);
+            Cell c5 = row.createCell(5); c5.setCellValue(nvl(dtl.getColourCode())); c5.setCellStyle(dataStyle);
 
-            Cell c2 = row.createCell(2);
-            c2.setCellValue(nvl(dtl.getEquipmentSealNo()));
-            c2.setCellStyle(dataStyle);
-
-            Cell c3 = row.createCell(3);
-            c3.setCellValue(nvl(dtl.getEquipmentIsoType()));
-            c3.setCellStyle(dataStyle);
-
-            Cell c4 = row.createCell(4);
-            c4.setCellValue(nvl(dtl.getMarks()));
-            marks = dtl.getMarks();
-            c4.setCellStyle(dataStyle);
-
-            Cell c5 = row.createCell(5);
-            c5.setCellValue(nvl(dtl.getColourCode()));
-            c5.setCellStyle(dataStyle);
-
-            double bundles = Double.parseDouble(nvl(dtl.getQtyOfBundles()));
-            Cell c6 = row.createCell(6);
-            c6.setCellValue(bundles);
-            c6.setCellStyle(dataStyle);
+            double bundles = dtl.getQtyOfBundles() != null ? dtl.getQtyOfBundles().doubleValue() : 0.0;
+            Cell c6 = row.createCell(6); c6.setCellValue(bundles); c6.setCellStyle(decimalStyle);
             totalBundles += bundles;
 
-            double weight = Double.parseDouble(nvl(dtl.getWeightTonnes()));
-            Cell c7 = row.createCell(7);
-            c7.setCellValue(weight);
-            c7.setCellStyle(decimalStyle);
+            double weight = dtl.getWeightTonnes() != null ? dtl.getWeightTonnes().doubleValue() : 0.0;
+            Cell c7 = row.createCell(7); c7.setCellValue(weight); c7.setCellStyle(decimalStyle);
             totalWeight += weight;
         }
 
-        Row totalRow = sheet.createRow(r++);
+        // TOTAL row — cells 0-4 merged with "TOTAL" label, cells 5 blank, 6=bundles, 7=weight
+        Row totalRow = sheet.createRow(r);
         totalRow.setHeightInPoints(16);
+        fillRow.accept(totalRow, yellowBoldCenter);
+        totalRow.getCell(0).setCellValue("TOTAL");
+        sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 4));
+        totalRow.getCell(5).setCellValue("");
+        totalRow.getCell(6).setCellValue(totalBundles);
+        totalRow.getCell(6).setCellStyle(yellowTotalDecStyle);
+        totalRow.getCell(7).setCellValue(totalWeight);
+        totalRow.getCell(7).setCellStyle(yellowTotalDecStyle);
+        r++;
 
-        totalRow.createCell(0).setCellStyle(dataStyle);
-        totalRow.createCell(1).setCellStyle(dataStyle);
-        totalRow.createCell(2).setCellStyle(dataStyle);
-        totalRow.createCell(3).setCellStyle(dataStyle);
-        totalRow.createCell(4).setCellStyle(dataStyle);
-
-        Cell totalLabel = totalRow.createCell(5);
-        totalLabel.setCellValue("TOTAL");
-        totalLabel.setCellStyle(yellowBoldCenter);
-
-        Cell totalB = totalRow.createCell(6);
-        totalB.setCellValue(totalBundles);
-        totalB.setCellStyle(yellowBoldCenter);
-
-        Cell totalW = totalRow.createCell(7);
-        totalW.setCellValue(totalWeight);
-        totalW.setCellStyle(yellowTotalDecStyle);
-
-        sheet.createRow(r++).setHeightInPoints(8);
+        // REMARKS label row
         Row remarksLabelRow = sheet.createRow(r++);
         remarksLabelRow.setHeightInPoints(16);
-        Cell remarksLabel = remarksLabelRow.createCell(0);
-        remarksLabel.setCellValue("REMARKS:");
-        remarksLabel.setCellStyle(plainBoldStyle);
+        remarksLabelRow.createCell(0).setCellValue("REMARKS:");
+        remarksLabelRow.getCell(0).setCellStyle(plainBoldStyle);
 
-        String[] remarksLines = {
-                marks,
-                portName,
-                "MADE IN BAHRAIN"
-        };
+        // REMARKS content rows — fill all 8 cells so borders are continuous
+        String[] remarksLines = { marks, portName, "MADE IN BAHRAIN" };
         for (String line : remarksLines) {
-            if (line.isBlank()) continue;
+            if (line == null || line.isBlank()) continue;
             Row rv = sheet.createRow(r);
             rv.setHeightInPoints(16);
-            Cell vc = rv.createCell(0);
-            vc.setCellValue(line);
-            vc.setCellStyle(grayStyle);
-            sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 3));
+            fillRow.accept(rv, grayBlank);
+            rv.getCell(0).setCellValue(line);
+            rv.getCell(0).setCellStyle(grayStyle);
+            sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 7));
             r++;
         }
-        sheet.createRow(r++).setHeightInPoints(8);
+
+        // NOTE row — fill all 8 cells so outer border is continuous
         Row noteRow = sheet.createRow(r);
         noteRow.setHeightInPoints(16);
-        Cell noteCell = noteRow.createCell(0);
-        noteCell.setCellValue("NOTE : Pls allocate HEAVY DUTY containers for above booking");
-        noteCell.setCellStyle(noteStyle); // yellow bg + red bold text
+        fillRow.accept(noteRow, noteStyle);
+        noteRow.getCell(0).setCellValue("NOTE : Pls allocate HEAVY DUTY containers for above booking");
         sheet.addMergedRegion(new CellRangeAddress(r, r, 0, 7));
-        r++;
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
@@ -881,25 +858,32 @@ public class BookingFormServiceImpl implements BookingFormService {
     /**
      * Call PROC_SHIP_BL_PAGE_SAVE_AFTER stored procedure
      */
-    private void callProcShipBlPageSaveAfter(Long groupPoid, Long companyPoid, Long transactionPoid,
-                                             Long splitBookingNo, String actionType, Long userPoid) {
+    /**
+     * Proc signature: PROC_SHIP_BL_PAGE_SAVE_AFTER(GROUP, COMPANY, P_DOC_KEY_POID, P_DET_ROW_ID, UPDATE_TYPE, LOGIN_USER)
+     * For ALLOCATESPLITBOOKING:
+     *   P_DOC_KEY_POID (param3) = splitBookingNo  → TARGET booking (0 = auto-create new split)
+     *   P_DET_ROW_ID   (param4) = sourceTransactionPoid → SOURCE booking (where IS_SPLIT='Y' containers live)
+     */
+    private void callProcShipBlPageSaveAfter(Long groupPoid, Long companyPoid, Long docKeyPoid,
+                                             Long detRowId, String actionType, Long userPoid) {
         try {
             String sql = "{call PROC_SHIP_BL_PAGE_SAVE_AFTER(?, ?, ?, ?, ?, ?)}";
             jdbcTemplate.execute((ConnectionCallback<Void>) connection -> {
                 CallableStatement cs = connection.prepareCall(sql);
                 cs.setLong(1, groupPoid);
                 cs.setLong(2, companyPoid);
-                cs.setLong(3, splitBookingNo != null ? splitBookingNo : 0L);
-                cs.setLong(4, transactionPoid);
+                cs.setLong(3, docKeyPoid != null ? docKeyPoid : 0L);  // P_DOC_KEY_POID = target splitBookingNo
+                cs.setLong(4, detRowId);                               // P_DET_ROW_ID   = source transactionPoid
                 cs.setString(5, actionType != null ? actionType : ALLOCATESPLITBOOKING);
-                cs.setString(6, String.valueOf(userPoid));
+                cs.setLong(6, userPoid);                               // must be numeric, not string
                 cs.execute();
                 cs.close();
                 return null;
             });
-            log.debug("Successfully called PROC_SHIP_BL_PAGE_SAVE_AFTER for transaction: {}", transactionPoid);
+            log.debug("Successfully called PROC_SHIP_BL_PAGE_SAVE_AFTER - docKeyPoid: {}, detRowId: {}", docKeyPoid, detRowId);
         } catch (Exception e) {
-            log.error("Error calling PROC_SHIP_BL_PAGE_SAVE_AFTER for transaction: {}", transactionPoid, e);
+            log.error("Error calling PROC_SHIP_BL_PAGE_SAVE_AFTER - docKeyPoid: {}, detRowId: {}", docKeyPoid, detRowId, e);
+            throw new ValidationException("Transfer failed: " + e.getMessage());
         }
     }
 
@@ -1288,7 +1272,7 @@ public class BookingFormServiceImpl implements BookingFormService {
     }
 
     private void enrichCargoDetails(BookingFormDto dto) {
-        if (dto.getChargesDetails() == null) return;
+        if (dto.getCargoDetails() == null) return;
 
         dto.getCargoDetails().forEach(cargo -> {
             if (cargo.getEquipmentIsoType() != null) {

@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestupdate.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,7 @@ public class ContainerRequestDto implements BlManifestValidationService.Containe
     private String cargoDescription;
     private String equipmentSealNo;
     private String equipmentIsoType;
+    private LovItem equipmentIsoTypeDet;
     private String equipmentType;
     private String equipmentSize;
     private Long quantity;
@@ -32,7 +34,9 @@ public class ContainerRequestDto implements BlManifestValidationService.Containe
     private Long noOfPacks;
     private String packUnit;
     private Long comodityPoid;
+    private LovItem comodityDet;
     private Long destinationPortPoid;
+    private LovItem destinationPortDet;
     private String imo;
     private String oogL;
     private String oogB;
@@ -47,6 +51,7 @@ public class ContainerRequestDto implements BlManifestValidationService.Containe
     private String isRefer;
     private String referType;
     private String imcoClassType;
+    private LovItem imcoClassTypeDet;
     private String guaranteeFlag;
     private String guaranteedBy;
     private Long extraFreeDays;
@@ -56,6 +61,7 @@ public class ContainerRequestDto implements BlManifestValidationService.Containe
     private String oogF;
     private String oogA;
     private String oogType;
+    private LovItem oogTypeDet;
     private String imcoClassActual;
     private LocalDate displayCollectedDate;
     private Long totalDaysCollected;

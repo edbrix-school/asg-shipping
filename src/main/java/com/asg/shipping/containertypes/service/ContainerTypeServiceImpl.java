@@ -239,7 +239,11 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
      * Validate ContainerTypeUpdateDTO
      */
     private void validateContainerTypeUpdateDTO(ContainerTypeUpdateDTO dto, Long groupPoid, Long excludeContainerTypePoid) {
-        // Note: Code is not updateable, so we don't check code uniqueness on update
+        // Check if container type code already exists (excluding current container type)
+        if (containerTypeRepository.existsByContainerTypeCodeExcludingPoid(dto.getContainerTypeCode(), excludeContainerTypePoid)) {
+            throw new ValidationException("Container type code already exists");
+        }
+        
         // Check if container type name already exists for this group (excluding current container type)
         if (containerTypeRepository.existsByContainerTypeNameExcludingPoid(dto.getContainerTypeName(), excludeContainerTypePoid)) {
             throw new ValidationException("Container type name already exists for this group");

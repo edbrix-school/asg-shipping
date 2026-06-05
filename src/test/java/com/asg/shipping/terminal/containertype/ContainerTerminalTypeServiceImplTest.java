@@ -256,6 +256,24 @@ class ContainerTerminalTypeServiceImplTest {
     }
 
     @Test
+    void testUpdate_DuplicateCode() {
+        entity.setContainerTerminalTypeCode("0234");
+        request.setContainerTerminalTypeCode("CT4020");
+
+        when(repository.findByContainerTerminalTypePoidAndGroupPoid(1L, 10L))
+                .thenReturn(Optional.of(entity));
+        when(repository.existsByContainerTerminalTypeCodeAndGroupPoid("CT4020", 10L))
+                .thenReturn(true);
+
+        ValidationException ex = assertThrows(
+                ValidationException.class,
+                () -> service.update(1L, request, 10L, "user1", "000-001")
+        );
+
+        assertTrue(ex.getMessage().contains("code already exists"));
+    }
+
+    @Test
     void testUpdate_DuplicateName() {
         // existing entity name
         entity.setContainerTerminalTypeName("Twenty Feet");

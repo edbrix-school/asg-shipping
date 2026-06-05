@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestupdate.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,21 +23,27 @@ public class ImportManifestBlRequestDto {
     private String docRef;
     private LocalDate transactionDate;
     private Long voyageTransactionPoid;
+    private LovItem voyageTransactionPoidDet;
     private String blNumber;
     private String agentReference;
     private Long shipperPoid;
     private Long shipperAddressPoid;
     private Long consigneePoid;
+    private LovItem consigneeDet;
     private Long consigneeAddressPoid;
     private Long notifyPoid1;
+    private LovItem notifyPoid1Det;
     private Long notifyAddressPoid1;
     private Long notifyPoid2;
     private Long notifyAddressPoid2;
     private Long notifyPoid3;
     private Long notifyAddressPoid3;
     private Long quotationTransactionPoid;
+    private LovItem quotationTransactionDet;
     private Long salesmanPoid;
+    private LovItem salesmanDet;
     private Long comodityPoid;
+    private LovItem comodityDet;
     private Long noOfOrgnlBls;
     private String exportReference;
     private String lpoSrnNo;
@@ -54,9 +61,13 @@ public class ImportManifestBlRequestDto {
     private String unitPack;
     private BigDecimal totalNoOfPacks;
     private Long placeOfRecieptPoid;
+    private LovItem placeOfRecieptDet;
     private Long placeOfDelieveryPoid;
+    private LovItem placeOfDelieveryDet;
     private Long portOfLoadingPoid;
+    private LovItem portOfLoadingDet;
     private Long portOfDischargePoid;
+    private LovItem portOfDischargeDet;
     private String remarks;
     private String blStatus;
     private String blOrginalPrint;
@@ -78,10 +89,13 @@ public class ImportManifestBlRequestDto {
     private LocalDate releasedGrantDate;
     private String releasedGrantReason;
     private String cargoType;
+    private LovItem cargoTypeDet;
     private String blType;
+    private LovItem blTypeDet;
     private String doNo;
     private String deleted;
     private String blIssueType;
+    private LovItem blIssueTypeDet;
     private String shipperEdiName;
     private String shipperEdiAddress;
     private String consigneeEdiName;
@@ -97,6 +111,7 @@ public class ImportManifestBlRequestDto {
     private String freightStatus;
     private String holdCanDo;
     private String holdReason;
+    private LovItem holdReasonDet;
     private String canSentQueue;
     private LocalDate canSentDate;
     private String canSentBy;
@@ -106,6 +121,7 @@ public class ImportManifestBlRequestDto {
     private String blPlaceLoad;
     private String blFinalDestination;
     private Long bookingPartyPoid;
+    private LovItem bookingPartyDet;
     private String blPlaceDischareDesc;
     private String cargoArrivalNumber;
     private String bookedByPp;
@@ -149,6 +165,8 @@ public class ImportManifestBlRequestDto {
     private List<ContainerRequestDto> containers;
 
     /* ================= DESCRIPTION & MARKS ================= */
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
     private List<CargoDescriptionRequestDto> cargoDescriptions;
 
     /* ================= MAFI ================= */

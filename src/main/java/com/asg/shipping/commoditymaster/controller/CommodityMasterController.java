@@ -21,7 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -74,9 +74,11 @@ public class CommodityMasterController {
     @PostMapping("/list")
     public ResponseEntity<?> getCommodities(
             @ParameterObject Pageable pageable,
-            @RequestBody(required = false) FilterRequestDto filters) {
+            @RequestBody(required = false) FilterRequestDto filters,
+            @RequestParam(required = false) @io.swagger.v3.oas.annotations.Parameter(description = "Start date (inclusive) for date filter") LocalDate startDate,
+            @RequestParam(required = false) @io.swagger.v3.oas.annotations.Parameter(description = "End date (inclusive) for date filter") LocalDate endDate) {
         try {
-            Map<String, Object> commodities = commodityMasterService.listCommodities(UserContext.getDocumentId(), filters, pageable);
+            Map<String, Object> commodities = commodityMasterService.listCommodities(UserContext.getDocumentId(), filters, startDate, endDate, pageable);
             return success("Commodity list fetched successfully", commodities);
         } catch (Exception e) {
             return internalServerError("Unable to fetch commodity list: " + e.getMessage());

@@ -41,13 +41,13 @@ public class ShipContainerTypeMaster extends BaseEntity {
     @Column(name = "CONTAINER_TYPE_ISO_NAME", nullable = false, length = 100)
     private String containerTypeIsoName;
 
-    @Column(name = "CONTAINER_CARGO_WEIGHT", precision = 25, scale = 3)
+    @Column(name = "CONTAINER_CARGO_WEIGHT")
     private BigDecimal containerCargoWeight;
 
-    @Column(name = "CONTAINER_TARE_WEIGHT", precision = 25, scale = 3)
+    @Column(name = "CONTAINER_TARE_WEIGHT")
     private BigDecimal containerTareWeight;
 
-    @Column(name = "CONTAINER_TEU_FACTOR", nullable = false, precision = 25, scale = 3)
+    @Column(name = "CONTAINER_TEU_FACTOR", nullable = false)
     private BigDecimal containerTeuFactor;
 
     @Column(name = "CONTAINER_TYPE_CATEGORY", nullable = false, length = 20)

@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestupdate.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,9 +20,14 @@ public class ImportManifestUpdateOpsDto {
     private Long transactionPoid;
     private String docRef;
     private Long voyageTransactionPoid;
+    private LovItem voyageTransactionPoidDet;
     private String blNumber;
     private String blType;
+    private LovItem blTypeDet;
+    private String blIssueType;
+    private LovItem blIssueTypeDet;
     private String cargoType;
+    private LovItem cargoTypeDet;
     private Long noOfOrgnlBls;
     private String typeOfMove;
     private Long demFreeDays;
@@ -32,7 +38,9 @@ public class ImportManifestUpdateOpsDto {
     private String exportReference;
     private String remarks;
     private Long quotationTransactionPoid;
+    private LovItem quotationTransactionDet;
     private Long salesmanPoid;
+    private LovItem salesmanDet;
 
     // Shipper / Consignee
     private String shipperEdiName;
@@ -40,17 +48,24 @@ public class ImportManifestUpdateOpsDto {
     private String consigneeEdiName;
     private String consigneeEdiAddress;
     private Long consigneePoid;
+    private LovItem consigneeDet;
     private Long bookingPartyPoid;
+    private LovItem bookingPartyDet;
 
     // Port details / Pre-carried
     private String preCarriedBy;
     private Long placeOfReceiptPoid;
+    private LovItem placeOfReceiptDet;
     private Long placeOfDeliveryPoid;
+    private LovItem placeOfDeliveryDet;
     private Long portOfLoadingPoid;
+    private LovItem portOfLoadingDet;
     private Long portOfDischargePoid;
+    private LovItem portOfDischargeDet;
 
     // Gross/Net Weight/CBM/Packs/Commodity
     private Long comodityPoid;
+    private LovItem comodityDet;
     private BigDecimal totalNetVolume;
     private BigDecimal totalWeight;
     private BigDecimal totalNetWeight;
@@ -66,11 +81,13 @@ public class ImportManifestUpdateOpsDto {
     private String notify3EdiName;
     private String notify3EdiAddress;
     private Long notifyPoid1;
+    private LovItem notifyPoid1Det;
     private Long notifyPoid2;
     private Long notifyPoid3;
 
     // Hold/CAN
     private String holdReason;
+    private LovItem holdReasonDet;
     private String holdCanDo;
     private String holdRemarks;
     private String manuallyCanSend;
@@ -81,6 +98,8 @@ public class ImportManifestUpdateOpsDto {
 
     // Detail lists using request DTOs
     private List<GeneralCargoRequestDto> generalCargoDetails;
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
     private List<CargoDescriptionRequestDto> cargoDescriptions;
     private List<ContainerRequestDto> containers;
     private List<ChargeRequestDto> chargeDetails;

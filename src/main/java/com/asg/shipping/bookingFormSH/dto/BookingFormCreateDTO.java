@@ -47,10 +47,10 @@ public class BookingFormCreateDTO {
     private Long salesmanPoid;
 
     private Long comodityPoid;
-    private BigDecimal totalVolume;
-    private BigDecimal totalWeight;
+    private Double totalVolume;
+    private Double totalWeight;
     private String unitPack;
-    private BigDecimal totalNoOfPacks;
+    private Double totalNoOfPacks;
     private Long placeOfRecieptPoid;
     private Long placeOfDelieveryPoid;
     private Long portOfLoadingPoid;

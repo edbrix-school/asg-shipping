@@ -107,6 +107,12 @@ public class ContainerTerminalTypeMapper {
             return;
         }
 
+        if (request.getContainerTerminalTypeCode() != null) {
+            entity.setContainerTerminalTypeCode(
+                    request.getContainerTerminalTypeCode().trim().toUpperCase()
+            );
+        }
+
         if (request.getContainerTerminalTypeName() != null) {
             entity.setContainerTerminalTypeName(
                     request.getContainerTerminalTypeName().trim()

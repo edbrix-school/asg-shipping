@@ -103,8 +103,8 @@ public class ChargeGroupMasterServiceTest {
             mocked.when(UserContext::getGroupPoid).thenReturn(100L);
             mocked.when(UserContext::getDocumentId).thenReturn("DOC001");
 
-            when(repository.findByChargeGroupCode("TEST001")).thenReturn(Optional.empty());
-            when(repository.findByChargeGroupName("Test Charge Group")).thenReturn(Optional.empty());
+            when(repository.findByChargeGroupCodeIgnoreCase("TEST001")).thenReturn(Optional.empty());
+            when(repository.findByChargeGroupNameIgnoreCase("Test Charge Group")).thenReturn(Optional.empty());
             when(repository.save(any(ShipChargeGroupMaster.class))).thenReturn(entity);
             when(lovService.getDetailsByPoidAndLovName(anyLong(), anyString())).thenReturn(lovDto);
 
@@ -120,7 +120,7 @@ public class ChargeGroupMasterServiceTest {
 
     @Test
     void create_DuplicateCode() {
-        when(repository.findByChargeGroupCode("TEST001")).thenReturn(Optional.of(entity));
+        when(repository.findByChargeGroupCodeIgnoreCase("TEST001")).thenReturn(Optional.of(entity));
 
         assertThrows(IllegalArgumentException.class, () -> service.create(requestDto));
         verify(repository, never()).save(any());
@@ -128,8 +128,8 @@ public class ChargeGroupMasterServiceTest {
 
     @Test
     void create_DuplicateName() {
-        when(repository.findByChargeGroupCode("TEST001")).thenReturn(Optional.empty());
-        when(repository.findByChargeGroupName("Test Charge Group")).thenReturn(Optional.of(entity));
+        when(repository.findByChargeGroupCodeIgnoreCase("TEST001")).thenReturn(Optional.empty());
+        when(repository.findByChargeGroupNameIgnoreCase("Test Charge Group")).thenReturn(Optional.of(entity));
 
         assertThrows(IllegalArgumentException.class, () -> service.create(requestDto));
         verify(repository, never()).save(any());

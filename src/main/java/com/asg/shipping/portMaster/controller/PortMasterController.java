@@ -106,7 +106,6 @@ public class PortMasterController {
             @Parameter(description = "Port POID to be deleted", required = true, example = "5001") @PathVariable("portPoid") Long portPoid,
             @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         service.deletePort(portPoid, deleteReasonDto);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), portPoid.toString());
         return success("Port deleted successfully");
     }
 

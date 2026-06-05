@@ -136,7 +136,15 @@ public class ContainerTerminalTypeServiceImpl implements ContainerTerminalTypeSe
                                 poid
                         ));
 
+        String newCode = request.getContainerTerminalTypeCode().trim().toUpperCase();
         String newName = request.getContainerTerminalTypeName().trim();
+
+        if (!newCode.equals(entity.getContainerTerminalTypeCode())
+                && repository.existsByContainerTerminalTypeCodeAndGroupPoid(newCode, groupPoid)) {
+            throw new ValidationException(
+                    "Container terminal type code already exists: " + newCode
+            );
+        }
 
         if (!newName.equals(entity.getContainerTerminalTypeName())
                 && repository.existsByContainerTerminalTypeNameAndGroupPoid(newName, groupPoid)) {

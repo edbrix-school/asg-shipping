@@ -13,6 +13,9 @@ import java.util.stream.Collectors;
 @Component
 public class ImportManifestBlMapper {
 
+    private static final String CONTAINER_OWN_CUSTOMER = "C";
+    private static final String CONTAINER_OWN_SHIPPER = "S";
+
     public ImportManifestUpdateOpsDto mapToScreenDto(ImportManifestBlRequestDto requestDto) {
         if (requestDto == null) {
             return null;
@@ -21,9 +24,14 @@ public class ImportManifestBlMapper {
                 .transactionPoid(requestDto.getTransactionPoid())
                 .docRef(requestDto.getDocRef())
                 .voyageTransactionPoid(requestDto.getVoyageTransactionPoid())
+                .voyageTransactionPoidDet(requestDto.getVoyageTransactionPoidDet())
                 .blNumber(requestDto.getBlNumber())
                 .blType(requestDto.getBlType())
+                .blTypeDet(requestDto.getBlTypeDet())
+                .blIssueType(requestDto.getBlIssueType())
+                .blIssueTypeDet(requestDto.getBlIssueTypeDet())
                 .cargoType(requestDto.getCargoType())
+                .cargoTypeDet(requestDto.getCargoTypeDet())
                 .noOfOrgnlBls(requestDto.getNoOfOrgnlBls())
                 .typeOfMove(requestDto.getTypeOfMove())
                 .demFreeDays(requestDto.getDemFreeDays())
@@ -39,15 +47,22 @@ public class ImportManifestBlMapper {
                 .consigneeEdiName(requestDto.getConsigneeEdiName())
                 .consigneeEdiAddress(requestDto.getConsigneeEdiAddress())
                 .consigneePoid(requestDto.getConsigneePoid())
+                .consigneeDet(requestDto.getConsigneeDet())
                 .bookingPartyPoid(requestDto.getBookingPartyPoid())
+                .bookingPartyDet(requestDto.getBookingPartyDet())
                 
                 .preCarriedBy(requestDto.getPreCarriedBy())
                 .placeOfReceiptPoid(requestDto.getPlaceOfRecieptPoid())
+                .placeOfReceiptDet(requestDto.getPlaceOfRecieptDet())
                 .placeOfDeliveryPoid(requestDto.getPlaceOfDelieveryPoid())
+                .placeOfDeliveryDet(requestDto.getPlaceOfDelieveryDet())
                 .portOfLoadingPoid(requestDto.getPortOfLoadingPoid())
+                .portOfLoadingDet(requestDto.getPortOfLoadingDet())
                 .portOfDischargePoid(requestDto.getPortOfDischargePoid())
+                .portOfDischargeDet(requestDto.getPortOfDischargeDet())
                 
                 .comodityPoid(requestDto.getComodityPoid())
+                .comodityDet(requestDto.getComodityDet())
                 .totalNetVolume(requestDto.getTotalNetVolume())
                 .totalWeight(requestDto.getTotalWeight())
                 .totalNetWeight(requestDto.getTotalNetWeight())
@@ -57,15 +72,17 @@ public class ImportManifestBlMapper {
                 
                 .notify1EdiName(requestDto.getNotify1EdiName())
                 .notify1EdiAddress(requestDto.getNotify1EdiAddress())
+                .notifyPoid1(requestDto.getNotifyPoid1())
+                .notifyPoid1Det(requestDto.getNotifyPoid1Det())
                 .notify2EdiName(requestDto.getNotify2EdiName())
                 .notify2EdiAddress(requestDto.getNotify2EdiAddress())
                 .notify3EdiName(requestDto.getNotify3EdiName())
                 .notify3EdiAddress(requestDto.getNotify3EdiAddress())
-                .notifyPoid1(requestDto.getNotifyPoid1())
                 .notifyPoid2(requestDto.getNotifyPoid2())
                 .notifyPoid3(requestDto.getNotifyPoid3())
                 
                 .holdReason(requestDto.getHoldReason())
+                .holdReasonDet(requestDto.getHoldReasonDet())
                 .holdCanDo(requestDto.getHoldCanDo())
                 .holdRemarks(requestDto.getHoldRemarks())
                 .manuallyCanSend(requestDto.getManuallyCanSend())
@@ -75,6 +92,8 @@ public class ImportManifestBlMapper {
                 .freightStatus(requestDto.getFreightStatus())
                 
                 .generalCargoDetails(requestDto.getGeneralCargoDetails())
+                .simpleCargoDescription(getCargoDescriptionByType(requestDto.getCargoDescriptions(), "DESC", "DESCRIPTION"))
+                .simpleCargoMarks(getCargoDescriptionByType(requestDto.getCargoDescriptions(), "MARK", "MARKS"))
                 .cargoDescriptions(requestDto.getCargoDescriptions())
                 .containers(requestDto.getContainers())
                 .chargeDetails(requestDto.getChargeDetails())
@@ -138,6 +157,8 @@ public class ImportManifestBlMapper {
                 
                 .notifyParties(screenDto.getAddressDetails())
                 .generalCargoDetails(screenDto.getGeneralCargoDetails())
+                .simpleCargoDescription(screenDto.getSimpleCargoDescription())
+                .simpleCargoMarks(screenDto.getSimpleCargoMarks())
                 .containers(screenDto.getContainers())
                 .cargoDescriptions(screenDto.getCargoDescriptions())
                 .mafiDetails(screenDto.getMafiDetails())
@@ -274,6 +295,8 @@ public class ImportManifestBlMapper {
                 .forwarderPin(entity.getForwarderPin())
                 .manifestEmailVerified(entity.getManifestEmailVerified())
                 .emailVerifiedWithSpecialC(entity.getEmailVerifiedWithSpecialC())
+                .simpleCargoDescription(null)
+                .simpleCargoMarks(null)
                 .createdBy(entity.getCreatedBy())
                 .createdDate(entity.getCreatedDate())
                 .lastModifiedBy(entity.getLastModifiedBy())
@@ -566,7 +589,7 @@ public class ImportManifestBlMapper {
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .mateTransactionPoid(entity.getMateTransactionPoid())
                 .containerNo(entity.getContainerNo())
-                .equipmentShipperOwn(entity.getEquipmentShipperOwn())
+                .equipmentShipperOwn(decodeContainerOwnership(entity.getEquipmentShipperOwn()))
                 .cargoDescription(entity.getCargoDescription())
                 .equipmentSealNo(entity.getEquipmentSealNo())
                 .equipmentIsoType(entity.getEquipmentIsoType())
@@ -633,7 +656,7 @@ public class ImportManifestBlMapper {
                 .id(id)
                 .mateTransactionPoid(dto.getMateTransactionPoid())
                 .containerNo(dto.getContainerNo())
-                .equipmentShipperOwn(dto.getEquipmentShipperOwn())
+                .equipmentShipperOwn(encodeContainerOwnership(dto.getEquipmentShipperOwn()))
                 .cargoDescription(dto.getCargoDescription())
                 .equipmentSealNo(dto.getEquipmentSealNo())
                 .equipmentIsoType(dto.getEquipmentIsoType())
@@ -686,6 +709,28 @@ public class ImportManifestBlMapper {
                 .hsDescription(dto.getHsDescription())
                 .amountPerDayAfterFree(dto.getAmountPerDayAfterFree())
                 .build();
+    }
+
+    private String encodeContainerOwnership(String socType) {
+        if (socType == null) {
+            return null;
+        }
+        return switch (socType.trim().toUpperCase()) {
+            case "COC", "C" -> CONTAINER_OWN_CUSTOMER;
+            case "SOC", "S" -> CONTAINER_OWN_SHIPPER;
+            default -> socType.isEmpty() ? null : socType.substring(0, 1).toUpperCase();
+        };
+    }
+
+    private String decodeContainerOwnership(String equipmentShipperOwn) {
+        if (equipmentShipperOwn == null) {
+            return null;
+        }
+        return switch (equipmentShipperOwn.trim().toUpperCase()) {
+            case CONTAINER_OWN_CUSTOMER -> "COC";
+            case CONTAINER_OWN_SHIPPER -> "SOC";
+            default -> equipmentShipperOwn;
+        };
     }
 
     // Detail mapping methods - Charges DTL
@@ -916,6 +961,37 @@ public class ImportManifestBlMapper {
         if (entities == null)
             return null;
         return entities.stream().map(this::mapMafiDtlToDto).collect(Collectors.toList());
+    }
+
+    public List<CargoDescriptionRequestDto> mapSimpleCargoToRows(String simpleCargoDescription, String simpleCargoMarks) {
+        List<CargoDescriptionRequestDto> rows = new java.util.ArrayList<>();
+        if (simpleCargoDescription != null) {
+            rows.add(CargoDescriptionRequestDto.builder()
+                    .descriptionType("DESC")
+                    .cargoDescription(simpleCargoDescription)
+                    .actionType("ISCREATED")
+                    .build());
+        }
+        if (simpleCargoMarks != null) {
+            rows.add(CargoDescriptionRequestDto.builder()
+                    .descriptionType("MARK")
+                    .cargoDescription(simpleCargoMarks)
+                    .actionType("ISCREATED")
+                    .build());
+        }
+        return rows;
+    }
+
+    private String getCargoDescriptionByType(List<CargoDescriptionRequestDto> rows, String... types) {
+        if (rows == null) {
+            return null;
+        }
+        return rows.stream()
+                .filter(r -> r.getDescriptionType() != null
+                        && java.util.Arrays.stream(types).anyMatch(t -> t.equalsIgnoreCase(r.getDescriptionType())))
+                .map(CargoDescriptionRequestDto::getCargoDescription)
+                .findFirst()
+                .orElse(null);
     }
 
     public void updateGeneralFromDto(GeneralCargoRequestDto dto, ShipBlManifestGeneralDtl entity) {

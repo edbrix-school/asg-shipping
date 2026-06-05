@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,6 +17,7 @@ public class GeneralCargoDto {
     private Long detRowId;
     private String description;
     private Long commodityPoid;
+    private LovItem commodityDet;
 
     private Long volume;
     private Long grossWeight;
@@ -27,5 +29,6 @@ public class GeneralCargoDto {
     private Long quantity;
 
     private Long destinationPortPoid;
+    private LovItem destinationPortDet;
     private String actionType;
 }

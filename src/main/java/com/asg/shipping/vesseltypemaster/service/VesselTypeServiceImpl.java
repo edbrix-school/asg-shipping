@@ -202,10 +202,8 @@ public class VesselTypeServiceImpl implements VesselTypeService {
         vesselTypeRepository.save(vesselType);
 
         loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), vesselTypeId.toString());
-        String logDetail = String.format("KeyId = VESSEL_TYPE_POID:%s", vesselTypeId);
-        String tableName = ShipVesselTypeMaster.class.getAnnotation(jakarta.persistence.Table.class).name();
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), vesselTypeId.toString(), "Deleted", "N", "Y", logDetail, tableName);
-        loggingService.createLogDetailsEntry(UserContext.getDocumentId(), vesselTypeId.toString(), "Active", "Y", "N", logDetail, tableName);
+
+
 
         log.info("deleteVesselType completed for vesselTypeId={} companyPoid={}", vesselTypeId, companyPoid);
     }

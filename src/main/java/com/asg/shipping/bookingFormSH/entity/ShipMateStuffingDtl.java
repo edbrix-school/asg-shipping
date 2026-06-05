@@ -44,7 +44,7 @@ public class ShipMateStuffingDtl extends BaseEntity {
     @Column(name = "WEIGHT_TONNES", precision = 20, scale = 3)
     private BigDecimal weightTonnes;
 
-    @Column(name = "QTY_OF_BUNDLES")
+    @Column(name = "QTY_OF_BUNDLES", precision = 20, scale = 3)
     private BigDecimal qtyOfBundles;
 
     @ManyToOne(fetch = FetchType.LAZY)
