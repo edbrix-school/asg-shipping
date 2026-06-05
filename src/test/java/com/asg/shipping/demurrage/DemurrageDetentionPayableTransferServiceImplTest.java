@@ -391,7 +391,8 @@ class DemurrageDetentionPayableTransferServiceImplTest {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
 
-            when(jdbcTemplate.queryForList(eq("SELECT * FROM VW_SHIP_BILLWISE_ACCOUNT_TRN WHERE GL_CODE = ? AND REMARKS LIKE ? AND COMPANY_POID = ?"), any(Object[].class)))
+            // Billwise query: no COMPANY_POID filter (matches legacy VwShipBillwiseAccountTrnView1)
+            when(jdbcTemplate.queryForList(contains("VW_SHIP_BILLWISE_ACCOUNT_TRN"), any(Object[].class)))
                     .thenReturn(List.of(
                             Map.of(
                                     "REMARKS", "Demurrage for BL001",
@@ -413,8 +414,6 @@ class DemurrageDetentionPayableTransferServiceImplTest {
                             Map.of("DOC_REF", "DOC-1", "DM_CHARGE_AMT", java.math.BigDecimal.valueOf(120)),
                             Map.of("DOC_REF", "DOC-1", "DM_CHARGE_AMT", java.math.BigDecimal.valueOf(120))
                     ));
-            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
-                    .thenReturn("12345");
 
             Map<String, Object> result = service.loadBillwiseDataBeforeCreate(loadRequest);
 
@@ -424,8 +423,9 @@ class DemurrageDetentionPayableTransferServiceImplTest {
 
             Map<?, ?> row1 = (Map<?, ?>) billDetails.get(0);
             Map<?, ?> row2 = (Map<?, ?>) billDetails.get(1);
-            assertEquals("BILL001", row1.get("billRefno"));
-            assertEquals("BILL001", row2.get("billRefno"));
+            // Multi-row branch: billRefno comes from DOC_REF in the dynamic query, not BILL_REF
+            assertEquals("DOC-1", row1.get("billRefno"));
+            assertEquals("DOC-1", row2.get("billRefno"));
             assertEquals(12345L, row1.get("glPoid"));
             assertEquals(12345L, row2.get("glPoid"));
             assertNotNull(row1.get("billwiseBalance"));
@@ -727,19 +727,16 @@ class DemurrageDetentionPayableTransferServiceImplTest {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(1L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(100L);
 
-            // Mock billwise accounts query to fail
+            // Mock billwise accounts query to fail — queryBillwiseAccountView catches and returns empty list
             when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
                 .thenThrow(new RuntimeException("Database error"));
-            // Mock stored procedure call for default GL
-            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
-                .thenReturn("12345");
 
             var result = service.loadBillwiseDataBeforeCreate(loadRequest);
 
             assertNotNull(result);
             assertTrue(result.containsKey("billDetails"));
-            // When billwise query fails, it creates a placeholder record, so totalCount should be 1
-            assertEquals(1, result.get("totalCount"));
+            // Legacy behaviour: no billwise rows → container skipped, no bill detail produced
+            assertEquals(0, result.get("totalCount"));
         }
     }
 
