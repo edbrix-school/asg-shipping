@@ -368,9 +368,11 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                     ShipLineCommCntnrDtlEntity oldItem = new ShipLineCommCntnrDtlEntity();
                     BeanUtils.copyProperties(entity, oldItem);
                     mapper.applyUpdateContainerEntity(entity, dto, userId);
+                    ShipLineCommCntnrDtlEntity newItem = new ShipLineCommCntnrDtlEntity();
+                    BeanUtils.copyProperties(entity, newItem);
                     toUpdate.add(entity);
                     String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
-                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommCntnrDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                    logRequests.add(new LogRequestDto<>(oldItem, newItem, ShipLineCommCntnrDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
                 }
                 case ACTION_IS_DELETED -> {
                     Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
@@ -460,9 +462,11 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                     ShipLineCommDtlEntity oldItem = new ShipLineCommDtlEntity();
                     BeanUtils.copyProperties(entity, oldItem);
                     mapper.applyUpdateOtherRemunerationEntity(entity, dto, userId);
+                    ShipLineCommDtlEntity newItem = new ShipLineCommDtlEntity();
+                    BeanUtils.copyProperties(entity, newItem);
                     toUpdate.add(entity);
                     String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
-                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                    logRequests.add(new LogRequestDto<>(oldItem, newItem, ShipLineCommDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
                 }
                 case ACTION_IS_DELETED -> {
                     Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
@@ -552,9 +556,11 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                     ShipLineCommLocalDtlEntity oldItem = new ShipLineCommLocalDtlEntity();
                     BeanUtils.copyProperties(entity, oldItem);
                     mapper.applyUpdateLocalShareEntity(entity, dto, userId);
+                    ShipLineCommLocalDtlEntity newItem = new ShipLineCommLocalDtlEntity();
+                    BeanUtils.copyProperties(entity, newItem);
                     toUpdate.add(entity);
                     String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
-                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommLocalDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                    logRequests.add(new LogRequestDto<>(oldItem, newItem, ShipLineCommLocalDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
                 }
                 case ACTION_IS_DELETED -> {
                     Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
