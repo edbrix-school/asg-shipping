@@ -324,7 +324,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setUserRoles(mapper.mapUserRoleDetailsToDto(updatedUserRoles));
         List<ShipLineMasterPicDtl> updatedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setPicDetails(mapper.mapPicDetailsToDto(updatedPicDetails));
-        //enrichDtoWithLovData(result, saved, groupPoid);
+        enrichDtoWithLovData(result, saved, groupPoid);
 
         // Populate addressTypeMap
         if (saved.getAddressPoid() != null) {
