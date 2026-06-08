@@ -150,8 +150,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 addressTypeMap.setMain(byType.get("MAIN"));
                 addressTypeMap.setFinance(byType.get("FINANCE"));
                 addressTypeMap.setSales(byType.get("SALES"));
-                addressTypeMap.setOperation(byType.get("OPERATIONS"));
-                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setOperation(byType.get("OPERATION"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE_ADDRESS"));
                 addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
                 addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
                 addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
@@ -252,8 +252,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 addressTypeMap.setMain(byType.get("MAIN"));
                 addressTypeMap.setFinance(byType.get("FINANCE"));
                 addressTypeMap.setSales(byType.get("SALES"));
-                addressTypeMap.setOperation(byType.get("OPERATIONS"));
-                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setOperation(byType.get("OPERATION"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE_ADDRESS"));
                 addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
                 addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
                 addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
@@ -340,8 +340,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 addressTypeMap.setMain(byType.get("MAIN"));
                 addressTypeMap.setFinance(byType.get("FINANCE"));
                 addressTypeMap.setSales(byType.get("SALES"));
-                addressTypeMap.setOperation(byType.get("OPERATIONS"));
-                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setOperation(byType.get("OPERATION"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE_ADDRESS"));
                 addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
                 addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
                 addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
@@ -1080,8 +1080,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 "MAIN", Optional.ofNullable(typeMap.getMain()).orElse(List.of()),
                 "FINANCE", Optional.ofNullable(typeMap.getFinance()).orElse(List.of()),
                 "SALES", Optional.ofNullable(typeMap.getSales()).orElse(List.of()),
-                "OPERATIONS", Optional.ofNullable(typeMap.getOperation()).orElse(List.of()),
-                "INVOICE", Optional.ofNullable(typeMap.getInvoiceAddress()).orElse(List.of()),
+                "OPERATION", Optional.ofNullable(typeMap.getOperation()).orElse(List.of()),
+                "INVOICE_ADDRESS", Optional.ofNullable(typeMap.getInvoiceAddress()).orElse(List.of()),
                 "DELIVERY_ORDER", Optional.ofNullable(typeMap.getDeliveryOrder()).orElse(List.of()),
                 "SHIP_CHANDLING", Optional.ofNullable(typeMap.getShipChandling()).orElse(List.of()),
                 "CLAIM_UAC", Optional.ofNullable(typeMap.getClaimUac()).orElse(List.of()),
