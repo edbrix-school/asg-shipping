@@ -846,22 +846,19 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     /**
      * Container availability query for Process For Filtered Data.
-     * Uses NOT EXISTS with IS NOT NULL guards (GAP-10) to mirror legacy NOT IN semantics safely.
+     * Uses NOT IN to exactly mirror legacy query behavior (NOT EXISTS was causing data filtering issues).
      * No date filter — legacy EmptyFromDate/EmptyToDate are rendered=false.
+     * No DEMURRAGE_ACUTAL filter — legacy doesn't have this condition.
      */
     private String buildContainerQuerySql() {
         return "SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER V " +
-                "WHERE NOT EXISTS (" +
-                "  SELECT 1 FROM SHIP_DEM_DETN_TRANSFER_HDR H " +
+                "WHERE (V.MAINFEST_TRANSACTION_POID, V.CONTAINER_NO) NOT IN (" +
+                "  SELECT D.MAINFEST_TRANSACTION_POID, D.CONTAINER_NO " +
+                "  FROM SHIP_DEM_DETN_TRANSFER_HDR H " +
                 "  INNER JOIN SHIP_DEM_DETN_TRANSFER_DTL D ON D.TRANSACTION_POID = H.TRANSACTION_POID " +
                 "  WHERE NVL(H.DELETED, 'N') = 'N' " +
-                "  AND NVL(D.IS_SELECT, 'N') = 'Y' " +
-                "  AND D.MAINFEST_TRANSACTION_POID IS NOT NULL " +
-                "  AND D.CONTAINER_NO IS NOT NULL " +
-                "  AND D.MAINFEST_TRANSACTION_POID = V.MAINFEST_TRANSACTION_POID " +
-                "  AND D.CONTAINER_NO = V.CONTAINER_NO" +
+                "  AND NVL(D.IS_SELECT, 'N') = 'Y'" +
                 ") " +
-                "AND NVL(V.DEMURRAGE_ACUTAL, 0) > 0 " +
                 "AND V.BL_TYPE = ? AND V.LINE_POID = ? AND V.COMPANY_POID = ? " +
                 "ORDER BY V.BL_NUMBER";
     }

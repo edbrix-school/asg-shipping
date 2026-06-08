@@ -42,6 +42,7 @@ public class ImportManifestBlMapper {
                 .exportReference(requestDto.getExportReference())
                 .remarks(requestDto.getRemarks())
                 .salesmanPoid(requestDto.getSalesmanPoid())
+                .salesmanDet(requestDto.getSalesmanDet())
                 .shipperEdiName(requestDto.getShipperEdiName())
                 .shipperEdiAddress(requestDto.getShipperEdiAddress())
                 .consigneeEdiName(requestDto.getConsigneeEdiName())
