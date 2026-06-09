@@ -42,6 +42,11 @@ class PortStorageTariffsControllerTest {
     private PortStorageTariffUpdateDTO updateDto;
     private DeleteReasonDto deleteReasonDto;
 
+    private void stubSearch(Map<String, Object> result) {
+        lenient().doReturn(result).when(tariffService).searchTariffs(
+                anyString(), any(), any(), any(), any());
+    }
+
     @BeforeEach
     void setUp() {
         testDto = PortStorageTariffDto.builder()
@@ -81,13 +86,13 @@ class PortStorageTariffsControllerTest {
 
             FilterRequestDto filterRequest = new FilterRequestDto(null, null, null);
             Map<String, Object> result = new HashMap<>();
-            when(tariffService.searchTariffs(anyString(), any(), any(), any(), any())).thenReturn(result);
+            stubSearch(result);
 
             ResponseEntity<?> response = controller.searchTariffs(filterRequest, 0, 20, "description,asc", null, null);
 
             assertNotNull(response);
             assertEquals(200, response.getStatusCode().value());
-            verify(tariffService).searchTariffs(anyString(), any(), isNull(), isNull(), any());
+            verify(tariffService).searchTariffs(eq("100-060"), eq(filterRequest), isNull(), isNull(), any());
         }
     }
 
@@ -97,8 +102,7 @@ class PortStorageTariffsControllerTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-            Map<String, Object> result = new HashMap<>();
-            when(tariffService.searchTariffs(anyString(), any(), any(), any(), any())).thenReturn(result);
+            stubSearch(new HashMap<>());
 
             ResponseEntity<?> response = controller.searchTariffs(null, 0, 20, null, null, null);
 
@@ -260,8 +264,7 @@ class PortStorageTariffsControllerTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-            Map<String, Object> result = new HashMap<>();
-            when(tariffService.searchTariffs(anyString(), any(), any(), any(), any())).thenReturn(result);
+            stubSearch(new HashMap<>());
 
             // Test with single field sort
             ResponseEntity<?> response1 = controller.searchTariffs(null, 0, 20, "description", null, null);
@@ -303,14 +306,13 @@ class PortStorageTariffsControllerTest {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
             FilterRequestDto complexFilter = new FilterRequestDto("OR", "Y", null);
-            Map<String, Object> result = new HashMap<>();
-            when(tariffService.searchTariffs(anyString(), any(), any(), any(), any())).thenReturn(result);
+            stubSearch(new HashMap<>());
 
             ResponseEntity<?> response = controller.searchTariffs(complexFilter, 1, 50, "periodFrom,desc", null, null);
 
             assertNotNull(response);
             assertEquals(200, response.getStatusCode().value());
-            verify(tariffService).searchTariffs(anyString(), eq(complexFilter), isNull(), isNull(), any());
+            verify(tariffService).searchTariffs(eq("100-060"), eq(complexFilter), isNull(), isNull(), any());
         }
     }
 
@@ -336,14 +338,14 @@ class PortStorageTariffsControllerTest {
 
             LocalDate periodFrom = LocalDate.of(2026, 1, 1);
             LocalDate periodTo = LocalDate.of(2026, 1, 30);
-            when(tariffService.searchTariffs(anyString(), any(), eq(periodFrom), eq(periodTo), any()))
-                    .thenReturn(new HashMap<>());
+            doReturn(new HashMap<>()).when(tariffService).searchTariffs(
+                    anyString(), any(), eq(periodFrom), eq(periodTo), any());
 
             ResponseEntity<?> response = controller.searchTariffs(
                     null, 0, 40, "TRANSACTION_POID,DESC", periodFrom, periodTo);
 
             assertEquals(200, response.getStatusCode().value());
-            verify(tariffService).searchTariffs(anyString(), isNull(), eq(periodFrom), eq(periodTo), any());
+            verify(tariffService).searchTariffs(eq("100-060"), isNull(), eq(periodFrom), eq(periodTo), any());
         }
     }
 
@@ -353,8 +355,7 @@ class PortStorageTariffsControllerTest {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-            Map<String, Object> result = new HashMap<>();
-            when(tariffService.searchTariffs(anyString(), any(), any(), any(), any())).thenReturn(result);
+            stubSearch(new HashMap<>());
 
             // Test with invalid sort format (more than 2 parts)
             ResponseEntity<?> response = controller.searchTariffs(null, 0, 20, "field,asc,extra", null, null);
