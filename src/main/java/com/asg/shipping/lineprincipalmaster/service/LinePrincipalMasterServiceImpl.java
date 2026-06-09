@@ -344,7 +344,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setUserRoles(mapper.mapUserRoleDetailsToDto(updatedUserRoles));
         List<ShipLineMasterPicDtl> updatedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(saved.getLinePoid());
         result.setPicDetails(mapper.mapPicDetailsToDto(updatedPicDetails));
-        enrichDtoWithLovData(result, saved, groupPoid);
+       // enrichDtoWithLovData(result, saved, groupPoid);
 
         // Populate addressTypeMap
         if (saved.getAddressPoid() != null) {
@@ -1166,10 +1166,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
         if (!createdDetails.isEmpty()) {
             insertCreatedAddressDetails(createdDetails);
-            createdDetails.forEach(detail -> {
-                String logDetail = String.format("Row Created on Address Detail with addressPoid: %s", detail.getAddressPoid());
-                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId, logDetail);
-            });
+            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId,
+                    "Address Detail row(s) created");
         }
         if (!toDelete.isEmpty()) {
             deleteAddressDetails(master.getAddressMasterPoid(), toDelete);
