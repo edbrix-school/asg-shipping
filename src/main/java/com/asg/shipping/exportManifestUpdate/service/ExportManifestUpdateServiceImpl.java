@@ -29,7 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+import com.asg.common.lib.security.model.CustomAuthDetails;
 
 import net.sf.jasperreports.engine.JasperReport;
 
@@ -246,19 +249,13 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         return mapper.mapToResponse(saved);
     }
 
-    private ExportManifestBlResponse loadEnrichedHeaderOnly(Long transactionPoid) {
+    private ExportManifestBlResponse loadMinimalHeader(Long transactionPoid) {
         Long groupPoid = UserContext.getGroupPoid();
         Long companyPoid = UserContext.getCompanyPoid();
-        Long userPoid = UserContext.getUserPoid();
         ExportShipBlManifestHdr entity = hdrRepository
                 .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
                 .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
-        ExportManifestBlResponse response = mapper.mapToResponse(entity);
-        enrichHeaderWithLovData(response, entity);
-        String status = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
-        response.setStatusDetails(parseBlStatus(status));
-        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoFromStatus(status));
-        return response;
+        return mapper.mapToResponse(entity);
     }
 
     private void validateHeaderExists(Long transactionPoid) {
@@ -297,47 +294,69 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         // With @JsonUnwrapped, header is always non-null but fields may all be null if FE sent nothing.
         // Use voyageTransactionPoid as a meaningful presence check.
         ExportManifestBlRequest headerReq = request.getHeader();
-        if (headerReq != null && headerReq.getVoyageTransactionPoid() != null) {
-            updateExportBl(transactionPoid, headerReq); // persist; minimal response discarded
+        ExportManifestBlResponse headerResponse = (headerReq != null && headerReq.getVoyageTransactionPoid() != null)
+                ? updateExportBl(transactionPoid, headerReq)
+                : loadMinimalHeader(transactionPoid);
+
+        // Capture UserContext (ThreadLocal) so child threads can inherit it
+        CustomAuthDetails authDetails = UserContext.getCurrentUser();
+
+        // Fire all 5 detail writes in parallel — no fetch, no return value
+        CompletableFuture<Void> generalFuture = request.getGeneralCargoDetails() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateGeneralCargoDetails(transactionPoid, request.getGeneralCargoDetails(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> containerFuture = request.getContainerDetails() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateContainerDetails(transactionPoid, request.getContainerDetails(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> cargoDescFuture = request.getCargoDescription() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateCargoDescription(transactionPoid, request.getCargoDescription(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> cargoMarksFuture = request.getCargoMarks() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateCargoMarks(transactionPoid, request.getCargoMarks(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> chargeFuture = request.getChargeDetails() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateChargeDetails(transactionPoid, request.getChargeDetails(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        // Wait for all writes; rethrow the first failure
+        try {
+            CompletableFuture.allOf(generalFuture, containerFuture, cargoDescFuture, cargoMarksFuture, chargeFuture).join();
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            throw (cause instanceof RuntimeException) ? (RuntimeException) cause : new RuntimeException(cause);
         }
-        // Always load the enriched header (LOV + status) for the combined response
-        ExportManifestBlResponse headerResponse = loadEnrichedHeaderOnly(transactionPoid);
 
-        // --- General cargo ---
-        List<GeneralCargoDetailDto> generalCargoResponse = (request.getGeneralCargoDetails() != null)
-                ? doUpdateGeneralCargoDetails(transactionPoid, request.getGeneralCargoDetails(), userId)
-                : fetchGeneralCargoDetails(transactionPoid);
-
-        // --- Container details ---
-        List<ContainerDetailDto> containerResponse = (request.getContainerDetails() != null)
-                ? doUpdateContainerDetails(transactionPoid, request.getContainerDetails(), userId)
-                : fetchContainerDetails(transactionPoid);
-
-        // --- Cargo description list (fetch reflects simple save above if list not provided) ---
-        List<CargoDescriptionDto> cargoDescResponse = (request.getCargoDescription() != null)
-                ? doUpdateCargoDescription(transactionPoid, request.getCargoDescription(), userId)
-                : fetchCargoDescription(transactionPoid);
-
-        // --- Cargo marks list (fetch reflects simple save above if list not provided) ---
-        List<CargoMarksDto> cargoMarksResponse = (request.getCargoMarks() != null)
-                ? doUpdateCargoMarks(transactionPoid, request.getCargoMarks(), userId)
-                : fetchCargoMarks(transactionPoid);
-
-        // --- Charge details ---
-        Map<String, Object> chargeResponse = (request.getChargeDetails() != null)
-                ? doUpdateChargeDetails(transactionPoid, request.getChargeDetails(), userId)
-                : fetchChargeDetails(transactionPoid);
+        // Recalculate header totals once after all parallel writes complete
+        boolean anyUpdate = request.getGeneralCargoDetails() != null
+                || request.getContainerDetails() != null
+                || request.getChargeDetails() != null;
+        if (anyUpdate) {
+            recalculateHeaderTotals(transactionPoid);
+        }
 
         ExportManifestUpdateResponse response = new ExportManifestUpdateResponse();
         response.setHeader(headerResponse);
-        response.setGeneralCargoDetails(generalCargoResponse);
-        response.setContainerDetails(containerResponse);
-        response.setCargoDescription(cargoDescResponse);
-        response.setCargoMarks(cargoMarksResponse);
         response.setSimpleCargoDescription(simpleCargoDescResponse);
         response.setSimpleCargoMarks(simpleCargoMarksResponse);
-        response.setDisplayTopInfoExportBLS(headerResponse.getDisplayTopInfoExportBLS());
-        response.setChargeDetails(chargeResponse);
 
         return response;
     }
@@ -352,7 +371,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 .collect(Collectors.joining(" "));
     }
 
-    /** Joins DTO list — used when the list is already fetched (e.g. getCargoContainerDetails). */
     private String joinCargoDescriptions(List<CargoDescriptionDto> list) {
         if (list == null || list.isEmpty()) return null;
         return list.stream()
@@ -437,10 +455,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<GeneralCargoDetailDto> updateGeneralCargoDetails(Long transactionPoid, List<GeneralCargoDetailDto> request) {
         log.info("Updating general cargo details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        return doUpdateGeneralCargoDetails(transactionPoid, request, getCurrentUser());
+        doUpdateGeneralCargoDetails(transactionPoid, request, getCurrentUser());
+        recalculateHeaderTotals(transactionPoid);
+        return fetchGeneralCargoDetails(transactionPoid);
     }
 
-    private List<GeneralCargoDetailDto> doUpdateGeneralCargoDetails(Long transactionPoid, List<GeneralCargoDetailDto> request, String userId) {
+    private void doUpdateGeneralCargoDetails(Long transactionPoid, List<GeneralCargoDetailDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (GeneralCargoDetailDto dto : request) {
@@ -481,8 +501,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 generalDtlRepository.deleteByTransactionPoidAndDetRowIds(transactionPoid, deleteIds);
             }
         }
-        recalculateHeaderTotals(transactionPoid);
-        return fetchGeneralCargoDetails(transactionPoid);
     }
 
     // ========== Container Details Operations ==========
@@ -506,10 +524,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<ContainerDetailDto> updateContainerDetails(Long transactionPoid, List<ContainerDetailDto> request) {
         log.info("Updating container details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        return doUpdateContainerDetails(transactionPoid, request, getCurrentUser());
+        doUpdateContainerDetails(transactionPoid, request, getCurrentUser());
+        recalculateHeaderTotals(transactionPoid);
+        return fetchContainerDetails(transactionPoid);
     }
 
-    private List<ContainerDetailDto> doUpdateContainerDetails(Long transactionPoid, List<ContainerDetailDto> request, String userId) {
+    private void doUpdateContainerDetails(Long transactionPoid, List<ContainerDetailDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (ContainerDetailDto dto : request) {
@@ -554,8 +574,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 containerDtlRepository.deleteByTransactionPoidAndDetRowIds(transactionPoid, deleteIds);
             }
         }
-        recalculateHeaderTotals(transactionPoid);
-        return fetchContainerDetails(transactionPoid);
     }
 
     // ========== Cargo Description and Marks Operations ==========
@@ -577,10 +595,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoDescriptionDto> updateCargoDescription(Long transactionPoid, List<CargoDescriptionDto> request) {
         log.info("Updating cargo description for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        return doUpdateCargoDescription(transactionPoid, request, getCurrentUser());
+        doUpdateCargoDescription(transactionPoid, request, getCurrentUser());
+        return fetchCargoDescription(transactionPoid);
     }
 
-    private List<CargoDescriptionDto> doUpdateCargoDescription(Long transactionPoid, List<CargoDescriptionDto> request, String userId) {
+    private void doUpdateCargoDescription(Long transactionPoid, List<CargoDescriptionDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (CargoDescriptionDto dto : request) {
@@ -611,7 +630,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 cargoDtlRepository.deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(transactionPoid, "DESC", deleteIds);
             }
         }
-        return fetchCargoDescription(transactionPoid);
     }
 
     @Override
@@ -650,10 +668,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoMarksDto> updateCargoMarks(Long transactionPoid, List<CargoMarksDto> request) {
         log.info("Updating cargo marks for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        return doUpdateCargoMarks(transactionPoid, request, getCurrentUser());
+        doUpdateCargoMarks(transactionPoid, request, getCurrentUser());
+        return fetchCargoMarks(transactionPoid);
     }
 
-    private List<CargoMarksDto> doUpdateCargoMarks(Long transactionPoid, List<CargoMarksDto> request, String userId) {
+    private void doUpdateCargoMarks(Long transactionPoid, List<CargoMarksDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (CargoMarksDto dto : request) {
@@ -684,7 +703,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 cargoDtlRepository.deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(transactionPoid, "MARK", deleteIds);
             }
         }
-        return fetchCargoMarks(transactionPoid);
     }
 
     // ========== Charge Details Operations ==========
@@ -720,10 +738,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public Map<String, Object> updateChargeDetails(Long transactionPoid, List<ChargeDetailDto> request) {
         log.info("Updating charge details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        return doUpdateChargeDetails(transactionPoid, request, getCurrentUser());
+        doUpdateChargeDetails(transactionPoid, request, getCurrentUser());
+        recalculateHeaderTotals(transactionPoid);
+        return fetchChargeDetails(transactionPoid);
     }
 
-    private Map<String, Object> doUpdateChargeDetails(Long transactionPoid, List<ChargeDetailDto> request, String userId) {
+    private void doUpdateChargeDetails(Long transactionPoid, List<ChargeDetailDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (ChargeDetailDto dto : request) {
@@ -767,8 +787,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 chargesDtlRepository.deleteByTransactionPoidAndDetRowIds(transactionPoid, deleteIds);
             }
         }
-        recalculateHeaderTotals(transactionPoid);
-        return fetchChargeDetails(transactionPoid);
     }
 
     private void recalculateHeaderTotals(Long transactionPoid) {
