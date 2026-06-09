@@ -179,9 +179,19 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Validate
         validateLineCreateDTO(dto, groupPoid);
 
-        GlobalAddressMaster addressMaster = resolveAddressMasterForCreate(
-                dto.getAddressPoid(), dto.getLineName(), dto.getSeqno(), groupPoid);
-        dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        boolean hasAddressData = hasAnyAddressData(dto.getAddressTypeMap());
+
+        GlobalAddressMaster addressMaster = null;
+        if (dto.getAddressPoid() != null) {
+            addressMaster = addressMasterRepository.findByAddressMasterPoid(dto.getAddressPoid())
+                    .orElseThrow(() -> new ResourceNotFoundException("Address", "addressPoid", dto.getAddressPoid().toString()));
+        } else if (hasAddressData) {
+            addressMaster = createAddressMaster(dto.getLineName(), dto.getSeqno(), groupPoid);
+        }
+
+        if (addressMaster != null) {
+            dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        }
 
         // Create main entity
         ShipLineMaster line = new ShipLineMaster();
@@ -197,7 +207,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 .orElseThrow(() -> new ValidationException("Failed to resolve LINE_POID for newly created line."));
         Long resolvedLinePoid = resolvedLine.getLinePoid();
 
-        if (dto.getAddressTypeMap() != null) {
+        if (hasAddressData && addressMaster != null) {
             saveAllAddressDetails(dto.getAddressTypeMap(), addressMaster, getCurrentUser(), resolvedLinePoid.toString());
             refreshPersistenceContext();
         }
@@ -284,15 +294,25 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Validate
         validateLineUpdateDTO(dto, groupPoid, id);
 
-        GlobalAddressMaster addressMaster = resolveAddressMasterForUpdate(
-                dto.getAddressPoid(), dto.getLineName(), dto.getSeqno(), groupPoid);
-        dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        boolean hasAddressData = hasAnyAddressData(dto.getAddressTypeMap());
+
+        GlobalAddressMaster addressMaster = null;
+        if (dto.getAddressPoid() != null) {
+            addressMaster = addressMasterRepository.findByAddressMasterPoid(dto.getAddressPoid())
+                    .orElseThrow(() -> new ResourceNotFoundException("Address", "addressPoid", dto.getAddressPoid().toString()));
+        } else if (hasAddressData) {
+            addressMaster = createAddressMaster(dto.getLineName(), dto.getSeqno(), groupPoid);
+        }
+
+        if (addressMaster != null) {
+            dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        }
 
         // Update main entity
         mapper.mapUpdateDTOToEntity(dto, line, groupPoid, userPoid, companyPoid);
         ShipLineMaster saved = lineRepository.save(line);
 
-        if (dto.getAddressTypeMap() != null) {
+        if (hasAddressData && addressMaster != null) {
             saveAllAddressDetails(dto.getAddressTypeMap(), addressMaster, getCurrentUser(), id.toString());
             refreshPersistenceContext();
         }
@@ -1027,6 +1047,19 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         }
     }
 
+    private boolean hasAnyAddressData(AddressTypeMapDTO typeMap) {
+        if (typeMap == null) return false;
+        return isListNotEmpty(typeMap.getMain()) || isListNotEmpty(typeMap.getFinance()) ||
+               isListNotEmpty(typeMap.getSales()) || isListNotEmpty(typeMap.getOperation()) ||
+               isListNotEmpty(typeMap.getInvoiceAddress()) || isListNotEmpty(typeMap.getDeliveryOrder()) ||
+               isListNotEmpty(typeMap.getShipChandling()) || isListNotEmpty(typeMap.getClaimUac()) ||
+               isListNotEmpty(typeMap.getCan());
+    }
+
+    private boolean isListNotEmpty(List<?> list) {
+        return list != null && !list.isEmpty();
+    }
+
     private GlobalAddressMaster resolveAddressMasterForCreate(Long addressPoid, String lineName, Integer seqno, Long groupPoid) {
         if (addressPoid == null) {
             return createAddressMaster(lineName, seqno, groupPoid);
@@ -1133,10 +1166,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
         if (!createdDetails.isEmpty()) {
             insertCreatedAddressDetails(createdDetails);
-            createdDetails.forEach(detail -> {
-                String logDetail = String.format("Row Created on Address Detail with addressPoid: %s", detail.getAddressPoid());
-                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId, logDetail);
-            });
+            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId,
+                    "Address Detail row(s) created");
         }
         if (!toDelete.isEmpty()) {
             deleteAddressDetails(master.getAddressMasterPoid(), toDelete);
