@@ -2,6 +2,7 @@ package com.asg.shipping.portstoragetariffsmaster.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.asg.common.lib.dto.request.LogRequestDto;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,13 +79,17 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
-        log.info("Searching tariffs with docId: {}, page: {}, size: {}", docId, pageable.getPageNumber(), pageable.getPageSize());
+    public Map<String, Object> searchTariffs(String docId, FilterRequestDto request,
+                                             LocalDate periodFrom, LocalDate periodTo,
+                                             Pageable pageable) {
+        log.info("Searching tariffs with docId: {}, page: {}, size: {}, periodFrom: {}, periodTo: {}",
+                docId, pageable.getPageNumber(), pageable.getPageSize(), periodFrom, periodTo);
 
         // Resolve filter components from FilterRequestDto
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = new ArrayList<>(documentService.resolveFilters(request));
+        applyPeriodRangeFilters(filters, periodFrom, periodTo);
 
         // Call documentService.search with docId, filters, operator, pageable, isDeleted
         // Label field: "DESCRIPTION" (display field)
@@ -107,6 +113,18 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
 
         // Wrap with pagination and display fields
         return PaginationUtil.wrapPage(page, raw.displayFields());
+    }
+
+    /**
+     * Returns tariffs whose period overlaps the selected range (All Records view).
+     * Overlap: PERIOD_FROM &lt;= searchTo AND PERIOD_TO &gt;= searchFrom
+     */
+    private void applyPeriodRangeFilters(List<FilterDto> filters, LocalDate periodFrom, LocalDate periodTo) {
+        if (periodFrom == null || periodTo == null) {
+            return;
+        }
+        filters.add(new FilterDto("PERIOD_FROM", "<=" + periodTo));
+        filters.add(new FilterDto("PERIOD_TO", ">=" + periodFrom));
     }
 
     @Override

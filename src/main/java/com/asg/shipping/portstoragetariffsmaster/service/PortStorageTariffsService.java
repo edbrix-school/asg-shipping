@@ -6,6 +6,7 @@ import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffCreateDTO;
 import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffDto;
 import com.asg.shipping.portstoragetariffsmaster.dto.PortStorageTariffUpdateDTO;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -22,7 +23,9 @@ public interface PortStorageTariffsService {
      * @param pageable Pagination and sorting information
      * @return Map containing paginated results and display fields
      */
-    Map<String, Object> searchTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request,
+                                      LocalDate periodFrom, LocalDate periodTo,
+                                      org.springframework.data.domain.Pageable pageable);
 
     /**
      * Get tariff by ID
