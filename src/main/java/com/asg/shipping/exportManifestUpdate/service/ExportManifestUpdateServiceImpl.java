@@ -191,15 +191,9 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Save entity
         ExportShipBlManifestHdr saved = hdrRepository.save(entity);
-        
-        log.info("Successfully created Export BL with ID: {}", saved.getTransactionPoid());
-        ExportManifestBlResponse response = mapper.mapToResponse(saved);
-        
-        // Enrich with LOV data
-        enrichHeaderWithLovData(response, saved);
-        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(saved.getTransactionPoid()));
 
-        return response;
+        log.info("Successfully created Export BL with ID: {}", saved.getTransactionPoid());
+        return mapper.mapToResponse(saved);
     }
 
     @Override
@@ -247,14 +241,23 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Save entity
         ExportShipBlManifestHdr saved = hdrRepository.save(entity);
-        
-        log.info("Successfully updated Export BL with ID: {}", saved.getTransactionPoid());
-        ExportManifestBlResponse response = mapper.mapToResponse(saved);
-        
-        // Enrich with LOV data
-        enrichHeaderWithLovData(response, saved);
-        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(saved.getTransactionPoid()));
 
+        log.info("Successfully updated Export BL with ID: {}", saved.getTransactionPoid());
+        return mapper.mapToResponse(saved);
+    }
+
+    private ExportManifestBlResponse loadEnrichedHeaderOnly(Long transactionPoid) {
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+        ExportShipBlManifestHdr entity = hdrRepository
+                .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
+                .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
+        ExportManifestBlResponse response = mapper.mapToResponse(entity);
+        enrichHeaderWithLovData(response, entity);
+        String status = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
+        response.setStatusDetails(parseBlStatus(status));
+        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoFromStatus(status));
         return response;
     }
 
@@ -294,9 +297,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         // With @JsonUnwrapped, header is always non-null but fields may all be null if FE sent nothing.
         // Use voyageTransactionPoid as a meaningful presence check.
         ExportManifestBlRequest headerReq = request.getHeader();
-        ExportManifestBlResponse headerResponse = (headerReq != null && headerReq.getVoyageTransactionPoid() != null)
-                ? updateExportBl(transactionPoid, headerReq)
-                : getExportBlById(transactionPoid);
+        if (headerReq != null && headerReq.getVoyageTransactionPoid() != null) {
+            updateExportBl(transactionPoid, headerReq); // persist; minimal response discarded
+        }
+        // Always load the enriched header (LOV + status) for the combined response
+        ExportManifestBlResponse headerResponse = loadEnrichedHeaderOnly(transactionPoid);
 
         // --- General cargo ---
         List<GeneralCargoDetailDto> generalCargoResponse = (request.getGeneralCargoDetails() != null)
