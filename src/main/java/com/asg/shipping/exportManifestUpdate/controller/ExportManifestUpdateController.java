@@ -235,7 +235,7 @@ public class ExportManifestUpdateController {
         try {
             String docId = UserContext.getDocumentId();
             byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-            String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE")
+            String fileName = request.isCargoManifest()
                     ? "cargo-manifest-" : "freight-manifest-";
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,

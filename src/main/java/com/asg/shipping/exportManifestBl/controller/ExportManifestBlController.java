@@ -352,8 +352,7 @@ public class ExportManifestBlController {
 		try {
 			String docId = UserContext.getDocumentId();
 			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-			String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-"
-					: "freight-manifest-";
+			String fileName = request.isCargoManifest() ? "cargo-manifest-" : "freight-manifest-";
 			return ResponseEntity.ok()
 					.header(HttpHeaders.CONTENT_DISPOSITION,
 							"attachment; filename=" + fileName + transactionPoid + ".pdf")
