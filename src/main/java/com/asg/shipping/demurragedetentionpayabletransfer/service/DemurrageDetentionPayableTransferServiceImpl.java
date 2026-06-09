@@ -36,6 +36,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -332,22 +334,30 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             throw new ValidationException("Failed to load available containers: " + e.getMessage());
         }
 
-        // Insert new rows with IsSelect='N' (legacy bean line 181)
+        // Insert new rows with IsSelect='N' (legacy bean line 181) — collect in memory for batch save
+        List<ShipDemDetnTransferDtl> newDetails = new ArrayList<>(containers.size());
         long detRowId = 0;
         for (Map<String, Object> row : containers) {
             detRowId++;
-            transferDtlRepository.save(buildTransferDetailFromViewRow(row, id, detRowId));
+            newDetails.add(buildTransferDetailFromViewRow(row, id, detRowId));
+        }
+        if (!newDetails.isEmpty()) {
+            transferDtlRepository.saveAll(newDetails);
         }
 
         log.info("Inserted {} transfer detail rows for transaction: {}", detRowId, id);
 
-        List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+        // Map in-memory transfer details and fetch bill details in parallel
+        CompletableFuture<List<DemurrageDetentionTransferDetailDto>> transferFuture =
+                CompletableFuture.supplyAsync(() -> mapper.mapTransferDtlListToDto(newDetails));
+
+        CompletableFuture<List<DemurrageDetentionTransferBillDetailDto>> billFuture =
+                CompletableFuture.supplyAsync(() -> mapper.mapBillDtlListToDto(
+                        billDtlRepository.findByTransactionPoidOrderByDetRowId(id)));
 
         DemurrageDetentionPayableTransferDto result = mapper.mapToDto(entity);
-        result.setTransferDetails(mapper.mapTransferDtlListToDto(transferDetails));
-        result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
-        enrichLovData(result);
+        result.setTransferDetails(transferFuture.join());
+        result.setBillDetails(billFuture.join());
 
         return result;
     }
@@ -407,28 +417,25 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         }
         String glCode = resolveGlCode(entity.getBlType());
 
-        // Only iterate rows where IsSelect='Y' (legacy bean line 277)
-        List<ShipDemDetnTransferDtl> selectedDetails = transferDtlRepository
-                .findByTransactionPoidOrderByDetRowId(id)
-                .stream()
+        // Load all transfer details once — reuse for both selected filtering and response (no re-fetch)
+        List<ShipDemDetnTransferDtl> allTransferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+        List<ShipDemDetnTransferDtl> selectedDetails = allTransferDetails.stream()
                 .filter(d -> "Y".equalsIgnoreCase(d.getIsSelect()))
                 .collect(Collectors.toList());
 
         // Wipe existing bill details (legacy bean lines 248-258)
         billDtlRepository.deleteByTransactionPoid(id);
 
-        long currentDetRowId = 0;
-        for (ShipDemDetnTransferDtl container : selectedDetails) {
-            currentDetRowId = buildAndPersistBillRows(id, container, glCode, currentDetRowId);
+        // Batch queries + single saveAll instead of N queries + N individual saves
+        List<ShipDemDtnTransferBillDtl> newBillDetails = buildBillRowsBatch(id, selectedDetails, glCode);
+        if (!newBillDetails.isEmpty()) {
+            billDtlRepository.saveAll(newBillDetails);
         }
 
-        List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-
+        // Use in-memory data — no re-fetch of either table
         DemurrageDetentionPayableTransferDto result = mapper.mapToDto(entity);
-        result.setTransferDetails(mapper.mapTransferDtlListToDto(transferDetails));
-        result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
-        enrichLovData(result);
+        result.setTransferDetails(mapper.mapTransferDtlListToDto(allTransferDetails));
+        result.setBillDetails(mapper.mapBillDtlListToDto(newBillDetails));
 
         log.info("Successfully loaded bill-wise settlement data for id: {}", id);
         return result;
@@ -773,71 +780,158 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Core billwise load logic shared by loadBillwiseData (post-create).
-     * Returns the updated currentDetRowId after inserting rows for this container.
+     * Builds all bill detail entities using batch DB queries, then returns them for a single saveAll.
+     * Replaces per-container queryBillwiseAccountView + queryDemDetBreakdown + save calls (N+1 pattern).
      */
-    private long buildAndPersistBillRows(Long transactionPoid, ShipDemDetnTransferDtl container,
-                                          String glCode, long currentDetRowId) {
-        // Query VW_SHIP_BILLWISE_ACCOUNT_TRN (legacy bean lines 280-295)
-        List<Map<String, Object>> billwiseRows = queryBillwiseAccountView(glCode, container.getBlNumber());
+    private List<ShipDemDtnTransferBillDtl> buildBillRowsBatch(Long transactionPoid,
+                                                                List<ShipDemDetnTransferDtl> selectedContainers,
+                                                                String glCode) {
+        if (selectedContainers.isEmpty()) return Collections.emptyList();
 
-        if (billwiseRows.isEmpty()) {
-            log.warn("No billwise rows found for container: {}, blNumber: {}", container.getContainerNo(), container.getBlNumber());
-            return currentDetRowId;
-        }
+        List<String> blNumbers = selectedContainers.stream()
+                .map(ShipDemDetnTransferDtl::getBlNumber)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
 
-        Map<String, Object> firstBillwiseRow = billwiseRows.get(0);
-        BigDecimal totalPayable = container.getTotalPayableAmount() != null ? container.getTotalPayableAmount() : BigDecimal.ZERO;
-        BigDecimal totalIncome = container.getTotalIncomeAmount() != null ? container.getTotalIncomeAmount() : BigDecimal.ZERO;
+        // One query for all BL numbers instead of one per container
+        Map<String, List<Map<String, Object>>> billwiseByBl = queryBillwiseAccountViewBatch(glCode, blNumbers);
 
-        if (billwiseRows.size() == 1) {
-            // Single-row branch (legacy bean lines 299-321)
-            currentDetRowId++;
-            ShipDemDtnTransferBillDtl billDetail = ShipDemDtnTransferBillDtl.builder()
-                    .transactionPoid(transactionPoid)
-                    .detRowId(currentDetRowId)
-                    .checkall("Y")
-                    .description(asString(firstBillwiseRow.get("REMARKS")))
-                    .billRefType("AGAINST")
-                    .billRefno(asString(firstBillwiseRow.get("BILL_REF")))
-                    .containerNo(container.getContainerNo())
-                    .billwiseBalance(asBigDecimal(firstBillwiseRow.get("BALANCE")))
-                    .drAmt(totalPayable.abs())
-                    .crAmt(totalIncome)
-                    .glPoid(asLong(firstBillwiseRow.get("GL_POID")))
-                    .glCompanyPoid(asLong(firstBillwiseRow.get("GL_COMPANY_POID")))
-                    .build();
-            billDtlRepository.save(billDetail);
-        } else {
-            // Multi-row branch: use VW_AR_SH_CONTAINER_DEMG_DTTN (legacy bean lines 323-374)
-            List<Map<String, Object>> dynRows = queryDemDetBreakdown(container.getContainerNo(), container.getBlNumber());
-            boolean isFirst = true;
-            for (Map<String, Object> dynRow : dynRows) {
+        // One query for all multi-row containers instead of one per container
+        List<ShipDemDetnTransferDtl> multiRowContainers = selectedContainers.stream()
+                .filter(c -> billwiseByBl.getOrDefault(c.getBlNumber(), Collections.emptyList()).size() > 1)
+                .collect(Collectors.toList());
+        Map<String, List<Map<String, Object>>> breakdownByKey = queryDemDetBreakdownBatch(multiRowContainers);
+
+        List<ShipDemDtnTransferBillDtl> result = new ArrayList<>();
+        long currentDetRowId = 0;
+
+        for (ShipDemDetnTransferDtl container : selectedContainers) {
+            List<Map<String, Object>> billwiseRows = billwiseByBl.getOrDefault(container.getBlNumber(), Collections.emptyList());
+            if (billwiseRows.isEmpty()) {
+                log.warn("No billwise rows found for container: {}, blNumber: {}", container.getContainerNo(), container.getBlNumber());
+                continue;
+            }
+
+            Map<String, Object> firstBillwiseRow = billwiseRows.get(0);
+            BigDecimal totalPayable = container.getTotalPayableAmount() != null ? container.getTotalPayableAmount() : BigDecimal.ZERO;
+            BigDecimal totalIncome = container.getTotalIncomeAmount() != null ? container.getTotalIncomeAmount() : BigDecimal.ZERO;
+
+            if (billwiseRows.size() == 1) {
+                // Single-row branch (legacy bean lines 299-321)
                 currentDetRowId++;
-                BigDecimal dmAmt = asBigDecimal(dynRow.get("DM_CHARGE_AMT"));
-                if (dmAmt == null) dmAmt = BigDecimal.ZERO;
-                BigDecimal drAmt = isFirst ? dmAmt.abs().subtract(totalIncome) : dmAmt.abs();
-                BigDecimal crAmt = isFirst ? totalIncome : BigDecimal.ZERO;
-                isFirst = false;
-
-                ShipDemDtnTransferBillDtl billDetail = ShipDemDtnTransferBillDtl.builder()
+                result.add(ShipDemDtnTransferBillDtl.builder()
                         .transactionPoid(transactionPoid)
                         .detRowId(currentDetRowId)
                         .checkall("Y")
-                        .description(asString(firstBillwiseRow.get("REMARKS")))  // from first billwise row
+                        .description(asString(firstBillwiseRow.get("REMARKS")))
                         .billRefType("AGAINST")
-                        .billRefno(asString(dynRow.get("DOC_REF")))
+                        .billRefno(asString(firstBillwiseRow.get("BILL_REF")))
                         .containerNo(container.getContainerNo())
-                        .billwiseBalance(BigDecimal.ZERO)  // legacy forces 0 in multi-row branch
-                        .drAmt(drAmt)
-                        .crAmt(crAmt)
-                        .glPoid(asLong(firstBillwiseRow.get("GL_POID")))  // from first billwise row
+                        .billwiseBalance(asBigDecimal(firstBillwiseRow.get("BALANCE")))
+                        .drAmt(totalPayable.abs())
+                        .crAmt(totalIncome)
+                        .glPoid(asLong(firstBillwiseRow.get("GL_POID")))
                         .glCompanyPoid(asLong(firstBillwiseRow.get("GL_COMPANY_POID")))
-                        .build();
-                billDtlRepository.save(billDetail);
+                        .build());
+            } else {
+                // Multi-row branch (legacy bean lines 323-374)
+                String key = container.getContainerNo() + "|" + container.getBlNumber();
+                List<Map<String, Object>> dynRows = breakdownByKey.getOrDefault(key, Collections.emptyList());
+                boolean isFirst = true;
+                for (Map<String, Object> dynRow : dynRows) {
+                    currentDetRowId++;
+                    BigDecimal dmAmt = asBigDecimal(dynRow.get("DM_CHARGE_AMT"));
+                    if (dmAmt == null) dmAmt = BigDecimal.ZERO;
+                    BigDecimal drAmt = isFirst ? dmAmt.abs().subtract(totalIncome) : dmAmt.abs();
+                    BigDecimal crAmt = isFirst ? totalIncome : BigDecimal.ZERO;
+                    isFirst = false;
+                    result.add(ShipDemDtnTransferBillDtl.builder()
+                            .transactionPoid(transactionPoid)
+                            .detRowId(currentDetRowId)
+                            .checkall("Y")
+                            .description(asString(firstBillwiseRow.get("REMARKS")))
+                            .billRefType("AGAINST")
+                            .billRefno(asString(dynRow.get("DOC_REF")))
+                            .containerNo(container.getContainerNo())
+                            .billwiseBalance(BigDecimal.ZERO)
+                            .drAmt(drAmt)
+                            .crAmt(crAmt)
+                            .glPoid(asLong(firstBillwiseRow.get("GL_POID")))
+                            .glCompanyPoid(asLong(firstBillwiseRow.get("GL_COMPANY_POID")))
+                            .build());
+                }
             }
         }
-        return currentDetRowId;
+        return result;
+    }
+
+    /**
+     * Batch variant of queryBillwiseAccountView — one round-trip for all BL numbers via OR LIKE.
+     * Returns results grouped by BL number.
+     */
+    private Map<String, List<Map<String, Object>>> queryBillwiseAccountViewBatch(String glCode, List<String> blNumbers) {
+        if (blNumbers.isEmpty()) return Collections.emptyMap();
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT GL_POID, GL_COMPANY_POID, BILL_REF, REMARKS, BALANCE FROM VW_SHIP_BILLWISE_ACCOUNT_TRN WHERE GL_CODE = ?");
+        List<Object> params = new ArrayList<>();
+        params.add(glCode);
+        sql.append(" AND (");
+        for (int i = 0; i < blNumbers.size(); i++) {
+            if (i > 0) sql.append(" OR ");
+            sql.append("REMARKS LIKE ?");
+            params.add("%" + blNumbers.get(i) + "%");
+        }
+        sql.append(")");
+
+        Map<String, List<Map<String, Object>>> result = new HashMap<>();
+        for (String bl : blNumbers) {
+            result.put(bl, new ArrayList<>());
+        }
+        try {
+            for (Map<String, Object> row : jdbcTemplate.queryForList(sql.toString(), params.toArray())) {
+                String remarks = asString(row.get("REMARKS"));
+                if (remarks == null) continue;
+                for (String bl : blNumbers) {
+                    if (remarks.contains(bl)) {
+                        result.get(bl).add(row);
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error batch querying VW_SHIP_BILLWISE_ACCOUNT_TRN for blNumbers: {}", blNumbers, e);
+        }
+        return result;
+    }
+
+    /**
+     * Batch variant of queryDemDetBreakdown — one round-trip for all containers via CONTAINER_NO IN (...).
+     * Returns results keyed by "containerNo|blNumber".
+     */
+    private Map<String, List<Map<String, Object>>> queryDemDetBreakdownBatch(List<ShipDemDetnTransferDtl> containers) {
+        if (containers.isEmpty()) return Collections.emptyMap();
+
+        String inClause = containers.stream().map(c -> "?").collect(Collectors.joining(","));
+        String sql = "SELECT CONTAINER_NO, GET_BL_NUMBER(BL_POID) AS BL_NUMBER, DOC_REF, SUM(DM_CHARGE_AMT) DM_CHARGE_AMT " +
+                "FROM VW_AR_SH_CONTAINER_DEMG_DTTN " +
+                "WHERE NVL(DM_CHARGE_AMT, 0) <> 0 " +
+                "AND CONTAINER_NO IN (" + inClause + ") " +
+                "GROUP BY CONTAINER_NO, GET_BL_NUMBER(BL_POID), DOC_REF";
+        Object[] params = containers.stream().map(ShipDemDetnTransferDtl::getContainerNo).toArray();
+
+        Map<String, List<Map<String, Object>>> result = new HashMap<>();
+        try {
+            for (Map<String, Object> row : jdbcTemplate.queryForList(sql, params)) {
+                String key = asString(row.get("CONTAINER_NO")) + "|" + asString(row.get("BL_NUMBER"));
+                result.computeIfAbsent(key, k -> new ArrayList<>()).add(row);
+            }
+        } catch (Exception e) {
+            log.error("Error batch querying VW_AR_SH_CONTAINER_DEMG_DTTN for containers: {}",
+                    containers.stream().map(ShipDemDetnTransferDtl::getContainerNo).collect(Collectors.toList()), e);
+        }
+        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

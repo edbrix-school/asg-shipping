@@ -242,8 +242,6 @@ class DemurrageDetentionPayableTransferServiceImplTest {
             lenient().when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
                     .thenReturn(List.of());
             doNothing().when(transferDtlRepository).deleteByTransactionPoid(any());
-            when(transferDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
-                    .thenReturn(List.of());
             when(billDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
                     .thenReturn(List.of());
             when(mapper.mapToDto(any()))
@@ -529,8 +527,6 @@ class DemurrageDetentionPayableTransferServiceImplTest {
                     .thenReturn(Optional.of(hdrEntity));
             doNothing().when(billDtlRepository).deleteByTransactionPoid(any());
             when(transferDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
-                    .thenReturn(List.of());
-            when(billDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
                     .thenReturn(List.of());
             when(mapper.mapToDto(any()))
                     .thenReturn(response);
