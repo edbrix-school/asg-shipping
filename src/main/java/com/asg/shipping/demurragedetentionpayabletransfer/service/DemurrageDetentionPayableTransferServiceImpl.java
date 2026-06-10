@@ -477,20 +477,27 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     "blType", request.getBlType(), "glCode", glCode);
         }
 
-        // One round-trip for all BL numbers (replaces one queryBillwiseAccountView call per container)
         List<String> blNumbers = selected.stream()
                 .map(LoadBillwiseRequestDTO.SelectedContainer::getBlNumber)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
-        Map<String, List<Map<String, Object>>> billwiseByBl = queryBillwiseAccountViewBatch(glCode, blNumbers);
-
-        // One round-trip for all multi-row containers (replaces one queryDemDetBreakdown call per container)
-        List<String> multiRowContainerNos = selected.stream()
-                .filter(c -> billwiseByBl.getOrDefault(c.getBlNumber(), Collections.emptyList()).size() > 1)
+        List<String> allContainerNos = selected.stream()
                 .map(LoadBillwiseRequestDTO.SelectedContainer::getContainerNo)
+                .filter(Objects::nonNull)
+                .distinct()
                 .collect(Collectors.toList());
-        Map<String, List<Map<String, Object>>> breakdownByKey = queryDemDetBreakdownBatch(multiRowContainerNos);
+
+        // Both queries are independent reads with no transaction context — fire them in parallel.
+        // Breakdown is pre-fetched for all containers (not just multi-row) so we don't have to
+        // wait for the billwise result to know which containers need it.
+        CompletableFuture<Map<String, List<Map<String, Object>>>> billwiseFuture =
+                CompletableFuture.supplyAsync(() -> queryBillwiseAccountViewBatch(glCode, blNumbers));
+        CompletableFuture<Map<String, List<Map<String, Object>>>> breakdownFuture =
+                CompletableFuture.supplyAsync(() -> queryDemDetBreakdownBatch(allContainerNos));
+
+        Map<String, List<Map<String, Object>>> billwiseByBl = billwiseFuture.join();
+        Map<String, List<Map<String, Object>>> breakdownByKey = breakdownFuture.join();
 
         // Assemble bill rows from the in-memory maps — no more per-container DB calls
         List<Map<String, Object>> allBillDetails = new ArrayList<>();
@@ -955,7 +962,9 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     /**
      * Container availability query for Process For Filtered Data.
-     * Uses NOT IN to exactly mirror legacy query behavior (NOT EXISTS was causing data filtering issues).
+     * Uses correlated NOT EXISTS — avoids the multi-column NOT IN row-constructor syntax that
+     * Oracle rejects at the grammar level in some driver/version combinations, and is NULL-safe
+     * (NOT IN silently drops all rows when the subquery returns any NULL in either column).
      * No date filter — legacy EmptyFromDate/EmptyToDate are rendered=false.
      * No DEMURRAGE_ACUTAL filter — legacy doesn't have this condition.
      */
@@ -966,12 +975,13 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 "V.SHORT_ACCESS, V.PAYABLE_AMT, V.INCOME_AMT, V.JOB_NO, V.CONSIGNEE, " +
                 "V.NOTIFY1, V.LINE_POID, V.NET_INCOME_AMT, V.MAINFEST_TRANSACTION_POID " +
                 "FROM VW_SHIP_DEM_DTN_TRANSFER V " +
-                "WHERE (V.MAINFEST_TRANSACTION_POID, V.CONTAINER_NO) NOT IN (" +
-                "  SELECT D.MAINFEST_TRANSACTION_POID, D.CONTAINER_NO " +
-                "  FROM SHIP_DEM_DETN_TRANSFER_HDR H " +
+                "WHERE NOT EXISTS (" +
+                "  SELECT 1 FROM SHIP_DEM_DETN_TRANSFER_HDR H " +
                 "  INNER JOIN SHIP_DEM_DETN_TRANSFER_DTL D ON D.TRANSACTION_POID = H.TRANSACTION_POID " +
                 "  WHERE NVL(H.DELETED, 'N') = 'N' " +
-                "  AND NVL(D.IS_SELECT, 'N') = 'Y'" +
+                "  AND NVL(D.IS_SELECT, 'N') = 'Y' " +
+                "  AND D.MAINFEST_TRANSACTION_POID = V.MAINFEST_TRANSACTION_POID " +
+                "  AND D.CONTAINER_NO = V.CONTAINER_NO" +
                 ") " +
                 "AND V.BL_TYPE = ? AND V.LINE_POID = ? AND V.COMPANY_POID = ? " +
                 "ORDER BY V.BL_NUMBER";
