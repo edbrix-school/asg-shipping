@@ -27,6 +27,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
@@ -78,13 +79,25 @@ public class PortStorageTariffsController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort field and direction (e.g., 'periodFrom,asc')", example = "periodFrom,asc")
-            @RequestParam(required = false) String sort) {
+            @Parameter(description = "Sort field and direction (e.g., 'PERIOD_FROM,desc')", example = "PERIOD_FROM,desc")
+            @RequestParam(required = false) String sort,
+            @Parameter(description = "Period range start (inclusive) for All Records filter")
+            @RequestParam(required = false) LocalDate periodFrom,
+            @Parameter(description = "Period range end (inclusive) for All Records filter")
+            @RequestParam(required = false) LocalDate periodTo) {
 
-        log.info("Searching port storage tariffs with page: {}, size: {}, sort: {}", page, size, sort);
+        log.info("Searching port storage tariffs with page: {}, size: {}, sort: {}, periodFrom: {}, periodTo: {}",
+                page, size, sort, periodFrom, periodTo);
+
+        if ((periodFrom == null && periodTo != null) || (periodFrom != null && periodTo == null)) {
+            return ApiResponse.badRequest("Both periodFrom and periodTo should be specified or both dates should be empty.");
+        }
+        if (periodFrom != null && periodFrom.isAfter(periodTo)) {
+            return ApiResponse.badRequest("periodFrom must be less than or equal to periodTo.");
+        }
 
         Pageable pageable = createPageable(page, size, sort);
-        Map<String, Object> result = tariffService.searchTariffs(DOC_ID, request, pageable);
+        Map<String, Object> result = tariffService.searchTariffs(DOC_ID, request, periodFrom, periodTo, pageable);
 
         log.info("Successfully retrieved port storage tariffs");
         return ApiResponse.success("Tariffs retrieved successfully", result);

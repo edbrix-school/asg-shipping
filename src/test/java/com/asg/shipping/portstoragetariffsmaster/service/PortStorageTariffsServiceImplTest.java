@@ -1,6 +1,7 @@
 package com.asg.shipping.portstoragetariffsmaster.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -156,11 +157,43 @@ class PortStorageTariffsServiceImplTest {
             when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                     .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 
-            Map<String, Object> result = service.searchTariffs("DOC_ID", filterRequest, pageable);
+            Map<String, Object> result = service.searchTariffs("DOC_ID", filterRequest, null, null, pageable);
 
             assertNotNull(result);
             verify(documentService).search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString());
             verify(documentService).resolveFilters(filterRequest);
+        }
+    }
+
+    @Test
+    void searchTariffs_AppliesPeriodOverlapFilters() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+
+            FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
+            Pageable pageable = PageRequest.of(0, 20);
+            LocalDate periodFrom = LocalDate.of(2026, 1, 1);
+            LocalDate periodTo = LocalDate.of(2026, 1, 30);
+
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(new ArrayList<>());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+
+            service.searchTariffs("DOC_ID", filterRequest, periodFrom, periodTo, pageable);
+
+            verify(documentService).search(
+                    eq("DOC_ID"),
+                    argThat(filters -> filters.size() == 2
+                            && filters.stream().anyMatch(f -> "PERIOD_FROM".equals(f.searchField()) && "<=2026-01-30".equals(f.searchValue()))
+                            && filters.stream().anyMatch(f -> "PERIOD_TO".equals(f.searchField()) && ">=2026-01-01".equals(f.searchValue()))),
+                    eq("AND"),
+                    eq(pageable),
+                    eq("N"),
+                    eq("DESCRIPTION"),
+                    eq("TRANSACTION_POID")
+            );
         }
     }
 

@@ -825,19 +825,25 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     	
     	log.info("Bl print : {}", transactionPoid);
     	
-    	Long groupPoid=UserContext.getGroupPoid();
-    	Long companyPoid=UserContext.getCompanyPoid();
+    	Long groupPoid = UserContext.getGroupPoid();
+    	Long companyPoid = UserContext.getCompanyPoid();
     	ExportShipBlManifestHdr entity = hdrRepository
-                .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
+                .findActiveExportBlByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ValidationException("Export BL not found with ID: " + transactionPoid));
     	if(entity.getBlOrginalPrint()!=null && entity.getBlOrginalPrint().equalsIgnoreCase("Y")) {
     		throw new ValidationException("BL already printed");
     	}
     	
-    	String jrxmlFile= customBLRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
+    	String jrxmlFile = customBLRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
+    	if (jrxmlFile == null || jrxmlFile.isBlank()) {
+    		throw new ValidationException("BL print report template not configured for this BL");
+    	}
+    	if (!jrxmlFile.toLowerCase().contains(".jrxml")) {
+    		throw new ValidationException(jrxmlFile.trim());
+    	}
     	Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-140");
-		JasperReport mainReport = printService.load("Shipping/"+jrxmlFile);
-		params.put("DRAFT_ORIGINAL", request.getDraftOriginal());
+		JasperReport mainReport = printService.load("Shipping/" + jrxmlFile);
+		params.put("DRAFT_ORIGINAL", request.getDraftOriginalParam());
 		return printService.fillReportToPdf(mainReport, params, dataSource);
     	
     }
@@ -845,7 +851,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     @Override
     public byte[] generateManifest(Long transactionPoid, GenerateManifestRequest request, String docId) throws Exception {
     	Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
-		params.put("P_FREIGHTCARGO", request.getFreightCargo().toString().toUpperCase());
+		params.put("P_FREIGHTCARGO", request.getFreightCargoParam());
         params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
 	    params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
 	    params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
