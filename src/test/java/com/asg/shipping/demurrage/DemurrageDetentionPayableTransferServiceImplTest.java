@@ -409,8 +409,8 @@ class DemurrageDetentionPayableTransferServiceImplTest {
                     ));
             when(jdbcTemplate.queryForList(contains("VW_AR_SH_CONTAINER_DEMG_DTTN"), any(Object[].class)))
                     .thenReturn(List.of(
-                            Map.of("DOC_REF", "DOC-1", "DM_CHARGE_AMT", java.math.BigDecimal.valueOf(120)),
-                            Map.of("DOC_REF", "DOC-1", "DM_CHARGE_AMT", java.math.BigDecimal.valueOf(120))
+                            Map.of("CONTAINER_NO", "CONT001", "BL_NUMBER", "BL001", "DOC_REF", "DOC-1", "DM_CHARGE_AMT", java.math.BigDecimal.valueOf(120)),
+                            Map.of("CONTAINER_NO", "CONT001", "BL_NUMBER", "BL001", "DOC_REF", "DOC-1", "DM_CHARGE_AMT", java.math.BigDecimal.valueOf(120))
                     ));
 
             Map<String, Object> result = service.loadBillwiseDataBeforeCreate(loadRequest);

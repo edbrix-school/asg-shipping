@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
+import java.sql.PreparedStatement;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -73,6 +74,16 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     // Fallback income GL POID (legacy: common.GetParameterValue("DEM_DET_ACCOUNT_INCOME","Group","1","13653"))
     private static final long DEFAULT_INCOME_GL_POID = 13653L;
+
+    private static final String BATCH_INSERT_TRANSFER_DTL_SQL =
+            "INSERT INTO SHIP_DEM_DETN_TRANSFER_DTL " +
+            "(TRANSACTION_POID, DET_ROW_ID, MAINFEST_TRANSACTION_POID, LINE_POID, " +
+            "JOB_NO, CONSIGNEE, NOTIFY, BL_NUMBER, CONTAINER_NO, SAIL_DATE, ARRIVAL_DATE, " +
+            "EMPTY_IN, EQUIPMENT_ISO_TYPE, DEMURRAGE_ACUTAL, EXTRA_FREE_DAYS, EXTRA_FREE_DAYS_PRNPLS, " +
+            "START_DATE, END_DATE, TOTAL_COLLECTED_DAYS, TOTAL_COLLECTED_AMT, " +
+            "TOTAL_SHORT_EXCESS_AMOUNT, TOTAL_PAYABLE_AMOUNT, TOTAL_INCOME_AMOUNT, " +
+            "NET_INCOME_AMT, IS_SELECT, CREATED_BY, CREATED_DATE, LASTMODIFIED_BY, LASTMODIFIED_DATE) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     @Transactional(readOnly = true)
@@ -325,39 +336,32 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         transferDtlRepository.deleteByTransactionPoid(id);
 
         // Query available containers (legacy bean lines 137-145, with GAP-10 IS NOT NULL guards)
-        String sql = buildContainerQuerySql();
         List<Map<String, Object>> containers;
         try {
-            containers = jdbcTemplate.queryForList(sql, blType, linePoid, companyPoid);
+            containers = jdbcTemplate.queryForList(buildContainerQuerySql(), blType, linePoid, companyPoid);
         } catch (Exception e) {
             log.error("Error querying VW_SHIP_DEM_DTN_TRANSFER", e);
             throw new ValidationException("Failed to load available containers: " + e.getMessage());
         }
 
-        // Insert new rows with IsSelect='N' (legacy bean line 181) — collect in memory for batch save
+        // Build entities in memory, then flush via a single JDBC batch INSERT (N round-trips → 1)
         List<ShipDemDetnTransferDtl> newDetails = new ArrayList<>(containers.size());
-        long detRowId = 0;
-        for (Map<String, Object> row : containers) {
-            detRowId++;
-            newDetails.add(buildTransferDetailFromViewRow(row, id, detRowId));
+        for (int i = 0; i < containers.size(); i++) {
+            newDetails.add(buildTransferDetailFromViewRow(containers.get(i), id, i + 1L));
         }
         if (!newDetails.isEmpty()) {
-            transferDtlRepository.saveAll(newDetails);
+            batchInsertTransferDetails(newDetails);
         }
 
-        log.info("Inserted {} transfer detail rows for transaction: {}", detRowId, id);
+        log.info("Inserted {} transfer detail rows for transaction: {}", newDetails.size(), id);
 
-        // Map in-memory transfer details and fetch bill details in parallel
-        CompletableFuture<List<DemurrageDetentionTransferDetailDto>> transferFuture =
-                CompletableFuture.supplyAsync(() -> mapper.mapTransferDtlListToDto(newDetails));
-
-        CompletableFuture<List<DemurrageDetentionTransferBillDetailDto>> billFuture =
-                CompletableFuture.supplyAsync(() -> mapper.mapBillDtlListToDto(
-                        billDtlRepository.findByTransactionPoidOrderByDetRowId(id)));
+        // Bill details are fetched on the same transactional thread — CompletableFuture would
+        // lose the ThreadLocal-bound connection and run outside the transaction.
+        List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
         DemurrageDetentionPayableTransferDto result = mapper.mapToDto(entity);
-        result.setTransferDetails(transferFuture.join());
-        result.setBillDetails(billFuture.join());
+        result.setTransferDetails(mapper.mapTransferDtlListToDto(newDetails));
+        result.setBillDetails(mapper.mapBillDtlListToDto(billDetails));
 
         return result;
     }
@@ -459,34 +463,53 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             throw new ValidationException("BL Type must be IMPORT or EXPORT");
         }
 
-        List<Map<String, Object>> allBillDetails = new java.util.ArrayList<>();
         String glCode = resolveGlCode(request.getBlType());
+
+        // Filter first so batch queries only cover relevant containers
+        List<LoadBillwiseRequestDTO.SelectedContainer> selected = request.getSelectedContainers() == null
+                ? Collections.emptyList()
+                : request.getSelectedContainers().stream()
+                        .filter(c -> c.getIsSelect() == null || "Y".equalsIgnoreCase(c.getIsSelect()))
+                        .collect(Collectors.toList());
+
+        if (selected.isEmpty()) {
+            return Map.of("billDetails", Collections.emptyList(), "totalCount", 0,
+                    "blType", request.getBlType(), "glCode", glCode);
+        }
+
+        // One round-trip for all BL numbers (replaces one queryBillwiseAccountView call per container)
+        List<String> blNumbers = selected.stream()
+                .map(LoadBillwiseRequestDTO.SelectedContainer::getBlNumber)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<String, List<Map<String, Object>>> billwiseByBl = queryBillwiseAccountViewBatch(glCode, blNumbers);
+
+        // One round-trip for all multi-row containers (replaces one queryDemDetBreakdown call per container)
+        List<String> multiRowContainerNos = selected.stream()
+                .filter(c -> billwiseByBl.getOrDefault(c.getBlNumber(), Collections.emptyList()).size() > 1)
+                .map(LoadBillwiseRequestDTO.SelectedContainer::getContainerNo)
+                .collect(Collectors.toList());
+        Map<String, List<Map<String, Object>>> breakdownByKey = queryDemDetBreakdownBatch(multiRowContainerNos);
+
+        // Assemble bill rows from the in-memory maps — no more per-container DB calls
+        List<Map<String, Object>> allBillDetails = new ArrayList<>();
         long lastRowNumber = 0;
 
-        for (LoadBillwiseRequestDTO.SelectedContainer container : request.getSelectedContainers()) {
-            if (container.getIsSelect() != null && !"Y".equalsIgnoreCase(container.getIsSelect())) {
-                log.debug("Skipping container {} — IsSelect != Y", container.getContainerNo());
-                continue;
-            }
-
-            // Mirror legacy VwShipBillwiseAccountTrnView1: filter by GL_CODE and REMARKS only (no COMPANY_POID)
-            List<Map<String, Object>> billwiseAccounts = queryBillwiseAccountView(glCode, container.getBlNumber());
-            int billwiseCount = billwiseAccounts.size();
-            log.debug("Found {} billwise account records for container: {}", billwiseCount, container.getContainerNo());
-
-            if (billwiseCount == 0) {
-                // Legacy produces no bill rows when no billwise accounts exist — skip this container
+        for (LoadBillwiseRequestDTO.SelectedContainer container : selected) {
+            List<Map<String, Object>> billwiseRows = billwiseByBl.getOrDefault(container.getBlNumber(), Collections.emptyList());
+            if (billwiseRows.isEmpty()) {
                 log.warn("No billwise accounts found for container: {}, blNumber: {} — skipping (legacy behaviour)",
                         container.getContainerNo(), container.getBlNumber());
                 continue;
             }
 
-            Map<String, Object> firstBillwiseAccount = billwiseAccounts.get(0);
+            Map<String, Object> firstBillwiseAccount = billwiseRows.get(0);
 
-            if (billwiseCount == 1) {
+            if (billwiseRows.size() == 1) {
                 // Single-row branch (legacy bean lines 299-321)
                 lastRowNumber++;
-                Map<String, Object> billDetail = new java.util.HashMap<>();
+                Map<String, Object> billDetail = new HashMap<>();
                 billDetail.put("detRowId", lastRowNumber);
                 billDetail.put("checkall", "Y");
                 billDetail.put("description", firstBillwiseAccount.get("REMARKS"));
@@ -494,43 +517,36 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 billDetail.put("billRefno", firstBillwiseAccount.get("BILL_REF"));
                 billDetail.put("containerNo", container.getContainerNo());
                 billDetail.put("billwiseBalance", firstBillwiseAccount.get("BALANCE"));
-                BigDecimal drAmt = container.getTotalPayableAmount() != null ?
-                        container.getTotalPayableAmount().abs() : BigDecimal.ZERO;
-                billDetail.put("drAmt", drAmt);
-                billDetail.put("crAmt", container.getTotalIncomeAmount() != null ?
-                        container.getTotalIncomeAmount() : BigDecimal.ZERO);
+                billDetail.put("drAmt", container.getTotalPayableAmount() != null
+                        ? container.getTotalPayableAmount().abs() : BigDecimal.ZERO);
+                billDetail.put("crAmt", container.getTotalIncomeAmount() != null
+                        ? container.getTotalIncomeAmount() : BigDecimal.ZERO);
                 billDetail.put("glPoid", firstBillwiseAccount.get("GL_POID"));
                 allBillDetails.add(billDetail);
-
             } else {
-                // Multi-row branch: use VW_AR_SH_CONTAINER_DEMG_DTTN (legacy bean lines 323-374)
-                List<Map<String, Object>> dynRows = queryDemDetBreakdown(container.getContainerNo(), container.getBlNumber());
-                int totalDynCount = dynRows.size();
-                int currentDynCount = totalDynCount;
+                // Multi-row branch (legacy bean lines 323-374)
+                String key = container.getContainerNo() + "|" + container.getBlNumber();
+                List<Map<String, Object>> dynRows = breakdownByKey.getOrDefault(key, Collections.emptyList());
+                BigDecimal incomeAmt = container.getTotalIncomeAmount() != null
+                        ? container.getTotalIncomeAmount() : BigDecimal.ZERO;
+                boolean isFirst = true;
                 for (Map<String, Object> dynRow : dynRows) {
                     lastRowNumber++;
-                    Map<String, Object> billDetail = new java.util.HashMap<>();
+                    BigDecimal dmAmt = dynRow.get("DM_CHARGE_AMT") != null
+                            ? new BigDecimal(dynRow.get("DM_CHARGE_AMT").toString()).abs() : BigDecimal.ZERO;
+                    Map<String, Object> billDetail = new HashMap<>();
                     billDetail.put("detRowId", lastRowNumber);
                     billDetail.put("checkall", "Y");
                     billDetail.put("description", firstBillwiseAccount.get("REMARKS"));
                     billDetail.put("billRefType", "AGAINST");
                     billDetail.put("billRefno", dynRow.get("DOC_REF"));
                     billDetail.put("containerNo", container.getContainerNo());
-                    billDetail.put("billwiseBalance", "0");
-                    BigDecimal dmAmt = dynRow.get("DM_CHARGE_AMT") != null ?
-                            new BigDecimal(dynRow.get("DM_CHARGE_AMT").toString()).abs() : BigDecimal.ZERO;
-                    if (totalDynCount == currentDynCount) {
-                        BigDecimal incomeAmt = container.getTotalIncomeAmount() != null ?
-                                container.getTotalIncomeAmount() : BigDecimal.ZERO;
-                        billDetail.put("drAmt", dmAmt.subtract(incomeAmt));
-                        billDetail.put("crAmt", incomeAmt);
-                    } else {
-                        billDetail.put("drAmt", dmAmt);
-                        billDetail.put("crAmt", BigDecimal.ZERO);
-                    }
+                    billDetail.put("billwiseBalance", BigDecimal.ZERO);
+                    billDetail.put("drAmt", isFirst ? dmAmt.subtract(incomeAmt) : dmAmt);
+                    billDetail.put("crAmt", isFirst ? incomeAmt : BigDecimal.ZERO);
                     billDetail.put("glPoid", firstBillwiseAccount.get("GL_POID"));
                     allBillDetails.add(billDetail);
-                    currentDynCount--;
+                    isFirst = false;
                 }
             }
         }
@@ -798,10 +814,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         Map<String, List<Map<String, Object>>> billwiseByBl = queryBillwiseAccountViewBatch(glCode, blNumbers);
 
         // One query for all multi-row containers instead of one per container
-        List<ShipDemDetnTransferDtl> multiRowContainers = selectedContainers.stream()
+        List<String> multiRowContainerNos = selectedContainers.stream()
                 .filter(c -> billwiseByBl.getOrDefault(c.getBlNumber(), Collections.emptyList()).size() > 1)
+                .map(ShipDemDetnTransferDtl::getContainerNo)
                 .collect(Collectors.toList());
-        Map<String, List<Map<String, Object>>> breakdownByKey = queryDemDetBreakdownBatch(multiRowContainers);
+        Map<String, List<Map<String, Object>>> breakdownByKey = queryDemDetBreakdownBatch(multiRowContainerNos);
 
         List<ShipDemDtnTransferBillDtl> result = new ArrayList<>();
         long currentDetRowId = 0;
@@ -910,26 +927,24 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
      * Batch variant of queryDemDetBreakdown — one round-trip for all containers via CONTAINER_NO IN (...).
      * Returns results keyed by "containerNo|blNumber".
      */
-    private Map<String, List<Map<String, Object>>> queryDemDetBreakdownBatch(List<ShipDemDetnTransferDtl> containers) {
-        if (containers.isEmpty()) return Collections.emptyMap();
+    private Map<String, List<Map<String, Object>>> queryDemDetBreakdownBatch(List<String> containerNos) {
+        if (containerNos.isEmpty()) return Collections.emptyMap();
 
-        String inClause = containers.stream().map(c -> "?").collect(Collectors.joining(","));
+        String inClause = containerNos.stream().map(c -> "?").collect(Collectors.joining(","));
         String sql = "SELECT CONTAINER_NO, GET_BL_NUMBER(BL_POID) AS BL_NUMBER, DOC_REF, SUM(DM_CHARGE_AMT) DM_CHARGE_AMT " +
                 "FROM VW_AR_SH_CONTAINER_DEMG_DTTN " +
                 "WHERE NVL(DM_CHARGE_AMT, 0) <> 0 " +
                 "AND CONTAINER_NO IN (" + inClause + ") " +
                 "GROUP BY CONTAINER_NO, GET_BL_NUMBER(BL_POID), DOC_REF";
-        Object[] params = containers.stream().map(ShipDemDetnTransferDtl::getContainerNo).toArray();
 
         Map<String, List<Map<String, Object>>> result = new HashMap<>();
         try {
-            for (Map<String, Object> row : jdbcTemplate.queryForList(sql, params)) {
+            for (Map<String, Object> row : jdbcTemplate.queryForList(sql, containerNos.toArray())) {
                 String key = asString(row.get("CONTAINER_NO")) + "|" + asString(row.get("BL_NUMBER"));
                 result.computeIfAbsent(key, k -> new ArrayList<>()).add(row);
             }
         } catch (Exception e) {
-            log.error("Error batch querying VW_AR_SH_CONTAINER_DEMG_DTTN for containers: {}",
-                    containers.stream().map(ShipDemDetnTransferDtl::getContainerNo).collect(Collectors.toList()), e);
+            log.error("Error batch querying VW_AR_SH_CONTAINER_DEMG_DTTN for containers: {}", containerNos, e);
         }
         return result;
     }
@@ -945,7 +960,12 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
      * No DEMURRAGE_ACUTAL filter — legacy doesn't have this condition.
      */
     private String buildContainerQuerySql() {
-        return "SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER V " +
+        return "SELECT V.BL_NUMBER, V.CONTAINER_NO, V.EQUIPMENT_ISO_TYPE, V.SAIL_DATE, V.ARRIVAL_DATE, " +
+                "V.EMPTY_IN, V.DEMURRAGE_ACUTAL, V.EXTRA_FREE_DAYS, V.EXTRA_FREE_DAYS_PRNPLS, " +
+                "V.START_DATE, V.END_DATE, V.TOTAL_COLLECTED_DAYS, V.TOTAL_COLLECTED_AMT, " +
+                "V.SHORT_ACCESS, V.PAYABLE_AMT, V.INCOME_AMT, V.JOB_NO, V.CONSIGNEE, " +
+                "V.NOTIFY1, V.LINE_POID, V.NET_INCOME_AMT, V.MAINFEST_TRANSACTION_POID " +
+                "FROM VW_SHIP_DEM_DTN_TRANSFER V " +
                 "WHERE (V.MAINFEST_TRANSACTION_POID, V.CONTAINER_NO) NOT IN (" +
                 "  SELECT D.MAINFEST_TRANSACTION_POID, D.CONTAINER_NO " +
                 "  FROM SHIP_DEM_DETN_TRANSFER_HDR H " +
@@ -989,6 +1009,47 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
             log.error("Error querying VW_AR_SH_CONTAINER_DEMG_DTTN for container: {}, blNumber: {}", containerNo, blNumber, e);
             return Collections.emptyList();
         }
+    }
+
+    /**
+     * Single-round-trip batch INSERT replacing N individual JPA persists.
+     * Audit fields are set here because JPA lifecycle callbacks are bypassed.
+     */
+    private void batchInsertTransferDetails(List<ShipDemDetnTransferDtl> details) {
+        String currentUser = getCurrentUser();
+        java.sql.Timestamp now = java.sql.Timestamp.valueOf(LocalDateTime.now());
+        jdbcTemplate.batchUpdate(BATCH_INSERT_TRANSFER_DTL_SQL, details, details.size(),
+                (PreparedStatement ps, ShipDemDetnTransferDtl d) -> {
+                    ps.setLong(1, d.getTransactionPoid());
+                    ps.setLong(2, d.getDetRowId());
+                    ps.setObject(3, d.getMainfestTransactionPoid());
+                    ps.setObject(4, d.getLinePoid());
+                    ps.setString(5, d.getJobNo());
+                    ps.setString(6, d.getConsignee());
+                    ps.setString(7, d.getNotify());
+                    ps.setString(8, d.getBlNumber());
+                    ps.setString(9, d.getContainerNo());
+                    ps.setObject(10, d.getSailDate() != null ? java.sql.Date.valueOf(d.getSailDate()) : null);
+                    ps.setObject(11, d.getArrivalDate() != null ? java.sql.Date.valueOf(d.getArrivalDate()) : null);
+                    ps.setObject(12, d.getEmptyIn() != null ? java.sql.Date.valueOf(d.getEmptyIn()) : null);
+                    ps.setString(13, d.getEquipmentIsoType());
+                    ps.setObject(14, d.getDemurrageAcutal());
+                    ps.setObject(15, d.getExtraFreeDays());
+                    ps.setObject(16, d.getExtraFreeDaysPrnpls());
+                    ps.setObject(17, d.getStartDate() != null ? java.sql.Date.valueOf(d.getStartDate()) : null);
+                    ps.setObject(18, d.getEndDate() != null ? java.sql.Date.valueOf(d.getEndDate()) : null);
+                    ps.setObject(19, d.getTotalCollectedDays());
+                    ps.setObject(20, d.getTotalCollectedAmt());
+                    ps.setObject(21, d.getTotalShortExcessAmount());
+                    ps.setObject(22, d.getTotalPayableAmount());
+                    ps.setObject(23, d.getTotalIncomeAmount());
+                    ps.setObject(24, d.getNetIncomeAmt());
+                    ps.setString(25, d.getIsSelect() != null ? d.getIsSelect() : "N");
+                    ps.setString(26, currentUser);
+                    ps.setTimestamp(27, now);
+                    ps.setString(28, currentUser);
+                    ps.setTimestamp(29, now);
+                });
     }
 
     /**
