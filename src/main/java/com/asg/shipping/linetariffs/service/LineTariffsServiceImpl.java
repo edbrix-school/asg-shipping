@@ -51,6 +51,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private static final String TRANSACTION_POID_COL = "TRANSACTION_POID";
     private static final String TARIFF_DETAIL = "Tariff Detail";
     private static final String DET_ROW_ID = "detRowId";
+    private static final String DELETED_FIELD = "DELETED";
+    private static final String ACTIVE_ONLY = "N";
 
     private final ShipLineTariffHdrRepository tariffHdrRepository;
     private final ShipLineTariffImpDtlRepository impDtlRepository;
@@ -71,15 +73,14 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         log.info("Searching line tariffs with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
 
         String operator = documentService.resolveOperator(request);
-        String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = resolveSearchFilters(request);
 
         RawSearchResult raw = documentService.search(
                 docId,
                 filters,
                 operator,
                 pageable,
-                isDeleted,
+                ACTIVE_ONLY,
                 "DESCRIPTION",
                 TRANSACTION_POID_COL
         );
@@ -91,6 +92,12 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         );
 
         return PaginationUtil.wrapPage(page, raw.displayFields());
+    }
+
+    private List<FilterDto> resolveSearchFilters(com.asg.common.lib.dto.FilterRequestDto request) {
+        List<FilterDto> filters = new ArrayList<>(documentService.resolveFilters(request));
+        filters.removeIf(f -> DELETED_FIELD.equalsIgnoreCase(f.searchField()));
+        return filters;
     }
 
     @Override
@@ -191,6 +198,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Create old entity for logging changes
         ShipLineTariffHdr oldTariff = new ShipLineTariffHdr();
         oldTariff.setDescription(tariff.getDescription());
+        oldTariff.setTransactionDate(tariff.getTransactionDate());
         oldTariff.setPeriodFrom(tariff.getPeriodFrom());
         oldTariff.setPeriodTo(tariff.getPeriodTo());
         oldTariff.setDmgFromSameday(tariff.getDmgFromSameday());
@@ -643,16 +651,17 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         ShipLineTariffHdr existing = tariffHdrRepository.findById(excludeTransactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, excludeTransactionPoid.toString()));
 
-        Long linePoid = dto.getLinePoid() != null ? dto.getLinePoid() : existing.getLinePoid();
-        LocalDate periodFrom = dto.getPeriodFrom() != null ? dto.getPeriodFrom() : existing.getPeriodFrom();
-        LocalDate periodTo = dto.getPeriodTo() != null ? dto.getPeriodTo() : existing.getPeriodTo();
-
-        validateOverlapForUpdate(linePoid, periodFrom, periodTo, groupPoid, excludeTransactionPoid);
+        if (!isPeriodOrLineUnchanged(dto, existing)) {
+            Long linePoid = dto.getLinePoid() != null ? dto.getLinePoid() : existing.getLinePoid();
+            LocalDate periodFrom = dto.getPeriodFrom() != null ? dto.getPeriodFrom() : existing.getPeriodFrom();
+            LocalDate periodTo = dto.getPeriodTo() != null ? dto.getPeriodTo() : existing.getPeriodTo();
+            validateOverlapForUpdate(linePoid, periodFrom, periodTo, groupPoid, excludeTransactionPoid);
+        }
 
         // Check if document reference already exists (excluding current transaction)
         if (dto.getDocRef() != null
-                && !dto.getDocRef().isEmpty()
-                && tariffHdrRepository.existsByDocRefExcludingPoid(dto.getDocRef(), excludeTransactionPoid)) {
+                && !dto.getDocRef().trim().isEmpty()
+                && tariffHdrRepository.existsByDocRefExcludingPoid(dto.getDocRef().trim(), excludeTransactionPoid)) {
             throw new ValidationException("Document reference already exists");
         }
 
@@ -668,6 +677,14 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (periodFrom != null && periodTo != null && periodFrom.isAfter(periodTo)) {
             throw new ValidationException("Period from date must be less than or equal to period to date");
         }
+    }
+
+   
+    private boolean isPeriodOrLineUnchanged(LineTariffUpdateDTO dto, ShipLineTariffHdr existing) {
+        boolean lineUnchanged = dto.getLinePoid() == null || dto.getLinePoid().equals(existing.getLinePoid());
+        boolean periodFromUnchanged = dto.getPeriodFrom() == null || dto.getPeriodFrom().equals(existing.getPeriodFrom());
+        boolean periodToUnchanged = dto.getPeriodTo() == null || dto.getPeriodTo().equals(existing.getPeriodTo());
+        return lineUnchanged && periodFromUnchanged && periodToUnchanged;
     }
 
     private void validateOverlapForCreate(LineTariffCreateDTO dto, Long groupPoid) {

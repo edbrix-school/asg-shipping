@@ -27,6 +27,8 @@ public class LineTariffCreateDTO {
     @Size(max = 100, message = "Description must not exceed 100 characters")
     private String description;
 
+    private LocalDate transactionDate;
+
     @NotNull(message = "Period from date is required")
     private LocalDate periodFrom;
 

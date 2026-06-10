@@ -1,5 +1,6 @@
 package com.asg.shipping.linetariffs.service;
 
+import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -108,7 +109,6 @@ class LineTariffsServiceImplTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         when(documentService.resolveOperator(any())).thenReturn("AND");
-        when(documentService.resolveIsDeleted(any())).thenReturn("N");
         when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
         when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
@@ -117,6 +117,49 @@ class LineTariffsServiceImplTest {
 
         assertNotNull(result);
         verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("N"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+    }
+
+    @Test
+    void searchLineTariffs_RemovesDeletedFilterFromRequest() {
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "AND",
+                "N",
+                List.of(new FilterDto("DESCRIPTION", "test"), new FilterDto("DELETED", "Y")));
+        Pageable pageable = PageRequest.of(0, 20);
+
+        when(documentService.resolveOperator(any())).thenReturn("AND");
+        when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+
+        service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+
+        verify(documentService).search(
+                eq("100-050"),
+                argThat(filters -> filters.size() == 1
+                        && "DESCRIPTION".equals(filters.get(0).searchField())
+                        && "test".equals(filters.get(0).searchValue())),
+                eq("AND"),
+                eq(pageable),
+                eq("N"),
+                eq("DESCRIPTION"),
+                eq("TRANSACTION_POID"));
+    }
+
+    @Test
+    void searchLineTariffs_AlwaysUsesActiveOnlyFilter() {
+        FilterRequestDto filterRequest = new FilterRequestDto("AND", "Y", Collections.emptyList());
+        Pageable pageable = PageRequest.of(0, 20);
+
+        when(documentService.resolveOperator(any())).thenReturn("AND");
+        when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
+        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+
+        service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+
+        verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("N"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+        verify(documentService, never()).resolveIsDeleted(any());
     }
 
     @Test
@@ -213,8 +256,6 @@ class LineTariffsServiceImplTest {
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), eq(1L)))
-                    .thenReturn(false);
             when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
             doNothing().when(tariffHdrRepository).flush();
 
@@ -229,6 +270,51 @@ class LineTariffsServiceImplTest {
             assertNotNull(result);
             verify(loggingService).logChanges(any(), any(), eq(ShipLineTariffHdr.class), eq("100-050"), eq("1"),
                     eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
+        }
+    }
+
+    @Test
+    void updateLineTariff_SkipsOverlapCheckWhenPeriodAndLineUnchanged() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
+
+            updateDTO.setLinePoid(10L);
+            updateDTO.setPeriodFrom(LocalDate.of(2026, 1, 1));
+            updateDTO.setPeriodTo(LocalDate.of(2026, 12, 31));
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
+            doNothing().when(tariffHdrRepository).flush();
+
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
+
+            LineTariffDto result = service.updateLineTariff(1L, updateDTO, 1L, 2L);
+
+            assertNotNull(result);
+            verify(tariffHdrRepository, never()).existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), any());
+        }
+    }
+
+    @Test
+    void updateLineTariff_OverlappingPeriodWhenPeriodChanged_ThrowsValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            updateDTO.setPeriodFrom(LocalDate.of(2026, 6, 1));
+            updateDTO.setPeriodTo(LocalDate.of(2027, 5, 31));
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), eq(1L)))
+                    .thenReturn(true);
+
+            assertThrows(ValidationException.class, () -> service.updateLineTariff(1L, updateDTO, 1L, 2L));
         }
     }
 
@@ -415,7 +501,6 @@ class LineTariffsServiceImplTest {
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), eq(1L))).thenReturn(false);
             when(tariffHdrRepository.save(any())).thenReturn(hdr);
             doNothing().when(tariffHdrRepository).flush();
             // bulk fetch returns both rows for the map
