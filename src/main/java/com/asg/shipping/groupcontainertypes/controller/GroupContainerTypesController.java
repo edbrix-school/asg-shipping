@@ -1,6 +1,7 @@
 package com.asg.shipping.groupcontainertypes.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -243,7 +244,7 @@ public class GroupContainerTypesController {
     @DeleteMapping("/{id}")
     @Operation(
             summary = "Delete container group",
-            description = "Soft delete a container group by setting DELETED flag to Y and ACTIVE to N"
+            description = "Soft delete a container group using DocumentDeleteService"
     )
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -264,9 +265,11 @@ public class GroupContainerTypesController {
     })
     public ResponseEntity<?> deleteContainerGroup(
             @Parameter(description = "Container Group POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Parameter(description = "Delete reason information", required = true)
+            @Valid @RequestBody DeleteReasonDto deleteReasonDto) {
         log.info("Deleting container group with id: {}", id);
-        containerGroupService.deleteContainerGroup(id);
+        containerGroupService.deleteContainerGroup(id, deleteReasonDto);
         log.info("Successfully deleted container group with id: {}", id);
         return ApiResponse.success("Container group deleted successfully");
     }
