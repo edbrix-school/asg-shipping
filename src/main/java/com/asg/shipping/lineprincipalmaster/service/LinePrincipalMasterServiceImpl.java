@@ -53,11 +53,7 @@ import java.sql.Connection;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -429,65 +425,47 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
     @Override
     @Transactional
-    public Integer copyCharges(Long id, CopyChargesRequestDto request) {
+    public CopyChargesRequestDto copyCharges(Long id, CopyChargesRequestDto request) {
         log.info("Copying charges from line {} to line {}", request.getSourceLinePoid(), id);
 
         Long groupPoid = getGroupPoid();
 
-        // Validate target line
-        lineRepository.findByLinePoidAndGroupPoid(id, groupPoid)
+        // Validate both lines exist
+        ShipLineMaster targetLine = lineRepository.findByLinePoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Target Line", "linePoid", id.toString()));
-
-        // Validate source line
         lineRepository.findByLinePoidAndGroupPoid(request.getSourceLinePoid(), groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Source Line", "linePoid", request.getSourceLinePoid().toString()));
 
-        // Get source charges
-        List<ShipLineMasterChargeDtl> sourceCharges = chargeDtlRepository.findByLinePoidOrderByDetRowId(request.getSourceLinePoid());
+        try (Connection conn = jdbcTemplate.getDataSource().getConnection();
+             CallableStatement stmt = conn.prepareCall("{call COPY_LINE_Type_Charges(?,?)}")) {
 
-        if (sourceCharges.isEmpty()) {
-            log.info("No charges found in source line {}", request.getSourceLinePoid());
-            return 0;
+            stmt.setLong(1, id);
+            stmt.setLong(2, request.getSourceLinePoid());
+            stmt.execute();
+
+        } catch (Exception e) {
+            log.error("Error calling COPY_LINE_Type_Charges for line: {}", id, e);
+            throw new ValidationException("Error copying charges: " + e.getMessage());
         }
 
-        // Get existing target charges to avoid duplicates
-        Set<Long> existingChargePoids = chargeDtlRepository.findByLinePoidOrderByDetRowId(id).stream()
-                .map(ShipLineMasterChargeDtl::getChargePoid)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        int copiedCount = 0;
-        Long maxDetRowId = chargeDtlRepository.findMaxDetRowIdByLinePoid(id);
-        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
-        for (ShipLineMasterChargeDtl sourceCharge : sourceCharges) {
-            // Skip if charge already exists in target
-            if (sourceCharge.getChargePoid() != null && existingChargePoids.contains(sourceCharge.getChargePoid())) {
-                continue;
-            }
-
-            // Create new charge detail for target line
-            ShipLineMasterChargeDtl newCharge = ShipLineMasterChargeDtl.builder()
-                    .linePoid(id)
-                    .detRowId(nextDetRowId++)
-                    .chargePoid(sourceCharge.getChargePoid())
-                    .lineChargeCode(sourceCharge.getLineChargeCode())
-                    .lineChargeDescription(sourceCharge.getLineChargeDescription())
-                    .validUntil(sourceCharge.getValidUntil())
-                    .remunCommissionCharge(sourceCharge.getRemunCommissionCharge())
-                    .excludedFromEdi(sourceCharge.getExcludedFromEdi())
-                    .defaultPrintGroupEdi(sourceCharge.getDefaultPrintGroupEdi())
-                    .wkyrptIncludeAs(sourceCharge.getWkyrptIncludeAs())
-                    .build();
-                    newCharge.setCreatedBy(getCurrentUser());
-                    newCharge.setCreatedDate(LocalDateTime.now());
-
-            chargeDtlRepository.save(newCharge);
-                    logChildCreated(id, "Charge Details", newCharge.getDetRowId());
-            copiedCount++;
+        CopyChargesRequestDto response = CopyChargesRequestDto.builder()
+                .sourceLinePoid(request.getSourceLinePoid())
+                .build();
+        if (targetLine.getLinePoid() != null) {
+            response.setSourceLineDet(
+                    lovService.getLovItemByPoid(
+                            targetLine.getLinePoid(),
+                            "LINE_MASTER",
+                            groupPoid,
+                            getCompanyPoid(),
+                            getUserPoid()
+                    )
+            );
         }
 
-        log.info("Successfully copied {} charges from line {} to line {}", copiedCount, request.getSourceLinePoid(), id);
-        return copiedCount;
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, currentDocumentId(), id.toString());
+        log.info("Successfully copied charges from line {} to line {}", request.getSourceLinePoid(), id);
+        return response;
     }
 
     @Override
