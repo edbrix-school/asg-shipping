@@ -60,13 +60,13 @@ public interface LinePrincipalMasterService {
     void deleteLine(Long id, DeleteReasonDto deleteReasonDto);
 
     /**
-     * Copy charges from another line
+     * Copy charges from another line using COPY_LINE_Type_Charges procedure
      *
-     * @param id Target Line POID
-     * @param request Copy charges request with source line POID
-     * @return Number of charges copied
+     * @param id Target Line POID (line to copy charges INTO)
+     * @param request Copy charges request with source line POID (line to copy FROM)
+     * @return Updated LinePrincipalMasterDto with refreshed charges
      */
-    Integer copyCharges(Long id, CopyChargesRequestDto request);
+    CopyChargesRequestDto copyCharges(Long id, CopyChargesRequestDto request);
 
     /**
      * Create GL master and sub accounts for a line

@@ -398,9 +398,9 @@ public class LinePrincipalMasterController {
             @Parameter(description = "Copy charges request", required = true)
             @Valid @RequestBody CopyChargesRequestDto request) {
         log.info("Copying charges from line {} to line {}", request.getSourceLinePoid(), id);
-        Integer copiedCount = lineService.copyCharges(id, request);
-        log.info("Successfully copied {} charges", copiedCount);
-        return ApiResponse.success("Charges copied successfully", Map.of("copiedCount", copiedCount));
+        CopyChargesRequestDto result = lineService.copyCharges(id, request);
+        log.info("Successfully copied charges to line {}", id);
+        return ApiResponse.success("Charges copied successfully", result);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
