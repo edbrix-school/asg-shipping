@@ -29,7 +29,7 @@ public class VesselTypeCreateDTO {
     @Pattern(regexp = "^[YN]$", message = "Active must be Y or N")
     private String active;
 
-    @Positive(message = "Sequence number must be positive")
+
     private Integer seqno;
 
     private Long costCentrePoid;
