@@ -527,12 +527,12 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             if (chargeDto.getChargePoid() != null) {
                 // Check for duplicate charge POID within the request
                 if (!chargePoids.add(chargeDto.getChargePoid())) {
-                    throw new ValidationException("Duplicate charge POID: " + chargeDto.getChargePoid());
+                    throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / "  + chargeDto.getLineChargeDescription()+ " already exists for this line");
                 }
 
                 // Check if charge POID already exists for this line
                 if (chargeDtlRepository.existsByLinePoidAndChargePoid(linePoid, chargeDto.getChargePoid())) {
-                    throw new ValidationException("Charge POID " + chargeDto.getChargePoid() + " already exists for this line");
+                    throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                 }
             }
 
@@ -579,17 +579,17 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 // Validation for non-deleted items
                 if (chargeDto.getChargePoid() != null) {
                     if (!chargePoids.add(chargeDto.getChargePoid())) {
-                        throw new ValidationException("Duplicate charge POID: " + chargeDto.getChargePoid());
+                        throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                     }
 
                     // Check uniqueness excluding current detail row
                     if (chargeDto.getDetRowId() != null) {
                         if (chargeDtlRepository.existsByLinePoidAndChargePoidExcluding(linePoid, chargeDto.getChargePoid(), chargeDto.getDetRowId())) {
-                            throw new ValidationException("Charge POID " + chargeDto.getChargePoid() + " already exists for this line");
+                            throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                         }
                     } else {
                         if (chargeDtlRepository.existsByLinePoidAndChargePoid(linePoid, chargeDto.getChargePoid())) {
-                            throw new com.asg.common.lib.exception.ValidationException("Charge POID " + chargeDto.getChargePoid() + " already exists for this line");
+                            throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                         }
                     }
                 }
