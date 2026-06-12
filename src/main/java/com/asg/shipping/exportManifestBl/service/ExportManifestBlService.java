@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
 
+import java.util.List;
 import java.util.Map;
 
 public interface ExportManifestBlService {
@@ -30,6 +31,10 @@ public interface ExportManifestBlService {
 
    
     ShipBlToFfDto getShipBlToFfByBlNumber(String blNumber);
+
+    List<ShipBlToFfDto> getShipBlToFfByManifestPoid(Long transactionPoid);
+
+    void deleteFfPurchaseJournal(Long transactionPoid, Long rnumid);
     
     
     byte[] generateBlPrint(Long transactionPoid, GenerateBlPrintRequest request, String docId) throws Exception;

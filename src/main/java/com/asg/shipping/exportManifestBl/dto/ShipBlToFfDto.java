@@ -19,5 +19,6 @@ public class ShipBlToFfDto {
     private String ffInvoice;
     private String ffPj;
     private String deleted;
+    private Boolean deleteAllowed;
 }
 
