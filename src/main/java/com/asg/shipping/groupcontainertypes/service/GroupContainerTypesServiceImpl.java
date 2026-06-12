@@ -1,11 +1,13 @@
 package com.asg.shipping.groupcontainertypes.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -46,6 +48,7 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
     @Autowired
     private ShipContainerTypeGrpMasterRepository containerGroupRepository;
 
+    private final DocumentDeleteService documentDeleteService;
     private final LoggingService loggingService;
 
     @Override
@@ -186,7 +189,7 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
 
     @Override
     @Transactional
-    public void deleteContainerGroup(Long id) {
+    public void deleteContainerGroup(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting container group with id: {}", id);
 
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
@@ -194,26 +197,13 @@ public class GroupContainerTypesServiceImpl implements GroupContainerTypesServic
         ShipContainerTypeGrpMaster containerGroup = containerGroupRepository.findByContainerGrpPoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Container Group", "containerGrpPoid", id.toString()));
 
-        // Check if already deleted (idempotent)
-        if ("Y".equals(containerGroup.getDeleted())) {
-            log.info("Container group with id: {} is already deleted", id);
-            return;
-        }
-
-        // Soft delete
-        containerGroup.setDeleted("Y");
-        containerGroup.setActive("N");
-        containerGroup.setLastModifiedBy(getCurrentUser());
-        containerGroup.setLastModifiedDate(LocalDateTime.now());
-
-        containerGroupRepository.save(containerGroup);
-
-        String docId = UserContext.getDocumentId();
-        String key = id.toString();
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
-
-        loggingService.logSimpleFieldChange(ShipContainerTypeGrpMaster.class, docId, key, "deleted", "N", "Y", "ShipContainerTypeGroup soft deleted");
-        loggingService.logSimpleFieldChange(ShipContainerTypeGrpMaster.class, docId, key, "active", "Y", "N", "ShipContainerTypeGroup soft deleted");
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_CONTAINER_TYPE_GRP_MASTER",
+                "CONTAINER_GRP_POID",
+                deleteReasonDto,
+                null
+        );
 
         log.info("Successfully deleted container group with id: {}", id);
     }
