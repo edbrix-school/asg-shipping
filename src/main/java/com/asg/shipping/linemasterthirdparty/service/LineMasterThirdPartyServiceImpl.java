@@ -153,7 +153,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         ShipLineMaster saved = lineRepository.save(line);
 
         // Log creation
-        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getLinePoid().toString(), LogDetailsEnum.CREATED.getDescription());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getLinePoid().toString(), "Created");
 
         // Fetch and return with LOV data
         LineMasterThirdPartyDto result = mapper.mapToDto(saved);
