@@ -15,10 +15,11 @@ import org.hibernate.annotations.Immutable;
 @Getter
 @NoArgsConstructor
 public class ShippingChargeLineViewEntity {
-    @Id
+    
     @Column(name = "CHARGE_POID")
     private Long chargePoid;
 
+    @Id
     @Column(name = "LINE_POID")
     private Long linePoid;
 
