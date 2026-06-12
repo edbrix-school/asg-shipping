@@ -109,6 +109,7 @@ class LineTariffsServiceImplTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         when(documentService.resolveOperator(any())).thenReturn("AND");
+        when(documentService.resolveIsDeleted(any())).thenReturn("N");
         when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
         when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
@@ -116,6 +117,7 @@ class LineTariffsServiceImplTest {
         Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
 
         assertNotNull(result);
+        verify(documentService).resolveIsDeleted(filterRequest);
         verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("N"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
     }
 
@@ -128,6 +130,7 @@ class LineTariffsServiceImplTest {
         Pageable pageable = PageRequest.of(0, 20);
 
         when(documentService.resolveOperator(any())).thenReturn("AND");
+        when(documentService.resolveIsDeleted(any())).thenReturn("N");
         when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
         when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
@@ -147,19 +150,20 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
-    void searchLineTariffs_AlwaysUsesActiveOnlyFilter() {
+    void searchLineTariffs_UsesIsDeletedFromRequest() {
         FilterRequestDto filterRequest = new FilterRequestDto("AND", "Y", Collections.emptyList());
         Pageable pageable = PageRequest.of(0, 20);
 
         when(documentService.resolveOperator(any())).thenReturn("AND");
+        when(documentService.resolveIsDeleted(any())).thenReturn("Y");
         when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
         when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 
         service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
 
-        verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("N"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
-        verify(documentService, never()).resolveIsDeleted(any());
+        verify(documentService).resolveIsDeleted(filterRequest);
+        verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("Y"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
     }
 
     @Test
