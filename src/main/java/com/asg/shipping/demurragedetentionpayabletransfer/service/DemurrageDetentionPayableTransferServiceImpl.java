@@ -129,6 +129,10 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
+        if ("Y".equals(entity.getDeleted())) {
+            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString());
+        }
+
         List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
@@ -970,7 +974,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                 "V.START_DATE, V.END_DATE, V.TOTAL_COLLECTED_DAYS, V.TOTAL_COLLECTED_AMT, " +
                 "V.SHORT_ACCESS, V.PAYABLE_AMT, V.INCOME_AMT, V.JOB_NO, V.CONSIGNEE, " +
                 "V.NOTIFY1, V.LINE_POID, V.NET_INCOME_AMT, V.MAINFEST_TRANSACTION_POID " +
-                "FROM VW_SHIP_DEM_DTN_TRANSFER V " +
+                "FROM VW_SHIP_DEM_DTN_TRANSFER_TEMP V " +
                 "WHERE NOT EXISTS (" +
                 "  SELECT 1 FROM SHIP_DEM_DETN_TRANSFER_HDR H " +
                 "  INNER JOIN SHIP_DEM_DETN_TRANSFER_DTL D ON D.TRANSACTION_POID = H.TRANSACTION_POID " +
