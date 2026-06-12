@@ -56,7 +56,7 @@ public class LineTariffsController {
     @PostMapping("/search")
     @Operation(
             summary = "Search line tariffs",
-            description = "Retrieve paginated active line tariffs (DELETED = 'N' or NULL) with optional filtering and sorting",
+            description = "Retrieve paginated line tariffs with optional filtering and sorting. Use isDeleted=Y to view deleted records.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {

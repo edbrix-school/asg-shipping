@@ -52,7 +52,6 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private static final String TARIFF_DETAIL = "Tariff Detail";
     private static final String DET_ROW_ID = "detRowId";
     private static final String DELETED_FIELD = "DELETED";
-    private static final String ACTIVE_ONLY = "N";
 
     private final ShipLineTariffHdrRepository tariffHdrRepository;
     private final ShipLineTariffImpDtlRepository impDtlRepository;
@@ -73,6 +72,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         log.info("Searching line tariffs with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
 
         String operator = documentService.resolveOperator(request);
+        String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = resolveSearchFilters(request);
 
         RawSearchResult raw = documentService.search(
@@ -80,7 +80,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 filters,
                 operator,
                 pageable,
-                ACTIVE_ONLY,
+                isDeleted,
                 "DESCRIPTION",
                 TRANSACTION_POID_COL
         );
