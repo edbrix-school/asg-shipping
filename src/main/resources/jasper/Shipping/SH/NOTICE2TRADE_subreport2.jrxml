@@ -1,0 +1,520 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="NOTICE2TRADE_subreport2" language="groovy" pageWidth="540" pageHeight="802" columnWidth="540" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" whenNoDataType="AllSectionsNoDetail" uuid="a3893b40-cf52-4769-afe6-09c148a08e28">
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<parameter name="P_DOC_POID2" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT distinct TRANSACTION_POID,CONTAINER_TYPE_CATEGORY,CNT_SIZE,CNT_TYPE_CATEGORY,FREE_DAYS,
+CASE WHEN NVL(SLAB1_TILLDAYS,0)>999 AND NVL(SLAB2_TILLDAYS,0)=0 THEN NVL(FREE_DAYS,0)||'-Thereafter' ELSE (NVL(FREE_DAYS,0)+1)||'-'||(NVL(SLAB1_TILLDAYS,0)+NVL(FREE_DAYS,0)) END SLAB1SAYS,SLAB1_RATE,
+CASE WHEN NVL(SLAB1_TILLDAYS,0)>999 or  NVL(SLAB2_TILLDAYS,0)=0  then '0' WHEN NVL(SLAB2_TILLDAYS,0)>999 THEN 'Thereafter' ELSE (NVL(SLAB1_TILLDAYS,0)+NVL(FREE_DAYS,0)+1)||'-'||(NVL(SLAB1_TILLDAYS,0)+NVL(SLAB2_TILLDAYS,0)+NVL(FREE_DAYS,0))END SLAB2SAYS,SLAB2_RATE,
+CASE WHEN NVL(SLAB1_TILLDAYS,0)>999 or NVL(SLAB2_TILLDAYS,0)>999 or  NVL(SLAB3_TILLDAYS,0)=0 THEN '0' WHEN NVL(SLAB3_TILLDAYS,0)>999 THEN 'Thereafter'  ELSE (NVL(SLAB1_TILLDAYS,0)+NVL(SLAB2_TILLDAYS,0)+NVL(FREE_DAYS,0)+1)||'-'||(NVL(SLAB1_TILLDAYS,0)+NVL(SLAB2_TILLDAYS,0)+NVL(SLAB3_TILLDAYS,0)+NVL(FREE_DAYS,0))END SLAB3SAYS,SLAB3_RATE,
+CASE WHEN NVL(SLAB2_TILLDAYS,0)>999 or NVL(SLAB3_TILLDAYS,0)>999 or (NVL(SLAB3_TILLDAYS,0)=0 or NVL(SLAB4_TILLDAYS,0)=0) THEN '0' WHEN NVL(SLAB4_TILLDAYS,0)>999 THEN 'Thereafter'  ELSE (NVL(SLAB1_TILLDAYS,0)+NVL(SLAB2_TILLDAYS,0)+NVL(SLAB3_TILLDAYS,0)+NVL(FREE_DAYS,0)+1)||'-'||(NVL(SLAB1_TILLDAYS,0)+NVL(SLAB2_TILLDAYS,0)+NVL(SLAB3_TILLDAYS,0)+NVL(SLAB4_TILLDAYS,0)+NVL(FREE_DAYS,0))END SLAB4SAYS,SLAB4_RATE,
+CASE WHEN NVL(SLAB2_TILLDAYS,0)>999 or NVL(SLAB3_TILLDAYS,0)>999 or NVL(SLAB4_TILLDAYS,0)>999 or (NVL(SLAB3_TILLDAYS,0)=0 or NVL(SLAB4_TILLDAYS,0)=0 or NVL(SLAB5_TILLDAYS,0)=0) THEN '0' WHEN NVL(SLAB5_TILLDAYS,0)>999 THEN 'Thereafter'  ELSE (NVL(SLAB1_TILLDAYS,0)+NVL(SLAB2_TILLDAYS,0)+NVL(SLAB3_TILLDAYS,0)+NVL(SLAB4_TILLDAYS,0)+NVL(FREE_DAYS,0)+1)||'-'||(NVL(SLAB1_TILLDAYS,0)+NVL(SLAB2_TILLDAYS,0)+NVL(SLAB3_TILLDAYS,0)+NVL(SLAB4_TILLDAYS,0)+NVL(SLAB5_TILLDAYS,0)+NVL(FREE_DAYS,0))END SLAB5SAYS,SLAB5_RATE
+FROM(
+SELECT THDR.TRANSACTION_POID,
+decode(CNTTYPE.CONTAINER_TYPE_CATEGORY,'STD','STANDARD','SPL','SPECIAL EQUIPMENT','REF','REEFERS')CONTAINER_TYPE_CATEGORY,
+CNTTYPE.CONTAINER_TYPE_SIZE CNT_SIZE,
+CNTTYPE.CONTAINER_TYPE_SIZE||CNTTYPE.CONTAINER_TYPE_ISO_NAME CNT_TYPE_CATEGORY ,
+TDTL.FREE_DAYS ,
+--TDTL.SLAB1_TILLDAYS,
+nvl(TDTL.SLAB1_RATE,0)SLAB1_RATE,
+CASE WHEN nvl(TDTL.SLAB1_TILLDAYS,0)>0 THEN nvl(TDTL.SLAB1_TILLDAYS,0) ELSE 0 END SLAB1_TILLDAYS,
+CASE WHEN nvl(TDTL.SLAB2_TILLDAYS,0)>0 THEN ABS(nvl(TDTL.SLAB2_TILLDAYS,0)-nvl(TDTL.SLAB1_TILLDAYS,0)) ELSE 0 END SLAB2_TILLDAYS,
+TDTL.SLAB2_TILLDAYS TOTAL_SLAB2DAYS,
+nvl(TDTL.SLAB2_RATE,0)SLAB2_RATE,
+CASE WHEN nvl(TDTL.SLAB3_TILLDAYS,0)>0 THEN ABS(nvl(TDTL.SLAB3_TILLDAYS,0)-nvl(TDTL.SLAB2_TILLDAYS,0)) ELSE 0 END SLAB3_TILLDAYS,
+TDTL.SLAB3_TILLDAYS TOTAL_SLAB3DAYS,
+nvl(TDTL.SLAB3_RATE,0)SLAB3_RATE,
+CASE WHEN nvl(TDTL.SLAB4_TILLDAYS,0)>0 THEN ABS(nvl(TDTL.SLAB4_TILLDAYS,0)-nvl(TDTL.SLAB3_TILLDAYS,0)) ELSE 0 END SLAB4_TILLDAYS,
+TDTL.SLAB4_TILLDAYS TOTAL_SLAB4DAYS,
+nvl(TDTL.SLAB4_RATE,0) SLAB4_RATE,
+CASE WHEN nvl(TDTL.SLAB5_TILLDAYS,0)>0 THEN ABS(nvl(TDTL.SLAB5_TILLDAYS,0)-nvl(TDTL.SLAB4_TILLDAYS,0)) ELSE 0 END SLAB5_TILLDAYS,
+TDTL.SLAB5_TILLDAYS TOTAL_SLAB5DAYS,
+nvl(TDTL.SLAB5_RATE,0)SLAB5_RATE
+FROM SHIP_LINE_TARIFF_IMP_DTL TDTL
+INNER JOIN SHIP_LINE_TARIFF_HDR THDR ON THDR.TRANSACTION_POID=TDTL.TRANSACTION_POID
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER CNTTYPE ON TDTL.CONTAINER_TYPE_POID=CNTTYPE.CONTAINER_TYPE_POID
+WHERE TDTL.TRANSACTION_POID=$P{P_DOC_POID2}
+AND CNTTYPE.CONTAINER_TYPE_SIZE||CNTTYPE.CONTAINER_TYPE_ISO_NAME NOT LIKE '%AUTOBASIS%'
+) ORDER BY CONTAINER_TYPE_CATEGORY DESC,CNT_SIZE]]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="CONTAINER_TYPE_CATEGORY" class="java.lang.String"/>
+	<field name="CNT_SIZE" class="java.lang.String"/>
+	<field name="CNT_TYPE_CATEGORY" class="java.lang.String"/>
+	<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB1SAYS" class="java.lang.String"/>
+	<field name="SLAB1_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB2SAYS" class="java.lang.String"/>
+	<field name="SLAB2_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB3SAYS" class="java.lang.String"/>
+	<field name="SLAB3_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB4SAYS" class="java.lang.String"/>
+	<field name="SLAB4_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB5SAYS" class="java.lang.String"/>
+	<field name="SLAB5_RATE" class="java.math.BigDecimal"/>
+	<group name="CONTAINER_TYPE_CATEGORY">
+		<groupExpression><![CDATA[$F{CONTAINER_TYPE_CATEGORY}]]></groupExpression>
+		<groupHeader>
+			<band height="23">
+				<textField>
+					<reportElement mode="Opaque" x="2" y="0" width="207" height="22" backcolor="#CCCCCC" uuid="3f6224be-4185-4171-aeef-d3a7a00451d9"/>
+					<textElement verticalAlignment="Middle">
+						<font size="12" isBold="true" isUnderline="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{CONTAINER_TYPE_CATEGORY}]]></textFieldExpression>
+				</textField>
+			</band>
+		</groupHeader>
+	</group>
+	<group name="CNT_SIZE">
+		<groupExpression><![CDATA[$F{CNT_SIZE}]]></groupExpression>
+		<groupHeader>
+			<band height="23">
+				<textField>
+					<reportElement mode="Opaque" x="35" y="1" width="174" height="20" backcolor="#CCCCCC" uuid="188ba678-a5b7-4514-97b3-7795cb9170a8"/>
+					<textElement verticalAlignment="Middle">
+						<font isBold="true"/>
+					</textElement>
+					<textFieldExpression><![CDATA[$F{CNT_SIZE}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement mode="Opaque" x="2" y="1" width="34" height="20" backcolor="#CCCCCC" uuid="1e70695d-423b-4af6-bec1-d8f18c4e18d3"/>
+					<textElement verticalAlignment="Middle">
+						<font isBold="true"/>
+					</textElement>
+					<text><![CDATA[Size :]]></text>
+				</staticText>
+			</band>
+		</groupHeader>
+	</group>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="37" splitType="Stretch">
+			<staticText>
+				<reportElement mode="Opaque" x="2" y="0" width="35" height="36" backcolor="#CCCCCC" uuid="bdc7fe57-f1a9-4733-9003-162287432bc0"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Type]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="37" y="0" width="43" height="36" backcolor="#CCCCCC" uuid="43630072-bbb8-43ea-9d2a-b004acdd0ee1"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle"/>
+				<text><![CDATA[Free Days]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="80" y="0" width="91" height="20" backcolor="#CCCCCC" uuid="926f66be-76c3-4674-9dc0-d65babd7b9c6"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[SLAB1]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="171" y="0" width="91" height="20" backcolor="#CCCCCC" uuid="301bec97-5046-4b78-9151-7e475b5ca249"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[SLAB2]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="262" y="0" width="91" height="20" backcolor="#CCCCCC" uuid="f3f29a4c-e7ce-4478-bc62-ad69680d286e"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[SLAB3]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="353" y="0" width="91" height="20" backcolor="#CCCCCC" uuid="c1a9537c-364f-4c36-9627-2195cbfda311"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[SLAB4]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="444" y="0" width="91" height="20" backcolor="#CCCCCC" uuid="2b001bcd-5404-4ab0-aaa9-6bdfc17b59cb"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font isBold="true"/>
+				</textElement>
+				<text><![CDATA[SLAB5]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="80" y="20" width="49" height="16" backcolor="#CCCCCC" uuid="6e09fc9e-53e2-458d-a11d-3e9a8ed73e37"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Days]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="129" y="20" width="42" height="16" backcolor="#CCCCCC" uuid="d087a44c-acdf-4579-bb24-dc07cb131dd6"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Rates]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="220" y="20" width="42" height="16" backcolor="#CCCCCC" uuid="57f665ba-86a2-484b-8e65-dfcd5092e5ca"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Rates]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="171" y="20" width="49" height="16" backcolor="#CCCCCC" uuid="58377693-ff7f-4758-acac-ff621305de2f"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Days]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="311" y="20" width="41" height="16" backcolor="#CCCCCC" uuid="c9845043-19a9-4b3e-925e-093453f146bc"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Rates]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="262" y="20" width="49" height="16" backcolor="#CCCCCC" uuid="4391a009-a8c7-487a-90a1-6cc925a9278a"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Days]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="403" y="20" width="41" height="16" backcolor="#CCCCCC" uuid="959ff8e9-a044-47dd-a4f1-95e2a2ea7c6c"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Rates]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="353" y="20" width="49" height="16" backcolor="#CCCCCC" uuid="471f764e-34ce-43a9-a6c3-891b264c0cd0"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Days]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="494" y="20" width="41" height="16" backcolor="#CCCCCC" uuid="4d2b8dbd-857a-481a-abf1-bdad32368f14"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Rates]]></text>
+			</staticText>
+			<staticText>
+				<reportElement mode="Opaque" x="445" y="20" width="49" height="16" backcolor="#CCCCCC" uuid="ce9b44c8-fcac-4b34-95b1-1a8ec0a4a9ff"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="9"/>
+				</textElement>
+				<text><![CDATA[Days]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="21" splitType="Stretch">
+			<textField isBlankWhenNull="true">
+				<reportElement x="2" y="0" width="35" height="20" uuid="b82027d6-fce5-499a-9348-f002b77bbceb"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CNT_TYPE_CATEGORY}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="37" y="0" width="43" height="20" uuid="dd4023b6-a2ed-4734-b557-3332f5890f1d"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FREE_DAYS}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="80" y="0" width="49" height="20" uuid="343742a8-16bb-4891-8748-04a06e58cd36"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB1SAYS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="129" y="0" width="42" height="20" uuid="5aadf4e3-40c7-489f-8d6e-c7abdbdfd54e"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB1_RATE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="171" y="0" width="49" height="20" uuid="1270db9b-de89-4cd9-8a28-538c66447b14"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB2SAYS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="220" y="0" width="42" height="20" uuid="891a1407-3da0-4c59-967b-4d3160581561"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB2_RATE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="262" y="0" width="49" height="20" uuid="e89e1b54-97e4-40f0-8529-3522a0d13de7"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB3SAYS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="311" y="0" width="42" height="20" uuid="07eb3395-0bd5-414d-96b2-bf10e9c8aa8b"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB3_RATE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="353" y="0" width="49" height="20" uuid="211d20d4-c797-4d12-8e83-675090a1d133"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB4SAYS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="402" y="0" width="42" height="20" uuid="81a5477d-ba30-4517-ad8d-d6ebfe632d07"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB4_RATE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="444" y="0" width="50" height="20" uuid="c6b5917a-1d28-4de7-9041-c9fe5aaa1468"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB5SAYS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0.000" isBlankWhenNull="true">
+				<reportElement x="494" y="0" width="41" height="20" uuid="6dc3b8ee-254f-4abb-9f5d-f750a80701a2"/>
+				<box>
+					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB5_RATE}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>
