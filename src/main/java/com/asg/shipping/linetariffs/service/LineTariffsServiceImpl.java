@@ -9,6 +9,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.*;
@@ -21,6 +22,7 @@ import com.asg.shipping.linetariffs.util.LineTariffMapper;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.sf.jasperreports.engine.JasperReport;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +40,8 @@ import java.util.stream.Stream;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 
+import javax.sql.DataSource;
+
 /**
  * Service implementation for Line Tariffs operations
  */
@@ -52,6 +56,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private static final String TARIFF_DETAIL = "Tariff Detail";
     private static final String DET_ROW_ID = "detRowId";
     private static final String DELETED_FIELD = "DELETED";
+    private static final String DOC_ID = "100-050";
 
     private final ShipLineTariffHdrRepository tariffHdrRepository;
     private final ShipLineTariffImpDtlRepository impDtlRepository;
@@ -65,6 +70,30 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private final ShipContainerTypeMasterRepository containerTypeRepository;
     private final ShipLineMasterTypeRepository lineMasterTypeRepository;
     private final EntityManager entityManager;
+    private final PrintService printService;
+    private final DataSource dataSource;
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] print(Long transactionPoid) throws Exception {
+        log.info("Generating Notice to Trade PDF for line tariff id: {}", transactionPoid);
+
+        Long groupPoid = UserContext.getGroupPoid();
+        tariffHdrRepository.findByTransactionPoidAndGroupPoid(transactionPoid, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, transactionPoid.toString()));
+
+        List<ShipLineTariffImpDtl> impDetails = impDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        if (impDetails.isEmpty()) {
+            throw new ValidationException(
+                    "No import demurrage collectable slab data found. Load container types (IMP) and save tariff details before printing.");
+        }
+
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, DOC_ID);
+        params.put("DOC_KEY_POID", String.valueOf(transactionPoid));
+        params.put("NOTICE2TRADE_SUBREPORT2", printService.load("Shipping/SH/NOTICE2TRADE_subreport2.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/NOTICE2TRADE.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
 
     @Override
     @Transactional(readOnly = true)

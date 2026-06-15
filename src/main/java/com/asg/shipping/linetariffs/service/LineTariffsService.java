@@ -95,5 +95,13 @@ public interface LineTariffsService {
      * @return Updated LineTariffDto
      */
     void loadContainerTypes(Long transactionPoid, String type);
+
+    /**
+     * Generate Notice to Trade PDF for line demurrage tariff revision.
+     *
+     * @param transactionPoid TRANSACTION_POID of the tariff header
+     * @return PDF bytes
+     */
+    byte[] print(Long transactionPoid) throws Exception;
 }
 

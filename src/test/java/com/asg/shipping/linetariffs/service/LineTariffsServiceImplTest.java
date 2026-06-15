@@ -9,6 +9,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.common.entity.ShipLineMasterType;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
@@ -19,6 +20,7 @@ import com.asg.shipping.linetariffs.entity.*;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
 import jakarta.persistence.EntityManager;
+import net.sf.jasperreports.engine.JasperReport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -37,6 +39,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import javax.sql.DataSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -57,6 +61,8 @@ class LineTariffsServiceImplTest {
     @Mock private ShipContainerTypeMasterRepository containerTypeRepository;
     @Mock private ShipLineMasterTypeRepository lineMasterTypeRepository;
     @Mock private EntityManager entityManager;
+    @Mock private PrintService printService;
+    @Mock private DataSource dataSource;
 
     @InjectMocks
     private LineTariffsServiceImpl service;
@@ -554,5 +560,44 @@ class LineTariffsServiceImplTest {
     void loadContainerTypes_TariffNotFound_ThrowsResourceNotFoundException() {
         when(tariffHdrRepository.findById(1L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> service.loadContainerTypes(1L, "IMP"));
+    }
+
+    @Test
+    void print_Success() throws Exception {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(new ShipLineTariffImpDtl()));
+            when(printService.buildBaseParams(1L, "100-050")).thenReturn(new HashMap<>());
+            when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
+            when(printService.fillReportToPdf(any(), any(), eq(dataSource))).thenReturn(new byte[]{1, 2, 3});
+
+            byte[] result = service.print(1L);
+
+            assertArrayEquals(new byte[]{1, 2, 3}, result);
+            verify(printService).load("Shipping/SH/NOTICE2TRADE_subreport2.jrxml");
+            verify(printService).load("Shipping/SH/NOTICE2TRADE.jrxml");
+        }
+    }
+
+    @Test
+    void print_TariffNotFound_ThrowsResourceNotFoundException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> service.print(1L));
+        }
+    }
+
+    @Test
+    void print_NoImpCollectableData_ThrowsValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+            assertThrows(ValidationException.class, () -> service.print(1L));
+        }
     }
 }

@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
@@ -308,5 +309,36 @@ class LineTariffsControllerTest {
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
+    }
+
+    @Test
+    void print_Success() throws Exception {
+        byte[] pdf = new byte[]{1, 2, 3};
+        when(lineTariffsService.print(1L)).thenReturn(pdf);
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertArrayEquals(pdf, (byte[]) response.getBody());
+        verify(lineTariffsService).print(1L);
+    }
+
+    @Test
+    void print_NotFound() throws Exception {
+        when(lineTariffsService.print(1L))
+                .thenThrow(new ResourceNotFoundException("Line Tariff", "transactionPoid", "1"));
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
+    void print_Error() throws Exception {
+        when(lineTariffsService.print(1L)).thenThrow(new RuntimeException("jasper failed"));
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(500, response.getStatusCode().value());
     }
 }
