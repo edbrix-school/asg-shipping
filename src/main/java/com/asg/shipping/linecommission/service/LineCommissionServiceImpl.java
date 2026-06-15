@@ -368,11 +368,9 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                     ShipLineCommCntnrDtlEntity oldItem = new ShipLineCommCntnrDtlEntity();
                     BeanUtils.copyProperties(entity, oldItem);
                     mapper.applyUpdateContainerEntity(entity, dto, userId);
-                    ShipLineCommCntnrDtlEntity newItem = new ShipLineCommCntnrDtlEntity();
-                    BeanUtils.copyProperties(entity, newItem);
                     toUpdate.add(entity);
                     String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
-                    logRequests.add(new LogRequestDto<>(oldItem, newItem, ShipLineCommCntnrDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommCntnrDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
                 }
                 case ACTION_IS_DELETED -> {
                     Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
@@ -406,7 +404,13 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         if (!toUpdate.isEmpty()) {
             updatedItems = cntnrRepository.saveAll(toUpdate);
             if (!logRequests.isEmpty()) {
-                loggingService.createLogBatch(logRequests);
+                List<LogRequestDto<ShipLineCommCntnrDtlEntity>> savedLogRequests = new ArrayList<>();
+                for (int i = 0; i < logRequests.size(); i++) {
+                    LogRequestDto<ShipLineCommCntnrDtlEntity> req = logRequests.get(i);
+                    ShipLineCommCntnrDtlEntity savedNew = updatedItems.get(i);
+                    savedLogRequests.add(new LogRequestDto<>(req.getOldObj(), savedNew, ShipLineCommCntnrDtlEntity.class, docId, docKeyPoid, req.getLogDetail()));
+                }
+                loggingService.createLogBatch(savedLogRequests);
             }
         }
 
@@ -462,11 +466,9 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                     ShipLineCommDtlEntity oldItem = new ShipLineCommDtlEntity();
                     BeanUtils.copyProperties(entity, oldItem);
                     mapper.applyUpdateOtherRemunerationEntity(entity, dto, userId);
-                    ShipLineCommDtlEntity newItem = new ShipLineCommDtlEntity();
-                    BeanUtils.copyProperties(entity, newItem);
                     toUpdate.add(entity);
                     String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
-                    logRequests.add(new LogRequestDto<>(oldItem, newItem, ShipLineCommDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
                 }
                 case ACTION_IS_DELETED -> {
                     Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
@@ -500,7 +502,13 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         if (!toUpdate.isEmpty()) {
             updatedItems = dtlRepository.saveAll(toUpdate);
             if (!logRequests.isEmpty()) {
-                loggingService.createLogBatch(logRequests);
+                List<LogRequestDto<ShipLineCommDtlEntity>> savedLogRequests = new ArrayList<>();
+                for (int i = 0; i < logRequests.size(); i++) {
+                    LogRequestDto<ShipLineCommDtlEntity> req = logRequests.get(i);
+                    ShipLineCommDtlEntity savedNew = updatedItems.get(i);
+                    savedLogRequests.add(new LogRequestDto<>(req.getOldObj(), savedNew, ShipLineCommDtlEntity.class, docId, docKeyPoid, req.getLogDetail()));
+                }
+                loggingService.createLogBatch(savedLogRequests);
             }
         }
 
@@ -556,11 +564,9 @@ public class LineCommissionServiceImpl implements LineCommissionService {
                     ShipLineCommLocalDtlEntity oldItem = new ShipLineCommLocalDtlEntity();
                     BeanUtils.copyProperties(entity, oldItem);
                     mapper.applyUpdateLocalShareEntity(entity, dto, userId);
-                    ShipLineCommLocalDtlEntity newItem = new ShipLineCommLocalDtlEntity();
-                    BeanUtils.copyProperties(entity, newItem);
                     toUpdate.add(entity);
                     String logDetailForUpdate = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, detRowIdToUpdate);
-                    logRequests.add(new LogRequestDto<>(oldItem, newItem, ShipLineCommLocalDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
+                    logRequests.add(new LogRequestDto<>(oldItem, entity, ShipLineCommLocalDtlEntity.class, docId, docKeyPoid, logDetailForUpdate));
                 }
                 case ACTION_IS_DELETED -> {
                     Long detRowIdToDelete = normalizeDetRowId(dto.getDetRowId());
@@ -594,7 +600,13 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         if (!toUpdate.isEmpty()) {
             updatedItems = localRepository.saveAll(toUpdate);
             if (!logRequests.isEmpty()) {
-                loggingService.createLogBatch(logRequests);
+                List<LogRequestDto<ShipLineCommLocalDtlEntity>> savedLogRequests = new ArrayList<>();
+                for (int i = 0; i < logRequests.size(); i++) {
+                    LogRequestDto<ShipLineCommLocalDtlEntity> req = logRequests.get(i);
+                    ShipLineCommLocalDtlEntity savedNew = updatedItems.get(i);
+                    savedLogRequests.add(new LogRequestDto<>(req.getOldObj(), savedNew, ShipLineCommLocalDtlEntity.class, docId, docKeyPoid, req.getLogDetail()));
+                }
+                loggingService.createLogBatch(savedLogRequests);
             }
         }
 
