@@ -17,7 +17,9 @@ public class CustomerInvoiceChargeMapMasterRequest {
     @Positive
     private Long customerPoid;
 
-    @NotEmpty
+    private Long oldCustomerPoid;
+
+    @NotEmpty(message = "details must not be empty")
     @Valid
     private List<CustomerInvoiceChargeMapDetailDto> details;
 }
