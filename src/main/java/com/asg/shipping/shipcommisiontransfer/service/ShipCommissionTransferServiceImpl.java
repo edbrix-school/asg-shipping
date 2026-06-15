@@ -573,13 +573,14 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     private String callProcMateRcptEmptyManifest(Long transactionPoid, String user) {
         try {
             String sql = "{call PROC_MATE_RCPT_EMPTY_MANIFEST(?, ?, ?)}";
-            return jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+            String result = jdbcTemplate.execute(sql, (CallableStatement cs) -> {
                 cs.setLong(1, transactionPoid);
                 cs.setString(2, user);
                 cs.registerOutParameter(3, Types.VARCHAR);
                 cs.execute();
                 return cs.getString(3);
             });
+            return "Records imported..." + result;
         } catch (Exception e) {
             log.error("Error calling PROC_MATE_RCPT_EMPTY_MANIFEST for transaction: {}", transactionPoid, e);
             throw new ValidationException("Error loading data from voyage: " + e.getMessage());
