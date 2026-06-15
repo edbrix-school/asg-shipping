@@ -31,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
@@ -281,6 +282,42 @@ public class ExportManifestBlController {
         service.deleteExportManifestBl(transactionPoid);
         log.info("Successfully deleted Export Manifest BL with transactionPoid: {}", transactionPoid);
         return ApiResponse.success("Export Manifest BL deleted successfully");
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/{transactionPoid}/ff-jobs")
+    @Operation(
+            summary = "List FF jobs for Export Manifest BL",
+            description = "Retrieve FF job rows from VW_SHIP_BL_TO_FF for the FF Jobs tab (read-only grid).",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> getShipBlToFfByManifestPoid(
+            @Parameter(description = "Export Manifest BL transaction POID", required = true, example = "249416")
+            @PathVariable Long transactionPoid) {
+
+        log.info("Getting FF job list for manifest transactionPoid: {}", transactionPoid);
+        List<ShipBlToFfDto> result = service.getShipBlToFfByManifestPoid(transactionPoid);
+        log.info("Successfully retrieved {} FF job row(s) for manifest transactionPoid: {}", result.size(), transactionPoid);
+        return ApiResponse.success("FF job details retrieved successfully", result);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.DELETE)
+    @DeleteMapping("/{transactionPoid}/ff-jobs/{rnumid}")
+    @Operation(
+            summary = "Delete FF purchase journal for a specific FF Jobs row",
+            description = "Reverses FF PJ for the selected row via PROC_GL_REVERSE_SHTOFF_POSTING. FF invoice is retained (VAT rule).",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> deleteFfPurchaseJournal(
+            @Parameter(description = "Export Manifest BL transaction POID", required = true, example = "268427")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "FF Jobs row id (RNUMID)", required = true, example = "43")
+            @PathVariable Long rnumid) {
+
+        log.info("Deleting FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+        service.deleteFfPurchaseJournal(transactionPoid, rnumid);
+        log.info("Successfully deleted FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+        return ApiResponse.success("FF purchase journal deleted successfully");
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)

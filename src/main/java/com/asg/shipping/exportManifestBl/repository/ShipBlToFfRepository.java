@@ -17,23 +17,35 @@ public class ShipBlToFfRepository {
 
     private final JdbcTemplate jdbcTemplate;
 
-   
-    public Optional<ShipBlToFfDto> findByBlNumber(String blNumber, Long companyPoid) {
-        String sql = "SELECT RNUMID, MASTER_BL_NO, SHIPPING_MANIFEST_POID, SHIPPING_INVOICE, " +
-                "FF_JOBNO, FF_INVOICE, FF_PJ, DELETED " +
-                "FROM VW_SHIP_BL_TO_FF " +
-                "WHERE MASTER_BL_NO = ? AND COMPANY_POID = ?";
+    private static final String BASE_SQL =
+            "SELECT v.RNUMID, v.MASTER_BL_NO, v.SHIPPING_MANIFEST_POID, v.SHIPPING_INVOICE, " +
+            "v.FF_JOBNO, v.FF_INVOICE, v.FF_PJ, v.DELETED " +
+            "FROM VW_SHIP_BL_TO_FF v " +
+            "INNER JOIN SHIP_BL_MANIFEST_HDR h ON h.TRANSACTION_POID = v.SHIPPING_MANIFEST_POID " +
+            "WHERE NVL(v.DELETED, 'N') = 'N' " +
+            "AND NVL(h.DELETED, 'N') = 'N' ";
 
-        try {
-            List<ShipBlToFfDto> results = jdbcTemplate.query(sql, new ShipBlToFfRowMapper(), blNumber, companyPoid);
-            return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
-        } catch (Exception e) {
-            // Log error and return empty
-            return Optional.empty();
-        }
+    public List<ShipBlToFfDto> findAllByMasterBlNo(String masterBlNo, Long companyPoid) {
+        String sql = BASE_SQL + "AND v.MASTER_BL_NO = ? AND h.COMPANY_POID = ? ORDER BY v.RNUMID";
+        return jdbcTemplate.query(sql, new ShipBlToFfRowMapper(), masterBlNo, companyPoid);
     }
 
-  
+    public List<ShipBlToFfDto> findAllByManifestPoid(Long transactionPoid, Long companyPoid) {
+        String sql = BASE_SQL + "AND v.SHIPPING_MANIFEST_POID = ? AND h.COMPANY_POID = ? ORDER BY v.RNUMID";
+        return jdbcTemplate.query(sql, new ShipBlToFfRowMapper(), transactionPoid, companyPoid);
+    }
+
+    public Optional<ShipBlToFfDto> findByBlNumber(String blNumber, Long companyPoid) {
+        List<ShipBlToFfDto> results = findAllByMasterBlNo(blNumber, companyPoid);
+        return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+    }
+
+    public Optional<ShipBlToFfDto> findByRnumidAndManifestPoid(Long rnumid, Long transactionPoid, Long companyPoid) {
+        String sql = BASE_SQL + "AND v.RNUMID = ? AND v.SHIPPING_MANIFEST_POID = ? AND h.COMPANY_POID = ?";
+        List<ShipBlToFfDto> results = jdbcTemplate.query(sql, new ShipBlToFfRowMapper(), rnumid, transactionPoid, companyPoid);
+        return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+    }
+
     private static class ShipBlToFfRowMapper implements RowMapper<ShipBlToFfDto> {
         @Override
         public ShipBlToFfDto mapRow(ResultSet rs, int rowNum) throws SQLException {
@@ -51,4 +63,3 @@ public class ShipBlToFfRepository {
         }
     }
 }
-
