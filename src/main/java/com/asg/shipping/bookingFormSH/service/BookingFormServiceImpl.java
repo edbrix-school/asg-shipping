@@ -155,7 +155,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         String dataQuery = "SELECT * FROM (SELECT a.*, ROWNUM rn FROM (" +
                 "SELECT * FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where +
-                ") a WHERE ROWNUM <= ?) WHERE rn > ?";
+                " ORDER BY EMPTY_IN ASC) a WHERE ROWNUM <= ?) WHERE rn > ?";
         String countQuery = "SELECT COUNT(*) FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where;
 
         List<Object> dataParams = new ArrayList<>(params);
