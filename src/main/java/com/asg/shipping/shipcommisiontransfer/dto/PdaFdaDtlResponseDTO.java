@@ -17,4 +17,5 @@ public class PdaFdaDtlResponseDTO {
     private BigDecimal currencyRate;
     private String remarks;
     private BigDecimal fdaAmount;
+    private String chargeName;
 }
