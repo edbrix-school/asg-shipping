@@ -239,7 +239,10 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
 
         detailRepo.save(entity);
 
-        if (!isNewDetail) {
+        if (isNewDetail) {
+            loggingService.createLogSummaryEntry(docId, key,
+                    String.format("Row Created on Charge Detail with detRowId: %s", id.getDetRowId()));
+        } else {
             loggingService.logChanges(oldDetail, entity, CustomerInvoicePrtDtlEntity.class, docId, key,
                     LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
         }
