@@ -23,6 +23,8 @@ import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionHdrRepository;
 import com.asg.shipping.shipcommisiontransfer.util.ShipCommissionTransferMapper;
+import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
+import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.PersistenceContext;
@@ -66,6 +68,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     private final JdbcTemplate jdbcTemplate;
     private final PdaFdaDtlRepository pdaFdaDtlRepository;
     private final DocumentDeleteService documentDeleteService;
+    private final ShipChargeMasterRepository shipChargeMasterRepository;
 
     private static final String TRANSACTION_POID = "transactionPoid";
     private static final String SHIP_COMMISSION_TRANSFER = "Ship Commission Transfer";
@@ -387,15 +390,23 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
         List<PdaFdaDtl> list = pdaFdaDtlRepository.findByIdTransactionPoid(transactionPoid);
 
-        return list.stream().map(entity -> PdaFdaDtlResponseDTO.builder()
-                .detRowId(entity.getId().getDetRowId())
-                .charge(entity.getChargePoid())
-                .currencyCode(entity.getCurrencyCode())
-                .currencyRate(entity.getCurrencyRate())
-                .remarks(entity.getRemarks())
-                .fdaAmount(entity.getFdaAmount())
-                .build()
-        ).toList();
+        return list.stream().map(entity -> {
+
+            String chargeName = shipChargeMasterRepository
+                    .findByChargePoid(entity.getChargePoid())
+                    .map(ShipChargeMaster::getChargeName)
+                    .orElse(null);
+
+            return PdaFdaDtlResponseDTO.builder()
+                    .detRowId(entity.getId().getDetRowId())
+                    .charge(entity.getChargePoid())
+                    .chargeName(chargeName)
+                    .currencyCode(entity.getCurrencyCode())
+                    .currencyRate(entity.getCurrencyRate())
+                    .remarks(entity.getRemarks())
+                    .fdaAmount(entity.getFdaAmount())
+                    .build();
+        }).toList();
     }
 
     @Override
