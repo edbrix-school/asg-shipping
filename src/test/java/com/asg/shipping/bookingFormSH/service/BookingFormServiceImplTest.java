@@ -210,10 +210,10 @@ class BookingFormServiceImplTest {
         ShipMateStuffingDtl stuffingDtl = new ShipMateStuffingDtl();
         stuffingDtl.setTransactionPoid(TX_POID);
         stuffingDtl.setDetRowId(1L);
+        stuffingDtl.setEquipmentIsoType("22G1");
 
         when(headerRepository.findByTransactionPoid(TX_POID))
                 .thenReturn(Optional.of(hdr));
-        // enrichCargoDetails now correctly guards on cargoDetails == null (bug fixed)
         when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
         when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(chargesDtl));
         when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(containerDtl));
@@ -222,11 +222,66 @@ class BookingFormServiceImplTest {
         when(lovService.getChargeMasterLov(5L)).thenReturn(List.of(lovItem));
         when(lovService.getPortMasterLov(anyLong())).thenReturn(List.of(lovItem));
         when(lovService.getCommodityMasterLov(7L)).thenReturn(List.of(lovItem));
+        when(lovService.getEquipmentIsoTypeLov("22G1")).thenReturn(List.of(lovItem));
 
         BookingFormDto result = service.getBookingForm(TX_POID);
         assertNotNull(result);
         assertEquals(1, result.getChargesDetails().size());
         assertEquals(1, result.getContainerDetails().size());
+        assertEquals(1, result.getStuffingDetails().size());
+        assertNotNull(result.getStuffingDetails().get(0).getEquipmentIsoTypeDet());
+    }
+
+    @Test
+    void getBookingForm_stuffingDetails_equipmentIsoTypeDet_populated() {
+        LovItem lovItem = buildLovItem(196L, "22G1", "20FT DRY CONTAINER");
+
+        ShipMateHdr hdr = new ShipMateHdr();
+        hdr.setDeleted("N");
+        hdr.setTransactionPoid(TX_POID);
+
+        ShipMateStuffingDtl stuffingDtl = new ShipMateStuffingDtl();
+        stuffingDtl.setTransactionPoid(TX_POID);
+        stuffingDtl.setDetRowId(1L);
+        stuffingDtl.setEquipmentIsoType("22G1");
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(stuffingDtl));
+        when(lovService.getEquipmentIsoTypeLov("22G1")).thenReturn(List.of(lovItem));
+
+        BookingFormDto result = service.getBookingForm(TX_POID);
+
+        assertNotNull(result.getStuffingDetails());
+        assertEquals(1, result.getStuffingDetails().size());
+        assertNotNull(result.getStuffingDetails().get(0).getEquipmentIsoTypeDet());
+        assertEquals("22G1", result.getStuffingDetails().get(0).getEquipmentIsoTypeDet().getCode());
+    }
+
+    @Test
+    void getBookingForm_stuffingDetails_nullIsoType_doesNotPopulateDet() {
+        ShipMateHdr hdr = new ShipMateHdr();
+        hdr.setDeleted("N");
+        hdr.setTransactionPoid(TX_POID);
+
+        ShipMateStuffingDtl stuffingDtl = new ShipMateStuffingDtl();
+        stuffingDtl.setTransactionPoid(TX_POID);
+        stuffingDtl.setDetRowId(1L);
+        stuffingDtl.setEquipmentIsoType(null);
+
+        when(headerRepository.findByTransactionPoid(TX_POID)).thenReturn(Optional.of(hdr));
+        when(cargoRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(chargesRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(containerRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of());
+        when(stuffingRepo.findByTransactionPoidOrderByDetRowId(TX_POID)).thenReturn(List.of(stuffingDtl));
+
+        BookingFormDto result = service.getBookingForm(TX_POID);
+
+        assertNotNull(result.getStuffingDetails());
+        assertNull(result.getStuffingDetails().get(0).getEquipmentIsoTypeDet());
+        verify(lovService, never()).getEquipmentIsoTypeLov(any());
     }
 
     @Test
@@ -968,9 +1023,10 @@ class BookingFormServiceImplTest {
         Map<String, Object> result = service.searchContainerInventory("DOC123", null, null, 103L, pageable);
 
         assertNotNull(result);
-        // verify LOAD_FULL IS NULL is in the query
         verify(jdbcTemplate).queryForList(
-                argThat(sql -> sql.contains("LOAD_FULL IS NULL") && sql.contains("LINE_POID = ?")),
+                argThat(sql -> sql.contains("LOAD_FULL IS NULL")
+                        && sql.contains("LINE_POID = ?")
+                        && sql.contains("ORDER BY EMPTY_IN ASC")),
                 any(Object[].class));
         verify(jdbcTemplate).queryForObject(
                 argThat(sql -> sql.contains("LOAD_FULL IS NULL") && sql.contains("LINE_POID = ?")),

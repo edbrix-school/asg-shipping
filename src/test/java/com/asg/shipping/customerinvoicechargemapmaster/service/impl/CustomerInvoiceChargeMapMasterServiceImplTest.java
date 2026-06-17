@@ -163,6 +163,10 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
                 && entity.getId().getCustomerPoid().equals(1L)
                 && entity.getId().getDetRowId().equals(1L)
                 && entity.getChargePoid().equals(100L)));
+        verify(loggingService).createLogSummaryEntry(
+                eq("DOC123"),
+                eq("1"),
+                contains("Row Created on Charge Detail with detRowId:"));
     }
 
     @Test

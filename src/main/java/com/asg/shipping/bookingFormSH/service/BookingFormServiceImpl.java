@@ -1247,6 +1247,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         enrichCargoDetails(dto);
         enrichChargeDetails(dto);
         enrichContainerDetails(dto);
+        enrichStuffingDetails(dto);
     }
 
     private <T> void setLov(
@@ -1268,6 +1269,15 @@ public class BookingFormServiceImpl implements BookingFormService {
         dto.getChargesDetails().forEach(charge -> {
             setLov(charge.getChargePoid(), lovService::getChargeMasterLov, charge::setChargePoidDet);
             setLov(charge.getPaidAtPortPoid(), lovService::getPortMasterLov, charge::setPaidAtPortPoidDet);
+        });
+    }
+
+    private void enrichStuffingDetails(BookingFormDto dto) {
+        if (dto.getStuffingDetails() == null) return;
+
+        dto.getStuffingDetails().forEach(stuffing -> {
+            if (stuffing.getEquipmentIsoType() != null && !stuffing.getEquipmentIsoType().isBlank())
+                lovService.getEquipmentIsoTypeLov(stuffing.getEquipmentIsoType()).stream().findFirst().ifPresent(stuffing::setEquipmentIsoTypeDet);
         });
     }
 
