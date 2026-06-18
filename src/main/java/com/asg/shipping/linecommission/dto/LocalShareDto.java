@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,8 +19,8 @@ public class LocalShareDto {
     @NotNull(message = "chargePoid is required")
     private Long chargePoid;
     private LovGetListDto chargeDet;
-    private Long percent;
-    private Long amount;
+    private BigDecimal percent;
+    private BigDecimal amount;
     private String remarks;
     private String createdBy;
     private LocalDateTime createdDate;

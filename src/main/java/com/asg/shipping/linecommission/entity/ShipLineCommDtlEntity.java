@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "SHIP_LINE_COMM_DTL")
 @IdClass(ShipLineCommDtlId.class)
@@ -27,37 +29,37 @@ public class ShipLineCommDtlEntity extends BaseEntity {
     private Long currencyPoid;
 
     @Column(name = "AMOUNT")
-    private Long amount;
+    private BigDecimal amount;
 
     @Column(name = "PERCENT")
-    private Long percent;
+    private BigDecimal percent;
 
     @Column(name = "PAYBACK_PERCENT")
-    private Long paybackPercent;
+    private BigDecimal paybackPercent;
 
     @Column(name = "OUR_BOOKING_PERCENTAGE")
-    private Long ourBookingPercentage;
+    private BigDecimal ourBookingPercentage;
 
     @Column(name = "DEST_LOAD_PERCENTAGE")
-    private Long destLoadPercentage;
+    private BigDecimal destLoadPercentage;
 
     @Column(name = "SHORT_LEG_PERCENTAGE")
-    private Long shortLegPercentage;
+    private BigDecimal shortLegPercentage;
 
     @Column(name = "SPL_EQP_PERCENTAGE")
-    private Long splEqpPercentage;
+    private BigDecimal splEqpPercentage;
 
     @Column(name = "AMOUNT_PER_TUE")
-    private Long amountPerTue;
+    private BigDecimal amountPerTue;
 
     @Column(name = "PP_BOOKING_PERCENTAGE_COLLECT")
-    private Long ppBookingPercentageCollect;
+    private BigDecimal ppBookingPercentageCollect;
 
     @Column(name = "MIN_AMOUNT_LESSER")
-    private Long minAmountLesser;
+    private BigDecimal minAmountLesser;
 
     @Column(name = "MIN_COMM_AMOUNT")
-    private Long minCommAmount;
+    private BigDecimal minCommAmount;
 
     @Column(name = "REMARKS")
     private String remarks;
