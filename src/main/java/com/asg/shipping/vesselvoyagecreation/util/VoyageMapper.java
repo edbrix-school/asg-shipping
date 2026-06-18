@@ -40,6 +40,10 @@ public class VoyageMapper {
                 .entryInMarassi(e.getEntryInMarassi())
                 .mscVesselVoyageReff(e.getMscVesselVoyageReff())
                 .deleted(e.getDeleted())
+                .createdBy(e.getCreatedBy())
+                .createdDate(e.getCreatedDate())
+                .lastModifiedBy(e.getLastModifiedBy())
+                .lastModifiedDate(e.getLastModifiedDate())
                 .build();
     }
 
