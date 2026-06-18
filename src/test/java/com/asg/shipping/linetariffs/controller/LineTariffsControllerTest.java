@@ -60,7 +60,7 @@ class LineTariffsControllerTest {
     @Test
     void searchLineTariffs_Success() {
         Map<String, Object> result = new HashMap<>();
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any()))
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
@@ -68,12 +68,12 @@ class LineTariffsControllerTest {
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).searchLineTariffs(eq(DOC_ID), any(), any(), isNull(), isNull());
+        verify(lineTariffsService).searchLineTariffs(eq(DOC_ID), any(), any());
     }
 
     @Test
     void searchLineTariffs_WhenServiceThrows_ReturnsInternalServerError() {
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any()))
                 .thenThrow(new RuntimeException("boom"));
 
         ResponseEntity<?> response = controller.searchLineTariffs(null, 0, 20, null);
@@ -88,7 +88,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
@@ -106,7 +106,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description");
@@ -122,7 +122,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "");
@@ -136,7 +136,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description,desc,extra");
