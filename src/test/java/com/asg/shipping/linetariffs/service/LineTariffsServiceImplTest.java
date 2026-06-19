@@ -114,17 +114,30 @@ class LineTariffsServiceImplTest {
         FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
         Pageable pageable = PageRequest.of(0, 20);
 
-        when(documentService.resolveOperator(any())).thenReturn("AND");
-        when(documentService.resolveIsDeleted(any())).thenReturn("N");
-        when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
-        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 
-        assertNotNull(result);
-        verify(documentService).resolveIsDeleted(filterRequest);
-        verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("N"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+            Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            assertNotNull(result);
+            verify(documentService).resolveIsDeleted(filterRequest);
+            verify(documentService).search(
+                    eq("100-050"),
+                    argThat(filters -> filters.size() == 1
+                            && "COMPANY_POID".equals(filters.get(0).searchField())
+                            && "=1".equals(filters.get(0).searchValue())),
+                    eq("AND"),
+                    eq(pageable),
+                    eq("N"),
+                    eq("DESCRIPTION"),
+                    eq("TRANSACTION_POID"));
+        }
     }
 
     @Test
@@ -132,27 +145,31 @@ class LineTariffsServiceImplTest {
         FilterRequestDto filterRequest = new FilterRequestDto(
                 "AND",
                 "N",
-                List.of(new FilterDto("DESCRIPTION", "test"), new FilterDto("DELETED", "Y")));
+                List.of(new FilterDto("DESCRIPTION", "test"), new FilterDto("DELETED", "Y"), new FilterDto("COMPANY_POID", "=99")));
         Pageable pageable = PageRequest.of(0, 20);
 
-        when(documentService.resolveOperator(any())).thenReturn("AND");
-        when(documentService.resolveIsDeleted(any())).thenReturn("N");
-        when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
-        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 
-        verify(documentService).search(
-                eq("100-050"),
-                argThat(filters -> filters.size() == 1
-                        && "DESCRIPTION".equals(filters.get(0).searchField())
-                        && "test".equals(filters.get(0).searchValue())),
-                eq("AND"),
-                eq(pageable),
-                eq("N"),
-                eq("DESCRIPTION"),
-                eq("TRANSACTION_POID"));
+            service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            verify(documentService).search(
+                    eq("100-050"),
+                    argThat(filters -> filters.size() == 2
+                            && filters.stream().anyMatch(f -> "DESCRIPTION".equals(f.searchField()) && "test".equals(f.searchValue()))
+                            && filters.stream().anyMatch(f -> "COMPANY_POID".equals(f.searchField()) && "=1".equals(f.searchValue()))),
+                    eq("AND"),
+                    eq(pageable),
+                    eq("N"),
+                    eq("DESCRIPTION"),
+                    eq("TRANSACTION_POID"));
+        }
     }
 
     @Test
@@ -160,16 +177,47 @@ class LineTariffsServiceImplTest {
         FilterRequestDto filterRequest = new FilterRequestDto("AND", "Y", Collections.emptyList());
         Pageable pageable = PageRequest.of(0, 20);
 
-        when(documentService.resolveOperator(any())).thenReturn("AND");
-        when(documentService.resolveIsDeleted(any())).thenReturn("Y");
-        when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
-        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("Y");
+            when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 
-        verify(documentService).resolveIsDeleted(filterRequest);
-        verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("Y"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+            service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            verify(documentService).resolveIsDeleted(filterRequest);
+            verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("Y"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_SkipsCompanyFilterWhenCompanyPoidNull() {
+        FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
+        Pageable pageable = PageRequest.of(0, 20);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(null);
+
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            verify(documentService).search(
+                    eq("100-050"),
+                    argThat(List::isEmpty),
+                    eq("AND"),
+                    eq(pageable),
+                    eq("N"),
+                    eq("DESCRIPTION"),
+                    eq("TRANSACTION_POID"));
+        }
     }
 
     @Test

@@ -92,7 +92,7 @@ public class LineTariffsController {
 
         try {
             Pageable pageable = createPageable(page, size, sort);
-            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, null, null);
+            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable);
 
             log.info("Successfully retrieved line tariffs");
             return ApiResponse.success("Line tariffs retrieved successfully", result);

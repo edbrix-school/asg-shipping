@@ -56,6 +56,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private static final String TARIFF_DETAIL = "Tariff Detail";
     private static final String DET_ROW_ID = "detRowId";
     private static final String DELETED_FIELD = "DELETED";
+    private static final String COMPANY_POID_COL = "COMPANY_POID";
     private static final String DOC_ID = "100-050";
 
     private final ShipLineTariffHdrRepository tariffHdrRepository;
@@ -97,12 +98,14 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable, LocalDate startDate, LocalDate endDate) {
-        log.info("Searching line tariffs with docId: {}, page: {}, size: {}, startDate: {}, endDate: {}", docId, pageable.getPageNumber(), pageable.getPageSize(), startDate, endDate);
+    public Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
+        log.info("Searching line tariffs with docId: {}, page: {}, size: {}, companyPoid: {}",
+                docId, pageable.getPageNumber(), pageable.getPageSize(), UserContext.getCompanyPoid());
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
         List<FilterDto> filters = resolveSearchFilters(request);
+        applyCompanyFilter(filters);
 
         RawSearchResult raw = documentService.search(
                 docId,
@@ -126,7 +129,16 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private List<FilterDto> resolveSearchFilters(com.asg.common.lib.dto.FilterRequestDto request) {
         List<FilterDto> filters = new ArrayList<>(documentService.resolveFilters(request));
         filters.removeIf(f -> DELETED_FIELD.equalsIgnoreCase(f.searchField()));
+        filters.removeIf(f -> COMPANY_POID_COL.equalsIgnoreCase(f.searchField()));
         return filters;
+    }
+
+    private void applyCompanyFilter(List<FilterDto> filters) {
+        Long companyPoid = UserContext.getCompanyPoid();
+        if (companyPoid == null) {
+            return;
+        }
+        filters.add(new FilterDto(COMPANY_POID_COL, "=" + companyPoid));
     }
 
     @Override
