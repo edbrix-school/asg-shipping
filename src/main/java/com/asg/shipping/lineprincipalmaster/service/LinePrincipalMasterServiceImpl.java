@@ -242,7 +242,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         result.setUserRoles(mapper.mapUserRoleDetailsToDto(savedUserRoles));
         List<ShipLineMasterPicDtl> savedPicDetails = picDtlRepository.findByLinePoidOrderByDetRowId(resolvedLinePoid);
         result.setPicDetails(mapper.mapPicDetailsToDto(savedPicDetails));
-        enrichDtoWithLovData(result, resolvedLine, groupPoid);
+        //enrichDtoWithLovData(result, resolvedLine, groupPoid);
 
         // Populate addressTypeMap
         if (resolvedLine.getAddressPoid() != null) {
@@ -1082,7 +1082,11 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         String entityId = StringUtils.isNotBlank(parentPoid) ? parentPoid : String.valueOf(master.getAddressMasterPoid());
         List<GlobalAddressDetails> existingDetails = addressDetailsRepository.findByAddressMasterPoid(master.getAddressMasterPoid());
         Map<String, GlobalAddressDetails> existingMap = existingDetails.stream()
-                .collect(Collectors.toMap(detail -> String.valueOf(detail.getAddressPoid()), detail -> detail));
+                .collect(Collectors.toMap(
+                        detail -> detail.getAddressPoid().toPlainString(),
+                        detail -> detail,
+                        (a, b) -> a
+                ));
 
         List<GlobalAddressDetails> createdDetails = new ArrayList<>();
         List<String> toDelete = new ArrayList<>();
@@ -1139,6 +1143,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                     GlobalAddressDetails detail = buildAddressDetail(dto, master, type, counter++, currentUser);
                     createdDetails.add(detail);
                 }
+                // "nochange" and any other action types are skipped intentionally
             }
         }
 
@@ -1341,11 +1346,11 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         return new BigDecimal(normalizeAddressPoidKey(addressPoid));
     }
 
-    private Long resolveAddressDetailPoid(String addressPoid, int counter) {
+    private BigDecimal resolveAddressDetailPoid(String addressPoid, int counter) {
         if (StringUtils.isNotBlank(addressPoid)) {
-            return toAddressPoidNumber(addressPoid).longValue();
+            return toAddressPoidNumber(addressPoid);
         }
-        return System.currentTimeMillis() + counter;
+        return BigDecimal.valueOf(System.currentTimeMillis() + counter);
     }
 
     private void updateAddressDetail(GlobalAddressDetails entity, AddressDetailsDTO dto, String currentUser) {

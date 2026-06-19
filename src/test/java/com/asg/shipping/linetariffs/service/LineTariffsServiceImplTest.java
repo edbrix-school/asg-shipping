@@ -34,6 +34,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +51,7 @@ import static org.mockito.Mockito.*;
 class LineTariffsServiceImplTest {
 
     @Mock private ShipLineTariffHdrRepository tariffHdrRepository;
+    @Mock private LineTariffListRepository lineTariffListRepository;
     @Mock private ShipLineTariffImpDtlRepository impDtlRepository;
     @Mock private ShipLineTariffImpPayDtlRepository impPayDtlRepository;
     @Mock private ShipLineTariffExpDtlRepository expDtlRepository;
@@ -116,59 +118,49 @@ class LineTariffsServiceImplTest {
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-            when(documentService.resolveOperator(any())).thenReturn("AND");
             when(documentService.resolveIsDeleted(any())).thenReturn("N");
             when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
-            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+            when(lineTariffListRepository.search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
 
-            Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable);
+            Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
 
             assertNotNull(result);
-            verify(documentService).resolveIsDeleted(filterRequest);
-            verify(documentService).search(
-                    eq("100-050"),
-                    argThat(filters -> filters.size() == 1
-                            && "COMPANY_POID".equals(filters.get(0).searchField())
-                            && "=1".equals(filters.get(0).searchValue())),
-                    eq("AND"),
-                    eq(pageable),
-                    eq("N"),
-                    eq("DESCRIPTION"),
-                    eq("TRANSACTION_POID"));
+            verify(lineTariffListRepository).search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable));
         }
     }
 
     @Test
-    void searchLineTariffs_RemovesDeletedFilterFromRequest() {
+    void searchLineTariffs_PassesBodyFiltersThrough() {
         FilterRequestDto filterRequest = new FilterRequestDto(
                 "AND",
                 "N",
-                List.of(new FilterDto("DESCRIPTION", "test"), new FilterDto("DELETED", "Y"), new FilterDto("COMPANY_POID", "=99")));
+                List.of(new FilterDto("DESCRIPTION", "test"), new FilterDto("COMPANY_POID", "99")));
         Pageable pageable = PageRequest.of(0, 20);
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-            when(documentService.resolveOperator(any())).thenReturn("AND");
             when(documentService.resolveIsDeleted(any())).thenReturn("N");
             when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
-            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+            when(lineTariffListRepository.search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
 
-            service.searchLineTariffs("100-050", filterRequest, pageable);
+            service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
 
-            verify(documentService).search(
-                    eq("100-050"),
-                    argThat(filters -> filters.size() == 2
-                            && filters.stream().anyMatch(f -> "DESCRIPTION".equals(f.searchField()) && "test".equals(f.searchValue()))
-                            && filters.stream().anyMatch(f -> "COMPANY_POID".equals(f.searchField()) && "=1".equals(f.searchValue()))),
-                    eq("AND"),
-                    eq(pageable),
+            verify(lineTariffListRepository).search(
+                    eq(1L),
+                    eq(1L),
+                    isNull(),
+                    isNull(),
                     eq("N"),
-                    eq("DESCRIPTION"),
-                    eq("TRANSACTION_POID"));
+                    argThat(filters -> filters.size() == 1
+                            && "DESCRIPTION".equals(filters.get(0).searchField())
+                            && "test".equals(filters.get(0).searchValue())),
+                    eq(pageable));
         }
     }
 
@@ -179,44 +171,39 @@ class LineTariffsServiceImplTest {
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-            when(documentService.resolveOperator(any())).thenReturn("AND");
             when(documentService.resolveIsDeleted(any())).thenReturn("Y");
             when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
-            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+            when(lineTariffListRepository.search(any(), any(), any(), any(), eq("Y"), anyList(), any()))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
 
-            service.searchLineTariffs("100-050", filterRequest, pageable);
+            service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
 
             verify(documentService).resolveIsDeleted(filterRequest);
-            verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("Y"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+            verify(lineTariffListRepository).search(eq(1L), eq(1L), isNull(), isNull(), eq("Y"), anyList(), eq(pageable));
         }
     }
 
     @Test
-    void searchLineTariffs_SkipsCompanyFilterWhenCompanyPoidNull() {
-        FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
-        Pageable pageable = PageRequest.of(0, 20);
+    void searchLineTariffs_AppliesPeriodOverlapQueryParams() {
+        FilterRequestDto filterRequest = new FilterRequestDto("OR", "N", Collections.emptyList());
+        Pageable pageable = PageRequest.of(0, 40);
+        LocalDate startDate = LocalDate.of(2026, 3, 20);
+        LocalDate endDate = LocalDate.of(2026, 6, 19);
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(null);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-            when(documentService.resolveOperator(any())).thenReturn("AND");
             when(documentService.resolveIsDeleted(any())).thenReturn("N");
-            when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
-            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+            when(documentService.resolveFilters(any())).thenReturn(new ArrayList<>());
+            when(lineTariffListRepository.search(eq(1L), eq(1L), eq(startDate), eq(endDate), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
 
-            service.searchLineTariffs("100-050", filterRequest, pageable);
+            service.searchLineTariffs("100-050", filterRequest, pageable, startDate, endDate);
 
-            verify(documentService).search(
-                    eq("100-050"),
-                    argThat(List::isEmpty),
-                    eq("AND"),
-                    eq(pageable),
-                    eq("N"),
-                    eq("DESCRIPTION"),
-                    eq("TRANSACTION_POID"));
+            verify(lineTariffListRepository).search(eq(1L), eq(1L), eq(startDate), eq(endDate), eq("N"), anyList(), eq(pageable));
         }
     }
 
