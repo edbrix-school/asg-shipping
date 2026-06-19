@@ -2,6 +2,7 @@ package com.asg.shipping.lineprincipalmaster.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -21,12 +22,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -85,18 +88,12 @@ public class LinePrincipalMasterController {
             )
     })
     public ResponseEntity<?> searchLines(
-            @RequestBody(required = false) com.asg.common.lib.dto.FilterRequestDto request,
-            @Parameter(description = "Page number (0-indexed)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", example = "20")
-            @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort field and direction (e.g., 'lineName,asc')", example = "lineName,asc")
-            @RequestParam(required = false) String sort) {
+            @ParameterObject Pageable pageable,
+            @RequestBody(required = false) FilterRequestDto filters,
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate) {
 
-        log.info("Searching lines with page: {}, size: {}, sort: {}", page, size, sort);
-
-        Pageable pageable = createPageable(page, size, sort);
-        Map<String, Object> result = lineService.searchLines(request, pageable);
+        Map<String, Object> result = lineService.searchLines(UserContext.getDocumentId(), filters, startDate, endDate, pageable);
 
         log.info("Successfully retrieved lines");
         return ApiResponse.success("Lines retrieved successfully", result);

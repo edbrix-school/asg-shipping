@@ -1,10 +1,6 @@
 package com.asg.shipping.lineprincipalmaster.service;
 
-import com.asg.common.lib.dto.AddressDetailsDTO;
-import com.asg.common.lib.dto.AddressTypeMapDTO;
-import com.asg.common.lib.dto.DeleteReasonDto;
-import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.*;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
@@ -52,6 +48,7 @@ import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -90,12 +87,12 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchLines(com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchLines(String docId, FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
         log.info("Searching lines with page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
 
         String operator = documentSearchService.resolveOperator(request);
         String isDeleted = documentSearchService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentSearchService.resolveFilters(request);
+        List<FilterDto> filters = documentSearchService.resolveDateFilters(request, "TRANSACTION_DATE", startDate, endDate);
 
         RawSearchResult raw = documentSearchService.search(DOC_ID, filters, operator, pageable, isDeleted,
                 "LINE_NAME", // label field
