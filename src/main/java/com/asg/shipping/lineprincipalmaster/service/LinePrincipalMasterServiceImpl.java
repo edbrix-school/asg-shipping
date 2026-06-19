@@ -35,6 +35,7 @@ import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterUserRoleDtl
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtl;
 import com.asg.shipping.lineprincipalmaster.entity.ShipLineMasterPicDtlId;
 import com.asg.shipping.lineprincipalmaster.repository.ShipLineMasterPicDtlRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -46,16 +47,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
@@ -88,6 +86,7 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
     private final JdbcTemplate jdbcTemplate;
     private final GlobalAddressMasterRepository addressMasterRepository;
     private final GlobalAddressDetailsRepository addressDetailsRepository;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -147,8 +146,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 addressTypeMap.setMain(byType.get("MAIN"));
                 addressTypeMap.setFinance(byType.get("FINANCE"));
                 addressTypeMap.setSales(byType.get("SALES"));
-                addressTypeMap.setOperation(byType.get("OPERATIONS"));
-                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setOperation(byType.get("OPERATION"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE_ADDRESS"));
                 addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
                 addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
                 addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
@@ -176,9 +175,19 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Validate
         validateLineCreateDTO(dto, groupPoid);
 
-        GlobalAddressMaster addressMaster = resolveAddressMasterForCreate(
-                dto.getAddressPoid(), dto.getLineName(), dto.getSeqno(), groupPoid);
-        dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        boolean hasAddressData = hasAnyAddressData(dto.getAddressTypeMap());
+
+        GlobalAddressMaster addressMaster = null;
+        if (dto.getAddressPoid() != null) {
+            addressMaster = addressMasterRepository.findByAddressMasterPoid(dto.getAddressPoid())
+                    .orElseThrow(() -> new ResourceNotFoundException("Address", "addressPoid", dto.getAddressPoid().toString()));
+        } else if (hasAddressData) {
+            addressMaster = createAddressMaster(dto.getLineName(), dto.getSeqno(), groupPoid);
+        }
+
+        if (addressMaster != null) {
+            dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        }
 
         // Create main entity
         ShipLineMaster line = new ShipLineMaster();
@@ -194,8 +203,9 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 .orElseThrow(() -> new ValidationException("Failed to resolve LINE_POID for newly created line."));
         Long resolvedLinePoid = resolvedLine.getLinePoid();
 
-        if (dto.getAddressTypeMap() != null) {
+        if (hasAddressData && addressMaster != null) {
             saveAllAddressDetails(dto.getAddressTypeMap(), addressMaster, getCurrentUser(), resolvedLinePoid.toString());
+            refreshPersistenceContext();
         }
 
         // Create charge details
@@ -248,8 +258,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 addressTypeMap.setMain(byType.get("MAIN"));
                 addressTypeMap.setFinance(byType.get("FINANCE"));
                 addressTypeMap.setSales(byType.get("SALES"));
-                addressTypeMap.setOperation(byType.get("OPERATIONS"));
-                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setOperation(byType.get("OPERATION"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE_ADDRESS"));
                 addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
                 addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
                 addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
@@ -280,16 +290,27 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         // Validate
         validateLineUpdateDTO(dto, groupPoid, id);
 
-        GlobalAddressMaster addressMaster = resolveAddressMasterForUpdate(
-                dto.getAddressPoid(), dto.getLineName(), dto.getSeqno(), groupPoid);
-        dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        boolean hasAddressData = hasAnyAddressData(dto.getAddressTypeMap());
+
+        GlobalAddressMaster addressMaster = null;
+        if (dto.getAddressPoid() != null) {
+            addressMaster = addressMasterRepository.findByAddressMasterPoid(dto.getAddressPoid())
+                    .orElseThrow(() -> new ResourceNotFoundException("Address", "addressPoid", dto.getAddressPoid().toString()));
+        } else if (hasAddressData) {
+            addressMaster = createAddressMaster(dto.getLineName(), dto.getSeqno(), groupPoid);
+        }
+
+        if (addressMaster != null) {
+            dto.setAddressPoid(addressMaster.getAddressMasterPoid());
+        }
 
         // Update main entity
         mapper.mapUpdateDTOToEntity(dto, line, groupPoid, userPoid, companyPoid);
         ShipLineMaster saved = lineRepository.save(line);
 
-        if (dto.getAddressTypeMap() != null) {
+        if (hasAddressData && addressMaster != null) {
             saveAllAddressDetails(dto.getAddressTypeMap(), addressMaster, getCurrentUser(), id.toString());
+            refreshPersistenceContext();
         }
 
         // Handle charge details
@@ -335,8 +356,8 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 addressTypeMap.setMain(byType.get("MAIN"));
                 addressTypeMap.setFinance(byType.get("FINANCE"));
                 addressTypeMap.setSales(byType.get("SALES"));
-                addressTypeMap.setOperation(byType.get("OPERATIONS"));
-                addressTypeMap.setInvoiceAddress(byType.get("INVOICE"));
+                addressTypeMap.setOperation(byType.get("OPERATION"));
+                addressTypeMap.setInvoiceAddress(byType.get("INVOICE_ADDRESS"));
                 addressTypeMap.setDeliveryOrder(byType.get("DELIVERY_ORDER"));
                 addressTypeMap.setShipChandling(byType.get("SHIP_CHANDLING"));
                 addressTypeMap.setClaimUac(byType.get("CLAIM_UAC"));
@@ -404,65 +425,47 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
 
     @Override
     @Transactional
-    public Integer copyCharges(Long id, CopyChargesRequestDto request) {
+    public CopyChargesRequestDto copyCharges(Long id, CopyChargesRequestDto request) {
         log.info("Copying charges from line {} to line {}", request.getSourceLinePoid(), id);
 
         Long groupPoid = getGroupPoid();
 
-        // Validate target line
-        lineRepository.findByLinePoidAndGroupPoid(id, groupPoid)
+        // Validate both lines exist
+        ShipLineMaster targetLine = lineRepository.findByLinePoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Target Line", "linePoid", id.toString()));
-
-        // Validate source line
         lineRepository.findByLinePoidAndGroupPoid(request.getSourceLinePoid(), groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Source Line", "linePoid", request.getSourceLinePoid().toString()));
 
-        // Get source charges
-        List<ShipLineMasterChargeDtl> sourceCharges = chargeDtlRepository.findByLinePoidOrderByDetRowId(request.getSourceLinePoid());
+        try (Connection conn = jdbcTemplate.getDataSource().getConnection();
+             CallableStatement stmt = conn.prepareCall("{call COPY_LINE_Type_Charges(?,?)}")) {
 
-        if (sourceCharges.isEmpty()) {
-            log.info("No charges found in source line {}", request.getSourceLinePoid());
-            return 0;
+            stmt.setLong(1, id);
+            stmt.setLong(2, request.getSourceLinePoid());
+            stmt.execute();
+
+        } catch (Exception e) {
+            log.error("Error calling COPY_LINE_Type_Charges for line: {}", id, e);
+            throw new ValidationException("Error copying charges: " + e.getMessage());
         }
 
-        // Get existing target charges to avoid duplicates
-        Set<Long> existingChargePoids = chargeDtlRepository.findByLinePoidOrderByDetRowId(id).stream()
-                .map(ShipLineMasterChargeDtl::getChargePoid)
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        int copiedCount = 0;
-        Long maxDetRowId = chargeDtlRepository.findMaxDetRowIdByLinePoid(id);
-        long nextDetRowId = (maxDetRowId != null ? maxDetRowId : 0L) + 1L;
-        for (ShipLineMasterChargeDtl sourceCharge : sourceCharges) {
-            // Skip if charge already exists in target
-            if (sourceCharge.getChargePoid() != null && existingChargePoids.contains(sourceCharge.getChargePoid())) {
-                continue;
-            }
-
-            // Create new charge detail for target line
-            ShipLineMasterChargeDtl newCharge = ShipLineMasterChargeDtl.builder()
-                    .linePoid(id)
-                    .detRowId(nextDetRowId++)
-                    .chargePoid(sourceCharge.getChargePoid())
-                    .lineChargeCode(sourceCharge.getLineChargeCode())
-                    .lineChargeDescription(sourceCharge.getLineChargeDescription())
-                    .validUntil(sourceCharge.getValidUntil())
-                    .remunCommissionCharge(sourceCharge.getRemunCommissionCharge())
-                    .excludedFromEdi(sourceCharge.getExcludedFromEdi())
-                    .defaultPrintGroupEdi(sourceCharge.getDefaultPrintGroupEdi())
-                    .wkyrptIncludeAs(sourceCharge.getWkyrptIncludeAs())
-                    .build();
-                    newCharge.setCreatedBy(getCurrentUser());
-                    newCharge.setCreatedDate(LocalDateTime.now());
-
-            chargeDtlRepository.save(newCharge);
-                    logChildCreated(id, "Charge Details", newCharge.getDetRowId());
-            copiedCount++;
+        CopyChargesRequestDto response = CopyChargesRequestDto.builder()
+                .sourceLinePoid(request.getSourceLinePoid())
+                .build();
+        if (targetLine.getLinePoid() != null) {
+            response.setSourceLineDet(
+                    lovService.getLovItemByPoid(
+                            targetLine.getLinePoid(),
+                            "LINE_MASTER",
+                            groupPoid,
+                            getCompanyPoid(),
+                            getUserPoid()
+                    )
+            );
         }
 
-        log.info("Successfully copied {} charges from line {} to line {}", copiedCount, request.getSourceLinePoid(), id);
-        return copiedCount;
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, currentDocumentId(), id.toString());
+        log.info("Successfully copied charges from line {} to line {}", request.getSourceLinePoid(), id);
+        return response;
     }
 
     @Override
@@ -524,12 +527,12 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
             if (chargeDto.getChargePoid() != null) {
                 // Check for duplicate charge POID within the request
                 if (!chargePoids.add(chargeDto.getChargePoid())) {
-                    throw new ValidationException("Duplicate charge POID: " + chargeDto.getChargePoid());
+                    throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / "  + chargeDto.getLineChargeDescription()+ " already exists for this line");
                 }
 
                 // Check if charge POID already exists for this line
                 if (chargeDtlRepository.existsByLinePoidAndChargePoid(linePoid, chargeDto.getChargePoid())) {
-                    throw new ValidationException("Charge POID " + chargeDto.getChargePoid() + " already exists for this line");
+                    throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                 }
             }
 
@@ -576,17 +579,17 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 // Validation for non-deleted items
                 if (chargeDto.getChargePoid() != null) {
                     if (!chargePoids.add(chargeDto.getChargePoid())) {
-                        throw new ValidationException("Duplicate charge POID: " + chargeDto.getChargePoid());
+                        throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                     }
 
                     // Check uniqueness excluding current detail row
                     if (chargeDto.getDetRowId() != null) {
                         if (chargeDtlRepository.existsByLinePoidAndChargePoidExcluding(linePoid, chargeDto.getChargePoid(), chargeDto.getDetRowId())) {
-                            throw new ValidationException("Charge POID " + chargeDto.getChargePoid() + " already exists for this line");
+                            throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                         }
                     } else {
                         if (chargeDtlRepository.existsByLinePoidAndChargePoid(linePoid, chargeDto.getChargePoid())) {
-                            throw new com.asg.common.lib.exception.ValidationException("Charge POID " + chargeDto.getChargePoid() + " already exists for this line");
+                            throw new ValidationException("Charge Code " + chargeDto.getLineChargeCode() + " / " + chargeDto.getLineChargeDescription()+ " already exists for this line");
                         }
                     }
                 }
@@ -1022,6 +1025,19 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         }
     }
 
+    private boolean hasAnyAddressData(AddressTypeMapDTO typeMap) {
+        if (typeMap == null) return false;
+        return isListNotEmpty(typeMap.getMain()) || isListNotEmpty(typeMap.getFinance()) ||
+               isListNotEmpty(typeMap.getSales()) || isListNotEmpty(typeMap.getOperation()) ||
+               isListNotEmpty(typeMap.getInvoiceAddress()) || isListNotEmpty(typeMap.getDeliveryOrder()) ||
+               isListNotEmpty(typeMap.getShipChandling()) || isListNotEmpty(typeMap.getClaimUac()) ||
+               isListNotEmpty(typeMap.getCan());
+    }
+
+    private boolean isListNotEmpty(List<?> list) {
+        return list != null && !list.isEmpty();
+    }
+
     private GlobalAddressMaster resolveAddressMasterForCreate(Long addressPoid, String lineName, Integer seqno, Long groupPoid) {
         if (addressPoid == null) {
             return createAddressMaster(lineName, seqno, groupPoid);
@@ -1068,21 +1084,22 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         Map<String, GlobalAddressDetails> existingMap = existingDetails.stream()
                 .collect(Collectors.toMap(detail -> String.valueOf(detail.getAddressPoid()), detail -> detail));
 
-        List<GlobalAddressDetails> toSave = new ArrayList<>();
-        List<GlobalAddressDetails> toDelete = new ArrayList<>();
         List<GlobalAddressDetails> createdDetails = new ArrayList<>();
+        List<String> toDelete = new ArrayList<>();
 
         Map<String, List<AddressDetailsDTO>> typedLists = Map.of(
                 "MAIN", Optional.ofNullable(typeMap.getMain()).orElse(List.of()),
                 "FINANCE", Optional.ofNullable(typeMap.getFinance()).orElse(List.of()),
                 "SALES", Optional.ofNullable(typeMap.getSales()).orElse(List.of()),
-                "OPERATIONS", Optional.ofNullable(typeMap.getOperation()).orElse(List.of()),
-                "INVOICE", Optional.ofNullable(typeMap.getInvoiceAddress()).orElse(List.of()),
+                "OPERATION", Optional.ofNullable(typeMap.getOperation()).orElse(List.of()),
+                "INVOICE_ADDRESS", Optional.ofNullable(typeMap.getInvoiceAddress()).orElse(List.of()),
                 "DELIVERY_ORDER", Optional.ofNullable(typeMap.getDeliveryOrder()).orElse(List.of()),
                 "SHIP_CHANDLING", Optional.ofNullable(typeMap.getShipChandling()).orElse(List.of()),
                 "CLAIM_UAC", Optional.ofNullable(typeMap.getClaimUac()).orElse(List.of()),
                 "CAN", Optional.ofNullable(typeMap.getCan()).orElse(List.of())
         );
+
+        int counter = existingDetails.size() + 1;
 
         for (Map.Entry<String, List<AddressDetailsDTO>> entry : typedLists.entrySet()) {
             String type = entry.getKey();
@@ -1090,51 +1107,245 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
                 String actionType = StringUtils.defaultIfBlank(dto.getActionType(), "isCreated");
 
                 if ("isDeleted".equalsIgnoreCase(actionType)) {
-                    if (dto.getAddressPoid() != null && existingMap.containsKey(dto.getAddressPoid())) {
-                        GlobalAddressDetails detail = existingMap.get(dto.getAddressPoid());
-                        toDelete.add(detail);
-                        String logDetail = String.format("Row Deleted on Address Detail with addressPoid: %s", detail.getAddressPoid());
-                        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId, logDetail);
+                    if (StringUtils.isNotBlank(dto.getAddressPoid())) {
+                        GlobalAddressDetails detail = resolveExistingAddressDetail(existingMap, dto.getAddressPoid());
+                        toDelete.add(dto.getAddressPoid());
+                        if (detail != null) {
+                            String logDetail = String.format("Row Deleted on Address Detail with addressPoid: %s", detail.getAddressPoid());
+                            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId, logDetail);
+                        }
                     }
                 } else if ("isUpdated".equalsIgnoreCase(actionType)) {
-                    if (dto.getAddressPoid() != null && existingMap.containsKey(dto.getAddressPoid())) {
-                        GlobalAddressDetails detail = existingMap.get(dto.getAddressPoid());
-                        GlobalAddressDetails oldDetail = new GlobalAddressDetails();
-                        BeanUtils.copyProperties(detail, oldDetail);
-                        updateAddressDetail(detail, dto, currentUser);
-                        toSave.add(detail);
-                        String logDetail = String.format("KeyId = ADDRESS_MASTER_POID %s: ADDRESS_POID %s",
-                                master.getAddressMasterPoid(), detail.getAddressPoid());
-                        loggingService.createLog(oldDetail, detail, GlobalAddressDetails.class,
-                                UserContext.getDocumentId(), entityId, logDetail);
+                    if (StringUtils.isNotBlank(dto.getAddressPoid())) {
+                        GlobalAddressDetails detail = resolveExistingAddressDetail(existingMap, dto.getAddressPoid());
+                        GlobalAddressDetails oldDetail = null;
+                        GlobalAddressDetails updatedDetail = null;
+                        if (detail != null) {
+                            oldDetail = new GlobalAddressDetails();
+                            BeanUtils.copyProperties(detail, oldDetail);
+                            updatedDetail = new GlobalAddressDetails();
+                            BeanUtils.copyProperties(detail, updatedDetail);
+                            updateAddressDetail(updatedDetail, dto, currentUser);
+                        }
+                        updateAddressDetailByPoid(dto, master, type, currentUser);
+                        if (detail != null) {
+                            String logDetail = String.format("KeyId = ADDRESS_MASTER_POID %s: ADDRESS_POID %s",
+                                    master.getAddressMasterPoid(), detail.getAddressPoid());
+                            loggingService.createLog(oldDetail, updatedDetail, GlobalAddressDetails.class,
+                                    UserContext.getDocumentId(), entityId, logDetail);
+                        }
                     }
                 } else if ("isCreated".equalsIgnoreCase(actionType)) {
-                    GlobalAddressDetails detail = buildAddressDetail(dto, master, type, currentUser);
-                    toSave.add(detail);
+                    GlobalAddressDetails detail = buildAddressDetail(dto, master, type, counter++, currentUser);
                     createdDetails.add(detail);
                 }
             }
         }
 
-        if (!toSave.isEmpty()) {
-            addressDetailsRepository.saveAll(toSave);
-            createdDetails.forEach(detail -> {
-                String logDetail = String.format("Row Created on Address Detail with addressPoid: %s", detail.getAddressPoid());
-                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId, logDetail);
-            });
+        if (!createdDetails.isEmpty()) {
+            insertCreatedAddressDetails(createdDetails);
+            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), entityId,
+                    "Address Detail row(s) created");
         }
         if (!toDelete.isEmpty()) {
-            addressDetailsRepository.deleteAll(toDelete);
+            deleteAddressDetails(master.getAddressMasterPoid(), toDelete);
         }
     }
 
-    private GlobalAddressDetails buildAddressDetail(AddressDetailsDTO dto, GlobalAddressMaster master, String type, String currentUser) {
+    private GlobalAddressDetails buildAddressDetail(AddressDetailsDTO dto, GlobalAddressMaster master, String type, int counter, String currentUser) {
         GlobalAddressDetails detail = new GlobalAddressDetails();
+        detail.setAddressPoid(resolveAddressDetailPoid(dto.getAddressPoid(), counter));
         detail.setAddressMasterPoid(master.getAddressMasterPoid());
         detail.setAddressType(type);
         detail.setCreatedBy(currentUser);
         applyAddressDetailFields(detail, dto);
         return detail;
+    }
+
+    private void refreshPersistenceContext() {
+        entityManager.flush();
+        entityManager.clear();
+    }
+
+    private void insertCreatedAddressDetails(List<GlobalAddressDetails> details) {
+        String sql = """
+                INSERT INTO GLOBAL_ADDRESS_DETAILS (
+                    ADDRESS_POID, ADDRESS_MASTER_POID, ADDRESS_TYPE, OFF_TEL1, OFF_TEL2,
+                    CONTACT_PERSON, DESIGNATION, MOBILE, FAX, EMAIL1, EMAIL2, WEBSITE,
+                    PO_BOX, OFF_NO, BLDG, ROAD, AREA_CITY, STATE, COUNTRY_POID,
+                    LAND_MARK, CREATED_BY, CREATED_DATE, VERIFIED, VERIFIED_BY,
+                    VERIFIED_DATE, CITY, WHATSAPP_NO, LINKEDIN, INSTAGRAM, FACEBOOK
+                ) VALUES (
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, SYSDATE, ?, ?,
+                    ?, ?, ?, ?, ?, ?
+                )
+                """;
+
+        jdbcTemplate.batchUpdate(sql, details, details.size(), (ps, detail) -> {
+            ps.setObject(1, detail.getAddressPoid());
+            ps.setObject(2, detail.getAddressMasterPoid());
+            ps.setString(3, detail.getAddressType());
+            ps.setString(4, detail.getOffTel1());
+            ps.setString(5, detail.getOffTel2());
+            ps.setString(6, detail.getContactPerson());
+            ps.setString(7, detail.getDesignation());
+            ps.setString(8, detail.getMobile());
+            ps.setString(9, detail.getFax());
+            ps.setString(10, detail.getEmail1());
+            ps.setString(11, detail.getEmail2());
+            ps.setString(12, detail.getWebsite());
+            ps.setString(13, detail.getPoBox());
+            ps.setString(14, detail.getOffNo());
+            ps.setString(15, detail.getBldg());
+            ps.setString(16, detail.getRoad());
+            ps.setString(17, detail.getAreaCity());
+            ps.setString(18, detail.getState());
+            ps.setObject(19, detail.getCountryPoid());
+            ps.setString(20, detail.getLandMark());
+            ps.setString(21, detail.getCreatedBy());
+            ps.setString(22, detail.getVerified());
+            ps.setString(23, detail.getVerifiedBy());
+            ps.setTimestamp(24, detail.getVerifiedDate());
+            ps.setString(25, detail.getCity());
+            ps.setString(26, detail.getWhatsappNo());
+            ps.setString(27, detail.getLinkedin());
+            ps.setString(28, detail.getInstagram());
+            ps.setString(29, detail.getFacebook());
+        });
+    }
+
+    private void updateAddressDetailByPoid(AddressDetailsDTO dto, GlobalAddressMaster master, String type, String currentUser) {
+        GlobalAddressDetails detail = buildAddressDetailForSql(dto, master, type, currentUser);
+        String sql = """
+                UPDATE GLOBAL_ADDRESS_DETAILS
+                   SET ADDRESS_TYPE = ?,
+                       OFF_TEL1 = ?,
+                       OFF_TEL2 = ?,
+                       CONTACT_PERSON = ?,
+                       DESIGNATION = ?,
+                       MOBILE = ?,
+                       FAX = ?,
+                       EMAIL1 = ?,
+                       EMAIL2 = ?,
+                       WEBSITE = ?,
+                       PO_BOX = ?,
+                       OFF_NO = ?,
+                       BLDG = ?,
+                       ROAD = ?,
+                       AREA_CITY = ?,
+                       STATE = ?,
+                       COUNTRY_POID = ?,
+                       LAND_MARK = ?,
+                       LASTMODIFIED_BY = ?,
+                       LASTMODIFIED_DATE = SYSDATE,
+                       VERIFIED = ?,
+                       VERIFIED_BY = ?,
+                       VERIFIED_DATE = ?,
+                       CITY = ?,
+                       WHATSAPP_NO = ?,
+                       LINKEDIN = ?,
+                       INSTAGRAM = ?,
+                       FACEBOOK = ?
+                 WHERE ADDRESS_MASTER_POID = ?
+                   AND ADDRESS_POID = ?
+                """;
+
+        Object[] args = {
+                detail.getAddressType(),
+                detail.getOffTel1(),
+                detail.getOffTel2(),
+                detail.getContactPerson(),
+                detail.getDesignation(),
+                detail.getMobile(),
+                detail.getFax(),
+                detail.getEmail1(),
+                detail.getEmail2(),
+                detail.getWebsite(),
+                detail.getPoBox(),
+                detail.getOffNo(),
+                detail.getBldg(),
+                detail.getRoad(),
+                detail.getAreaCity(),
+                detail.getState(),
+                detail.getCountryPoid(),
+                detail.getLandMark(),
+                currentUser,
+                detail.getVerified(),
+                detail.getVerifiedBy(),
+                detail.getVerifiedDate(),
+                detail.getCity(),
+                detail.getWhatsappNo(),
+                detail.getLinkedin(),
+                detail.getInstagram(),
+                detail.getFacebook(),
+                master.getAddressMasterPoid(),
+                toAddressPoidNumber(dto.getAddressPoid())
+        };
+
+        int updatedRows = jdbcTemplate.update(sql, args);
+        if (updatedRows == 0) {
+            args[args.length - 1] = toNormalizedAddressPoidNumber(dto.getAddressPoid());
+            jdbcTemplate.update(sql, args);
+        }
+    }
+
+    private GlobalAddressDetails buildAddressDetailForSql(AddressDetailsDTO dto, GlobalAddressMaster master, String type, String currentUser) {
+        GlobalAddressDetails detail = new GlobalAddressDetails();
+        detail.setAddressMasterPoid(master.getAddressMasterPoid());
+        detail.setAddressType(type);
+        detail.setLastmodifiedBy(currentUser);
+        applyAddressDetailFields(detail, dto);
+        return detail;
+    }
+
+    private void deleteAddressDetails(Long addressMasterPoid, List<String> addressPoids) {
+        String sql = "DELETE FROM GLOBAL_ADDRESS_DETAILS WHERE ADDRESS_MASTER_POID = ? AND ADDRESS_POID = ?";
+        jdbcTemplate.batchUpdate(sql, addressPoids, addressPoids.size(), (ps, addressPoid) -> {
+            ps.setObject(1, addressMasterPoid);
+            ps.setObject(2, toAddressPoidNumber(addressPoid));
+        });
+        jdbcTemplate.batchUpdate(sql, addressPoids, addressPoids.size(), (ps, addressPoid) -> {
+            ps.setObject(1, addressMasterPoid);
+            ps.setObject(2, toNormalizedAddressPoidNumber(addressPoid));
+        });
+    }
+
+    private GlobalAddressDetails resolveExistingAddressDetail(Map<String, GlobalAddressDetails> existingMap, String addressPoid) {
+        GlobalAddressDetails exact = existingMap.get(addressPoid);
+        if (exact != null) {
+            return exact;
+        }
+        return existingMap.get(normalizeAddressPoidKey(addressPoid));
+    }
+
+    private String normalizeAddressPoidKey(String addressPoid) {
+        if (StringUtils.isBlank(addressPoid)) {
+            return addressPoid;
+        }
+        BigDecimal numericPoid = toAddressPoidNumber(addressPoid);
+        try {
+            return numericPoid.toBigIntegerExact().toString();
+        } catch (ArithmeticException ignored) {
+            return numericPoid.toBigInteger().toString();
+        }
+    }
+
+    private BigDecimal toAddressPoidNumber(String addressPoid) {
+        return new BigDecimal(addressPoid.trim());
+    }
+
+    private BigDecimal toNormalizedAddressPoidNumber(String addressPoid) {
+        return new BigDecimal(normalizeAddressPoidKey(addressPoid));
+    }
+
+    private Long resolveAddressDetailPoid(String addressPoid, int counter) {
+        if (StringUtils.isNotBlank(addressPoid)) {
+            return toAddressPoidNumber(addressPoid).longValue();
+        }
+        return System.currentTimeMillis() + counter;
     }
 
     private void updateAddressDetail(GlobalAddressDetails entity, AddressDetailsDTO dto, String currentUser) {

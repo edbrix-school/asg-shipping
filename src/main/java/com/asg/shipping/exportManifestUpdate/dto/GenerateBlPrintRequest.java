@@ -8,5 +8,9 @@ import lombok.Data;
 @Data
 public class GenerateBlPrintRequest {
     private String draftOriginal; // "N" for original, "Y" for draft
+
+    public String getDraftOriginalParam() {
+        return "Y".equalsIgnoreCase(draftOriginal) ? "Y" : "N";
+    }
 }
 

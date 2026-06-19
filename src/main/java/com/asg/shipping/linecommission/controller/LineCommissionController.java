@@ -9,6 +9,7 @@ import com.asg.shipping.linecommission.service.LineCommissionService;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,6 +20,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
@@ -74,15 +76,45 @@ public class LineCommissionController {
             @ParameterObject Pageable pageable,
             @RequestBody(required = false) FilterRequestDto filters,
             @RequestHeader("X-Document-Id") String docId,
-            @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested
+            @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested,
+            @RequestParam(required = false) @io.swagger.v3.oas.annotations.Parameter(description = "Start date (inclusive) for date filter") java.time.LocalDate startDate,
+            @RequestParam(required = false) @io.swagger.v3.oas.annotations.Parameter(description = "End date (inclusive) for date filter") java.time.LocalDate endDate
     ) {
         try {
             log.info("List LineCommission request | page={}, size={}, docId={}, actionRequested={}",
                     pageable.getPageNumber(), pageable.getPageSize(), docId, actionRequested);
-            Map<String, Object> result = service.listLineCommissions(docId, filters, pageable);
+            Map<String, Object> result = service.listLineCommissions(docId, filters, startDate, endDate, pageable);
             return success("Line commission list fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Unable to fetch line commissions: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @Operation(
+            summary = "Generate PDF for Line Commission",
+            description = "Generate PDF report for a specific Line Commission transaction",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "PDF generated successfully",
+                            content = @Content(mediaType = "application/pdf")),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Line Commission not found"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Failed to generate PDF")
+            }
+    )
+    @GetMapping(value = "/print/{transactionPoid}", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", example = "21")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = service.print(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=line-commission-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for Line Commission: {}", transactionPoid, e);
+            return internalServerError("Failed to generate PDF: " + e.getMessage());
         }
     }
 
@@ -150,7 +182,8 @@ public class LineCommissionController {
         log.info("LoadContainerTypesByLinePath request | linePoid={}, groupPoid={}, userId={}, actionRequested={}",
                 linePoid, groupPoid, userId, actionRequested);
         List<ContainerTypeDto> resp = service.loadContainerTypes(linePoid, groupPoid, userId);
-        return success("Records loaded", resp);
+        String message = resp.isEmpty() ? "No container types found for the selected line" : "Records loaded";
+        return success(message, resp);
     }
 }
 

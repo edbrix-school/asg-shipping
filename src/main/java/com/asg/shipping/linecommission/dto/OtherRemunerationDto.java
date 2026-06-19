@@ -4,6 +4,8 @@ import com.asg.common.lib.dto.LovGetListDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -16,15 +18,15 @@ public class OtherRemunerationDto {
     private LovGetListDto remunerationDet;
     private Long currencyPoid;
     private LovGetListDto currencyDet;
-    private Long percent;
-    private Long ourBookingPercentage;
-    private Long principalBookPutClt;
-    private Long expImpPreCollection;
-    private Long stLegAmount;
-    private Long splEqpPercentage;
-    private Long amount;
-    private Long amountPerTeu;
-    private Long paybackPercent;
+    private BigDecimal percent;
+    private BigDecimal ourBookingPercentage;
+    private BigDecimal principalBookPutClt;
+    private BigDecimal expImpPreCollection;
+    private BigDecimal stLegAmount;
+    private BigDecimal splEqpPercentage;
+    private BigDecimal amount;
+    private BigDecimal amountPerTeu;
+    private BigDecimal paybackPercent;
     private String remarks;
     private String createdBy;
     private LocalDateTime createdDate;

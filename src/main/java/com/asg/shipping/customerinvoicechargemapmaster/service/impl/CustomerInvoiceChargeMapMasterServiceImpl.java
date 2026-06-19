@@ -96,6 +96,13 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                     "At least one charge mapping detail is required");
         }
 
+        // If customer was changed, delete old master + details first
+        if (request.getOldCustomerPoid() != null
+                && !request.getOldCustomerPoid().equals(request.getCustomerPoid())) {
+            detailRepo.deleteAll(detailRepo.findByIdCustomerPoid(request.getOldCustomerPoid()));
+            masterRepo.findById(request.getOldCustomerPoid()).ifPresent(masterRepo::delete);
+        }
+
         boolean isNewRecord = !masterRepo.existsById(request.getCustomerPoid());
 
         CustomerInvoicePrtMasterEntity master =
@@ -232,7 +239,10 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
 
         detailRepo.save(entity);
 
-        if (!isNewDetail) {
+        if (isNewDetail) {
+            loggingService.createLogSummaryEntry(docId, key,
+                    String.format("Row Created on Charge Detail with detRowId: %s", id.getDetRowId()));
+        } else {
             loggingService.logChanges(oldDetail, entity, CustomerInvoicePrtDtlEntity.class, docId, key,
                     LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
         }

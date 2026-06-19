@@ -144,6 +144,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         conditions.add("LOAD_FULL IS NULL");
         conditions.add("LOAD_EMPTY IS NULL");
+        conditions.add("EMPTY_OUT IS NULL");
 
         if (!conditions.isEmpty()) {
             where.append(" WHERE ").append(String.join(" AND ", conditions));
@@ -154,7 +155,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         String dataQuery = "SELECT * FROM (SELECT a.*, ROWNUM rn FROM (" +
                 "SELECT * FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where +
-                ") a WHERE ROWNUM <= ?) WHERE rn > ?";
+                " ORDER BY EMPTY_IN ASC) a WHERE ROWNUM <= ?) WHERE rn > ?";
         String countQuery = "SELECT COUNT(*) FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where;
 
         List<Object> dataParams = new ArrayList<>(params);
@@ -1246,6 +1247,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         enrichCargoDetails(dto);
         enrichChargeDetails(dto);
         enrichContainerDetails(dto);
+        enrichStuffingDetails(dto);
     }
 
     private <T> void setLov(
@@ -1267,6 +1269,15 @@ public class BookingFormServiceImpl implements BookingFormService {
         dto.getChargesDetails().forEach(charge -> {
             setLov(charge.getChargePoid(), lovService::getChargeMasterLov, charge::setChargePoidDet);
             setLov(charge.getPaidAtPortPoid(), lovService::getPortMasterLov, charge::setPaidAtPortPoidDet);
+        });
+    }
+
+    private void enrichStuffingDetails(BookingFormDto dto) {
+        if (dto.getStuffingDetails() == null) return;
+
+        dto.getStuffingDetails().forEach(stuffing -> {
+            if (stuffing.getEquipmentIsoType() != null && !stuffing.getEquipmentIsoType().isBlank())
+                lovService.getEquipmentIsoTypeLov(stuffing.getEquipmentIsoType()).stream().findFirst().ifPresent(stuffing::setEquipmentIsoTypeDet);
         });
     }
 

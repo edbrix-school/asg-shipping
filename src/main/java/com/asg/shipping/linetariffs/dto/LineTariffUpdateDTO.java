@@ -25,6 +25,8 @@ public class LineTariffUpdateDTO {
     @Size(max = 100, message = "Description must not exceed 100 characters")
     private String description;
 
+    private LocalDate transactionDate;
+
     private LocalDate periodFrom;
 
     private LocalDate periodTo;

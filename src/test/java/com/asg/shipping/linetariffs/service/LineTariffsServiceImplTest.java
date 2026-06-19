@@ -1,5 +1,6 @@
 package com.asg.shipping.linetariffs.service;
 
+import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -8,6 +9,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.common.entity.ShipLineMasterType;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
@@ -18,6 +20,7 @@ import com.asg.shipping.linetariffs.entity.*;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
 import jakarta.persistence.EntityManager;
+import net.sf.jasperreports.engine.JasperReport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import javax.sql.DataSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -56,6 +61,8 @@ class LineTariffsServiceImplTest {
     @Mock private ShipContainerTypeMasterRepository containerTypeRepository;
     @Mock private ShipLineMasterTypeRepository lineMasterTypeRepository;
     @Mock private EntityManager entityManager;
+    @Mock private PrintService printService;
+    @Mock private DataSource dataSource;
 
     @InjectMocks
     private LineTariffsServiceImpl service;
@@ -107,16 +114,110 @@ class LineTariffsServiceImplTest {
         FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
         Pageable pageable = PageRequest.of(0, 20);
 
-        when(documentService.resolveOperator(any())).thenReturn("AND");
-        when(documentService.resolveIsDeleted(any())).thenReturn("N");
-        when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
-        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
 
-        Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 
-        assertNotNull(result);
-        verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("N"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+            Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            assertNotNull(result);
+            verify(documentService).resolveIsDeleted(filterRequest);
+            verify(documentService).search(
+                    eq("100-050"),
+                    argThat(filters -> filters.size() == 1
+                            && "COMPANY_POID".equals(filters.get(0).searchField())
+                            && "=1".equals(filters.get(0).searchValue())),
+                    eq("AND"),
+                    eq(pageable),
+                    eq("N"),
+                    eq("DESCRIPTION"),
+                    eq("TRANSACTION_POID"));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_RemovesDeletedFilterFromRequest() {
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "AND",
+                "N",
+                List.of(new FilterDto("DESCRIPTION", "test"), new FilterDto("DELETED", "Y"), new FilterDto("COMPANY_POID", "=99")));
+        Pageable pageable = PageRequest.of(0, 20);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            verify(documentService).search(
+                    eq("100-050"),
+                    argThat(filters -> filters.size() == 2
+                            && filters.stream().anyMatch(f -> "DESCRIPTION".equals(f.searchField()) && "test".equals(f.searchValue()))
+                            && filters.stream().anyMatch(f -> "COMPANY_POID".equals(f.searchField()) && "=1".equals(f.searchValue()))),
+                    eq("AND"),
+                    eq(pageable),
+                    eq("N"),
+                    eq("DESCRIPTION"),
+                    eq("TRANSACTION_POID"));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_UsesIsDeletedFromRequest() {
+        FilterRequestDto filterRequest = new FilterRequestDto("AND", "Y", Collections.emptyList());
+        Pageable pageable = PageRequest.of(0, 20);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("Y");
+            when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            verify(documentService).resolveIsDeleted(filterRequest);
+            verify(documentService).search(eq("100-050"), anyList(), eq("AND"), eq(pageable), eq("Y"), eq("DESCRIPTION"), eq("TRANSACTION_POID"));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_SkipsCompanyFilterWhenCompanyPoidNull() {
+        FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
+        Pageable pageable = PageRequest.of(0, 20);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(null);
+
+            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(Collections.emptyList());
+            when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
+                    .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable);
+
+            verify(documentService).search(
+                    eq("100-050"),
+                    argThat(List::isEmpty),
+                    eq("AND"),
+                    eq(pageable),
+                    eq("N"),
+                    eq("DESCRIPTION"),
+                    eq("TRANSACTION_POID"));
+        }
     }
 
     @Test
@@ -213,8 +314,6 @@ class LineTariffsServiceImplTest {
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), eq(1L)))
-                    .thenReturn(false);
             when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
             doNothing().when(tariffHdrRepository).flush();
 
@@ -229,6 +328,51 @@ class LineTariffsServiceImplTest {
             assertNotNull(result);
             verify(loggingService).logChanges(any(), any(), eq(ShipLineTariffHdr.class), eq("100-050"), eq("1"),
                     eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
+        }
+    }
+
+    @Test
+    void updateLineTariff_SkipsOverlapCheckWhenPeriodAndLineUnchanged() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
+
+            updateDTO.setLinePoid(10L);
+            updateDTO.setPeriodFrom(LocalDate.of(2026, 1, 1));
+            updateDTO.setPeriodTo(LocalDate.of(2026, 12, 31));
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
+            doNothing().when(tariffHdrRepository).flush();
+
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
+
+            LineTariffDto result = service.updateLineTariff(1L, updateDTO, 1L, 2L);
+
+            assertNotNull(result);
+            verify(tariffHdrRepository, never()).existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), any());
+        }
+    }
+
+    @Test
+    void updateLineTariff_OverlappingPeriodWhenPeriodChanged_ThrowsValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            updateDTO.setPeriodFrom(LocalDate.of(2026, 6, 1));
+            updateDTO.setPeriodTo(LocalDate.of(2027, 5, 31));
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), eq(1L)))
+                    .thenReturn(true);
+
+            assertThrows(ValidationException.class, () -> service.updateLineTariff(1L, updateDTO, 1L, 2L));
         }
     }
 
@@ -415,7 +559,6 @@ class LineTariffsServiceImplTest {
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.existsOverlappingPeriod(anyLong(), anyLong(), anyLong(), any(), any(), eq(1L))).thenReturn(false);
             when(tariffHdrRepository.save(any())).thenReturn(hdr);
             doNothing().when(tariffHdrRepository).flush();
             // bulk fetch returns both rows for the map
@@ -465,5 +608,44 @@ class LineTariffsServiceImplTest {
     void loadContainerTypes_TariffNotFound_ThrowsResourceNotFoundException() {
         when(tariffHdrRepository.findById(1L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> service.loadContainerTypes(1L, "IMP"));
+    }
+
+    @Test
+    void print_Success() throws Exception {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(new ShipLineTariffImpDtl()));
+            when(printService.buildBaseParams(1L, "100-050")).thenReturn(new HashMap<>());
+            when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
+            when(printService.fillReportToPdf(any(), any(), eq(dataSource))).thenReturn(new byte[]{1, 2, 3});
+
+            byte[] result = service.print(1L);
+
+            assertArrayEquals(new byte[]{1, 2, 3}, result);
+            verify(printService).load("Shipping/SH/NOTICE2TRADE_subreport2.jrxml");
+            verify(printService).load("Shipping/SH/NOTICE2TRADE.jrxml");
+        }
+    }
+
+    @Test
+    void print_TariffNotFound_ThrowsResourceNotFoundException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> service.print(1L));
+        }
+    }
+
+    @Test
+    void print_NoImpCollectableData_ThrowsValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+
+            assertThrows(ValidationException.class, () -> service.print(1L));
+        }
     }
 }

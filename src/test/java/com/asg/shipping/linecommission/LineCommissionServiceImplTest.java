@@ -10,6 +10,9 @@ import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.service.PrintService;
+import net.sf.jasperreports.engine.JasperReport;
+import javax.sql.DataSource;
 import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.linecommission.dto.ContainerRateDto;
 import com.asg.shipping.linecommission.dto.LineCommissionResponse;
@@ -50,11 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -81,6 +80,10 @@ class LineCommissionServiceImplTest {
     private LoggingService loggingService;
     @Mock
     private DocumentDeleteService documentDeleteService;
+    @Mock
+    private PrintService printService;
+    @Mock
+    private DataSource dataSource;
     @Mock
     private EntityManager entityManager;
 
@@ -141,7 +144,7 @@ class LineCommissionServiceImplTest {
 
         when(documentService.resolveOperator(filterRequest)).thenReturn("OR");
         when(documentService.resolveIsDeleted(filterRequest)).thenReturn("N");
-        when(documentService.resolveFilters(filterRequest)).thenReturn(List.of(filter));
+        when(documentService.resolveDateFilters(eq(filterRequest), eq("TRANSACTION_DATE"), isNull(), isNull())).thenReturn(List.of(filter));
         when(documentService.search(
                 anyString(),
                 any(),
@@ -153,7 +156,7 @@ class LineCommissionServiceImplTest {
         )).thenReturn(raw);
 
         Map<String, Object> result =
-                service.listLineCommissions("DOC-1", filterRequest, pageable);
+                service.listLineCommissions("DOC-1", filterRequest, null, null, pageable);
 
         assertNotNull(result);
         verify(documentService).search(any(), any(), any(), any(), any(), any(), any());

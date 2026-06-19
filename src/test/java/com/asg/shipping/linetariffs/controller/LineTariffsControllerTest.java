@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
@@ -59,7 +60,7 @@ class LineTariffsControllerTest {
     @Test
     void searchLineTariffs_Success() {
         Map<String, Object> result = new HashMap<>();
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any()))
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
@@ -67,12 +68,12 @@ class LineTariffsControllerTest {
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).searchLineTariffs(eq(DOC_ID), any(), any(), isNull(), isNull());
+        verify(lineTariffsService).searchLineTariffs(eq(DOC_ID), any(), any());
     }
 
     @Test
     void searchLineTariffs_WhenServiceThrows_ReturnsInternalServerError() {
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any()))
                 .thenThrow(new RuntimeException("boom"));
 
         ResponseEntity<?> response = controller.searchLineTariffs(null, 0, 20, null);
@@ -87,7 +88,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
@@ -105,7 +106,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description");
@@ -121,7 +122,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "");
@@ -135,7 +136,7 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture()))
                 .thenReturn(result);
 
         controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description,desc,extra");
@@ -308,5 +309,36 @@ class LineTariffsControllerTest {
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
+    }
+
+    @Test
+    void print_Success() throws Exception {
+        byte[] pdf = new byte[]{1, 2, 3};
+        when(lineTariffsService.print(1L)).thenReturn(pdf);
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(200, response.getStatusCode().value());
+        assertArrayEquals(pdf, (byte[]) response.getBody());
+        verify(lineTariffsService).print(1L);
+    }
+
+    @Test
+    void print_NotFound() throws Exception {
+        when(lineTariffsService.print(1L))
+                .thenThrow(new ResourceNotFoundException("Line Tariff", "transactionPoid", "1"));
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
+    void print_Error() throws Exception {
+        when(lineTariffsService.print(1L)).thenThrow(new RuntimeException("jasper failed"));
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(500, response.getStatusCode().value());
     }
 }

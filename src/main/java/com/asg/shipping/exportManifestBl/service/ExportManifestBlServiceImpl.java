@@ -36,9 +36,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.sql.CallableStatement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import static org.springframework.util.StringUtils.hasText;
 
 import net.sf.jasperreports.engine.JasperReport;
 import javax.sql.DataSource;
@@ -253,12 +257,110 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
 
         Long companyPoid = UserContext.getCompanyPoid();
-        ShipBlToFfDto result = shipBlToFfRepository.findByBlNumber(blNumber.trim(), companyPoid)
+        ShipBlToFfDto result = enrichFfJobRow(shipBlToFfRepository.findByBlNumber(blNumber.trim(), companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "FF Job Details", "BL number", blNumber));
+                        "FF Job Details", "BL number", blNumber)));
 
         log.info("Successfully retrieved FF job details for BL number: {}", blNumber);
         return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ShipBlToFfDto> getShipBlToFfByManifestPoid(Long transactionPoid) {
+        log.info("Getting FF job details for manifest transactionPoid: {}", transactionPoid);
+
+        Long companyPoid = UserContext.getCompanyPoid();
+        validateActiveExportManifestBl(transactionPoid, companyPoid);
+
+        return shipBlToFfRepository.findAllByManifestPoid(transactionPoid, companyPoid).stream()
+                .map(this::enrichFfJobRow)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteFfPurchaseJournal(Long transactionPoid, Long rnumid) {
+        log.info("Deleting FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+
+        if (rnumid == null) {
+            throw new ValidationException("FF job row id is required");
+        }
+
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long groupPoid = UserContext.getGroupPoid();
+        validateActiveExportManifestBl(transactionPoid, companyPoid);
+
+        ShipBlToFfDto ffRow = shipBlToFfRepository.findByRnumidAndManifestPoid(rnumid, transactionPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("FF Job", "rnumid", rnumid.toString()));
+
+        if (!hasText(ffRow.getFfPj())) {
+            throw new ValidationException("No FF Purchase Journal exists to delete for the selected row");
+        }
+        if (!hasText(ffRow.getMasterBlNo())) {
+            throw new ValidationException("Master BL number is missing for the selected FF job row");
+        }
+
+        callProcGlReverseShtoffPosting(
+                groupPoid,
+                companyPoid,
+                UserContext.getUserPoid(),
+                ffRow.getMasterBlNo().trim(),
+                String.valueOf(rnumid));
+
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(),
+                String.format("FF Jobs row %s reversed via PROC_GL_REVERSE_SHTOFF_POSTING for BL %s, PJ %s",
+                        rnumid, ffRow.getMasterBlNo(), ffRow.getFfPj()));
+
+        log.info("Successfully reversed FF purchase journal {} for manifest transactionPoid: {}", ffRow.getFfPj(), transactionPoid);
+    }
+
+    private ShipBlToFfDto enrichFfJobRow(ShipBlToFfDto row) {
+        row.setDeleteAllowed(hasText(row.getFfPj()));
+        return row;
+    }
+
+    private void validateActiveExportManifestBl(Long transactionPoid, Long companyPoid) {
+        ExportManifestBlHdr hdr = repository.findByTransactionPoid(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Export Manifest BL", "transactionPoid", transactionPoid.toString()));
+
+        if (!companyPoid.equals(hdr.getCompanyPoid())) {
+            throw new ResourceNotFoundException("Export Manifest BL", "transactionPoid", transactionPoid.toString());
+        }
+        if ("Y".equals(hdr.getDeleted())) {
+            throw new ResourceNotFoundException("Export Manifest BL", "transactionPoid", transactionPoid.toString());
+        }
+    }
+
+    private void callProcGlReverseShtoffPosting(Long groupPoid, Long companyPoid, Long userPoid,
+                                                 String masterBlNo, String rnumid) {
+        try {
+            String sql = "{call PROC_GL_REVERSE_SHTOFF_POSTING(?, ?, ?, ?, ?, ?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, groupPoid);
+                cs.setLong(2, companyPoid);
+                cs.setLong(3, userPoid);
+                cs.setString(4, masterBlNo);
+                cs.setString(5, rnumid);
+                cs.registerOutParameter(6, Types.VARCHAR);
+                cs.execute();
+                String status = cs.getString(6);
+                if (status == null || status.isBlank()) {
+                    throw new ValidationException("No status returned from PROC_GL_REVERSE_SHTOFF_POSTING");
+                }
+                if (status.toUpperCase().contains("ERROR")) {
+                    throw new ValidationException(status.trim());
+                }
+                return null;
+            });
+        } catch (ValidationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Error calling PROC_GL_REVERSE_SHTOFF_POSTING for masterBlNo: {}, rnumid: {}",
+                    masterBlNo, rnumid, ex);
+            throw new ValidationException("Error reversing FF purchase journal: " + ex.getMessage());
+        }
     }
     
     @Override

@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.response.ApiResponse;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.exportManifestBl.dto.*;
 import com.asg.shipping.exportManifestBl.service.ExportManifestBlService;
@@ -30,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
@@ -283,6 +285,42 @@ public class ExportManifestBlController {
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/{transactionPoid}/ff-jobs")
+    @Operation(
+            summary = "List FF jobs for Export Manifest BL",
+            description = "Retrieve FF job rows from VW_SHIP_BL_TO_FF for the FF Jobs tab (read-only grid).",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> getShipBlToFfByManifestPoid(
+            @Parameter(description = "Export Manifest BL transaction POID", required = true, example = "249416")
+            @PathVariable Long transactionPoid) {
+
+        log.info("Getting FF job list for manifest transactionPoid: {}", transactionPoid);
+        List<ShipBlToFfDto> result = service.getShipBlToFfByManifestPoid(transactionPoid);
+        log.info("Successfully retrieved {} FF job row(s) for manifest transactionPoid: {}", result.size(), transactionPoid);
+        return ApiResponse.success("FF job details retrieved successfully", result);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.DELETE)
+    @DeleteMapping("/{transactionPoid}/ff-jobs/{rnumid}")
+    @Operation(
+            summary = "Delete FF purchase journal for a specific FF Jobs row",
+            description = "Reverses FF PJ for the selected row via PROC_GL_REVERSE_SHTOFF_POSTING. FF invoice is retained (VAT rule).",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> deleteFfPurchaseJournal(
+            @Parameter(description = "Export Manifest BL transaction POID", required = true, example = "268427")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "FF Jobs row id (RNUMID)", required = true, example = "43")
+            @PathVariable Long rnumid) {
+
+        log.info("Deleting FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+        service.deleteFfPurchaseJournal(transactionPoid, rnumid);
+        log.info("Successfully deleted FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+        return ApiResponse.success("FF purchase journal deleted successfully");
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
     @GetMapping("/ff-job/{blNumber}")
     @Operation(
             summary = "Get FF job details by BL number",
@@ -330,6 +368,9 @@ public class ExportManifestBlController {
 					.header(HttpHeaders.CONTENT_DISPOSITION,
 							"attachment; filename=bl-print-" + transactionPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
+		} catch (ValidationException e) {
+			log.warn("Validation failed for BL Print {}: {}", transactionPoid, e.getMessage());
+			return error(e.getMessage(), 400);
 		} catch (Exception e) {
 			log.error("Failed to generate PDF for BL Print: {}", transactionPoid, e);
 			return error("Failed to generate PDF: " + e.getMessage(), 500);
@@ -348,8 +389,7 @@ public class ExportManifestBlController {
 		try {
 			String docId = UserContext.getDocumentId();
 			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-			String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-"
-					: "freight-manifest-";
+			String fileName = request.isCargoManifest() ? "cargo-manifest-" : "freight-manifest-";
 			return ResponseEntity.ok()
 					.header(HttpHeaders.CONTENT_DISPOSITION,
 							"attachment; filename=" + fileName + transactionPoid + ".pdf")

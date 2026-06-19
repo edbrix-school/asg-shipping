@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "SHIP_LINE_COMM_CNTNR_DTL")
 @IdClass(ShipLineCommCntnrDtlId.class)
@@ -24,16 +26,16 @@ public class ShipLineCommCntnrDtlEntity extends BaseEntity {
     private Long containerTypePoid;
 
     @Column(name = "IMPORT_BOX_RATE")
-    private Long importBoxRate;
+    private BigDecimal importBoxRate;
 
     @Column(name = "EXPORT_BOX_RATE")
-    private Long exportBoxRate;
+    private BigDecimal exportBoxRate;
 
     @Column(name = "TRANSHIP_BOX_RATE")
-    private Long transhipBoxRate;
+    private BigDecimal transhipBoxRate;
 
     @Column(name = "SHORT_LEG_AMOUNT")
-    private Long shortLegAmount;
+    private BigDecimal shortLegAmount;
 
     @Column(name = "REMARKS")
     private String remarks;

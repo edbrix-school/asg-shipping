@@ -9,12 +9,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class VoyageUpsertRequest {
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate transactionDate;
 
     @NotNull(message = "voyageNo is required")
     @Size(max = 20, message = "voyageNo max length is 20")

@@ -5,8 +5,6 @@ import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
 
-import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,11 +19,9 @@ public interface LineTariffsService {
      * @param docId Document ID (e.g., "100-050" for Line Tariffs)
      * @param request FilterRequestDto containing filters, operator, isDeleted
      * @param pageable Pagination and sorting information
-     * @param startDate Optional start date for filtering
-     * @param endDate Optional end date for filtering
      * @return Map containing paginated results and display fields
      */
-    Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable, LocalDate startDate, LocalDate endDate);
+    Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
 
     /**
      * Get line tariff by ID
@@ -95,5 +91,13 @@ public interface LineTariffsService {
      * @return Updated LineTariffDto
      */
     void loadContainerTypes(Long transactionPoid, String type);
+
+    /**
+     * Generate Notice to Trade PDF for line demurrage tariff revision.
+     *
+     * @param transactionPoid TRANSACTION_POID of the tariff header
+     * @return PDF bytes
+     */
+    byte[] print(Long transactionPoid) throws Exception;
 }
 

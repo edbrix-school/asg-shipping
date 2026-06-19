@@ -4,6 +4,7 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
@@ -28,6 +29,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -56,7 +59,7 @@ public class LineTariffsController {
     @PostMapping("/search")
     @Operation(
             summary = "Search line tariffs",
-            description = "Retrieve paginated list of line tariffs with optional filtering and sorting using DocumentSearchService",
+            description = "Retrieve paginated line tariffs with optional filtering and sorting. Use isDeleted=Y to view deleted records.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -89,7 +92,7 @@ public class LineTariffsController {
 
         try {
             Pageable pageable = createPageable(page, size, sort);
-            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, null, null);
+            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable);
 
             log.info("Successfully retrieved line tariffs");
             return ApiResponse.success("Line tariffs retrieved successfully", result);
@@ -349,6 +352,52 @@ public class LineTariffsController {
         log.info("Loading container types for id: {}, type: {}", id, type);
         lineTariffsService.loadContainerTypes(id, type);
         return ApiResponse.success("Container types loaded successfully");
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/{id}/print")
+    @Operation(
+            summary = "Generate Notice to Trade PDF",
+            description = "Generates the Notice to Trade PDF for line demurrage tariff revision with slab details grouped by container category and size.",
+            security = @SecurityRequirement(name = "bearerAuth"),
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "PDF generated successfully",
+                            content = @Content(mediaType = "application/pdf")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "Line tariff not found",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "500",
+                            description = "Failed to generate PDF",
+                            content = @Content(mediaType = "application/json")
+                    )
+            }
+    )
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", required = true, example = "12345")
+            @PathVariable Long id) {
+        try {
+            byte[] pdf = lineTariffsService.print(id);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=line-tariff-notice-to-trade-" + id + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (com.asg.shipping.exceptions.ResourceNotFoundException e) {
+            log.warn("Line tariff not found for print id {}: {}", id, e.getMessage());
+            return ApiResponse.notFound(e.getMessage());
+        } catch (ValidationException e) {
+            log.warn("Line tariff print validation failed for id {}: {}", id, e.getMessage());
+            return ApiResponse.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for line tariff: {}", id, e);
+            return ApiResponse.internalServerError("Failed to generate PDF: " + e.getMessage());
+        }
     }
 
     /**

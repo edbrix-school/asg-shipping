@@ -85,6 +85,33 @@ class CustomerInvoiceChargeMapMasterControllerTest {
         verify(service).getByCustomer(eq(1L), any());
     }
     @Test
+    void saveOrUpdate_withCustomerChange_success() throws Exception {
+        mockRequest.setOldCustomerPoid(5933L);
+        mockRequest.setCustomerPoid(5928L);
+
+        CustomerInvoiceChargeMapMasterResponse changedResponse = new CustomerInvoiceChargeMapMasterResponse();
+        changedResponse.setCustomerPoid(5928L);
+        changedResponse.setDetails(mockResponse.getDetails());
+
+        when(service.saveOrUpdate(any(CustomerInvoiceChargeMapMasterRequest.class), any()))
+                .thenReturn(changedResponse);
+
+        mockMvc.perform(post("/v1/customer-invoice-charge-map-master")
+                        .header("X-Group-Poid", "100")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(mockRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.result.data.customerPoid").value(5928));
+
+        verify(service).saveOrUpdate(
+                argThat(r -> r.getOldCustomerPoid().equals(5933L)
+                        && r.getCustomerPoid().equals(5928L)),
+                isNull()
+        );
+    }
+
+    @Test
     void saveOrUpdate_Success() throws Exception {
 
         mockMvc.perform(post("/v1/customer-invoice-charge-map-master")
