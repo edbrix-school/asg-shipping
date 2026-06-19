@@ -5,6 +5,7 @@ import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -21,7 +22,9 @@ public interface LineTariffsService {
      * @param pageable Pagination and sorting information
      * @return Map containing paginated results and display fields
      */
-    Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request,
+                                          org.springframework.data.domain.Pageable pageable,
+                                          LocalDate startDate, LocalDate endDate);
 
     /**
      * Get line tariff by ID

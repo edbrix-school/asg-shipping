@@ -2,7 +2,7 @@ package com.asg.shipping.linetariffs.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
-import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
@@ -58,8 +58,15 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     private static final String DELETED_FIELD = "DELETED";
     private static final String COMPANY_POID_COL = "COMPANY_POID";
     private static final String DOC_ID = "100-050";
+    private static final Map<String, String> LIST_DISPLAY_FIELDS = Map.of(
+            TRANSACTION_POID_COL, "text",
+            "DESCRIPTION", "text",
+            "PERIOD_FROM", "text",
+            "PERIOD_TO", "text"
+    );
 
     private final ShipLineTariffHdrRepository tariffHdrRepository;
+    private final LineTariffListRepository lineTariffListRepository;
     private final ShipLineTariffImpDtlRepository impDtlRepository;
     private final ShipLineTariffImpPayDtlRepository impPayDtlRepository;
     private final ShipLineTariffExpDtlRepository expDtlRepository;
@@ -98,47 +105,45 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchLineTariffs(String docId, com.asg.common.lib.dto.FilterRequestDto request, Pageable pageable) {
-        log.info("Searching line tariffs with docId: {}, page: {}, size: {}, companyPoid: {}",
-                docId, pageable.getPageNumber(), pageable.getPageSize(), UserContext.getCompanyPoid());
+    public Map<String, Object> searchLineTariffs(String docId, FilterRequestDto request,
+                                                 Pageable pageable, LocalDate startDate, LocalDate endDate) {
+        log.info("get LOR LineTariffs started for docId={} startDate={} endDate={}", docId, startDate, endDate);
 
-        String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = resolveSearchFilters(request);
-        applyCompanyFilter(filters);
+        List<FilterDto> filtersList = resolveListFilters(request);
 
-        RawSearchResult raw = documentService.search(
-                docId,
-                filters,
-                operator,
-                pageable,
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long groupPoid = UserContext.getGroupPoid();
+
+        LineTariffListRepository.ListSearchResult result = lineTariffListRepository.search(
+                companyPoid,
+                groupPoid,
+                startDate,
+                endDate,
                 isDeleted,
-                "DESCRIPTION",
-                TRANSACTION_POID_COL
+                filtersList,
+                pageable
         );
 
-        Page<Map<String, Object>> page = new PageImpl<>(
-                raw.records(),
-                pageable,
-                raw.totalRecords()
-        );
-
-        return PaginationUtil.wrapPage(page, raw.displayFields());
+        Page<Map<String, Object>> page = new PageImpl<>(result.records(), pageable, result.totalRecords());
+        log.info("get LOR LineTariffs completed for docId={} count={}", docId, result.totalRecords());
+        return PaginationUtil.wrapPage(page, LIST_DISPLAY_FIELDS);
     }
 
-    private List<FilterDto> resolveSearchFilters(com.asg.common.lib.dto.FilterRequestDto request) {
-        List<FilterDto> filters = new ArrayList<>(documentService.resolveFilters(request));
+    /**
+     * Body filters only — period range from startDate/endDate query params;
+     * company/group from UserContext (exact JDBC bind, not DocumentSearchService).
+     */
+    private List<FilterDto> resolveListFilters(FilterRequestDto request) {
+        List<FilterDto> filters = request != null
+                ? new ArrayList<>(documentService.resolveFilters(request))
+                : new ArrayList<>();
         filters.removeIf(f -> DELETED_FIELD.equalsIgnoreCase(f.searchField()));
         filters.removeIf(f -> COMPANY_POID_COL.equalsIgnoreCase(f.searchField()));
+        filters.removeIf(f -> "GROUP_POID".equalsIgnoreCase(f.searchField()));
+        filters.removeIf(f -> "PERIOD_FROM".equalsIgnoreCase(f.searchField())
+                || "PERIOD_TO".equalsIgnoreCase(f.searchField()));
         return filters;
-    }
-
-    private void applyCompanyFilter(List<FilterDto> filters) {
-        Long companyPoid = UserContext.getCompanyPoid();
-        if (companyPoid == null) {
-            return;
-        }
-        filters.add(new FilterDto(COMPANY_POID_COL, "=" + companyPoid));
     }
 
     @Override

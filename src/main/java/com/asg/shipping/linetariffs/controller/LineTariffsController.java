@@ -34,6 +34,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -59,7 +60,9 @@ public class LineTariffsController {
     @PostMapping("/search")
     @Operation(
             summary = "Search line tariffs",
-            description = "Retrieve paginated line tariffs with optional filtering and sorting. Use isDeleted=Y to view deleted records.",
+            description = "Retrieve paginated line tariffs with optional filtering and sorting. "
+                    + "Use startDate and endDate query params for All Records search (PERIOD_FROM/PERIOD_TO overlap). "
+                    + "Use isDeleted=Y to view deleted records.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -85,14 +88,26 @@ public class LineTariffsController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort field and direction (e.g., 'description,asc')", example = "description,asc")
-            @RequestParam(required = false) String sort) {
+            @Parameter(description = "Sort field and direction (e.g., 'LINE_POID,asc')", example = "LINE_POID,asc")
+            @RequestParam(required = false) String sort,
+            @Parameter(description = "Period range start for All Records search")
+            @RequestParam(required = false) LocalDate startDate,
+            @Parameter(description = "Period range end for All Records search")
+            @RequestParam(required = false) LocalDate endDate) {
 
-        log.info("Searching line tariffs with page: {}, size: {}, sort: {}", page, size, sort);
+        log.info("Searching line tariffs with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}",
+                page, size, sort, startDate, endDate);
+
+        if ((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+            return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
+        }
+        if (startDate != null && startDate.isAfter(endDate)) {
+            return ApiResponse.badRequest("startDate must be less than or equal to endDate.");
+        }
 
         try {
             Pageable pageable = createPageable(page, size, sort);
-            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable);
+            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, startDate, endDate);
 
             log.info("Successfully retrieved line tariffs");
             return ApiResponse.success("Line tariffs retrieved successfully", result);
