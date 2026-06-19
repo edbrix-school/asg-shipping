@@ -16,6 +16,8 @@ import java.time.LocalDate;
 public class VoyageResponse {
     private Long transactionPoid;
     private String docRef;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate transactionDate;
     private String jobNo;
     private String voyageNo;
 

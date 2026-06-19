@@ -15,6 +15,7 @@ public class VoyageMapper {
         return VoyageResponse.builder()
                 .transactionPoid(e.getTransactionPoid())
                 .docRef(e.getDocRef())
+                .transactionDate(e.getTransactionDate())
                 .jobNo(e.getJobNo())
                 .voyageNo(e.getVoyageNo())
                 .linePoid(e.getLinePoid())
@@ -54,7 +55,7 @@ public class VoyageMapper {
         return ShipVoyageHdrEntity.builder()
                 .groupPoid(groupPoid)
                 .companyPoid(companyPoid)
-                .transactionDate(DateUtil.getCurrentDateInUserTimeZone())
+                .transactionDate(req.getTransactionDate() != null ? req.getTransactionDate() : DateUtil.getCurrentDateInUserTimeZone())
                 .voyageNo(req.getVoyageNo())
                 .linePoid(req.getLinePoid())
                 .vesselPoid(req.getVesselPoid())
@@ -82,6 +83,7 @@ public class VoyageMapper {
     }
 
     public static void updateEntity(ShipVoyageHdrEntity e, VoyageUpsertRequest req) {
+        if (req.getTransactionDate() != null) e.setTransactionDate(req.getTransactionDate());
         e.setVoyageNo(req.getVoyageNo());
         e.setLinePoid(req.getLinePoid());
         e.setVesselPoid(req.getVesselPoid());
