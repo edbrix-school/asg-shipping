@@ -1,11 +1,15 @@
 package com.asg.shipping.deliveryorderissuetocustomer.service;
 
+import com.asg.common.lib.dto.FilterDto;
+import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
@@ -32,6 +36,9 @@ import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import static com.asg.common.lib.security.util.UserContext.*;
 
@@ -49,6 +56,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
+    private final DocumentSearchService documentSearchService;
 
     private static final String ARSHRCPTPRINTUPDATE = "ARSHRCPTPRINTUPDATE";
     private static final String TRANSACTIONPOID = "transactionPoid";
@@ -498,5 +506,30 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             return String.valueOf(ch);
         }
         return value.toString();
+    }
+
+
+    @Override
+    public Map<String, Object> searchDeliveryOrders(String documentId, com.asg.common.lib.dto.FilterRequestDto filters, Pageable pageable) {
+        try {
+            String operator = documentSearchService.resolveOperator(filters);
+            String isDeleted = documentSearchService.resolveIsDeleted(filters);
+            List<FilterDto> filterList = documentSearchService.resolveFilters(filters);
+
+            RawSearchResult raw = documentSearchService.search(
+                    documentId,
+                    filterList,
+                    operator,
+                    pageable,
+                    isDeleted,
+                    "BL_NUMBER",
+                    "TRANSACTION_POID");
+
+            Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+            return PaginationUtil.wrapPage(page, raw.displayFields());
+        } catch (Exception e) {
+            log.error("Error searching delivery orders", e);
+            throw e;
+        }
     }
 }
