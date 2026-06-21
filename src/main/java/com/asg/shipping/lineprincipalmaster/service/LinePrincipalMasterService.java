@@ -1,8 +1,11 @@
 package com.asg.shipping.lineprincipalmaster.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.lineprincipalmaster.dto.*;
+import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -18,7 +21,7 @@ public interface LinePrincipalMasterService {
      * @param pageable Pagination and sorting information
      * @return Map containing paginated results and display fields
      */
-    Map<String, Object> searchLines(com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchLines(String docId, FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable);
 
     /**
      * Get line by ID including charges
