@@ -1,5 +1,6 @@
 package com.asg.shipping.containertypes.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.containertypes.dto.ContainerTypeCreateDTO;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
@@ -64,7 +65,7 @@ public interface ContainerTypeService {
      *
      * @param id Container Type POID
      */
-    void deleteContainerType(Long id);
+    void deleteContainerType(Long id, DeleteReasonDto deleteReasonDto);
 }
 
 
