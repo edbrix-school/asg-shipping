@@ -37,7 +37,6 @@ import java.sql.*;
 import java.util.concurrent.CompletableFuture;
 import java.sql.Date;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -73,12 +72,12 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchLinePayableTransfer(String docId, FilterRequestDto filterRequest, Pageable pageable) {
+    public Map<String, Object> searchLinePayableTransfer(String docId, FilterRequestDto filterRequest, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         log.info("Searching Line Payable Transfer As Per Reporting records");
 
         String operator = documentSearchService.resolveOperator(filterRequest);
         String isDeleted = documentSearchService.resolveIsDeleted(filterRequest);
-        List<FilterDto> filters = documentSearchService.resolveFilters(filterRequest);
+        List<FilterDto> filters = documentSearchService.resolveDateFilters(filterRequest, "TRANSACTION_DATE", fromDate, toDate);
 
         RawSearchResult raw = documentSearchService.search(
                 docId,

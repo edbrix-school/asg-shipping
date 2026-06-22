@@ -72,7 +72,7 @@ class LinePayableTransferReportingControllerTest {
         result.put("content", Collections.singletonList(testDto));
         result.put("totalElements", 1);
 
-        when(service.searchLinePayableTransfer(anyString(), any(), any())).thenReturn(result);
+        when(service.searchLinePayableTransfer(anyString(), any(), any(), any(), any())).thenReturn(result);
 
         FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
 
