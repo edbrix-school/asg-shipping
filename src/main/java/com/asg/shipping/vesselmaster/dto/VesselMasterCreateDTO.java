@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselmaster.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -51,6 +52,7 @@ public class VesselMasterCreateDTO {
     @Schema(description = "Registration Number", example = "REG123456")
     private String registrationNo;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     @Schema(description = "Registration Date", example = "2020-01-01")
     private LocalDate registrationDate;
 

@@ -20,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -67,17 +68,13 @@ public class LinePayableTransferReportingController {
     })
     public ResponseEntity<?> searchLinePayableTransfer(
             @RequestBody(required = false) FilterRequestDto filterRequest,
-            @Parameter(description = "Page number (0-indexed)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size", example = "20")
-            @RequestParam(defaultValue = "20") int size,
+            @ParameterObject Pageable pageable,
             @Parameter(description = "Start date (inclusive) for date filter, format: yyyy-MM-dd")
             @RequestParam(required = false) LocalDate fromDate,
             @Parameter(description = "End date (inclusive) for date filter, format: yyyy-MM-dd")
             @RequestParam(required = false) LocalDate toDate) {
-        log.info("Searching line payable transfer records with page: {}, size: {}", page, size);
+        log.info("Searching line payable transfer records with page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
         String docId = "100-432";
-        Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
         Map<String, Object> result = service.searchLinePayableTransfer(docId, filterRequest, fromDate, toDate, pageable);
         log.info("Successfully retrieved line payable transfer records");
         return ApiResponse.success("Line payable transfer records retrieved successfully", result);
@@ -370,4 +367,5 @@ public class LinePayableTransferReportingController {
         log.info("Successfully processed {} weekly report records", details.size());
         return ApiResponse.success("Weekly BL report processed successfully", details);
     }
+
 }
