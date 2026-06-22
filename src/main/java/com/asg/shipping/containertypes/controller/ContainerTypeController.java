@@ -1,6 +1,7 @@
 package com.asg.shipping.containertypes.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -263,9 +264,11 @@ public class ContainerTypeController {
     })
     public ResponseEntity<?> deleteContainerType(
             @Parameter(description = "Container Type POID", required = true, example = "12345")
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @Parameter(description = "Delete reason information", required = true)
+            @Valid @RequestBody DeleteReasonDto deleteReasonDto) {
         log.info("Deleting container type with id: {}", id);
-        containerTypeService.deleteContainerType(id);
+        containerTypeService.deleteContainerType(id, deleteReasonDto);
         log.info("Successfully deleted container type with id: {}", id);
         return ApiResponse.success("Container type deleted successfully");
     }
