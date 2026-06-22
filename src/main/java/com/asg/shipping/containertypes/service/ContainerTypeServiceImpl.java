@@ -1,5 +1,6 @@
 package com.asg.shipping.containertypes.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -7,6 +8,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
@@ -49,6 +51,7 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
     @Autowired
     private ShipContainerTypeMasterRepository containerTypeRepository;
 
+    private final DocumentDeleteService documentDeleteService;
     private final LoggingService loggingService;
 
     @Override
@@ -187,35 +190,21 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
 
     @Override
     @Transactional
-    public void deleteContainerType(Long id) {
+    public void deleteContainerType(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting container type with id: {}", id);
 
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
 
-        ShipContainerTypeMaster containerType = containerTypeRepository.findByContainerTypePoidAndGroupPoid(id, groupPoid)
+        containerTypeRepository.findByContainerTypePoidAndGroupPoid(id, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Container Type", "containerTypePoid", id.toString()));
 
-        // Check if already deleted (idempotent)
-        if ("Y".equals(containerType.getDeleted())) {
-            log.info("Container type with id: {} is already deleted", id);
-            return;
-        }
-
-        // Soft delete
-        containerType.setDeleted("Y");
-        containerType.setActive("N");
-        containerType.setLastModifiedBy(getCurrentUser());
-        containerType.setLastModifiedDate(LocalDateTime.now());
-
-        containerTypeRepository.save(containerType);
-
-        String docId = UserContext.getDocumentId();
-        String key = id.toString();
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
-
-        loggingService.logSimpleFieldChange(ShipContainerTypeMaster.class, docId, key, "deleted", "N", "Y", "ContainerType soft deleted");
-        loggingService.logSimpleFieldChange(ShipContainerTypeMaster.class, docId, key, "active", "Y", "N", "ContainerType soft deleted");
-
+        documentDeleteService.deleteDocument(
+                id,
+                "SHIP_CONTAINER_TYPE_MASTER",
+                "CONTAINER_TYPE_POID",
+                deleteReasonDto,
+                null
+        );
 
         log.info("Successfully deleted container type with id: {}", id);
     }
