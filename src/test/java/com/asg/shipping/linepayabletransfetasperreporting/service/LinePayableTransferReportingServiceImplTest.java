@@ -399,11 +399,11 @@ class LinePayableTransferReportingServiceImplTest {
 
         when(documentSearchService.resolveOperator(any())).thenReturn("AND");
         when(documentSearchService.resolveIsDeleted(any())).thenReturn("N");
-        when(documentSearchService.resolveFilters(any())).thenReturn(Collections.emptyList());
+        when(documentSearchService.resolveDateFilters(any(), anyString(), any(), any())).thenReturn(Collections.emptyList());
         when(documentSearchService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                 .thenReturn(rawResult);
 
-        Map<String, Object> result = service.searchLinePayableTransfer("100-432", filterRequest, pageable);
+        Map<String, Object> result = service.searchLinePayableTransfer("100-432", filterRequest, LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31), pageable);
 
         assertNotNull(result);
         verify(documentSearchService).search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString());

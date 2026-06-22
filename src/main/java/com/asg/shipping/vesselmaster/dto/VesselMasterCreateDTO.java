@@ -97,11 +97,11 @@ public class VesselMasterCreateDTO {
 
     @Positive(message = "Hatches must be positive")
     @Schema(description = "Number of Hatches", example = "5")
-    private Integer hatches;
+    private BigDecimal hatches;
 
     @Positive(message = "Bay hatch must be positive")
     @Schema(description = "Bay Hatch Count", example = "10")
-    private Integer bayhatch;
+    private BigDecimal bayhatch;
 
     @Size(max = 20, message = "IMO number cannot exceed 20 characters")
     @Schema(description = "IMO Number", example = "IMO1234567")

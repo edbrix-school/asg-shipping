@@ -9,6 +9,7 @@ import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransfe
 import com.asg.shipping.linepayabletransfetasperreporting.dto.LoadDataByDateRangeRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -35,7 +36,7 @@ public interface LinePayableTransferReportingService {
     /**
      * Search Line Payable Transfer As Per Reporting records
      */
-    Map<String, Object> searchLinePayableTransfer(String docId, FilterRequestDto filterRequest, Pageable pageable);
+    Map<String, Object> searchLinePayableTransfer(String docId, FilterRequestDto filterRequest, LocalDate fromDate, LocalDate toDate, Pageable pageable);
 
     /**
      * Delete (soft delete) a Line Payable Transfer As Per Reporting record

@@ -93,10 +93,10 @@ public class VesselMasterDto {
     private BigDecimal draft;
 
     @Schema(description = "Number of Hatches")
-    private Integer hatches;
+    private BigDecimal hatches;
 
     @Schema(description = "Bay Hatch Count")
-    private Integer bayhatch;
+    private BigDecimal bayhatch;
 
     @Schema(description = "IMO Number")
     private String imoNumber;

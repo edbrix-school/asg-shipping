@@ -83,10 +83,10 @@ public class ShipVesselMaster extends BaseEntity {
     private BigDecimal draft;
 
     @Column(name = "HATCHES")
-    private Integer hatches;
+    private BigDecimal hatches;
 
     @Column(name = "BAYHATCH")
-    private Integer bayhatch;
+    private BigDecimal bayhatch;
 
     @Column(name = "IMO_NUMBER", length = 20, unique = true)
     private String imoNumber;
