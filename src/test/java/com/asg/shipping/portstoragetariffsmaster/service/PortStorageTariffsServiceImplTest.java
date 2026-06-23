@@ -393,7 +393,7 @@ class PortStorageTariffsServiceImplTest {
 
             service.deleteTariff(1L, 1L, 1L, null);
 
-            verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_PORT_TARIFF_HDR"), eq("TRANSACTION_POID"), isNull(), any(LocalDate.class));
+            verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_PORT_TARIFF_HDR"), eq("TRANSACTION_POID"), isNull(), isNull());
         }
     }
 
@@ -633,14 +633,14 @@ class PortStorageTariffsServiceImplTest {
     void deleteTariff_WithDeleteReason() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC_ID");
 
             testTariffHdr.setDeleted("N");
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(testTariffHdr));
 
             service.deleteTariff(1L, 1L, 1L, deleteReasonDto);
 
-            verify(documentDeleteService).deleteDocument(eq(1L), eq("SHIP_PORT_TARIFF_HDR"), eq("TRANSACTION_POID"), eq(deleteReasonDto), any(LocalDate.class));
+            verify(documentDeleteService).deleteDocument(
+                    eq(1L), eq("SHIP_PORT_TARIFF_HDR"), eq("TRANSACTION_POID"), eq(deleteReasonDto), isNull());
         }
     }
 
