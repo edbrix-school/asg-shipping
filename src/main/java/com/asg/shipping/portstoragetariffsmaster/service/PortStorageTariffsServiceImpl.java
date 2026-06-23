@@ -240,13 +240,13 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
             throw new com.asg.shipping.exceptions.CustomException("Cannot delete tariff. It is already deleted.");
         }
 
-        // 3. Use DocumentDeleteService to handle delete reason
         documentDeleteService.deleteDocument(
                 tariffId,
                 "SHIP_PORT_TARIFF_HDR",
                 TRANSACTION_POID,
                 deleteReasonDto,
-                tariff.getTransactionDate());
+                null);
+
         log.info("deleteTariff completed for tariffId={} companyPoid={}", tariffId, companyPoid);
     }
 
