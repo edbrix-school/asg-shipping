@@ -133,6 +133,38 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
+    void searchLineTariffs_PassesGlobalSearchThrough() {
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "OR",
+                "N",
+                List.of(new FilterDto("GLOBALSEARCH", "MAERSK")));
+        Pageable pageable = PageRequest.of(0, 20);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(lineTariffListRepository.search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+
+            verify(lineTariffListRepository).search(
+                    eq(1L),
+                    eq(1L),
+                    isNull(),
+                    isNull(),
+                    eq("N"),
+                    argThat(filters -> filters.size() == 1
+                            && "GLOBALSEARCH".equals(filters.get(0).searchField())
+                            && "MAERSK".equals(filters.get(0).searchValue())),
+                    eq(pageable));
+        }
+    }
+
+    @Test
     void searchLineTariffs_PassesBodyFiltersThrough() {
         FilterRequestDto filterRequest = new FilterRequestDto(
                 "AND",

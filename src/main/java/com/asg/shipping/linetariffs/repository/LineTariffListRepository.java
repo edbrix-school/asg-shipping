@@ -19,30 +19,33 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * List search for doc 100-050 — legacy period overlap + exact COMPANY_POID / GROUP_POID.
- * DocumentSearchService cannot apply exact COMPANY_POID on master docs.
+ * List search for doc 100-050 — exact COMPANY_POID / GROUP_POID and legacy period filter.
+ * Master doc 100-050 does not scope correctly through DocumentSearchService alone.
  */
 @Repository
 @Slf4j
 public class LineTariffListRepository {
 
     private static final String TABLE = "SHIP_LINE_TARIFF_HDR";
+    private static final String ALIAS = "t";
     private static final String SELECT_COLUMNS = """
-            TRANSACTION_POID, DESCRIPTION, PERIOD_FROM, PERIOD_TO, DELETED,
-            DMG_FROM_NEXTDAY, DMG_SKIP_HOLIDAYS, DMG_SKIP_WEEKENDS,
-            DTN_FROM_NEXTDAY, DTN_SKIP_HOLIDAYS, DTN_SKIP_WEEKENDS,
-            DMG_BASESLAB_AFTER_FREE, DTN_BASESLAB_AFTER_FREE,
-            PAYABLE_CURRENCY, RECEIVABLE_CURRENCY, DOC_REF, COMPANY_POID, LINE_POID
+            t.TRANSACTION_POID, t.DESCRIPTION, t.PERIOD_FROM, t.PERIOD_TO, t.DELETED,
+            t.DMG_FROM_NEXTDAY, t.DMG_SKIP_HOLIDAYS, t.DMG_SKIP_WEEKENDS,
+            t.DTN_FROM_NEXTDAY, t.DTN_SKIP_HOLIDAYS, t.DTN_SKIP_WEEKENDS,
+            t.DMG_BASESLAB_AFTER_FREE, t.DTN_BASESLAB_AFTER_FREE,
+            t.PAYABLE_CURRENCY, t.RECEIVABLE_CURRENCY, t.DOC_REF, t.COMPANY_POID, t.LINE_POID
             """;
 
     private final JdbcTemplate jdbcTemplate;
     private final String qualifiedTableName;
+    private final String lineMasterTable;
 
     public LineTariffListRepository(
             JdbcTemplate jdbcTemplate,
             @Value("${spring.jpa.properties.hibernate.default_schema}") String schema) {
         this.jdbcTemplate = jdbcTemplate;
         this.qualifiedTableName = schema + "." + TABLE;
+        this.lineMasterTable = schema + ".SHIP_LINE_MASTER";
     }
 
     public record ListSearchResult(List<Map<String, Object>> records, long totalRecords) {}
@@ -58,23 +61,24 @@ public class LineTariffListRepository {
         List<Object> params = new ArrayList<>();
 
         if ("Y".equalsIgnoreCase(isDeleted)) {
-            where.append(" AND DELETED = 'Y' ");
+            where.append(" AND ").append(col("DELETED")).append(" = 'Y' ");
         } else {
-            where.append(" AND (DELETED IS NULL OR DELETED = 'N') ");
+            where.append(" AND (").append(col("DELETED")).append(" IS NULL OR ").append(col("DELETED")).append(" = 'N') ");
         }
 
         if (companyPoid != null) {
-            where.append(" AND COMPANY_POID IS NOT NULL AND COMPANY_POID = ? ");
+            where.append(" AND ").append(col("COMPANY_POID")).append(" IS NOT NULL AND ").append(col("COMPANY_POID")).append(" = ? ");
             params.add(companyPoid);
         }
 
         if (groupPoid != null) {
-            where.append(" AND GROUP_POID = ? ");
+            where.append(" AND ").append(col("GROUP_POID")).append(" = ? ");
             params.add(groupPoid);
         }
 
         if (startDate != null && endDate != null) {
-            where.append(" AND PERIOD_FROM <= ? AND PERIOD_TO >= ? AND PERIOD_TO <= ? ");
+            where.append(" AND ").append(col("PERIOD_FROM")).append(" <= ? AND ")
+                    .append(col("PERIOD_TO")).append(" >= ? AND ").append(col("PERIOD_TO")).append(" <= ? ");
             params.add(java.sql.Date.valueOf(endDate));
             params.add(java.sql.Date.valueOf(startDate));
             params.add(java.sql.Date.valueOf(endDate));
@@ -82,7 +86,9 @@ public class LineTariffListRepository {
 
         appendExtraFilters(extraFilters, where, params);
 
-        String fromClause = " FROM " + qualifiedTableName + where;
+        String fromClause = " FROM " + qualifiedTableName + " " + ALIAS + where;
+        log.debug("Line tariff list SQL: SELECT COUNT(*) {}", fromClause);
+
         Long total = jdbcTemplate.queryForObject("SELECT COUNT(*) " + fromClause, Long.class, params.toArray());
         long totalRecords = total != null ? total : 0L;
 
@@ -107,21 +113,61 @@ public class LineTariffListRepository {
             }
             String field = filter.searchField().trim().toUpperCase();
             String value = filter.searchValue().trim();
-            if (value.isEmpty() || !"DESCRIPTION".equals(field)) {
+            if (value.isEmpty()) {
                 continue;
             }
-            where.append(" AND UPPER(DESCRIPTION) LIKE ? ");
-            params.add("%" + value.toUpperCase() + "%");
+            if ("GLOBALSEARCH".equals(field)) {
+                appendGlobalSearch(where, params, stripComparisonPrefix(value));
+            } else if ("DESCRIPTION".equals(field)) {
+                where.append(" AND UPPER(").append(col("DESCRIPTION")).append(") LIKE ? ");
+                params.add("%" + stripComparisonPrefix(value).toUpperCase() + "%");
+            }
         }
+    }
+
+    private void appendGlobalSearch(StringBuilder where, List<Object> params, String term) {
+        String like = "%" + term.toUpperCase() + "%";
+        where.append(" AND (");
+        where.append(" UPPER(").append(col("DESCRIPTION")).append(") LIKE ? ");
+        params.add(like);
+        where.append(" OR UPPER(").append(col("DOC_REF")).append(") LIKE ? ");
+        params.add(like);
+        where.append(" OR UPPER(").append(col("PAYABLE_CURRENCY")).append(") LIKE ? ");
+        params.add(like);
+        where.append(" OR UPPER(").append(col("RECEIVABLE_CURRENCY")).append(") LIKE ? ");
+        params.add(like);
+        where.append(" OR UPPER(TO_CHAR(").append(col("TRANSACTION_POID")).append(")) LIKE ? ");
+        params.add(like);
+        where.append(" OR UPPER(TO_CHAR(").append(col("LINE_POID")).append(")) LIKE ? ");
+        params.add(like);
+        where.append(" OR UPPER(TO_CHAR(").append(col("PERIOD_FROM")).append(", 'YYYY-MM-DD')) LIKE ? ");
+        params.add(like);
+        where.append(" OR UPPER(TO_CHAR(").append(col("PERIOD_TO")).append(", 'YYYY-MM-DD')) LIKE ? ");
+        params.add(like);
+        where.append(" OR EXISTS (SELECT 1 FROM ").append(lineMasterTable).append(" lm ");
+        where.append(" WHERE lm.LINE_POID = ").append(col("LINE_POID"));
+        where.append(" AND (UPPER(lm.LINE_NAME) LIKE ? OR UPPER(lm.LINE_CODE) LIKE ? OR UPPER(lm.LINE_SHORT_NAME) LIKE ?)) ");
+        params.add(like);
+        params.add(like);
+        params.add(like);
+        where.append(") ");
+    }
+
+    private static String col(String column) {
+        return ALIAS + "." + column;
+    }
+
+    private static String stripComparisonPrefix(String value) {
+        return value.replaceFirst("^[<>=]+", "").trim();
     }
 
     private String buildOrderBy(Pageable pageable) {
         if (pageable.getSort().isUnsorted()) {
-            return " ORDER BY TRANSACTION_POID ASC";
+            return " ORDER BY " + col("TRANSACTION_POID") + " ASC";
         }
         List<String> parts = new ArrayList<>();
         for (Sort.Order order : pageable.getSort()) {
-            parts.add(mapSortColumn(order.getProperty()) + " " + order.getDirection().name());
+            parts.add(col(mapSortColumn(order.getProperty())) + " " + order.getDirection().name());
         }
         return " ORDER BY " + String.join(", ", parts);
     }
