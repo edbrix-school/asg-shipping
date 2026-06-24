@@ -62,6 +62,7 @@ public class LineTariffsController {
             summary = "Search line tariffs",
             description = "Retrieve paginated line tariffs with optional filtering and sorting. "
                     + "Use startDate and endDate query params for All Records search (PERIOD_FROM/PERIOD_TO overlap). "
+                    + "Period range is not applied when GLOBALSEARCH or DESCRIPTION filters are used. "
                     + "Use isDeleted=Y to view deleted records.",
             security = @SecurityRequirement(name = "bearerAuth")
     )

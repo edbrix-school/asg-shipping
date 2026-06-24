@@ -115,11 +115,18 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         Long companyPoid = UserContext.getCompanyPoid();
         Long groupPoid = UserContext.getGroupPoid();
 
+        LocalDate effectiveStartDate = startDate;
+        LocalDate effectiveEndDate = endDate;
+        if (hasTextSearchFilters(filtersList)) {
+            effectiveStartDate = null;
+            effectiveEndDate = null;
+        }
+
         LineTariffListRepository.ListSearchResult result = lineTariffListRepository.search(
                 companyPoid,
                 groupPoid,
-                startDate,
-                endDate,
+                effectiveStartDate,
+                effectiveEndDate,
                 isDeleted,
                 filtersList,
                 pageable
@@ -144,6 +151,22 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         filters.removeIf(f -> "PERIOD_FROM".equalsIgnoreCase(f.searchField())
                 || "PERIOD_TO".equalsIgnoreCase(f.searchField()));
         return filters;
+    }
+
+   
+    private boolean hasTextSearchFilters(List<FilterDto> filters) {
+        if (filters == null) {
+            return false;
+        }
+        return filters.stream().anyMatch(f -> {
+            if (f == null || f.searchField() == null || f.searchValue() == null) {
+                return false;
+            }
+            String field = f.searchField().trim().toUpperCase();
+            String value = f.searchValue().trim();
+            return !value.isEmpty()
+                    && ("GLOBALSEARCH".equals(field) || "DESCRIPTION".equals(field));
+        });
     }
 
     @Override
@@ -192,6 +215,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         }
 
         mapper.mapCreateDTOToEntity(dto, tariff, groupPoid);
+        tariff.setCompanyPoid(UserContext.getCompanyPoid());
 
         // Additional validation just before save to prevent race conditions
         if (dto.getDocRef() != null && !dto.getDocRef().trim().isEmpty() && tariffHdrRepository.existsByDocRef(dto.getDocRef().trim())) {
@@ -255,6 +279,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
         // Update header entity
         mapper.mapUpdateDTOToEntity(dto, tariff);
+        tariff.setCompanyPoid(UserContext.getCompanyPoid());
         ShipLineTariffHdr saved;
         try {
             saved = tariffHdrRepository.save(tariff);

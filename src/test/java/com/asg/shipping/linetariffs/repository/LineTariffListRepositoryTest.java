@@ -32,6 +32,28 @@ class LineTariffListRepositoryTest {
     }
 
     @Test
+    void search_PeriodRange_UsesOverlapNotEndDateCap() {
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), any(Object[].class))).thenReturn(0L);
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class))).thenReturn(List.of());
+
+        repository.search(
+                1L,
+                1L,
+                java.time.LocalDate.of(2026, 3, 20),
+                java.time.LocalDate.of(2026, 6, 19),
+                "N",
+                List.of(),
+                PageRequest.of(0, 20));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate).queryForObject(sqlCaptor.capture(), eq(Long.class), any(Object[].class));
+
+        String sql = sqlCaptor.getValue();
+        assertTrue(sql.contains("t.PERIOD_FROM <= ? AND t.PERIOD_TO >= ?"));
+        assertTrue(!sql.contains("t.PERIOD_TO <= ?"));
+    }
+
+    @Test
     void search_GlobalSearch_CorrelatesLineMasterToTariffRow() {
         when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), any(Object[].class))).thenReturn(0L);
         when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class))).thenReturn(List.of());

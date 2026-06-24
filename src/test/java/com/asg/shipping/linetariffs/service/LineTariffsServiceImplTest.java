@@ -133,6 +133,63 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
+    void searchLineTariffs_SkipsPeriodRangeWhenGlobalSearchPresent() {
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "OR",
+                "N",
+                List.of(new FilterDto("GLOBALSEARCH", "MAERSK")));
+        Pageable pageable = PageRequest.of(0, 20);
+        LocalDate startDate = LocalDate.of(2026, 3, 20);
+        LocalDate endDate = LocalDate.of(2026, 6, 19);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(lineTariffListRepository.search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable, startDate, endDate);
+
+            verify(lineTariffListRepository).search(
+                    eq(1L),
+                    eq(1L),
+                    isNull(),
+                    isNull(),
+                    eq("N"),
+                    anyList(),
+                    eq(pageable));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_SkipsPeriodRangeWhenDescriptionSearchPresent() {
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "AND",
+                "N",
+                List.of(new FilterDto("DESCRIPTION", "test tariff")));
+        Pageable pageable = PageRequest.of(0, 20);
+        LocalDate startDate = LocalDate.of(2026, 3, 20);
+        LocalDate endDate = LocalDate.of(2026, 6, 19);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(lineTariffListRepository.search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable, startDate, endDate);
+
+            verify(lineTariffListRepository).search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable));
+        }
+    }
+
+    @Test
     void searchLineTariffs_PassesGlobalSearchThrough() {
         FilterRequestDto filterRequest = new FilterRequestDto(
                 "OR",
@@ -288,6 +345,7 @@ class LineTariffsServiceImplTest {
             LineTariffDto result = service.createLineTariff(createDTO, 1L, 2L);
 
             assertNotNull(result);
+            verify(tariffHdrRepository).save(argThat(t -> Long.valueOf(1L).equals(t.getCompanyPoid())));
             verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("100-050"), eq("1"));
             verify(tariffHdrRepository).flush();
         }
