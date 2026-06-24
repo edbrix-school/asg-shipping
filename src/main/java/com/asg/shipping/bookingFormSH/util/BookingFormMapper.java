@@ -276,7 +276,9 @@ public class BookingFormMapper {
                 .isRefer(entity.getIsRefer()).referType(entity.getReferType()).oogLW(entity.getOogLW())
                 .oogRW(entity.getOogRW()).oogF(entity.getOogF()).oogA(entity.getOogA()).isSplit(entity.getIsSplit())
                 .imcoClassType(entity.getImcoClassType()).oogType(entity.getOogType()).vgmWeight(entity.getVgmWeight())
-                .vgmDocId(entity.getVgmDocId()).vgmDate(entity.getVgmDate()).vgmEdi(entity.getVgmEdi()).build();
+                .vgmDocId(entity.getVgmDocId()).vgmDate(entity.getVgmDate()).vgmEdi(entity.getVgmEdi())
+                .loadToVessel(entity.getLoadToVessel()).color(entity.getColor()).orderNumber(entity.getOrderNumber())
+                .build();
     }
 
     public static ShipMateContainerDtl mapContainerDtlFromDto(BookingFormContainerDetailDto dto, Long transactionPoid) {
@@ -297,7 +299,9 @@ public class BookingFormMapper {
                 .isRefer(dto.getIsRefer()).referType(dto.getReferType()).oogLW(dto.getOogLW()).oogRW(dto.getOogRW())
                 .oogF(dto.getOogF()).oogA(dto.getOogA()).isSplit(dto.getIsSplit()).imcoClassType(dto.getImcoClassType())
                 .oogType(dto.getOogType()).vgmWeight(dto.getVgmWeight()).vgmDocId(dto.getVgmDocId())
-                .vgmDate(dto.getVgmDate()).vgmEdi(dto.getVgmEdi()).build();
+                .vgmDate(dto.getVgmDate()).vgmEdi(dto.getVgmEdi())
+                .loadToVessel(dto.getLoadToVessel()).color(dto.getColor()).orderNumber(dto.getOrderNumber())
+                .build();
     }
 
     // Helper methods to map lists

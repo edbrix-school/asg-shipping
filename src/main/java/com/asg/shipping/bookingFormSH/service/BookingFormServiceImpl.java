@@ -1200,6 +1200,10 @@ public class BookingFormServiceImpl implements BookingFormService {
         entity.setRefferTemp(dto.getRefferTemp());
         entity.setRefferVent(dto.getRefferVent());
 
+        entity.setLoadToVessel(dto.getLoadToVessel());
+        entity.setColor(dto.getColor());
+        entity.setOrderNumber(dto.getOrderNumber());
+
         return entity;
     }
 
