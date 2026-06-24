@@ -137,7 +137,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         when(masterRepo.findById(1L)).thenReturn(Optional.empty(), Optional.of(created));
         when(masterRepo.save(any(CustomerInvoicePrtMasterEntity.class))).thenReturn(created);
 
-        when(detailRepo.findMaxDetRowId(1L)).thenReturn(null); // => detRowId should become 1
+        when(detailRepo.findMaxDetRowId(1L)).thenReturn(0L); // => detRowId should become 1
 
         when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.empty());
         when(detailRepo.save(any(CustomerInvoicePrtDtlEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -334,7 +334,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         when(masterRepo.findById(newCustomerPoid)).thenReturn(Optional.empty(), Optional.of(newMaster));
         when(masterRepo.save(any())).thenReturn(newMaster);
 
-        when(detailRepo.findMaxDetRowId(newCustomerPoid)).thenReturn(null);
+        when(detailRepo.findMaxDetRowId(newCustomerPoid)).thenReturn(0L);
         when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.empty());
         when(detailRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
 

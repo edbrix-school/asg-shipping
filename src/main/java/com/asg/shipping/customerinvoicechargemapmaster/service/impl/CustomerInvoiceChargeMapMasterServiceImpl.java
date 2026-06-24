@@ -123,7 +123,12 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                     LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
         }
 
+        Long maxDetRowIdResult = detailRepo.findMaxDetRowId(request.getCustomerPoid());
+        long maxDetRowId = maxDetRowIdResult != null ? maxDetRowIdResult : 0L;
         for (CustomerInvoiceChargeMapDetailDto dto : request.getDetails()) {
+            if (dto.getDetRowId() == null) {
+                dto.setDetRowId(++maxDetRowId);
+            }
             saveOrUpdateDetail(request.getCustomerPoid(), dto, docId, key);
         }
         log.info("Successfully saved/updated customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
@@ -198,10 +203,6 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
             String key) {
 
         Long detRowId = dto.getDetRowId();
-        if (detRowId == null) {
-            Long maxId = detailRepo.findMaxDetRowId(customerPoid);
-            detRowId = (maxId == null ? 1 : maxId + 1);
-        }
 
         CustomerInvoicePrtDtlId id = new CustomerInvoicePrtDtlId();
         id.setCustomerPoid(customerPoid);
@@ -212,8 +213,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         if (actionType.contains("DELETE")) {
             detailRepo.findById(id).ifPresent(existing -> {
                 detailRepo.delete(existing);
-                loggingService.logChanges(existing, null, CustomerInvoicePrtDtlEntity.class, docId, key,
-                        LogDetailsEnum.DELETED, "CUSTOMER_POID");
+                loggingService.logDelete(existing, docId, key);
             });
             return;
         }
