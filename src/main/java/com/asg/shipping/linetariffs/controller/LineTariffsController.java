@@ -282,7 +282,8 @@ public class LineTariffsController {
     @PostMapping("/{id}/copy")
     @Operation(
             summary = "Copy line tariff to new period",
-            description = "Copy existing tariff to new period. Updates source tariff PERIOD_TO to new PERIOD_FROM - 1 day and creates new tariff with copied data.",
+            description = "Copy existing tariff. Uses COPY_LINE_TARIFF when available; otherwise copies in Java "
+                    + "(header + all four detail tables). Optional period/description overrides are applied after copy.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -320,10 +321,18 @@ public class LineTariffsController {
         Long groupPoid = getGroupPoid();
         Long userPoid = getUserPoid();
 
-        LineTariffDto copied = lineTariffsService.copyLineTariff(id, request, groupPoid, userPoid);
-
-        log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, copied.getTransactionPoid());
-        return ApiResponse.success("Line tariff copied successfully", copied);
+        try {
+            LineTariffDto copied = lineTariffsService.copyLineTariff(id, request, groupPoid, userPoid);
+            log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, copied.getTransactionPoid());
+            return ApiResponse.success("Line tariff copied successfully", copied);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.notFound(e.getMessage());
+        } catch (ValidationException e) {
+            return ApiResponse.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error copying line tariff with id {}: {}", id, e.getMessage(), e);
+            return ApiResponse.internalServerError("Failed to copy line tariff: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
@@ -366,8 +375,15 @@ public class LineTariffsController {
             @Parameter(description = "IMP for Import Demurrage, EXP for Export Detention", required = true)
             @RequestParam String type) {
         log.info("Loading container types for id: {}, type: {}", id, type);
-        lineTariffsService.loadContainerTypes(id, type);
-        return ApiResponse.success("Container types loaded successfully");
+        try {
+            lineTariffsService.loadContainerTypes(id, type);
+            return ApiResponse.success("Container types loaded successfully");
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.notFound(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error loading container types for id {}: {}", id, e.getMessage(), e);
+            return ApiResponse.internalServerError("Failed to load container types: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.PRINT)
