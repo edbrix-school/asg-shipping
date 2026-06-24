@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -120,13 +121,21 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         log.info("get LOR LineTariffs started for docId={} startDate={} endDate={}", docId, startDate, endDate);
 
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filtersList = resolveListFilters(request);
+        List<FilterDto> rawFilters = request != null
+                ? new ArrayList<>(documentService.resolveFilters(request))
+                : new ArrayList<>();
+        List<FilterDto> filtersList = resolveListFilters(rawFilters);
 
         Long companyPoid = UserContext.getCompanyPoid();
         Long groupPoid = UserContext.getGroupPoid();
 
         LocalDate effectiveStartDate = startDate;
         LocalDate effectiveEndDate = endDate;
+        PeriodRange listPeriod = extractListPeriodFromBody(rawFilters);
+        if (listPeriod != null) {
+            effectiveStartDate = listPeriod.start();
+            effectiveEndDate = listPeriod.end();
+        }
         if (hasTextSearchFilters(filtersList)) {
             effectiveStartDate = null;
             effectiveEndDate = null;
@@ -148,22 +157,63 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     }
 
     /**
-     * Body filters only — period range from startDate/endDate query params;
-     * company/group from UserContext (exact JDBC bind, not DocumentSearchService).
+     * Body filters only — list period resolved separately; company/group from UserContext.
      */
-    private List<FilterDto> resolveListFilters(FilterRequestDto request) {
-        List<FilterDto> filters = request != null
-                ? new ArrayList<>(documentService.resolveFilters(request))
-                : new ArrayList<>();
-        filters.removeIf(f -> DELETED_FIELD.equalsIgnoreCase(f.searchField()));
-        filters.removeIf(f -> COMPANY_POID_COL.equalsIgnoreCase(f.searchField()));
-        filters.removeIf(f -> "GROUP_POID".equalsIgnoreCase(f.searchField()));
-        filters.removeIf(f -> "PERIOD_FROM".equalsIgnoreCase(f.searchField())
+    private List<FilterDto> resolveListFilters(List<FilterDto> filters) {
+        List<FilterDto> resolved = new ArrayList<>(filters);
+        resolved.removeIf(f -> DELETED_FIELD.equalsIgnoreCase(f.searchField()));
+        resolved.removeIf(f -> COMPANY_POID_COL.equalsIgnoreCase(f.searchField()));
+        resolved.removeIf(f -> "GROUP_POID".equalsIgnoreCase(f.searchField()));
+        resolved.removeIf(f -> "PERIOD_FROM".equalsIgnoreCase(f.searchField())
                 || "PERIOD_TO".equalsIgnoreCase(f.searchField()));
-        return filters;
+        return resolved;
     }
 
-   
+    /**
+     * LOR period window from request body (UI Period From / Period To).
+     */
+    private PeriodRange extractListPeriodFromBody(List<FilterDto> rawFilters) {
+        LocalDate windowFrom = null;
+        LocalDate windowTo = null;
+        for (FilterDto filter : rawFilters) {
+            if (filter == null || filter.searchField() == null || filter.searchValue() == null) {
+                continue;
+            }
+            String field = filter.searchField().trim().toUpperCase();
+            String value = filter.searchValue().trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                if ("PERIOD_FROM".equals(field)) {
+                    if (value.startsWith("<=") || value.startsWith("<")) {
+                        windowTo = parseFilterDate(value);
+                    } else {
+                        windowFrom = parseFilterDate(value);
+                    }
+                } else if ("PERIOD_TO".equals(field)) {
+                    if (value.startsWith(">=") || value.startsWith(">")) {
+                        windowFrom = parseFilterDate(value);
+                    } else {
+                        windowTo = parseFilterDate(value);
+                    }
+                }
+            } catch (DateTimeParseException ignored) {
+                // skip invalid period filter value
+            }
+        }
+        if (windowFrom != null && windowTo != null) {
+            return new PeriodRange(windowFrom, windowTo);
+        }
+        return null;
+    }
+
+    private static LocalDate parseFilterDate(String value) {
+        return LocalDate.parse(value.replaceFirst("^[<>=]+", "").trim());
+    }
+
+    private record PeriodRange(LocalDate start, LocalDate end) {}
+
     private boolean hasTextSearchFilters(List<FilterDto> filters) {
         if (filters == null) {
             return false;
