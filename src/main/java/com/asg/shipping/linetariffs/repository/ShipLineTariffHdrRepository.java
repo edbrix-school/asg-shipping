@@ -68,5 +68,12 @@ public interface ShipLineTariffHdrRepository extends JpaRepository<ShipLineTarif
 
     @Query("SELECT t FROM ShipLineTariffHdr t WHERE t.linePoid = :linePoid AND t.groupPoid = :groupPoid AND t.deleted = 'N' ORDER BY t.transactionPoid DESC")
     List<ShipLineTariffHdr> findLatestByLinePoidAndGroupPoid(@Param("linePoid") Long linePoid, @Param("groupPoid") Long groupPoid);
+
+    @Query("SELECT t FROM ShipLineTariffHdr t WHERE t.linePoid = :linePoid AND t.groupPoid = :groupPoid "
+            + "AND t.transactionPoid > :sourceTransactionPoid AND t.deleted = 'N' ORDER BY t.transactionPoid DESC")
+    List<ShipLineTariffHdr> findNewerByLinePoidAndGroupPoid(
+            @Param("sourceTransactionPoid") Long sourceTransactionPoid,
+            @Param("linePoid") Long linePoid,
+            @Param("groupPoid") Long groupPoid);
 }
 
