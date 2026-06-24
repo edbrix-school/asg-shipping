@@ -22,7 +22,6 @@ import com.asg.shipping.linetariffs.util.LineTariffMapper;
 import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -128,6 +127,63 @@ class LineTariffsServiceImplTest {
             Map<String, Object> result = service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
 
             assertNotNull(result);
+            verify(lineTariffListRepository).search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_SkipsPeriodRangeWhenGlobalSearchPresent() {
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "OR",
+                "N",
+                List.of(new FilterDto("GLOBALSEARCH", "MAERSK")));
+        Pageable pageable = PageRequest.of(0, 20);
+        LocalDate startDate = LocalDate.of(2026, 3, 20);
+        LocalDate endDate = LocalDate.of(2026, 6, 19);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(lineTariffListRepository.search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable, startDate, endDate);
+
+            verify(lineTariffListRepository).search(
+                    eq(1L),
+                    eq(1L),
+                    isNull(),
+                    isNull(),
+                    eq("N"),
+                    anyList(),
+                    eq(pageable));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_SkipsPeriodRangeWhenDescriptionSearchPresent() {
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "AND",
+                "N",
+                List.of(new FilterDto("DESCRIPTION", "test tariff")));
+        Pageable pageable = PageRequest.of(0, 20);
+        LocalDate startDate = LocalDate.of(2026, 3, 20);
+        LocalDate endDate = LocalDate.of(2026, 6, 19);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(lineTariffListRepository.search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable, startDate, endDate);
+
             verify(lineTariffListRepository).search(eq(1L), eq(1L), isNull(), isNull(), eq("N"), anyList(), eq(pageable));
         }
     }
@@ -288,6 +344,7 @@ class LineTariffsServiceImplTest {
             LineTariffDto result = service.createLineTariff(createDTO, 1L, 2L);
 
             assertNotNull(result);
+            verify(tariffHdrRepository).save(argThat(t -> Long.valueOf(1L).equals(t.getCompanyPoid())));
             verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("100-050"), eq("1"));
             verify(tariffHdrRepository).flush();
         }
@@ -423,8 +480,7 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
-    @Disabled
-    void copyLineTariff_Success_NoDetails() {
+    void copyLineTariff_Success_ViaProcedure() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
@@ -433,6 +489,8 @@ class LineTariffsServiceImplTest {
             source.setTransactionPoid(5L);
             source.setGroupPoid(1L);
             source.setLinePoid(10L);
+            source.setPeriodFrom(LocalDate.of(2026, 1, 1));
+            source.setPeriodTo(LocalDate.of(2026, 12, 31));
 
             ShipLineTariffHdr newHdr = new ShipLineTariffHdr();
             newHdr.setTransactionPoid(99L);
@@ -447,8 +505,8 @@ class LineTariffsServiceImplTest {
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(5L, 1L)).thenReturn(Optional.of(source));
             doNothing().when(tariffHdrRepository).callCopyLineTariff(5L);
-            when(tariffHdrRepository.findById(5L)).thenReturn(Optional.of(source));
-            when(tariffHdrRepository.findLatestByLinePoidAndGroupPoid(10L, 1L)).thenReturn(List.of(newHdr, source));
+            when(tariffHdrRepository.findNewerByLinePoidAndGroupPoid(5L, 10L, 1L)).thenReturn(List.of(newHdr));
+            when(tariffHdrRepository.save(newHdr)).thenReturn(newHdr);
             when(impDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
             when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
             when(expDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
@@ -461,6 +519,65 @@ class LineTariffsServiceImplTest {
             verify(tariffHdrRepository).callCopyLineTariff(5L);
             verify(entityManager).flush();
             verify(entityManager).clear();
+            verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("100-050"), eq("99"));
+        }
+    }
+
+    @Test
+    void copyLineTariff_ProcFails_FallsBackToJava() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
+
+            ShipLineTariffHdr source = new ShipLineTariffHdr();
+            source.setTransactionPoid(5L);
+            source.setGroupPoid(1L);
+            source.setLinePoid(10L);
+            source.setPeriodFrom(LocalDate.of(2026, 1, 1));
+            source.setPeriodTo(LocalDate.of(2026, 12, 31));
+
+            ShipLineTariffHdr savedCopy = new ShipLineTariffHdr();
+            savedCopy.setTransactionPoid(99L);
+            savedCopy.setGroupPoid(1L);
+            savedCopy.setLinePoid(10L);
+
+            CopyTariffRequestDTO request = CopyTariffRequestDTO.builder()
+                    .periodFrom(LocalDate.of(2027, 1, 1))
+                    .periodTo(LocalDate.of(2027, 12, 31))
+                    .description("Copied")
+                    .build();
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(5L, 1L)).thenReturn(Optional.of(source));
+            doThrow(new RuntimeException("ORA-06550: COPY_LINE_TARIFF does not exist"))
+                    .when(tariffHdrRepository).callCopyLineTariff(5L);
+            when(tariffHdrRepository.existsOverlappingPeriod(
+                    eq(10L), eq(1L), eq(1L),
+                    eq(LocalDate.of(2027, 1, 1)), eq(LocalDate.of(2027, 12, 31)), eq(5L)))
+                    .thenReturn(false);
+            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenAnswer(invocation -> {
+                ShipLineTariffHdr arg = invocation.getArgument(0);
+                if (arg.getTransactionPoid() == null) {
+                    return savedCopy;
+                }
+                return arg;
+            });
+            when(tariffHdrRepository.findCompanyCodeByPoid(1L)).thenReturn("ASG");
+            when(tariffHdrRepository.generateDocRef("ASG")).thenReturn("DOC-NEW");
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(5L)).thenReturn(Collections.emptyList());
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(99L)).thenReturn(Collections.emptyList());
+            when(mapper.mapToDto(eq(savedCopy), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
+
+            LineTariffDto result = service.copyLineTariff(5L, request, 1L, 2L);
+
+            assertNotNull(result);
+            verify(loggingService).logChanges(any(), any(), eq(ShipLineTariffHdr.class), eq("100-050"), eq("5"),
+                    eq(LogDetailsEnum.MODIFIED), eq("TRANSACTION_POID"));
             verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.CREATED), eq("100-050"), eq("99"));
         }
     }
@@ -580,7 +697,9 @@ class LineTariffsServiceImplTest {
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
             when(tariffHdrRepository.save(any())).thenReturn(hdr);
             doNothing().when(tariffHdrRepository).flush();
-            // bulk fetch returns both rows for the map
+            when(impDtlRepository.getMaxDetRowId(1L)).thenReturn(3L);
+            when(impDtlRepository.findByTransactionPoidAndDetRowId(1L, 1L)).thenReturn(Optional.of(keepExisting));
+            when(impDtlRepository.findByTransactionPoidAndDetRowId(1L, 3L)).thenReturn(Optional.of(deleteExisting));
             when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
                     .thenReturn(List.of(keepExisting, deleteExisting));
             when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
@@ -590,12 +709,11 @@ class LineTariffsServiceImplTest {
 
             service.updateLineTariff(1L, updateDTO, 1L, 2L);
 
-            // deleteAllInBatch called with the isDeleted row
             verify(impDtlRepository).deleteAllInBatch(argThat(list ->
                     ((List<?>) list).size() == 1));
-            // saveAll called with the keep row
             verify(impDtlRepository).saveAll(argThat(list ->
                     ((List<?>) list).size() == 1));
+            verify(loggingService).createLogBatch(anyList());
         }
     }
 
