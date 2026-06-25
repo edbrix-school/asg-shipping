@@ -124,7 +124,6 @@ public class BookingFormController {
             @Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
         log.info("Delete request for Booking Form with id: {}", id);
         bookingFormService.deleteBookingForm(id, deleteReasonDto);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, UserContext.getDocumentId(), id.toString());
         return success("Booking Form deleted successfully");
     }
 

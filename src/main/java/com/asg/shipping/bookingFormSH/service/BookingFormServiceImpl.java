@@ -949,7 +949,10 @@ public class BookingFormServiceImpl implements BookingFormService {
 
                 case ISDELETED -> {
                     toDelete.add(rowId);
-                    loggingService.logDelete(dto, docId, docKey);
+                    fetchExisting.apply(transactionPoid, rowId).ifPresentOrElse(
+                            entity -> loggingService.logDelete(entity, docId, docKey),
+                            () -> loggingService.logDelete(dto, docId, docKey)
+                    );
                 }
 
                 case NOCHANGES -> {
