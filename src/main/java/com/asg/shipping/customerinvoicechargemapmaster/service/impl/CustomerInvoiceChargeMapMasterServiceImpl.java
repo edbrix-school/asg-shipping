@@ -132,6 +132,14 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
             saveOrUpdateDetail(request.getCustomerPoid(), dto, docId, key);
         }
         log.info("Successfully saved/updated customer invoice charge mapping for customerPoid: {}", request.getCustomerPoid());
+
+        List<CustomerInvoicePrtDtlEntity> remaining = detailRepo.findByIdCustomerPoid(request.getCustomerPoid());
+        if (remaining.isEmpty()) {
+            CustomerInvoiceChargeMapMasterResponse emptyResponse = new CustomerInvoiceChargeMapMasterResponse();
+            emptyResponse.setCustomerPoid(request.getCustomerPoid());
+            emptyResponse.setDetails(List.of());
+            return emptyResponse;
+        }
         return getByCustomer(request.getCustomerPoid(), groupPoid);
 
 }
