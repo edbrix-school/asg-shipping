@@ -166,7 +166,9 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         updateDetailTables(updateDTO, saved);
 
-        callProcShipBlReprintAftSave(saved.getTransactionPoid(), Long.parseLong(saved.getBlNumber()));
+        // Defer the proc call until after commit so the autonomous proc can read the saved rows.
+        eventPublisher.publishEvent(
+                new ManifestCorrectorSaveEvent(saved, Long.parseLong(saved.getBlNumber())));
 
         ManifestCorrectorDto result = mapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
@@ -194,7 +196,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
                 java.time.LocalDate.now()
         );
 
-        entity.setDeleted("Y");
+        //entity.setDeleted("Y");
         hdrRepository.saveAndFlush(entity);
 
         chargeDtlRepository.deleteByTransactionPoid(transactionPoid);

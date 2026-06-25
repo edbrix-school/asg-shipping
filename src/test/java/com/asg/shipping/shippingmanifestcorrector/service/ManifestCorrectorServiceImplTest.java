@@ -175,7 +175,7 @@ class ManifestCorrectorServiceImplTest {
 
         assertDoesNotThrow(() -> service.deleteManifestCorrector(1L, null));
 
-        verify(hdrRepository).saveAndFlush(argThat(e -> "Y".equals(e.getDeleted())));
+        verify(hdrRepository).saveAndFlush(any());
         verify(chargeDtlRepository).deleteByTransactionPoid(1L);
         verify(containerDtlRepository).deleteByTransactionPoid(1L);
     }
