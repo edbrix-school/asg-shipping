@@ -145,13 +145,13 @@ class BookingFormControllerTest {
     /* ---------------- DELETE ---------------- */
 
     @Test
-    void deleteBookingForm_Success_WithLogging() throws Exception {
+    void deleteBookingForm_Success() throws Exception {
         doNothing().when(bookingFormService).deleteBookingForm(eq(1L), any());
 
         mockMvc.perform(delete("/v1/booking-form-sh/1")).andExpect(status().isOk());
 
         verify(bookingFormService).deleteBookingForm(eq(1L), any());
-        verify(loggingService).createLogSummaryEntry(LogDetailsEnum.DELETED, "DOC123", "1");
+        verifyNoInteractions(loggingService);
     }
 
     /* ---------------- COPRAR ---------------- */

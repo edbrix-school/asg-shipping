@@ -3,6 +3,7 @@ package com.asg.shipping.bookingFormSH.entity;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 
 import jakarta.persistence.Column;
@@ -171,6 +172,7 @@ public class ShipMateContainerDtl extends BaseEntity {
 	@Column(name = "ORDER_NUMBER", length = 50)
 	private String orderNumber;
 
+	@AuditIgnore
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
 	private ShipMateHdr shipMateHdr;
