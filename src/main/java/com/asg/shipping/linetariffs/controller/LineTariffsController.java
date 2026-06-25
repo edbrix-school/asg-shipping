@@ -61,8 +61,9 @@ public class LineTariffsController {
     @Operation(
             summary = "Search line tariffs",
             description = "Retrieve paginated line tariffs with optional filtering and sorting. "
-                    + "Use startDate and endDate query params for All Records search (PERIOD_FROM/PERIOD_TO overlap). "
-                    + "Period range is not applied when GLOBALSEARCH or DESCRIPTION filters are used. "
+                    + "LOR: tariffs whose PERIOD_TO falls within the period window "
+                    + "(from body PERIOD_FROM/PERIOD_TO filters or startDate/endDate query params). "
+                    + "Generic search (GLOBALSEARCH/DESCRIPTION) skips period filter. "
                     + "Use isDeleted=Y to view deleted records.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
@@ -91,9 +92,9 @@ public class LineTariffsController {
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction (e.g., 'LINE_POID,asc')", example = "LINE_POID,asc")
             @RequestParam(required = false) String sort,
-            @Parameter(description = "Period range start for All Records search")
+            @Parameter(description = "Period range start (LOR window)")
             @RequestParam(required = false) LocalDate startDate,
-            @Parameter(description = "Period range end for All Records search")
+            @Parameter(description = "Period range end (LOR window)")
             @RequestParam(required = false) LocalDate endDate) {
 
         log.info("Searching line tariffs with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}",
@@ -108,7 +109,8 @@ public class LineTariffsController {
 
         try {
             Pageable pageable = createPageable(page, size, sort);
-            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, startDate, endDate);
+            Map<String, Object> result = lineTariffsService.searchLineTariffs(
+                    DOC_ID, request, pageable, startDate, endDate);
 
             log.info("Successfully retrieved line tariffs");
             return ApiResponse.success("Line tariffs retrieved successfully", result);

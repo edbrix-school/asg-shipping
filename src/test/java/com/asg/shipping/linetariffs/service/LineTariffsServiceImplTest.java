@@ -274,11 +274,11 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
-    void searchLineTariffs_AppliesPeriodOverlapQueryParams() {
+    void searchLineTariffs_LorAppliesPeriodToWithinRange() {
         FilterRequestDto filterRequest = new FilterRequestDto("OR", "N", Collections.emptyList());
         Pageable pageable = PageRequest.of(0, 40);
-        LocalDate startDate = LocalDate.of(2026, 3, 20);
-        LocalDate endDate = LocalDate.of(2026, 6, 19);
+        LocalDate startDate = LocalDate.of(2026, 3, 26);
+        LocalDate endDate = LocalDate.of(2026, 6, 24);
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
@@ -292,6 +292,33 @@ class LineTariffsServiceImplTest {
             service.searchLineTariffs("100-050", filterRequest, pageable, startDate, endDate);
 
             verify(lineTariffListRepository).search(eq(1L), eq(1L), eq(startDate), eq(endDate), eq("N"), anyList(), eq(pageable));
+        }
+    }
+
+    @Test
+    void searchLineTariffs_LorUsesPeriodFromBodyFilters() {
+        LocalDate periodFrom = LocalDate.of(2026, 3, 26);
+        LocalDate periodTo = LocalDate.of(2026, 6, 24);
+        FilterRequestDto filterRequest = new FilterRequestDto(
+                "AND",
+                "N",
+                List.of(
+                        new FilterDto("PERIOD_FROM", periodFrom.toString()),
+                        new FilterDto("PERIOD_TO", periodTo.toString())));
+        Pageable pageable = PageRequest.of(0, 20);
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+
+            when(documentService.resolveIsDeleted(any())).thenReturn("N");
+            when(documentService.resolveFilters(any())).thenReturn(filterRequest.filters());
+            when(lineTariffListRepository.search(eq(1L), eq(1L), eq(periodFrom), eq(periodTo), eq("N"), anyList(), eq(pageable)))
+                    .thenReturn(new LineTariffListRepository.ListSearchResult(Collections.emptyList(), 0L));
+
+            service.searchLineTariffs("100-050", filterRequest, pageable, null, null);
+
+            verify(lineTariffListRepository).search(eq(1L), eq(1L), eq(periodFrom), eq(periodTo), eq("N"), anyList(), eq(pageable));
         }
     }
 
