@@ -23,6 +23,8 @@ import com.asg.shipping.shipcommisiontransfer.entity.ShipBlCommissionHdr;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionDtlRepository;
 import com.asg.shipping.shipcommisiontransfer.repository.ShipBlCommissionHdrRepository;
 import com.asg.shipping.shipcommisiontransfer.util.ShipCommissionTransferMapper;
+import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.common.service.LovService;
 import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
 import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
 import jakarta.persistence.EntityManager;
@@ -69,6 +71,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     private final PdaFdaDtlRepository pdaFdaDtlRepository;
     private final DocumentDeleteService documentDeleteService;
     private final ShipChargeMasterRepository shipChargeMasterRepository;
+    private final LovService lovService;
 
     private static final String TRANSACTION_POID = "transactionPoid";
     private static final String SHIP_COMMISSION_TRANSFER = "Ship Commission Transfer";
@@ -411,7 +414,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
     @Override
     @Transactional
-    public List<Object[]> getCommissionPending( Long voyageTransactionPoid, CommissionPendingRequestDTO request) {
+    public List<CommissionPendingResponseDTO> getCommissionPending(Long voyageTransactionPoid, CommissionPendingRequestDTO request) {
         log.info("Fetching commission pending for voyageTransactionPoid: {}", voyageTransactionPoid);
 
         StoredProcedureQuery query = entityManager
@@ -442,7 +445,43 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
         query.execute();
 
-        return query.getResultList();
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = query.getResultList();
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        return rows.stream().map(row -> {
+            Long blPoid = row[1] != null ? ((Number) row[1]).longValue() : null;
+            LovItem blDet = blPoid != null
+                    ? lovService.getLovItemByPoid(blPoid, "ALLBLNUMBER", groupPoid, companyPoid, userPoid)
+                    : null;
+            com.asg.common.lib.dto.LovGetListDto blLovDto = blDet != null
+                    ? new com.asg.common.lib.dto.LovGetListDto(blDet.getPoid(), blDet.getCode(), blDet.getDescription(), null, blDet.getDescription(), null, null)
+                    : null;
+            return CommissionPendingResponseDTO.builder()
+                    .targetDocInfo(row[0] != null ? row[0].toString() : null)
+                    .blPoid(blPoid)
+                    .blDet(blLovDto)
+                    .currencyCode(row[2] != null ? row[2].toString() : null)
+                    .currencyExchange(row[3] != null ? new BigDecimal(row[3].toString()) : null)
+                    .impExpType(row[4] != null ? row[4].toString() : null)
+                    .quantity20(row[5] != null ? new BigDecimal(row[5].toString()) : null)
+                    .quantity40(row[6] != null ? new BigDecimal(row[6].toString()) : null)
+                    .blStatus(row[7] != null ? row[7].toString() : null)
+                    .sellAmount(row[8] != null ? new BigDecimal(row[8].toString()) : null)
+                    .buyPercharge20(row[9] != null ? new BigDecimal(row[9].toString()) : null)
+                    .buyPercharge40(row[10] != null ? new BigDecimal(row[10].toString()) : null)
+                    .sellAmount20(row[11] != null ? new BigDecimal(row[11].toString()) : null)
+                    .sellAmount40(row[12] != null ? new BigDecimal(row[12].toString()) : null)
+                    .commissionAmt(row[13] != null ? new BigDecimal(row[13].toString()) : null)
+                    .buyPercharge(row[14] != null ? new BigDecimal(row[14].toString()) : null)
+                    .commissionOnAmount(row[15] != null ? new BigDecimal(row[15].toString()) : null)
+                    .thcAmount(row[16] != null ? new BigDecimal(row[16].toString()) : null)
+                    .selected(row[17] != null ? row[17].toString() : null)
+                    .build();
+        }).toList();
     }
 
     @Transactional

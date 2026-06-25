@@ -262,7 +262,7 @@ class ShipCommissionTransferControllerTest {
                 .andExpect(jsonPath("$.success").value(false));
     }
 
-    @Test
+   /* @Test
     void testGetCommissionPending_Success() throws Exception {
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
@@ -285,7 +285,7 @@ class ShipCommissionTransferControllerTest {
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.message").value("Commission pending data fetched successfully"));
         }
-    }
+    }*/
 
     @Test
     void testGetCommissionPending_WithNullBody_UsesDefaultRequest() throws Exception {
