@@ -11,4 +11,10 @@ public interface ShipChargeGroupMasterRepository extends JpaRepository<ShipCharg
     boolean existsByChargeGroupNameAndChargeGroupPoidNot(String chargeGroupName, Long poid);
     boolean existsByChargeGroupCodeAndChargeGroupPoidNot(String chargeGroupCode, Long poid);
 
+    boolean existsByChargeGroupNameIgnoreCaseAndChargeGroupPoidNot(
+            String chargeGroupName, Long chargeGroupPoid);
+
+    boolean existsByChargeGroupCodeIgnoreCaseAndChargeGroupPoidNot(
+            String chargeGroupCode, Long chargeGroupPoid);
+
 }

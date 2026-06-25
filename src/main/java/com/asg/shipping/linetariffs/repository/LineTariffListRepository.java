@@ -77,10 +77,10 @@ public class LineTariffListRepository {
         }
 
         if (startDate != null && endDate != null) {
-            where.append(" AND ").append(col("PERIOD_FROM")).append(" <= ? AND ")
-                    .append(col("PERIOD_TO")).append(" >= ? ");
-            params.add(java.sql.Date.valueOf(endDate));
+            where.append(" AND ").append(col("PERIOD_TO")).append(" >= ? AND ")
+                    .append(col("PERIOD_TO")).append(" <= ? ");
             params.add(java.sql.Date.valueOf(startDate));
+            params.add(java.sql.Date.valueOf(endDate));
         }
 
         appendExtraFilters(extraFilters, where, params);
