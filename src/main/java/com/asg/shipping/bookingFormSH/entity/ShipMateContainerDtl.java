@@ -162,6 +162,15 @@ public class ShipMateContainerDtl extends BaseEntity {
 	@Column(name = "VGM_EDI", length = 1)
 	private String vgmEdi;
 
+	@Column(name = "LOAD_TO_VESSEL", length = 1)
+	private String loadToVessel;
+
+	@Column(name = "COLOR", length = 50)
+	private String color;
+
+	@Column(name = "ORDER_NUMBER", length = 50)
+	private String orderNumber;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
 	private ShipMateHdr shipMateHdr;
