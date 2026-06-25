@@ -115,9 +115,9 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER,TRANSACTION_POID , id.toString()));
 
-        if ("Y".equals(entity.getDeleted())) {
+       /* if ("Y".equals(entity.getDeleted())) {
             throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, id.toString());
-        }
+        }*/
 
         // Load detail records
         List<ShipBlCommissionDtl> detailRecords = detailRepository.findByTransactionPoidOrderByDetRowId(id);

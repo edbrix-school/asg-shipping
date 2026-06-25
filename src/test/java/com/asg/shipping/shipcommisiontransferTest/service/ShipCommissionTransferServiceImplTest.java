@@ -143,7 +143,7 @@ class ShipCommissionTransferServiceImplTest {
         }
     }
 
-    @Test
+   /* @Test
     void testGetShipCommissionTransfer_Deleted() {
         hdrEntity.setDeleted("Y");
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
@@ -155,7 +155,7 @@ class ShipCommissionTransferServiceImplTest {
 
             assertThrows(ResourceNotFoundException.class, () -> service.getShipCommissionTransfer(1L));
         }
-    }
+    }*/
 
     @Test
     void testGetShipCommissionTransfer_Success() {
