@@ -1,5 +1,6 @@
 package com.asg.shipping.shipcommisiontransfer.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -90,6 +91,7 @@ public class ShipBlCommissionDtl extends BaseEntity {
     @Column(name = "SHORT_LEG_SELECTED", length = 25)
     private String shortLegSelected;
 
+    @AuditIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ShipBlCommissionHdr shipBlCommissionHdr;

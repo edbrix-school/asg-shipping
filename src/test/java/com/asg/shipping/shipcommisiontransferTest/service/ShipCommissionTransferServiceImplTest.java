@@ -149,11 +149,19 @@ class ShipCommissionTransferServiceImplTest {
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getDocumentId).thenReturn("DOC-001");
+            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::isLogEnabled).thenReturn(true);
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
                     .thenReturn(Optional.of(hdrEntity));
+            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+            when(mapper.mapToDto(hdrEntity)).thenReturn(dto);
+            when(mapper.mapDtlListToDto(any())).thenReturn(List.of());
 
-            assertThrows(ResourceNotFoundException.class, () -> service.getShipCommissionTransfer(1L));
+            ShipCommissionTransferDto result = service.getShipCommissionTransfer(1L);
+
+            assertNotNull(result);
+            assertEquals(1L, result.getTransactionPoid());
         }
     }
 

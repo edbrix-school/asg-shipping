@@ -60,8 +60,8 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
 
         ShipChargeGroupMaster entity = ShipChargeGroupMaster.builder()
                 .groupPoid(UserContext.getGroupPoid())
-                .chargeGroupCode(request.getChargeGroupCode())
-                .chargeGroupName(request.getChargeGroupName().trim().toUpperCase())
+                .chargeGroupCode(request.getChargeGroupCode().trim())
+                .chargeGroupName(request.getChargeGroupName().trim())
                 .chargeGroupName2(request.getChargeGroupName2())
                 .chargeGlPayable(request.getChargeGlPayable())
                 .chargeGlSale(request.getChargeGlSale())
@@ -89,13 +89,13 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
                 .orElseThrow(() -> new ResourceNotFoundException(CHARGE_GROUP_NOT_FOUND,CHARGE_POID,poid));
 
         //  UNIQUE NAME VALIDATION
-        if (repository.existsByChargeGroupNameAndChargeGroupPoidNot(
+        if (repository.existsByChargeGroupNameIgnoreCaseAndChargeGroupPoidNot(
                 request.getChargeGroupName(), poid)) {
             throw new ValidationException("Charge Group Name already exists");
         }
 
         //  UNIQUE CODE VALIDATION (recommended)
-        if (repository.existsByChargeGroupCodeAndChargeGroupPoidNot(
+        if (repository.existsByChargeGroupCodeIgnoreCaseAndChargeGroupPoidNot(
                 request.getChargeGroupCode(), poid)) {
             throw new ValidationException("Charge Group Code already exists");
         }
@@ -103,8 +103,8 @@ public class ChargeGroupMasterServiceImpl implements ChargeGroupMasterService{
 
         ShipChargeGroupMaster oldChargeMaster = new ShipChargeGroupMaster();
         BeanUtils.copyProperties(entity, oldChargeMaster);
-        entity.setChargeGroupCode(request.getChargeGroupCode());
-        entity.setChargeGroupName(request.getChargeGroupName());
+        entity.setChargeGroupCode(request.getChargeGroupCode().trim());
+        entity.setChargeGroupName(request.getChargeGroupName().trim());
         entity.setGroupPoid(UserContext.getGroupPoid());
         entity.setChargeGroupName2(request.getChargeGroupName2());
         entity.setChargeGlPayable(request.getChargeGlPayable());
