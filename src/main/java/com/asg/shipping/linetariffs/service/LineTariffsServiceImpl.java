@@ -11,6 +11,7 @@ import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
+import com.asg.common.lib.utility.DiffUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.*;
@@ -325,17 +326,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         // Validate
         validateTariffUpdateDTO(dto, id, groupPoid);
 
-        // Create old entity for logging changes
         ShipLineTariffHdr oldTariff = new ShipLineTariffHdr();
-        oldTariff.setDescription(tariff.getDescription());
-        oldTariff.setTransactionDate(tariff.getTransactionDate());
-        oldTariff.setPeriodFrom(tariff.getPeriodFrom());
-        oldTariff.setPeriodTo(tariff.getPeriodTo());
-        oldTariff.setDmgFromSameday(tariff.getDmgFromSameday());
-        oldTariff.setDmgFromNextday(tariff.getDmgFromNextday());
-        oldTariff.setPayableCurrency(tariff.getPayableCurrency());
-        oldTariff.setReceivableCurrency(tariff.getReceivableCurrency());
-        oldTariff.setDocRef(tariff.getDocRef());
+        BeanUtils.copyProperties(tariff, oldTariff);
 
         // Update header entity
         mapper.mapUpdateDTOToEntity(dto, tariff);
@@ -354,7 +346,9 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             throw e;
         }
 
-        loggingService.logChanges(oldTariff, saved, ShipLineTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID_COL);
+        if (hasEntityChanges(oldTariff, saved, ShipLineTariffHdr.class)) {
+            loggingService.logChanges(oldTariff, saved, ShipLineTariffHdr.class, UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID_COL);
+        }
 
         // Update detail records
         updateDetailRecords(id, dto);
@@ -633,9 +627,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     ShipLineTariffImpDtl oldEntity = new ShipLineTariffImpDtl();
                     BeanUtils.copyProperties(existing, oldEntity);
                     mapper.updateImpDtlFromDTO(dto, existing);
-                    toUpdate.add(existing);
-                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffImpDtl.class, docId, docKeyPoid,
-                            String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    if (hasEntityChanges(oldEntity, existing, ShipLineTariffImpDtl.class)) {
+                        toUpdate.add(existing);
+                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffImpDtl.class, docId, docKeyPoid,
+                                String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    }
                 }
                 case ACTION_ISDELETED -> {
                     if (dto.getDetRowId() != null) {
@@ -691,9 +687,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     ShipLineTariffImpPayDtl oldEntity = new ShipLineTariffImpPayDtl();
                     BeanUtils.copyProperties(existing, oldEntity);
                     mapper.updateImpPayDtlFromDTO(dto, existing);
-                    toUpdate.add(existing);
-                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffImpPayDtl.class, docId, docKeyPoid,
-                            String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    if (hasEntityChanges(oldEntity, existing, ShipLineTariffImpPayDtl.class)) {
+                        toUpdate.add(existing);
+                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffImpPayDtl.class, docId, docKeyPoid,
+                                String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    }
                 }
                 case ACTION_ISDELETED -> {
                     if (dto.getDetRowId() != null) {
@@ -749,9 +747,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     ShipLineTariffExpDtl oldEntity = new ShipLineTariffExpDtl();
                     BeanUtils.copyProperties(existing, oldEntity);
                     mapper.updateExpDtlFromDTO(dto, existing);
-                    toUpdate.add(existing);
-                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffExpDtl.class, docId, docKeyPoid,
-                            String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    if (hasEntityChanges(oldEntity, existing, ShipLineTariffExpDtl.class)) {
+                        toUpdate.add(existing);
+                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffExpDtl.class, docId, docKeyPoid,
+                                String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    }
                 }
                 case ACTION_ISDELETED -> {
                     if (dto.getDetRowId() != null) {
@@ -807,9 +807,11 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     ShipLineTariffExpPayDtl oldEntity = new ShipLineTariffExpPayDtl();
                     BeanUtils.copyProperties(existing, oldEntity);
                     mapper.updateExpPayDtlFromDTO(dto, existing);
-                    toUpdate.add(existing);
-                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffExpPayDtl.class, docId, docKeyPoid,
-                            String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    if (hasEntityChanges(oldEntity, existing, ShipLineTariffExpPayDtl.class)) {
+                        toUpdate.add(existing);
+                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipLineTariffExpPayDtl.class, docId, docKeyPoid,
+                                String.format(LOG_KEY_ID_FORMAT, transactionPoid, dto.getDetRowId())));
+                    }
                 }
                 case ACTION_ISDELETED -> {
                     if (dto.getDetRowId() != null) {
@@ -871,6 +873,10 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (logEntries != null) {
             logEntries.forEach(entry -> loggingService.createLogSummaryEntry(docId, docKeyPoid, entry));
         }
+    }
+
+    private <T> boolean hasEntityChanges(T oldEntity, T newEntity, Class<T> entityClass) {
+        return !DiffUtil.createDiffList(oldEntity, newEntity, entityClass).isEmpty();
     }
 
     private void copyDetailRecords(Long sourceTransactionPoid, Long targetTransactionPoid) {

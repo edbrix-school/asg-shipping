@@ -1,5 +1,6 @@
 package com.asg.shipping.linetariffs.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import com.asg.common.lib.utility.DateUtil;
 import jakarta.persistence.*;
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class ShipLineTariffHdr extends BaseEntity {
 
+    @AuditIgnore
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "line_tariff_seq")
@@ -29,6 +31,7 @@ public class ShipLineTariffHdr extends BaseEntity {
     @Column(name = "TRANSACTION_DATE")
     private LocalDate transactionDate;
 
+    @AuditIgnore
     @Column(name = "GROUP_POID")
     private Long groupPoid;
 
@@ -44,6 +47,7 @@ public class ShipLineTariffHdr extends BaseEntity {
     @Column(name = "PERIOD_TO")
     private LocalDate periodTo;
 
+    @AuditIgnore
     @Column(name = "DELETED", length = 1)
     private String deleted;
 
@@ -86,6 +90,7 @@ public class ShipLineTariffHdr extends BaseEntity {
     @Column(name = "DOC_REF", length = 25, unique = true)
     private String docRef;
 
+    @AuditIgnore
     @Column(name = "COMPANY_POID")
     private Long companyPoid;
 
