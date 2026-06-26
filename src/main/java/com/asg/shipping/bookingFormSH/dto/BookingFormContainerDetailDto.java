@@ -68,7 +68,7 @@ public class BookingFormContainerDetailDto {
     private String vgmDocId;
     private LocalDate vgmDate;
     private String vgmEdi;
-    private String loadToVessel;
+    private java.time.LocalDate loadToVessel;
     private String color;
     private String orderNumber;
 }
