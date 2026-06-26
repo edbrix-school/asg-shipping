@@ -2,11 +2,7 @@ package com.asg.shipping.shipcommisiontransferTest.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.shipcommisiontransfer.controller.ShipCommissionTransferController;
-import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
-import com.asg.shipping.shipcommisiontransfer.dto.CommissionPendingRequestDTO;
-import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
-import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
-import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferUpdateDTO;
+import com.asg.shipping.shipcommisiontransfer.dto.*;
 import com.asg.shipping.shipcommisiontransfer.service.ShipCommissionTransferService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -262,7 +258,7 @@ class ShipCommissionTransferControllerTest {
                 .andExpect(jsonPath("$.success").value(false));
     }
 
-   /* @Test
+    @Test
     void testGetCommissionPending_Success() throws Exception {
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
@@ -273,7 +269,10 @@ class ShipCommissionTransferControllerTest {
             request.setFrtBuyActual(200.0);
             request.setShortLegSelected("Y");
 
-            List<Object[]> mockResult = List.of(new Object[]{"BL-001", 1000.0}, new Object[]{"BL-002", 2000.0});
+            List<CommissionPendingResponseDTO> mockResult = List.of(
+                    CommissionPendingResponseDTO.builder().blPoid(1000L).currencyCode("BHD").build(),
+                    CommissionPendingResponseDTO.builder().blPoid(2000L).currencyCode("USD").build()
+            );
 
             when(commissionTransferService.getCommissionPending( eq(100L), any(CommissionPendingRequestDTO.class)))
                     .thenReturn(mockResult);
@@ -285,7 +284,7 @@ class ShipCommissionTransferControllerTest {
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.message").value("Commission pending data fetched successfully"));
         }
-    }*/
+    }
 
     @Test
     void testGetCommissionPending_WithNullBody_UsesDefaultRequest() throws Exception {
