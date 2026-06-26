@@ -1,5 +1,6 @@
 package com.asg.shipping.linetariffs.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -17,10 +18,12 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class ShipLineTariffImpDtl extends BaseEntity {
 
+    @AuditIgnore
     @Id
     @Column(name = "TRANSACTION_POID", nullable = false)
     private Long transactionPoid;
 
+    @AuditIgnore
     @Id
     @Column(name = "DET_ROW_ID", nullable = false)
     private Long detRowId;
@@ -73,6 +76,7 @@ public class ShipLineTariffImpDtl extends BaseEntity {
     @Column(name = "SLAB7_RATE")
     private BigDecimal slab7Rate;
 
+    @AuditIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
     private ShipLineTariffHdr tariffHdr;

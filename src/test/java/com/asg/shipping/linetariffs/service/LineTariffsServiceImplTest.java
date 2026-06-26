@@ -417,7 +417,15 @@ class LineTariffsServiceImplTest {
 
             when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
+            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenAnswer(inv -> inv.getArgument(0));
+            doAnswer(invocation -> {
+                LineTariffUpdateDTO update = invocation.getArgument(0);
+                ShipLineTariffHdr entity = invocation.getArgument(1);
+                if (update.getDescription() != null) {
+                    entity.setDescription(update.getDescription());
+                }
+                return null;
+            }).when(mapper).mapUpdateDTOToEntity(any(LineTariffUpdateDTO.class), any(ShipLineTariffHdr.class));
             doNothing().when(tariffHdrRepository).flush();
 
             when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
@@ -727,6 +735,13 @@ class LineTariffsServiceImplTest {
             when(impDtlRepository.getMaxDetRowId(1L)).thenReturn(3L);
             when(impDtlRepository.findByTransactionPoidAndDetRowId(1L, 1L)).thenReturn(Optional.of(keepExisting));
             when(impDtlRepository.findByTransactionPoidAndDetRowId(1L, 3L)).thenReturn(Optional.of(deleteExisting));
+            doAnswer(invocation -> {
+                TariffDetailUpdateDTO detailDto = invocation.getArgument(0);
+                ShipLineTariffImpDtl entity = invocation.getArgument(1);
+                entity.setContainerTypePoid(detailDto.getContainerTypePoid());
+                entity.setFreeDays(detailDto.getFreeDays());
+                return null;
+            }).when(mapper).updateImpDtlFromDTO(any(TariffDetailUpdateDTO.class), any(ShipLineTariffImpDtl.class));
             when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
                     .thenReturn(List.of(keepExisting, deleteExisting));
             when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());

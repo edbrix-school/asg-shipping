@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -19,6 +20,8 @@ public class ImportManifestUpdateOpsDto {
 
     private Long transactionPoid;
     private String docRef;
+    private LocalDate transactionDate;
+    private String ffJobNoHold;
     private Long voyageTransactionPoid;
     private LovItem voyageTransactionPoidDet;
     private String blNumber;
