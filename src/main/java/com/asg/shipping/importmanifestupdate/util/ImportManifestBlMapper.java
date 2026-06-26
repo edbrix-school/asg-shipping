@@ -51,7 +51,8 @@ public class ImportManifestBlMapper {
                 .consigneeDet(requestDto.getConsigneeDet())
                 .bookingPartyPoid(requestDto.getBookingPartyPoid())
                 .bookingPartyDet(requestDto.getBookingPartyDet())
-                
+                .transactionDate(requestDto.getTransactionDate())
+                .ffJobNoHold(requestDto.getFfJobNoHold())
                 .preCarriedBy(requestDto.getPreCarriedBy())
                 .placeOfReceiptPoid(requestDto.getPlaceOfRecieptPoid())
                 .placeOfReceiptDet(requestDto.getPlaceOfRecieptDet())
