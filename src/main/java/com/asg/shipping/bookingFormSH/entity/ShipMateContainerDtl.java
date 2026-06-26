@@ -163,8 +163,8 @@ public class ShipMateContainerDtl extends BaseEntity {
 	@Column(name = "VGM_EDI", length = 1)
 	private String vgmEdi;
 
-	@Column(name = "LOAD_TO_VESSEL", length = 1)
-	private String loadToVessel;
+	@Column(name = "LOAD_TO_VESSEL")
+	private java.time.LocalDate loadToVessel;
 
 	@Column(name = "COLOR", length = 50)
 	private String color;
