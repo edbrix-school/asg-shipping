@@ -8,6 +8,7 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.shipcommisiontransfer.dto.CommissionPendingRequestDTO;
+import com.asg.shipping.shipcommisiontransfer.dto.CommissionPendingResponseDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.CalculateCommissionRequestDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferCreateDTO;
 import com.asg.shipping.shipcommisiontransfer.dto.ShipCommissionTransferDto;
@@ -214,7 +215,7 @@ public class ShipCommissionTransferController {
         try {
 
             if (request == null) request = new CommissionPendingRequestDTO();
-            List<Object[]> result = commissionTransferService.getCommissionPending(voyageTransactionPoid, request);
+            List<CommissionPendingResponseDTO> result = commissionTransferService.getCommissionPending(voyageTransactionPoid, request);
             return success("Commission pending data fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Error: " + e.getMessage());
