@@ -1107,19 +1107,31 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional(timeout = 120)
-    public void loadContainerTypes(Long transactionPoid, String type) {
+    public LoadContainerTypesResponseDto loadContainerTypes(Long transactionPoid, String type) {
         log.info("Loading container types for transactionPoid: {}, type: {}", transactionPoid, type);
 
         ShipLineTariffHdr hdr = tariffHdrRepository.findById(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, transactionPoid.toString()));
 
-        if ("IMP".equalsIgnoreCase(type)) {
+        String normalizedType = type != null ? type.trim().toUpperCase() : "";
+        if ("IMP".equals(normalizedType)) {
             impDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
-            impPayDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
-        } else {
+        } else if ("EXP".equals(normalizedType)) {
             expDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
-            expPayDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
+        } else {
+            throw new ValidationException("Invalid type. Use IMP for Import Demurrage or EXP for Export Detention.");
         }
+
+        LineTariffDto tariff = getLineTariff(transactionPoid);
+        List<TariffDetailDto> containerTypes = "IMP".equals(normalizedType)
+                ? tariff.getImportDemurrageCollectable()
+                : tariff.getExportDetentionCollectable();
+
+        return LoadContainerTypesResponseDto.builder()
+                .transactionPoid(transactionPoid)
+                .type(normalizedType)
+                .containerTypes(containerTypes != null ? containerTypes : List.of())
+                .build();
     }
 
     private Map<Long, ShipContainerTypeMaster> buildContainerTypeMap(

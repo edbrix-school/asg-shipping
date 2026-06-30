@@ -10,6 +10,7 @@ import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
+import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
@@ -378,8 +379,8 @@ public class LineTariffsController {
             @RequestParam String type) {
         log.info("Loading container types for id: {}, type: {}", id, type);
         try {
-            lineTariffsService.loadContainerTypes(id, type);
-            return ApiResponse.success("Container types loaded successfully");
+            LoadContainerTypesResponseDto result = lineTariffsService.loadContainerTypes(id, type);
+            return ApiResponse.success("Container types loaded successfully", result);
         } catch (ResourceNotFoundException e) {
             return ApiResponse.notFound(e.getMessage());
         } catch (Exception e) {

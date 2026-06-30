@@ -4,6 +4,7 @@ import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
+import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -93,7 +94,7 @@ public interface LineTariffsService {
      * @param type            "IMP" for Import Demurrage, "EXP" for Export Detention
      * @return Updated LineTariffDto
      */
-    void loadContainerTypes(Long transactionPoid, String type);
+    LoadContainerTypesResponseDto loadContainerTypes(Long transactionPoid, String type);
 
     /**
      * Generate Notice to Trade PDF for line demurrage tariff revision.
