@@ -15,7 +15,13 @@ import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.linetariffs.dto.*;
+import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
+import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
+import com.asg.shipping.linetariffs.dto.LineTariffDto;
+import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
+import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
+import com.asg.shipping.linetariffs.dto.TariffDetailDto;
+import com.asg.shipping.linetariffs.dto.TariffDetailUpdateDTO;
 import com.asg.shipping.linetariffs.entity.*;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
@@ -760,27 +766,52 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
-    void loadContainerTypes_IMP_InsertsIntoCollectableAndPayable() {
-        when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+    void loadContainerTypes_IMP_InsertsIntoCollectableOnly() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-        service.loadContainerTypes(1L, "IMP");
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
 
-        verify(impDtlRepository).bulkInsertFromLine(1L, 10L);
-        verify(impPayDtlRepository).bulkInsertFromLine(1L, 10L);
-        verify(expDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
-        verify(expPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+            LoadContainerTypesResponseDto result = service.loadContainerTypes(1L, "IMP");
+
+            assertNotNull(result);
+            assertEquals("IMP", result.getType());
+            assertEquals(1L, result.getTransactionPoid());
+            verify(impDtlRepository).bulkInsertFromLine(1L, 10L);
+            verify(impPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+            verify(expDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+            verify(expPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+        }
     }
 
     @Test
-    void loadContainerTypes_EXP_InsertsIntoCollectableAndPayable() {
-        when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+    void loadContainerTypes_EXP_InsertsIntoCollectableOnly() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-        service.loadContainerTypes(1L, "EXP");
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
 
-        verify(expDtlRepository).bulkInsertFromLine(1L, 10L);
-        verify(expPayDtlRepository).bulkInsertFromLine(1L, 10L);
-        verify(impDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
-        verify(impPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+            LoadContainerTypesResponseDto result = service.loadContainerTypes(1L, "EXP");
+
+            assertNotNull(result);
+            assertEquals("EXP", result.getType());
+            verify(expDtlRepository).bulkInsertFromLine(1L, 10L);
+            verify(expPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+            verify(impDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+            verify(impPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
+        }
     }
 
     @Test

@@ -9,6 +9,8 @@ import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
+import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
+import com.asg.shipping.linetariffs.dto.TariffDetailDto;
 import com.asg.shipping.linetariffs.service.LineTariffsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -301,34 +303,41 @@ class LineTariffsControllerTest {
 
     @Test
     void loadContainerTypes_IMP_Success() {
-        doNothing().when(lineTariffsService).loadContainerTypes(1L, "IMP");
+        LoadContainerTypesResponseDto response = LoadContainerTypesResponseDto.builder()
+                .transactionPoid(1L)
+                .type("IMP")
+                .containerTypes(List.of(TariffDetailDto.builder().detRowId(1L).build()))
+                .build();
+        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(response);
 
-        ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
+        ResponseEntity<?> apiResponse = controller.loadContainerTypes(1L, "IMP");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(apiResponse);
+        assertEquals(200, apiResponse.getStatusCode().value());
         verify(lineTariffsService).loadContainerTypes(1L, "IMP");
     }
 
     @Test
     void loadContainerTypes_EXP_Success() {
-        doNothing().when(lineTariffsService).loadContainerTypes(1L, "EXP");
+        when(lineTariffsService.loadContainerTypes(1L, "EXP")).thenReturn(
+                LoadContainerTypesResponseDto.builder().transactionPoid(1L).type("EXP").containerTypes(List.of()).build());
 
-        ResponseEntity<?> response = controller.loadContainerTypes(1L, "EXP");
+        ResponseEntity<?> apiResponse = controller.loadContainerTypes(1L, "EXP");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(apiResponse);
+        assertEquals(200, apiResponse.getStatusCode().value());
         verify(lineTariffsService).loadContainerTypes(1L, "EXP");
     }
 
     @Test
     void loadContainerTypes_ReturnsEmptyList_WhenAllUsed() {
-        doNothing().when(lineTariffsService).loadContainerTypes(1L, "IMP");
+        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(
+                LoadContainerTypesResponseDto.builder().transactionPoid(1L).type("IMP").containerTypes(List.of()).build());
 
-        ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
+        ResponseEntity<?> apiResponse = controller.loadContainerTypes(1L, "IMP");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(apiResponse);
+        assertEquals(200, apiResponse.getStatusCode().value());
     }
 
     @Test
