@@ -47,10 +47,8 @@ public interface ShipLineTariffImpPayDtlRepository extends JpaRepository<ShipLin
                    CONTAINER_TYPE_POID
             FROM SHIP_LINE_MASTER_TYPE_DTL
             WHERE LINE_POID = :linePoid
-              AND CONTAINER_TYPE_POID IS NOT NULL
-              AND (VALID_UNTIL IS NULL OR VALID_UNTIL >= SYSDATE)
-              AND CONTAINER_TYPE_POID NOT IN (
-                  SELECT COALESCE(CONTAINER_TYPE_POID, 0) FROM SHIP_LINE_TARIFF_IMP_DTL WHERE TRANSACTION_POID = :transactionPoid
+              AND NVL(CONTAINER_TYPE_POID, 0) NOT IN (
+                  SELECT NVL(CONTAINER_TYPE_POID, 0) FROM SHIP_LINE_TARIFF_IMP_PAY_DTL WHERE TRANSACTION_POID = :transactionPoid
               )
             """, nativeQuery = true)
     void bulkInsertFromLine(@Param("transactionPoid") Long transactionPoid, @Param("linePoid") Long linePoid);
