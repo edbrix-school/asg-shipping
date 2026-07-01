@@ -38,6 +38,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -1114,24 +1115,69 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                 .orElseThrow(() -> new ResourceNotFoundException(LINE_TARIFF, TRANSACTION_POID, transactionPoid.toString()));
 
         String normalizedType = type != null ? type.trim().toUpperCase() : "";
+        Set<Long> existingContainerTypePoids;
         if ("IMP".equals(normalizedType)) {
+            existingContainerTypePoids = collectImpContainerTypePoids(transactionPoid);
             impDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
         } else if ("EXP".equals(normalizedType)) {
+            existingContainerTypePoids = collectExpContainerTypePoids(transactionPoid);
             expDtlRepository.bulkInsertFromLine(transactionPoid, hdr.getLinePoid());
         } else {
             throw new ValidationException("Invalid type. Use IMP for Import Demurrage or EXP for Export Detention.");
         }
 
-        LineTariffDto tariff = getLineTariff(transactionPoid);
-        List<TariffDetailDto> containerTypes = "IMP".equals(normalizedType)
-                ? tariff.getImportDemurrageCollectable()
-                : tariff.getExportDetentionCollectable();
+        List<TariffDetailDto> containerTypes = mapNewlyLoadedContainerTypes(
+                transactionPoid, normalizedType, existingContainerTypePoids);
 
         return LoadContainerTypesResponseDto.builder()
                 .transactionPoid(transactionPoid)
                 .type(normalizedType)
-                .containerTypes(containerTypes != null ? containerTypes : List.of())
+                .containerTypes(containerTypes)
                 .build();
+    }
+
+    private Set<Long> collectImpContainerTypePoids(Long transactionPoid) {
+        return impDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid).stream()
+                .map(ShipLineTariffImpDtl::getContainerTypePoid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    private Set<Long> collectExpContainerTypePoids(Long transactionPoid) {
+        return expDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid).stream()
+                .map(ShipLineTariffExpDtl::getContainerTypePoid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    
+    private List<TariffDetailDto> mapNewlyLoadedContainerTypes(
+            Long transactionPoid, String type, Set<Long> existingContainerTypePoids) {
+        if ("IMP".equals(type)) {
+            List<ShipLineTariffImpDtl> newlyLoaded = impDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid).stream()
+                    .filter(d -> d.getContainerTypePoid() != null && !existingContainerTypePoids.contains(d.getContainerTypePoid()))
+                    .toList();
+            if (newlyLoaded.isEmpty()) {
+                return List.of();
+            }
+            Map<Long, ShipContainerTypeMaster> containerTypeMap =
+                    buildContainerTypeMap(newlyLoaded, List.of(), List.of(), List.of());
+            return newlyLoaded.stream()
+                    .map(d -> mapper.mapImpDtlToDto(d, containerTypeMap))
+                    .toList();
+        }
+
+        List<ShipLineTariffExpDtl> newlyLoaded = expDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid).stream()
+                .filter(d -> d.getContainerTypePoid() != null && !existingContainerTypePoids.contains(d.getContainerTypePoid()))
+                .toList();
+        if (newlyLoaded.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, ShipContainerTypeMaster> containerTypeMap =
+                buildContainerTypeMap(List.of(), List.of(), newlyLoaded, List.of());
+        return newlyLoaded.stream()
+                .map(d -> mapper.mapExpDtlToDto(d, containerTypeMap))
+                .toList();
     }
 
     private Map<Long, ShipContainerTypeMaster> buildContainerTypeMap(

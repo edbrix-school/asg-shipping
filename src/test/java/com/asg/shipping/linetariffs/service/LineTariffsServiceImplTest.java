@@ -770,19 +770,31 @@ class LineTariffsServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
+            ShipLineTariffImpDtl existing = new ShipLineTariffImpDtl();
+            existing.setTransactionPoid(1L);
+            existing.setDetRowId(1L);
+            existing.setContainerTypePoid(100L);
+
+            ShipLineTariffImpDtl newlyLoaded = new ShipLineTariffImpDtl();
+            newlyLoaded.setTransactionPoid(1L);
+            newlyLoaded.setDetRowId(2L);
+            newlyLoaded.setContainerTypePoid(200L);
+
+            TariffDetailDto newDto = TariffDetailDto.builder().detRowId(2L).containerTypePoid(200L).build();
+
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
-            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
+                    .thenReturn(List.of(existing))
+                    .thenReturn(List.of(existing, newlyLoaded));
+            when(mapper.mapImpDtlToDto(eq(newlyLoaded), anyMap())).thenReturn(newDto);
 
             LoadContainerTypesResponseDto result = service.loadContainerTypes(1L, "IMP");
 
             assertNotNull(result);
             assertEquals("IMP", result.getType());
             assertEquals(1L, result.getTransactionPoid());
+            assertEquals(1, result.getContainerTypes().size());
+            assertEquals(200L, result.getContainerTypes().get(0).getContainerTypePoid());
             verify(impDtlRepository).bulkInsertFromLine(1L, 10L);
             verify(impPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
             verify(expDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
@@ -795,23 +807,53 @@ class LineTariffsServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
+            ShipLineTariffExpDtl existing = new ShipLineTariffExpDtl();
+            existing.setTransactionPoid(1L);
+            existing.setDetRowId(1L);
+            existing.setContainerTypePoid(100L);
+
+            ShipLineTariffExpDtl newlyLoaded = new ShipLineTariffExpDtl();
+            newlyLoaded.setTransactionPoid(1L);
+            newlyLoaded.setDetRowId(2L);
+            newlyLoaded.setContainerTypePoid(200L);
+
+            TariffDetailDto newDto = TariffDetailDto.builder().detRowId(2L).containerTypePoid(200L).build();
+
             when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
-            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
-            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
+                    .thenReturn(List.of(existing))
+                    .thenReturn(List.of(existing, newlyLoaded));
+            when(mapper.mapExpDtlToDto(eq(newlyLoaded), anyMap())).thenReturn(newDto);
 
             LoadContainerTypesResponseDto result = service.loadContainerTypes(1L, "EXP");
 
             assertNotNull(result);
             assertEquals("EXP", result.getType());
+            assertEquals(1, result.getContainerTypes().size());
+            assertEquals(200L, result.getContainerTypes().get(0).getContainerTypePoid());
             verify(expDtlRepository).bulkInsertFromLine(1L, 10L);
             verify(expPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
             verify(impDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
             verify(impPayDtlRepository, never()).bulkInsertFromLine(anyLong(), anyLong());
         }
+    }
+
+    @Test
+    void loadContainerTypes_ReturnsEmptyList_WhenAllAlreadyLoaded() {
+        ShipLineTariffImpDtl existing = new ShipLineTariffImpDtl();
+        existing.setTransactionPoid(1L);
+        existing.setDetRowId(1L);
+        existing.setContainerTypePoid(100L);
+
+        when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+        when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L))
+                .thenReturn(List.of(existing))
+                .thenReturn(List.of(existing));
+
+        LoadContainerTypesResponseDto result = service.loadContainerTypes(1L, "IMP");
+
+        assertTrue(result.getContainerTypes().isEmpty());
+        verify(impDtlRepository).bulkInsertFromLine(1L, 10L);
     }
 
     @Test
