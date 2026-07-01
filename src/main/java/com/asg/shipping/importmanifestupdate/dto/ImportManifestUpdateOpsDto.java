@@ -31,6 +31,8 @@ public class ImportManifestUpdateOpsDto {
     private LovItem blIssueTypeDet;
     private String cargoType;
     private LovItem cargoTypeDet;
+    private Long documentCompanyPoid;
+    private Long documentCompanyDivisionPoid;
     private Long noOfOrgnlBls;
     private String typeOfMove;
     private Long demFreeDays;
