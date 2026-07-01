@@ -62,7 +62,8 @@ public class ImportManifestBlMapper {
                 .portOfLoadingDet(requestDto.getPortOfLoadingDet())
                 .portOfDischargePoid(requestDto.getPortOfDischargePoid())
                 .portOfDischargeDet(requestDto.getPortOfDischargeDet())
-                
+                .documentCompanyPoid(requestDto.getDocumentCompanyPoid())
+                .documentCompanyDivisionPoid(requestDto.getDocumentCompanyDivisionPoid())
                 .comodityPoid(requestDto.getComodityPoid())
                 .comodityDet(requestDto.getComodityDet())
                 .totalNetVolume(requestDto.getTotalNetVolume())
@@ -156,7 +157,8 @@ public class ImportManifestBlMapper {
                 .freightStatus(screenDto.getFreightStatus())
                 .cargoType(screenDto.getCargoType())
                 .blType(screenDto.getBlType())
-                
+                . documentCompanyPoid(screenDto.getDocumentCompanyPoid())
+                .documentCompanyDivisionPoid(screenDto.getDocumentCompanyDivisionPoid())
                 .notifyParties(screenDto.getAddressDetails())
                 .generalCargoDetails(screenDto.getGeneralCargoDetails())
                 .simpleCargoDescription(screenDto.getSimpleCargoDescription())
