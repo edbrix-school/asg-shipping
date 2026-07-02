@@ -94,12 +94,12 @@ public class DeliveryOrderIssueToCustomerController {
 
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @AllowedAction(UserRolesRightsEnum.EDIT)
     @PostMapping("/validate-document/{id}")
     public ResponseEntity<?> validateDocument(@PathVariable Long id, @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto) {
         ValidateDocumentDto dto = deliveryOrderIssueToCustomerService.validateDocument(id, requestDto);
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
-        return success("Delivery order retrieved successfully", dto);
+        return success("Delivery order validated successfully", dto);
     }
 
 
