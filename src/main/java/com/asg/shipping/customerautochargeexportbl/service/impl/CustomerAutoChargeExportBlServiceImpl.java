@@ -156,11 +156,11 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
 
         var periodFrom = updateDTO.getPeriodFrom() != null
                 ? updateDTO.getPeriodFrom()
-                : mapper.toLocalDate(existingEntity.getPeriodFrom());
+                : existingEntity.getPeriodFrom();
 
         var periodTo = updateDTO.getPeriodTo() != null
                 ? updateDTO.getPeriodTo()
-                : mapper.toLocalDate(existingEntity.getPeriodTo());
+                : existingEntity.getPeriodTo();
         validatePeriodDates(periodFrom, periodTo);
 
         mapper.mapUpdateDTOToEntity(updateDTO, existingEntity);
