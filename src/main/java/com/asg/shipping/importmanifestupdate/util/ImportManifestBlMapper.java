@@ -72,7 +72,8 @@ public class ImportManifestBlMapper {
                 .weightUnit(requestDto.getWeightUnit())
                 .unitPack(requestDto.getUnitPack())
                 .totalNoOfPacks(requestDto.getTotalNoOfPacks())
-                
+                .quotationTransactionPoid(requestDto.getQuotationTransactionPoid())
+                .quotationTransactionDet(requestDto.getQuotationTransactionDet())
                 .notify1EdiName(requestDto.getNotify1EdiName())
                 .notify1EdiAddress(requestDto.getNotify1EdiAddress())
                 .notifyPoid1(requestDto.getNotifyPoid1())
