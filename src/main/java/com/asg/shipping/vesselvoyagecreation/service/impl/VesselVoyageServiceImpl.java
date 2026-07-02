@@ -528,6 +528,9 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     @Override
     @Transactional
     public String transferTranshipments(Long voyagePoid, TranshipmentTransferRequest request) {
+        if (request.getDetRowIds() == null || request.getDetRowIds().isEmpty()) {
+            return "No rows selected for transfer.";
+        }
         List<ShipVoyageTranshipDtlEntity> rows = transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
         Set<Long> ids = new HashSet<>(request.getDetRowIds());
         int updated = 0;
