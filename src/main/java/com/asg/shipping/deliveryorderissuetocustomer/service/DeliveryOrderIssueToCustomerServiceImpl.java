@@ -87,51 +87,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
-        // Validate Principal DO Number
-        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired()) && StringUtils.isBlank(request.getPrincipalDoNumber()) || request.getPrincipalDoNumber().trim().length() <= 3) {
-            throw new ValidationException("Principal Do number can not be blank");
-        }
-
-        // Validate Address
-        if (StringUtils.isBlank(request.getDoReleasedAddressPerson())) {
-            throw new ValidationException("Address can not be blank");
-        }
-
-        // Validate ID/CPR
-        if (StringUtils.isBlank(request.getDoReleasedIdPerson())) {
-            throw new ValidationException("ID/CPR can not be blank");
-        }
-
-        // Validate Name
-        if (StringUtils.isBlank(request.getDoReleasedToPerson())) {
-            throw new ValidationException("Name can not be blank");
-        }
-
-        // Validate DO Priority
-        if (StringUtils.isBlank(request.getDoPriority())) {
-            throw new ValidationException("Do Issue TO, can not be blank");
-        }
-
-        // Validate Original BL Release CR
-        if (StringUtils.isBlank(request.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Bl issue type can not be blank");
-        }
-
-        // Validate BL Release Type Office matches Original BL Release CR
-        if (StringUtils.isBlank(dto.getBlReleaseTypeOffice())) {
-            throw new ValidationException("Office Bl issue type can not be blank");
-        }
-        if (!dto.getBlReleaseTypeOffice().equalsIgnoreCase(request.getOriginalBlReleaseCr())) {
-            throw new ValidationException("Check Bl issue type");
-        }
-
-        // Validate Delivery Sent To
-        if (StringUtils.isBlank(request.getDeliverySentTo())) {
-            throw new ValidationException("Select delivery send to from dropdown list");
-        }
-
-        // Validate Email Configuration
-        validateEmailConfiguration(request);
+        validateAllFields(transactionPoid, dto, request);
 
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", TRANSACTIONPOID, transactionPoid.toString()));
@@ -140,19 +96,13 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             throw new ResourceNotFoundException("BL Manifest", TRANSACTIONPOID, transactionPoid.toString());
         }
 
-        blManifestRepository.save(blManifest);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
-
-        // Call PROC_SHIP_DO_CNT_PRINT_AFTER with 18 parameters
-        // In legacy, this is called before printing. NOT_UPDATE is called AFTER printing all documents.
-        // In new architecture, printing is handled separately via print endpoints, so NOT_UPDATE
-        // will be called in the print endpoint after each document is printed.
         callProcShipDoCntPrintAfter(groupPoid, companyPoid, transactionPoid, null,
                 ARSHRCPTPRINTUPDATE, username, request.getDoReleasedIdPerson(),
                 request.getDoReleasedToPerson(), request.getDoReleasedAddressPerson(),
                 request.getOriginalBlReleaseCr(), request.getDoPriority(), request.getDoCntToConsignee(),
                 request.getDoCntToNotify(), request.getDoCntToOthers(), request.getDoCntToOthersMails(),
                 request.getEmailsDo(), request.getDeliverySentTo(), request.getPrincipalDoNumber());
+        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
     }
 
     @Override
@@ -220,26 +170,30 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
 
-        // In legacy, print methods only check if document can be printed and print it.
-        // All field validations are done once in doCntPrint() before printing.
-        // Here we only validate print conditions, not field values.
+        log.info("[PRINT] Starting print for transactionPoid={}, buttonType={}, groupPoid={}, companyPoid={}, username={}",
+                transactionPoid, buttonType, groupPoid, companyPoid, username);
+
+        DoShPrintingDtl dtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
+                .orElseThrow(() -> new ValidationException("Document must be validated before printing"));
+        log.info("[PRINT] DoShPrintingDtl found: idPerson={}, toPerson={}, addrsPerson={}, blReleaseCr={}",
+                dtl.getDoReleasedIdPerson(), dtl.getDoReleasedToPerson(), dtl.getDoReleasedAddrsPerson(), dtl.getOrignalBlReleaseCr());
 
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-414");
         params.put("P_TRAN_NO", transactionPoid);
+        log.info("[PRINT] Params built, keys={}", params.keySet());
 
         byte[] result = generatePrintByButtonType(transactionPoid, buttonType, params);
-        
-        // Only call the stored procedure if a PDF was actually generated
+        log.info("[PRINT] generatePrintByButtonType completed, resultSize={} bytes", result != null ? result.length : 0);
+
         if (result != null && result.length > 0) {
-            callProcShipDoCntPrintAfterNotUpdate(groupPoid, companyPoid, transactionPoid, null, buttonType.name(),
-                    username, requestDto.getDoReleasedIdPerson(), requestDto.getDoReleasedToPerson(),
-                    requestDto.getDoReleasedAddressPerson(), requestDto.getOriginalBlReleaseCr()
-            );
+            callProcShipDoCntPrintAfter(groupPoid, companyPoid, transactionPoid, null, buttonType.name(),
+                    username, dtl.getDoReleasedIdPerson(), dtl.getDoReleasedToPerson(),
+                    dtl.getDoReleasedAddrsPerson(), dtl.getOrignalBlReleaseCr(),
+                    null, null, null, null, null, null, null, null);
             return result;
         }
 
-        // Return an empty PDF (0 bytes) if validations failed or no data found
-        return new byte[0];
+        return new byte[0]; // unreachable — generate methods now throw instead of returning null
     }
 
     @Override
@@ -249,8 +203,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         Long companyPoid = getCompanyPoid();
         String username = getUserName();
 
-        // Validate Email Configuration
-        validateEmailConfiguration(requestDto);
+        validateAllFields(id, null, requestDto);
 
         callProcShipDoCntPrintAfter(
                 groupPoid, companyPoid, id, null,
@@ -287,65 +240,136 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     private byte[] generateDeliveryOrderPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
         if (!validatePrintDocument(transactionPoid, "DO")) {
-            return null;
+            throw new ValidationException("Delivery order print is not enabled for this shipping line");
         }
         JasperReport mainReport = printService.load("Shipping/SH/DO_SH.jrxml");
         return printService.fillReportToPdf(mainReport, params, dataSource);
     }
 
     private byte[] generateContainerFormPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
-        if (!validatePrintDocument(transactionPoid, "DLVCNT")) {
-            return null;
+        log.info("[CONTAINERFORMPRINT] Starting for transactionPoid={}", transactionPoid);
+
+        boolean canPrint = validatePrintDocument(transactionPoid, "DLVCNT");
+        log.info("[CONTAINERFORMPRINT] validatePrintDocument result={}", canPrint);
+        if (!canPrint) {
+            throw new ValidationException("Container delivery form print is not enabled for this shipping line");
         }
+
         String pLineCode = viewRepository.getPlineCode(transactionPoid);
+        log.info("[CONTAINERFORMPRINT] pLineCode={}", pLineCode);
+
         String templatePath = "HANJN".equalsIgnoreCase(pLineCode) ?
                 "Shipping/SH/Container_Delivery_ValidityHJS_Currently_not.jrxml" :
                 "Shipping/SH/Container_Delivery_Validity.jrxml";
+        log.info("[CONTAINERFORMPRINT] Loading template={}", templatePath);
+
         JasperReport mainReport = printService.load(templatePath);
+        log.info("[CONTAINERFORMPRINT] Template loaded successfully");
 
         String fslStamp = "FSL_STAMP";
-
         try {
             InputStream stampStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/FSL_STAMP.jpg");
             if (stampStream == null) {
-                log.warn("FSL_STAMP.jpg not found in classpath");
+                log.warn("[CONTAINERFORMPRINT] FSL_STAMP.jpg not found in classpath");
                 params.put(fslStamp, null);
             } else {
-                log.info("FSL_STAMP.jpg loaded successfully");
+                log.info("[CONTAINERFORMPRINT] FSL_STAMP.jpg loaded successfully");
                 byte[] stampBytes = stampStream.readAllBytes();
                 stampStream.close();
                 params.put(fslStamp, new java.io.ByteArrayInputStream(stampBytes));
             }
         } catch (Exception e) {
-            log.error("Error loading FSL_STAMP.jpg", e);
+            log.error("[CONTAINERFORMPRINT] Error loading FSL_STAMP.jpg", e);
             params.put(fslStamp, null);
         }
 
         if ("HANJN".equalsIgnoreCase(pLineCode)) {
             InputStream imageStream = getClass().getClassLoader().getResourceAsStream("jasper/Shipping/jpg/hidd_map4.jpg");
             if (imageStream != null) {
+                log.info("[CONTAINERFORMPRINT] hidd_map4.jpg loaded successfully");
                 params.put("IMAGE_MAP", imageStream);
+            } else {
+                log.warn("[CONTAINERFORMPRINT] hidd_map4.jpg not found in classpath");
             }
         }
 
-        return printService.fillReportToPdf(mainReport, params, dataSource);
+        log.info("[CONTAINERFORMPRINT] Calling fillReportToPdf with params keys={}", params.keySet());
+        byte[] pdf = printService.fillReportToPdf(mainReport, params, dataSource);
+        log.info("[CONTAINERFORMPRINT] fillReportToPdf completed, pdfSize={} bytes", pdf != null ? pdf.length : 0);
+        return pdf;
     }
 
     private byte[] generateReturnFormPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
-        if (!validatePrintDocument(transactionPoid, "RTNCNT")) {
-            return null;
+        log.info("[RETURNFORMPRINT] Starting for transactionPoid={}", transactionPoid);
+
+        boolean canPrint = validatePrintDocument(transactionPoid, "RTNCNT");
+        log.info("[RETURNFORMPRINT] validatePrintDocument result={}", canPrint);
+        if (!canPrint) {
+            throw new ValidationException("Container return form print is not enabled for this shipping line");
         }
-        JasperReport mainReport = printService.load("Shipping/SH/Container_Return_Validity.jrxml");
-        return printService.fillReportToPdf(mainReport, params, dataSource);
+
+        String templatePath = "Shipping/SH/Container_Return_Validity.jrxml";
+        log.info("[RETURNFORMPRINT] Loading template={}", templatePath);
+        JasperReport mainReport = printService.load(templatePath);
+        log.info("[RETURNFORMPRINT] Template loaded successfully");
+
+        log.info("[RETURNFORMPRINT] Calling fillReportToPdf with params keys={}", params.keySet());
+        byte[] pdf = printService.fillReportToPdf(mainReport, params, dataSource);
+        log.info("[RETURNFORMPRINT] fillReportToPdf completed, pdfSize={} bytes", pdf != null ? pdf.length : 0);
+        return pdf;
     }
 
     private boolean validatePrintDocument(Long transactionPoid, String docType) {
         String printCheck = checkPrintDocumentData(transactionPoid, docType);
+        log.info("[validatePrintDocument] transactionPoid={}, docType={}, lineEnabledCheck={}", transactionPoid, docType, printCheck);
         if ("N".equalsIgnoreCase(printCheck)) {
+            log.warn("[validatePrintDocument] Print not enabled in SHIP_LINE_MASTER for docType={}, transactionPoid={}", docType, transactionPoid);
             return false;
         }
         String alreadyPrinted = viewRepository.printDocumentAlreadyPrinted(docType, transactionPoid);
-        return !"Y".equalsIgnoreCase(alreadyPrinted);
+        log.info("[validatePrintDocument] alreadyPrinted={} for docType={}, transactionPoid={}", alreadyPrinted, docType, transactionPoid);
+        if ("Y".equalsIgnoreCase(alreadyPrinted)) {
+            log.warn("[validatePrintDocument] Document already printed for docType={}, transactionPoid={}", docType, transactionPoid);
+            return false;
+        }
+        return true;
+    }
+
+    private void validateAllFields(Long transactionPoid, DeliveryOrderIssueToCustomerDto dto, IssueDeliveryOrderRequestDto request) {
+        if (dto == null) {
+            dto = viewRepository.findByTransactionPoid(transactionPoid)
+                    .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
+        }
+        if ("Y".equalsIgnoreCase(dto.getPrincipalDoRequired())) {
+            if (request.getPrincipalDoNumber() == null || request.getPrincipalDoNumber().trim().length() <= 3) {
+                throw new ValidationException("Principal Do number can not be blank");
+            }
+        }
+        if (StringUtils.isBlank(request.getDoReleasedAddressPerson())) {
+            throw new ValidationException("Address can not be blank");
+        }
+        if (StringUtils.isBlank(request.getDoReleasedIdPerson())) {
+            throw new ValidationException("ID/CPR can not be blank");
+        }
+        if (StringUtils.isBlank(request.getDoReleasedToPerson())) {
+            throw new ValidationException("Name can not be blank");
+        }
+        if (StringUtils.isBlank(request.getDoPriority())) {
+            throw new ValidationException("Do Issue TO, can not be blank");
+        }
+        if (StringUtils.isBlank(request.getOriginalBlReleaseCr())) {
+            throw new ValidationException("Bl issue type can not be blank");
+        }
+        if (StringUtils.isBlank(dto.getBlReleaseTypeOffice())) {
+            throw new ValidationException("Office Bl issue type can not be blank");
+        }
+        if (!dto.getBlReleaseTypeOffice().equalsIgnoreCase(request.getOriginalBlReleaseCr())) {
+            throw new ValidationException("Check Bl issue type");
+        }
+        if (StringUtils.isBlank(request.getDeliverySentTo())) {
+            throw new ValidationException("Select delivery send to from dropdown list");
+        }
+        validateEmailConfiguration(request);
     }
 
     private void validateEmailConfiguration(IssueDeliveryOrderRequestDto request) {
@@ -480,6 +504,9 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             String doPrintLine = convertToString(row[2]);
             String lineCode = convertToString(row[3]);
             String rcptPrintLine = convertToString(row[4]);
+
+            log.info("checkPrintDocumentData for transactionPoid={}, printType={}: CONTAINER_FORM_VHENT={}, CONTAINER_FORM_RTN={}, DO_PRINT_LINE={}, LINE_CODE={}, RCPT_PRINT_LINE={}",
+                    transactionPoid, printType, containerFormVhent, containerFormRtn, doPrintLine, lineCode, rcptPrintLine);
 
             return switch (printType.toUpperCase()) {
                 case "DO" -> doPrintLine != null ? doPrintLine : "N";
