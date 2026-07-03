@@ -270,48 +270,32 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	@Override
 	public ReceiptAutoPopulateDto autoPopulateFields(Long blPoid, Long transactionPoid) {
 		ReceiptBlAutoPopulateDto blAutoPopulateDto = procRepository.autoPopulateFields(blPoid);
-        if (blAutoPopulateDto == null) {
-            throw new ResourceNotFoundException("BL", "transactionPoid", blPoid);
-        }
+		if (blAutoPopulateDto == null) {
+			throw new ResourceNotFoundException("BL", "transactionPoid", blPoid);
+		}
 
-		List<ReceiptAutoPopulateContainerDto> containerAutoPopulateDto = autoPopulateRepository.findAvailableContainersForBl(blPoid, transactionPoid);
-
-		List<ReceiptAutoPopulateChargeDto> manifestCharges = autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid);
-
-        
-        java.util.ArrayList<ReceiptAutoPopulateChargeDto> allCharges = new java.util.ArrayList<>(manifestCharges);
-		
-		Map<Long,LovGetListDto> blLovCache = new java.util.HashMap<>();
+		Map<Long, LovGetListDto> blLovCache = new java.util.HashMap<>();
 		Map<Long, LovGetListDto> chargeLovCache = new java.util.HashMap<>();
 
-		if (blAutoPopulateDto != null) {
-			blAutoPopulateDto.setBlDet(getBlDetails(blAutoPopulateDto.getBlPoid(), blLovCache));
-			blAutoPopulateDto.setCompanyDet(fetchLovByPoid(blAutoPopulateDto.getCompanyPoid(), "COMPANY"));
-			blAutoPopulateDto.setPrintCustomerDet(fetchLovByPoid(blAutoPopulateDto.getPrintCustomerPoid() != null ? blAutoPopulateDto.getPrintCustomerPoid().longValue() : null, "IMPORT_RECEIPT_CUSTOMER_PRINT"));
-			blAutoPopulateDto.setChequeCompanyDet(fetchLovByPoid(blAutoPopulateDto.getChequeCompanyPoid() != null ? blAutoPopulateDto.getChequeCompanyPoid().longValue() : null, "SHIP_DIVISION_PRINT"));
-		}
+		blAutoPopulateDto.setBlDet(getBlDetails(blAutoPopulateDto.getBlPoid(), blLovCache));
+		blAutoPopulateDto.setCompanyDet(fetchLovByPoid(blAutoPopulateDto.getCompanyPoid(), "COMPANY"));
+		blAutoPopulateDto.setPrintCustomerDet(fetchLovByPoid(blAutoPopulateDto.getPrintCustomerPoid() != null ? blAutoPopulateDto.getPrintCustomerPoid().longValue() : null, "IMPORT_RECEIPT_CUSTOMER_PRINT"));
+		blAutoPopulateDto.setChequeCompanyDet(fetchLovByPoid(blAutoPopulateDto.getChequeCompanyPoid() != null ? blAutoPopulateDto.getChequeCompanyPoid().longValue() : null, "SHIP_DIVISION_PRINT"));
 
-		// Since auto-populate is for a specific BL, all containers and charges will likely share the same BL POID
-		if (containerAutoPopulateDto != null) {
-			for (ReceiptAutoPopulateContainerDto container : containerAutoPopulateDto) {
-				container.setBlDet(getBlDetails(container.getBlPoid(), blLovCache));
-			}
-		}
+		List<ReceiptAutoPopulateContainerDto> containers = autoPopulateRepository.findAvailableContainersForBl(blPoid, transactionPoid);
+		containers.forEach(c -> c.setBlDet(getBlDetails(c.getBlPoid(), blLovCache)));
 
-		if (allCharges != null) {
-			for (ReceiptAutoPopulateChargeDto charge : allCharges) {
-				charge.setBlDet(getBlDetails(charge.getBlPoid(), blLovCache));
-				charge.setChargeDet(getChargeDetails(charge.getChargePoid(), chargeLovCache));
-				if (charge.getTaxPoid() != null) {
-					charge.setTaxDet(lovService.getDetailsByPoidAndLovName(charge.getTaxPoid(), "TAX_MASTER"));
-				}
-			}
-		}
+		List<ReceiptAutoPopulateChargeDto> charges = autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid);
+		charges.forEach(charge -> {
+			charge.setBlDet(getBlDetails(charge.getBlPoid(), blLovCache));
+			charge.setChargeDet(getChargeDetails(charge.getChargePoid(), chargeLovCache));
+			charge.setTaxDet(fetchLovByPoid(charge.getTaxPoid(), "TAX_MASTER"));
+		});
 
 		return ReceiptAutoPopulateDto.builder()
 				.blDetails(blAutoPopulateDto)
-				.container(containerAutoPopulateDto)
-				.charges(allCharges)
+				.container(containers)
+				.charges(charges)
 				.build();
 	}
 
