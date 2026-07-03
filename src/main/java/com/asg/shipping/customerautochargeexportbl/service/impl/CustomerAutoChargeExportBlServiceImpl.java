@@ -9,6 +9,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.shipping.common.service.LovService;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
@@ -67,6 +68,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
     private final CustomerAutoChargeExportBLMapper mapper;
     private final LoggingService loggingService;
     private final DocumentDeleteService documentDeleteService;
+    private final LovService lovService;
 
     @PersistenceContext
     private final EntityManager entityManager;
@@ -104,8 +106,45 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
 
         CustomerAutoChargeExportBLDto dto = mapper.mapToDto(entity);
         dto.setChargeDetails(mapper.mapDtlListToDto(detailRecords));
+        enrichLovData(dto);
 
         return dto;
+    }
+
+    private void enrichLovData(CustomerAutoChargeExportBLDto dto) {
+        if (dto.getChargeDetails() == null || dto.getChargeDetails().isEmpty()) {
+            return;
+        }
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+        for (CustomerAutoChargeDetailDto detail : dto.getChargeDetails()) {
+            try {
+                if (detail.getChargeCodePoid() != null) {
+                    detail.setChargeCodeDet(lovService.getLovItemByPoid(detail.getChargeCodePoid(), "CHARGE_MASTER_ALL", groupPoid, companyPoid, userPoid));
+                }
+                if (detail.getType() != null) {
+                    detail.setTypeDet(lovService.getLovItemByCode(detail.getType(), "CHARGE_REVENU_TYPE", groupPoid, companyPoid, userPoid));
+                }
+                if (detail.getImcoClassType() != null) {
+                    detail.setImcoClassTypeDet(lovService.getLovItemByCode(detail.getImcoClassType(), "IMCO_CLASS", groupPoid, companyPoid, userPoid));
+                }
+                if (detail.getOthersType() != null) {
+                    detail.setOthersTypeDet(lovService.getLovItemByCode(detail.getOthersType(), "OTHERS_TYPE", groupPoid, companyPoid, userPoid));
+                }
+                if (detail.getOogType() != null) {
+                    detail.setOogTypeDet(lovService.getLovItemByCode(detail.getOogType(), "OOG_TYPE", groupPoid, companyPoid, userPoid));
+                }
+                if (detail.getChargeApplicable() != null) {
+                    detail.setChargeApplicableDet(lovService.getLovItemByCode(detail.getChargeApplicable(), "CHARGE_APPLICABLE", groupPoid, companyPoid, userPoid));
+                }
+                if (detail.getCurrencyCode() != null) {
+                    detail.setCurrencyCodeDet(lovService.getLovItemByCode(detail.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid, userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", detail.getDetRowId(), e);
+            }
+        }
     }
 
     @Override

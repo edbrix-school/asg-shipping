@@ -52,6 +52,16 @@ public class CimuDemurrageRepository {
             }
         });
     }
+
+    public BigDecimal getPortDays(Long transactionPoid, String containerNo, String emptyIn) {
+        String sql = "SELECT FUNC_SHIP_CNT_PORT_DAYS(?, ?, ?) FROM DUAL";
+        log.info("Calling FUNC_SHIP_CNT_PORT_DAYS | transactionPoid={} containerNo={} emptyIn={}",
+                transactionPoid, containerNo, emptyIn);
+        return jdbcTemplate.query(sql, rs -> {
+            if (rs.next()) return rs.getBigDecimal(1);
+            return BigDecimal.ZERO;
+        }, transactionPoid, containerNo, emptyIn);
+    }
 }
 
 
