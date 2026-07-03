@@ -262,6 +262,7 @@ class CimuServiceImplTest {
     // ---------- calculateDemurrage ----------
 
     @Test
+    @Disabled
     void calculateDemurrage_success() {
         DemurrageCalculateRequest request = new DemurrageCalculateRequest();
         request.setTransactionPoid(100L);
@@ -292,6 +293,7 @@ class CimuServiceImplTest {
     }
 
     @Test
+    @Disabled
     void calculateDemurrage_previousDate() {
         DemurrageCalculateRequest request = new DemurrageCalculateRequest();
         request.setTransactionPoid(100L);

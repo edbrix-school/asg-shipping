@@ -22,6 +22,8 @@ public class DemurrageCalculateRequest {
 
     @NotNull(message = "demDt is required")
     private LocalDate demDt;
+
+    private String emptyIn;
 }
 
 
