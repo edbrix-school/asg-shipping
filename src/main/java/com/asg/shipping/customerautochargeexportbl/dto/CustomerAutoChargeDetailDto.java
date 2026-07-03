@@ -1,5 +1,7 @@
 package com.asg.shipping.customerautochargeexportbl.dto;
 
+
+import com.asg.shipping.common.dto.LovItem;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,24 +22,31 @@ public class CustomerAutoChargeDetailDto {
 
     @Schema(description = "Charge Code POID", example = "100")
     private Long chargeCodePoid;
+    private LovItem chargeCodeDet;
 
     @Schema(description = "Charge Type", example = "FREIGHT")
     private String type;
+    private LovItem typeDet;
 
     @Schema(description = "Charge Applicable", example = "Y")
     private String chargeApplicable;
+    private LovItem chargeApplicableDet;
 
     @Schema(description = "IMCO Class Type", example = "CLASS_1")
     private String imcoClassType;
+    private LovItem imcoClassTypeDet;
 
     @Schema(description = "OOG Type", example = "OOG_TYPE_1")
     private String oogType;
+    private LovItem oogTypeDet;
 
     @Schema(description = "Others Type", example = "OTHER")
     private String othersType;
+    private LovItem othersTypeDet;
 
     @Schema(description = "Currency Code", example = "USD")
     private String currencyCode;
+    private LovItem currencyCodeDet;
 
     @Schema(description = "Currency Exchange Rate", example = "1.0")
     private BigDecimal currencyExchange;

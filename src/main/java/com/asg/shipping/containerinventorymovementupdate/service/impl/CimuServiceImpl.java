@@ -190,27 +190,29 @@ public class CimuServiceImpl implements CimuService {
             throw new ValidationException("demDt is required");
         }
 
-        // SRS: cannot be previous date
-        if (demDt.isBefore(LocalDate.now())) {
-            throw new ValidationException("Dem DT cannot be previous date");
-        }
-
-        // Match legacy Container Inventory Movement Update behavior.
         String demDtStr = demDt.format(DEMURRAGE_DATE_FORMAT);
 
+        // Legacy: FUNC_SHIP_CNT_dem_Rtn(transactionPoid, containerNo, demDt)
         BigDecimal dem = demurrageRepository.calculateDemurrage(request.getTransactionPoid(), containerNo, demDtStr);
 
-        // Call FUNC_SHIP_CNT_IMPORT_TOTAL to get formatted message (matches legacy behavior)
-        // Returns: "Total amount need to collect =X, Total pending amount need to collect =Y"
+        // Legacy: FUNC_SHIP_CNT_IMPORT_TOTAL(transactionPoid, containerNo, demDt)
         String importTotalMsg = demurrageRepository.getImportTotalMessage(
                 request.getTransactionPoid(), containerNo, demDtStr);
 
-        BigDecimal collected = queryRepository.fetchTotalCollectedAmount(request.getTransactionPoid(), containerNo);
+        // FUNC_SHIP_CNT_PORT_DAYS(transactionPoid, containerNo, emptyIn)
+        BigDecimal portDays = demurrageRepository.getPortDays(
+                request.getTransactionPoid(), containerNo, request.getEmptyIn());
+
+        BigDecimal resolvedPortDays = portDays != null ? portDays : BigDecimal.ZERO;
+        BigDecimal resolvedDem = dem != null ? dem : BigDecimal.ZERO;
+        String portDaysMsg = "Total days lying in the Port: " + resolvedPortDays.stripTrailingZeros().toPlainString();
+        String demMsg = "Total Demurrage: " + resolvedDem.stripTrailingZeros().toPlainString();
+        String fullMessage = (importTotalMsg != null ? importTotalMsg + ", " : "") + portDaysMsg + ", " + demMsg;
 
         return DemurrageCalculateResponse.builder()
-                .demurrageAmount(dem != null ? dem : BigDecimal.ZERO)
-                .totalCollectedAmount(collected)
-                .collectedSummaryMessage(importTotalMsg)  // From FUNC_SHIP_CNT_IMPORT_TOTAL (matches legacy)
+                .demurrageAmount(resolvedDem)
+                .collectedSummaryMessage(fullMessage)
+                .portDays(resolvedPortDays)
                 .build();
     }
 

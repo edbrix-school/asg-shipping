@@ -272,13 +272,14 @@ class CimuServiceImplTest {
                 .thenReturn(BigDecimal.TEN);
         when(demurrageRepository.getImportTotalMessage(any(), any(), any()))
                 .thenReturn("Total amount need to collect =10");
-        when(queryRepository.fetchTotalCollectedAmount(any(), any()))
-                .thenReturn(BigDecimal.ONE);
+        when(demurrageRepository.getPortDays(any(), any(), any()))
+                .thenReturn(BigDecimal.valueOf(5));
 
         DemurrageCalculateResponse response = service.calculateDemurrage(request);
 
         assertEquals(BigDecimal.TEN, response.getDemurrageAmount());
-        assertEquals(BigDecimal.ONE, response.getTotalCollectedAmount());
+        assertEquals(BigDecimal.valueOf(5), response.getPortDays());
+        assertNotNull(response.getCollectedSummaryMessage());
     }
 
     @Test
@@ -298,7 +299,18 @@ class CimuServiceImplTest {
         request.setContainerNo("CONT001");
         request.setDemDt(LocalDate.now().minusDays(1));
 
-        assertThrows(ValidationException.class, () -> service.calculateDemurrage(request));
+        when(demurrageRepository.calculateDemurrage(any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(demurrageRepository.getImportTotalMessage(any(), any(), any()))
+                .thenReturn(null);
+        when(demurrageRepository.getPortDays(any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
+
+        DemurrageCalculateResponse response = service.calculateDemurrage(request);
+
+        assertNotNull(response);
+        assertEquals(BigDecimal.ZERO, response.getDemurrageAmount());
+        assertEquals(BigDecimal.ZERO, response.getPortDays());
     }
 
     // ---------- importFile ----------

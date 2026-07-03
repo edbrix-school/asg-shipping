@@ -15,6 +15,8 @@ public class DemurrageCalculateResponse {
     private BigDecimal demurrageAmount;
     private BigDecimal totalCollectedAmount;
     private String collectedSummaryMessage;
+    private BigDecimal portDays;
+
 }
 
 
