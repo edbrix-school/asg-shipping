@@ -42,6 +42,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Slf4j
@@ -269,49 +272,88 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 	@Override
 	public ReceiptAutoPopulateDto autoPopulateFields(Long blPoid, Long transactionPoid) {
-		ReceiptBlAutoPopulateDto blAutoPopulateDto = procRepository.autoPopulateFields(blPoid);
-        if (blAutoPopulateDto == null) {
-            throw new ResourceNotFoundException("BL", "transactionPoid", blPoid);
-        }
+		// Step 1: Fetch BL header, containers, and charges in parallel
+		CompletableFuture<ReceiptBlAutoPopulateDto> blFuture =
+				CompletableFuture.supplyAsync(() -> procRepository.autoPopulateFields(blPoid));
+		CompletableFuture<List<ReceiptAutoPopulateContainerDto>> containersFuture =
+				CompletableFuture.supplyAsync(() -> autoPopulateRepository.findAvailableContainersForBl(blPoid, transactionPoid));
+		CompletableFuture<List<ReceiptAutoPopulateChargeDto>> chargesFuture =
+				CompletableFuture.supplyAsync(() -> autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid));
 
-		List<ReceiptAutoPopulateContainerDto> containerAutoPopulateDto = autoPopulateRepository.findAvailableContainersForBl(blPoid, transactionPoid);
+		CompletableFuture.allOf(blFuture, containersFuture, chargesFuture).join();
 
-		List<ReceiptAutoPopulateChargeDto> manifestCharges = autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid);
-
-        
-        java.util.ArrayList<ReceiptAutoPopulateChargeDto> allCharges = new java.util.ArrayList<>(manifestCharges);
-		
-		Map<Long,LovGetListDto> blLovCache = new java.util.HashMap<>();
-		Map<Long, LovGetListDto> chargeLovCache = new java.util.HashMap<>();
-
-		if (blAutoPopulateDto != null) {
-			blAutoPopulateDto.setBlDet(getBlDetails(blAutoPopulateDto.getBlPoid(), blLovCache));
-			blAutoPopulateDto.setCompanyDet(fetchLovByPoid(blAutoPopulateDto.getCompanyPoid(), "COMPANY"));
-			blAutoPopulateDto.setPrintCustomerDet(fetchLovByPoid(blAutoPopulateDto.getPrintCustomerPoid() != null ? blAutoPopulateDto.getPrintCustomerPoid().longValue() : null, "IMPORT_RECEIPT_CUSTOMER_PRINT"));
-			blAutoPopulateDto.setChequeCompanyDet(fetchLovByPoid(blAutoPopulateDto.getChequeCompanyPoid() != null ? blAutoPopulateDto.getChequeCompanyPoid().longValue() : null, "SHIP_DIVISION_PRINT"));
+		ReceiptBlAutoPopulateDto blAutoPopulateDto = blFuture.join();
+		if (blAutoPopulateDto == null) {
+			throw new ResourceNotFoundException("BL", "transactionPoid", blPoid);
 		}
+		List<ReceiptAutoPopulateContainerDto> containers = containersFuture.join();
+		List<ReceiptAutoPopulateChargeDto> charges = chargesFuture.join();
 
-		// Since auto-populate is for a specific BL, all containers and charges will likely share the same BL POID
-		if (containerAutoPopulateDto != null) {
-			for (ReceiptAutoPopulateContainerDto container : containerAutoPopulateDto) {
-				container.setBlDet(getBlDetails(container.getBlPoid(), blLovCache));
-			}
-		}
+		// Step 2: Collect all poids per LOV name for batch fetching
+		List<Long> allBlPoids = Stream.concat(
+				Stream.of(blAutoPopulateDto.getBlPoid()),
+				Stream.concat(
+						containers.stream().map(ReceiptAutoPopulateContainerDto::getBlPoid),
+						charges.stream().map(ReceiptAutoPopulateChargeDto::getBlPoid)
+				)
+		).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-		if (allCharges != null) {
-			for (ReceiptAutoPopulateChargeDto charge : allCharges) {
-				charge.setBlDet(getBlDetails(charge.getBlPoid(), blLovCache));
-				charge.setChargeDet(getChargeDetails(charge.getChargePoid(), chargeLovCache));
-				if (charge.getTaxPoid() != null) {
-					charge.setTaxDet(lovService.getDetailsByPoidAndLovName(charge.getTaxPoid(), "TAX_MASTER"));
-				}
-			}
-		}
+		List<Long> companyPoids = Stream.of(blAutoPopulateDto.getCompanyPoid())
+				.filter(Objects::nonNull).collect(Collectors.toList());
+
+		List<Long> printCustomerPoids = Stream.of(blAutoPopulateDto.getPrintCustomerPoid())
+				.filter(Objects::nonNull).map(BigDecimal::longValue).collect(Collectors.toList());
+
+		List<Long> chequeCompanyPoids = Stream.of(blAutoPopulateDto.getChequeCompanyPoid())
+				.filter(Objects::nonNull).map(BigDecimal::longValue).collect(Collectors.toList());
+
+		List<Long> chargePoids = charges.stream().map(ReceiptAutoPopulateChargeDto::getChargePoid)
+				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		List<Long> taxPoids = charges.stream().map(ReceiptAutoPopulateChargeDto::getTaxPoid)
+				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		// Step 3: Batch fetch all LOV maps in parallel
+		CompletableFuture<Map<Long, LovGetListDto>> blLovFuture =
+				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER"));
+		CompletableFuture<Map<Long, LovGetListDto>> companyLovFuture =
+				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY"));
+		CompletableFuture<Map<Long, LovGetListDto>> printCustomerLovFuture =
+				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT"));
+		CompletableFuture<Map<Long, LovGetListDto>> chequeCompanyLovFuture =
+				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT"));
+		CompletableFuture<Map<Long, LovGetListDto>> chargeLovFuture =
+				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(chargePoids, "CHARGE_MASTER"));
+		CompletableFuture<Map<Long, LovGetListDto>> taxLovFuture =
+				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(taxPoids, "TAX_MASTER"));
+
+		CompletableFuture.allOf(blLovFuture, companyLovFuture, printCustomerLovFuture, chequeCompanyLovFuture, chargeLovFuture, taxLovFuture).join();
+
+		Map<Long, LovGetListDto> blLovMap = blLovFuture.join();
+		Map<Long, LovGetListDto> companyLovMap = companyLovFuture.join();
+		Map<Long, LovGetListDto> printCustomerLovMap = printCustomerLovFuture.join();
+		Map<Long, LovGetListDto> chequeCompanyLovMap = chequeCompanyLovFuture.join();
+		Map<Long, LovGetListDto> chargeLovMap = chargeLovFuture.join();
+		Map<Long, LovGetListDto> taxLovMap = taxLovFuture.join();
+
+		// Step 4: Enrich from maps — no per-item LOV calls
+		blAutoPopulateDto.setBlDet(blLovMap.get(blAutoPopulateDto.getBlPoid()));
+		blAutoPopulateDto.setCompanyDet(companyLovMap.get(blAutoPopulateDto.getCompanyPoid()));
+		blAutoPopulateDto.setPrintCustomerDet(blAutoPopulateDto.getPrintCustomerPoid() != null ? printCustomerLovMap.get(blAutoPopulateDto.getPrintCustomerPoid().longValue()) : null);
+		blAutoPopulateDto.setChequeCompanyDet(blAutoPopulateDto.getChequeCompanyPoid() != null ? chequeCompanyLovMap.get(blAutoPopulateDto.getChequeCompanyPoid().longValue()) : null);
+
+		containers.forEach(c -> c.setBlDet(blLovMap.get(c.getBlPoid())));
+
+		charges.forEach(charge -> {
+			charge.setBlDet(blLovMap.get(charge.getBlPoid()));
+			charge.setChargeDet(chargeLovMap.get(charge.getChargePoid()));
+			charge.setTaxDet(taxLovMap.get(charge.getTaxPoid()));
+		});
 
 		return ReceiptAutoPopulateDto.builder()
 				.blDetails(blAutoPopulateDto)
-				.container(containerAutoPopulateDto)
-				.charges(allCharges)
+				.container(containers)
+				.charges(charges)
 				.build();
 	}
 
