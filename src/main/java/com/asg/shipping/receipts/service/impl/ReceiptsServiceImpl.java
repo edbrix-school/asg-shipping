@@ -272,22 +272,14 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 	@Override
 	public ReceiptAutoPopulateDto autoPopulateFields(Long blPoid, Long transactionPoid) {
-		// Step 1: Fetch BL header, containers, and charges in parallel
-		CompletableFuture<ReceiptBlAutoPopulateDto> blFuture =
-				CompletableFuture.supplyAsync(() -> procRepository.autoPopulateFields(blPoid));
-		CompletableFuture<List<ReceiptAutoPopulateContainerDto>> containersFuture =
-				CompletableFuture.supplyAsync(() -> autoPopulateRepository.findAvailableContainersForBl(blPoid, transactionPoid));
-		CompletableFuture<List<ReceiptAutoPopulateChargeDto>> chargesFuture =
-				CompletableFuture.supplyAsync(() -> autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid));
-
-		CompletableFuture.allOf(blFuture, containersFuture, chargesFuture).join();
-
-		ReceiptBlAutoPopulateDto blAutoPopulateDto = blFuture.join();
+		// Step 1: Fetch BL header, containers, and charges on the main thread
+		// (EntityManager is not thread-safe; must stay on the transactional thread)
+		ReceiptBlAutoPopulateDto blAutoPopulateDto = procRepository.autoPopulateFields(blPoid);
 		if (blAutoPopulateDto == null) {
 			throw new ResourceNotFoundException("BL", "transactionPoid", blPoid);
 		}
-		List<ReceiptAutoPopulateContainerDto> containers = containersFuture.join();
-		List<ReceiptAutoPopulateChargeDto> charges = chargesFuture.join();
+		List<ReceiptAutoPopulateContainerDto> containers = autoPopulateRepository.findAvailableContainersForBl(blPoid, transactionPoid);
+		List<ReceiptAutoPopulateChargeDto> charges = autoPopulateRepository.findAvailableChargesForBl(blPoid, transactionPoid);
 
 		// Step 2: Collect all poids per LOV name for batch fetching
 		List<Long> allBlPoids = Stream.concat(
@@ -313,19 +305,23 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		List<Long> taxPoids = charges.stream().map(ReceiptAutoPopulateChargeDto::getTaxPoid)
 				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-		// Step 3: Batch fetch all LOV maps in parallel
+		// Step 3: Capture UserContext (ThreadLocal) on the calling thread before spawning async threads
+		com.asg.common.lib.security.model.CustomAuthDetails authDetails = UserContext.getCurrentUser();
+
+		// Step 4: Batch fetch all LOV maps in parallel using JdbcTemplate (thread-safe)
+		// Each async task propagates the captured auth context into its thread
 		CompletableFuture<Map<Long, LovGetListDto>> blLovFuture =
-				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER"));
+				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER"); });
 		CompletableFuture<Map<Long, LovGetListDto>> companyLovFuture =
-				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY"));
+				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY"); });
 		CompletableFuture<Map<Long, LovGetListDto>> printCustomerLovFuture =
-				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT"));
+				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT"); });
 		CompletableFuture<Map<Long, LovGetListDto>> chequeCompanyLovFuture =
-				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT"));
+				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT"); });
 		CompletableFuture<Map<Long, LovGetListDto>> chargeLovFuture =
-				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(chargePoids, "CHARGE_MASTER"));
+				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(chargePoids, "CHARGE_MASTER"); });
 		CompletableFuture<Map<Long, LovGetListDto>> taxLovFuture =
-				CompletableFuture.supplyAsync(() -> lovService.getDetailsByPoidsAndLovName(taxPoids, "TAX_MASTER"));
+				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(taxPoids, "TAX_MASTER"); });
 
 		CompletableFuture.allOf(blLovFuture, companyLovFuture, printCustomerLovFuture, chequeCompanyLovFuture, chargeLovFuture, taxLovFuture).join();
 
@@ -336,7 +332,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		Map<Long, LovGetListDto> chargeLovMap = chargeLovFuture.join();
 		Map<Long, LovGetListDto> taxLovMap = taxLovFuture.join();
 
-		// Step 4: Enrich from maps — no per-item LOV calls
+		// Step 5: Enrich from maps — no per-item LOV calls
 		blAutoPopulateDto.setBlDet(blLovMap.get(blAutoPopulateDto.getBlPoid()));
 		blAutoPopulateDto.setCompanyDet(companyLovMap.get(blAutoPopulateDto.getCompanyPoid()));
 		blAutoPopulateDto.setPrintCustomerDet(blAutoPopulateDto.getPrintCustomerPoid() != null ? printCustomerLovMap.get(blAutoPopulateDto.getPrintCustomerPoid().longValue()) : null);
