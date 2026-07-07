@@ -292,6 +292,9 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
         headerRepository.save(entity);
 
+        loggingService.createLogSummaryEntry("400-110", id.toString(),
+                String.format("%s %s", LogDetailsEnum.DELETED, entity.getDocRef()));
+
         log.info("Successfully deleted demurrage/detention payable transfer with id: {}", id);
     }
 
@@ -546,9 +549,32 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     public void updatePrincipalDays(UpdateFreeDaysRequestDTO request) {
         log.info("Updating principal extra days for {} containers", request.getContainerUpdates().size());
 
+        String transactionPoidStr = request.getContainerUpdates().isEmpty() ? null
+                : String.valueOf(request.getContainerUpdates().get(0).getMainfestTransactionPoid());
+
+        if (transactionPoidStr != null) {
+            loggingService.createLogSummaryEntry(DOC_ID, transactionPoidStr,
+                    String.format("%s - Principal Days Updated", LogDetailsEnum.MODIFIED));
+        }
+
         for (UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate update : request.getContainerUpdates()) {
             // GAP-9: validate nulls before calling SP
             validateFreeDaysUpdate(update);
+
+            // Fetch old value before update for detail log
+            BigDecimal oldValue = null;
+            try {
+                List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                        "SELECT EXTRA_FREE_DAYS_PRNPLS FROM SHIP_DEM_DETN_TRANSFER_DTL " +
+                        "WHERE MAINFEST_TRANSACTION_POID = ? AND CONTAINER_NO = ?",
+                        update.getMainfestTransactionPoid(), update.getContainerNo());
+                if (!rows.isEmpty() && rows.get(0).get("EXTRA_FREE_DAYS_PRNPLS") != null) {
+                    oldValue = asBigDecimal(rows.get(0).get("EXTRA_FREE_DAYS_PRNPLS"));
+                }
+            } catch (Exception e) {
+                log.warn("Could not fetch old EXTRA_FREE_DAYS_PRNPLS for container: {}", update.getContainerNo());
+            }
+
             callProcShipCntPpfredaysUpdate(
                     update.getMainfestTransactionPoid(),
                     update.getExtraFreeDaysPrnpls(),
@@ -560,6 +586,16 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     update.getMainfestTransactionPoid(),
                     update.getExtraFreeDaysPrnpls(),
                     update.getContainerNo()
+            );
+
+            loggingService.createLogDetailsEntry(
+                    DOC_ID,
+                    String.valueOf(update.getMainfestTransactionPoid()),
+                    "EXTRA_FREE_DAYS_PRNPLS",
+                    oldValue != null ? oldValue.toPlainString() : "",
+                    update.getExtraFreeDaysPrnpls() != null ? update.getExtraFreeDaysPrnpls().toPlainString() : "",
+                    String.format("Principal Days Updated for containerNo: %s", update.getContainerNo()),
+                    "SHIP_DEM_DETN_TRANSFER_DTL"
             );
         }
 
@@ -750,16 +786,31 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     private void updateDetailRecords(Long transactionPoid,
                                      List<DemurrageDetentionTransferDetailDto> transferDetails,
                                      List<DemurrageDetentionTransferBillDetailDto> billDetails) {
-        int prevTransferCount = transferDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid).size();
-        int prevBillCount = billDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid).size();
+        List<ShipDemDetnTransferDtl> existingTransfer = transferDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        List<ShipDemDtnTransferBillDtl> existingBill = billDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
 
-        if (prevTransferCount > 0) {
-            loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(),
-                    String.format("Replacing %d transfer detail row(s)", prevTransferCount));
+        // Determine which transfer detail rows are being removed
+        java.util.Set<Long> incomingTransferRowIds = transferDetails == null ? java.util.Collections.emptySet() :
+                transferDetails.stream().map(DemurrageDetentionTransferDetailDto::getDetRowId)
+                        .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        for (ShipDemDetnTransferDtl row : existingTransfer) {
+            if (!incomingTransferRowIds.contains(row.getDetRowId())) {
+                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(),
+                        String.format("Row Deleted on Demurrage Detention Transfer Detail with detRowId: %s, containerNo: %s",
+                                row.getDetRowId(), row.getContainerNo()));
+            }
         }
-        if (prevBillCount > 0) {
-            loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(),
-                    String.format("Replacing %d bill detail row(s)", prevBillCount));
+
+        // Determine which bill detail rows are being removed
+        java.util.Set<Long> incomingBillRowIds = billDetails == null ? java.util.Collections.emptySet() :
+                billDetails.stream().map(DemurrageDetentionTransferBillDetailDto::getDetRowId)
+                        .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        for (ShipDemDtnTransferBillDtl row : existingBill) {
+            if (!incomingBillRowIds.contains(row.getDetRowId())) {
+                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(),
+                        String.format("Row Deleted on Demurrage Detention Bill Detail with detRowId: %s, containerNo: %s",
+                                row.getDetRowId(), row.getContainerNo()));
+            }
         }
 
         transferDtlRepository.deleteByTransactionPoid(transactionPoid);
