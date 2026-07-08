@@ -4,10 +4,12 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.service.SalesInvoiceShippingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +51,7 @@ public class SalesInvoiceShippingController {
 
     private final SalesInvoiceShippingService service;
     private final ExcelExportService excelExportService;
+    private final LoggingService loggingService;
 
     /**
      * Search Sales Invoice records
@@ -117,6 +120,7 @@ public class SalesInvoiceShippingController {
         try {
             log.info("Get request for Sales Invoice with id: {}", id);
             SalesInvoiceShippingDto dto = service.getSalesInvoice(id);
+            loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
             return success("Sales Invoice retrieved successfully", dto);
         } catch (Exception e) {
             return internalServerError("Error fetching Sales Invoice: " + e.getMessage());

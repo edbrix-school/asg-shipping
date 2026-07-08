@@ -4,16 +4,19 @@ import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.request.LogRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.customerautochargeexportbl.entity.ShipCustomerChargesDtlEntity;
 import com.asg.shipping.salesinvoice.dto.*;
-import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceChargDtl;
-import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceContnrDtl;
-import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceHdr;
+import com.asg.shipping.salesinvoice.entity.*;
 import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceChargDtlRepository;
 import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceContnrDtlRepository;
 import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceHdrRepository;
@@ -22,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
 import oracle.jdbc.OracleTypes;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +59,19 @@ import static com.asg.common.lib.utility.ASGHelperUtils.getCurrentUser;
 @Slf4j
 public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingService {
 
+    private static final String LOG_ROW_CREATED_CONTAINER = "Row Created on Sales Invoice Container Detail with DetRowId: %s";
+    private static final String LOG_ROW_CREATED_CHARGE = "Row Created on Sales Invoice Charge Detail with DetRowId: %s";
+    private static final String COL_TRANSACTION_POID = "TRANSACTION_POID";
+    private static final String ACTION_NOCHANGES = "NOCHANGES";
+    private static final String ACTION_ISCREATED = "ISCREATED";
+    private static final String ACTION_ISUPDATED = "ISUPDATED";
+    private static final String ACTION_ISDELETED = "ISDELETED";
+    private static final String ERR_DET_ROW_ID_NULL_CONTAINER = "Sales Invoice Container Detail DetRowId is null";
+    private static final String ERR_DET_ROW_ID_NULL_CHARGE = "Sales Invoice Charge Detail DetRowId is null";
+    private static final String LOG_ROW_DELETED_CONTAINER = "Row Deleted on Sales Invoice Container Detail with DetRowId: %s";
+    private static final String LOG_ROW_DELETED_CHARGE = "Row Deleted on Sales Invoice Charge Detail with DetRowId: %s";
+    private static final String LOG_KEY_ID = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
+
     private final ArShSalesInvoiceHdrRepository hdrRepository;
     private final ArShSalesInvoiceContnrDtlRepository contnrDtlRepository;
     private final ArShSalesInvoiceChargDtlRepository chargDtlRepository;
@@ -63,6 +80,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final DataSource dataSource;
     private final PrintService printService;
     private final DocumentDeleteService documentDeleteService;
+    private final LoggingService loggingService;
     
     // Container quantity tracking variables for demurrage calculations
     private BigDecimal totalQtyValidate20 = BigDecimal.ZERO;
@@ -167,6 +185,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         var saved = new ArShSalesInvoiceHdr();
 
         saved = hdrRepository.saveAndFlush(entity);
+
         saveDetailTables(createDTO, saved.getTransactionPoid());
 
         BigDecimal invAmount = calculateInvoiceAmount(saved.getTransactionPoid());
@@ -181,7 +200,14 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
+
 //        enrichLovData(result);
+
+        loggingService.createLogSummaryEntry(
+                UserContext.getDocumentId(),
+                saved.getTransactionPoid().toString(),
+                String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), saved.getDocRef())
+        );
 
         log.info("Successfully created Sales Invoice with id: {}", saved.getTransactionPoid());
         return result;
@@ -198,15 +224,15 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         ArShSalesInvoiceHdr entity = hdrRepository.findActiveByTransactionPoid(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
 
+        ArShSalesInvoiceHdr oldEntity = new ArShSalesInvoiceHdr();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         validateUpdateDTO(updateDTO, id, companyPoid);
 
         SalesInvoiceMapper.mapUpdateDTOToEntity(updateDTO, entity);
         autoPopulateDefaults(entity, companyPoid);
 
         ArShSalesInvoiceHdr saved = hdrRepository.saveAndFlush(entity);
-
-        contnrDtlRepository.deleteByTransactionPoid(id);
-        chargDtlRepository.deleteByTransactionPoid(id);
 
         saveDetailTables(updateDTO, id);
 
@@ -220,8 +246,12 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "INVSHRCPTPRINTUPDATE");
 
         SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
+
         loadDetailTables(result, id);
 //        enrichLovData(result);
+
+        String key = saved.getTransactionPoid().toString();
+        loggingService.logChanges(oldEntity, entity, ArShSalesInvoiceHdr.class, UserContext.getDocumentId(), key, LogDetailsEnum.MODIFIED, COL_TRANSACTION_POID);
 
         log.info("Successfully updated Sales Invoice with id: {}", id);
         return result;
@@ -819,6 +849,8 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                     entity.setDetRowId(++maxDetRowId);
                 }
                 contnrDtlRepository.saveAndFlush(entity);
+                String logDetail = String.format(LOG_ROW_CREATED_CONTAINER, entity.getDetRowId());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
 
@@ -832,32 +864,116 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 }
                 var savedEntity = hdrRepository.findById(transactionPoid);
                 chargDtlRepository.saveAndFlush(entity);
+                String logDetail = String.format(LOG_ROW_CREATED_CHARGE, entity.getDetRowId());
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
             }
         }
     }
 
     private void saveDetailTables(SalesInvoiceShippingUpdateDTO dto, Long transactionPoid) {
+        List<ArShSalesInvoiceContnrDtl> contnrToUpdate = new ArrayList<>();
+        List<ArShSalesInvoiceChargDtl> chargeToUpdate = new ArrayList<>();
+        List<LogRequestDto<ArShSalesInvoiceContnrDtl>> contnrLogRequests = new ArrayList<>();
+        List<LogRequestDto<ArShSalesInvoiceChargDtl>> chargeLogRequests = new ArrayList<>();
         if (dto.getContainerDetails() != null && !dto.getContainerDetails().isEmpty()) {
             Long maxDetRowId = contnrDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
-            maxDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
+            long nextId = maxDetRowId == null ? 1 : maxDetRowId + 1;
             for (SalesInvoiceContainerDtlDto detailDto : dto.getContainerDetails()) {
-                ArShSalesInvoiceContnrDtl entity = SalesInvoiceMapper.mapContainerDtlFromDto(detailDto, transactionPoid);
-                if (entity.getDetRowId() == null) {
-                    entity.setDetRowId(++maxDetRowId);
+                String action = resolveAction(detailDto.getActionType());
+                switch(action) {
+                    case ACTION_NOCHANGES -> {
+                    }
+                    case ACTION_ISDELETED -> {
+                        if (detailDto.getDetRowId() != null) {
+                            contnrDtlRepository.deleteByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId());
+                            String logDetail = String.format(LOG_ROW_DELETED_CONTAINER, detailDto.getDetRowId());
+                            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+                        } else {
+                            throw new ValidationException(ERR_DET_ROW_ID_NULL_CONTAINER);
+                        }
+                    }
+                    case ACTION_ISCREATED -> {
+                        ArShSalesInvoiceContnrDtl entity = SalesInvoiceMapper.mapContainerDtlFromDto(detailDto, transactionPoid, nextId);
+                        nextId++;
+                        contnrDtlRepository.save(entity);
+                        String logDetail = String.format(LOG_ROW_CREATED_CONTAINER, entity.getDetRowId());
+                        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+                    }
+                    case ACTION_ISUPDATED -> {
+                        if (detailDto.getDetRowId() != null) {
+                            ArShSalesInvoiceContnrDtl entity = contnrDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
+                                    .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice Container Details", "DetRowId", detailDto.getDetRowId().toString()));
+                            ArShSalesInvoiceContnrDtl oldEntity = new ArShSalesInvoiceContnrDtl();
+                            BeanUtils.copyProperties(entity, oldEntity);
+                            ArShSalesInvoiceContnrDtl toUpdateEntity = SalesInvoiceMapper.mapContainerDtlFromDto(detailDto, transactionPoid);
+                            toUpdateEntity.setHeader(entity.getHeader());
+                            contnrToUpdate.add(toUpdateEntity);
+                            String logDetail = String.format(LOG_KEY_ID, transactionPoid, detailDto.getDetRowId());
+                            contnrLogRequests.add(new LogRequestDto<>(oldEntity, toUpdateEntity, ArShSalesInvoiceContnrDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
+                        } else {
+                            throw new ValidationException(ERR_DET_ROW_ID_NULL_CONTAINER);
+                        }
+                    }
+                    default ->
+                            throw new ValidationException("Invalid Action Type : " + action);
                 }
-                contnrDtlRepository.saveAndFlush(entity);
+            }
+            if (!contnrToUpdate.isEmpty()) {
+                contnrDtlRepository.saveAll(contnrToUpdate);
+                if (!contnrLogRequests.isEmpty()) {
+                    loggingService.createLogBatch(contnrLogRequests);
+                }
             }
         }
 
         if (dto.getChargesDetails() != null && !dto.getChargesDetails().isEmpty()) {
             Long maxDetRowId = chargDtlRepository.findMaxDetRowIdByTransactionPoid(transactionPoid);
-            maxDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
+            long nextId = maxDetRowId == null ? 1 : maxDetRowId + 1;
             for (SalesInvoiceChargesDtlDto detailDto : dto.getChargesDetails()) {
-                ArShSalesInvoiceChargDtl entity = SalesInvoiceMapper.mapChargesDtlFromDto(detailDto, transactionPoid);
-                if (entity.getDetRowId() == null) {
-                    entity.setDetRowId(++maxDetRowId);
+                String action = resolveAction(detailDto.getActionType());
+                switch(action) {
+                    case ACTION_NOCHANGES -> {
+                    }
+                    case ACTION_ISDELETED -> {
+                        if (detailDto.getDetRowId() != null) {
+                            chargDtlRepository.deleteByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId());
+                            String logDetail = String.format(LOG_ROW_DELETED_CHARGE, detailDto.getDetRowId());
+                            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+                        } else {
+                            throw new ValidationException(ERR_DET_ROW_ID_NULL_CHARGE);
+                        }
+                    }
+                    case ACTION_ISCREATED -> {
+                        ArShSalesInvoiceChargDtl entity = SalesInvoiceMapper.mapChargesDtlFromDto(detailDto, transactionPoid, nextId);
+                        nextId++;
+                        chargDtlRepository.save(entity);
+                        String logDetail = String.format(LOG_ROW_CREATED_CHARGE, entity.getDetRowId());
+                        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(), logDetail);
+                    }
+                    case ACTION_ISUPDATED -> {
+                        if (detailDto.getDetRowId() != null) {
+                            ArShSalesInvoiceChargDtl entity = chargDtlRepository.findByTransactionPoidAndDetRowId(transactionPoid, detailDto.getDetRowId())
+                                    .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice Charge Details", "DetRowId", detailDto.getDetRowId().toString()));
+                            ArShSalesInvoiceChargDtl oldEntity = new ArShSalesInvoiceChargDtl();
+                            BeanUtils.copyProperties(entity, oldEntity);
+                            ArShSalesInvoiceChargDtl toUpdateEntity = SalesInvoiceMapper.mapChargesDtlFromDto(detailDto, transactionPoid);
+                            toUpdateEntity.setHeader(entity.getHeader());
+                            chargeToUpdate.add(toUpdateEntity);
+                            String logDetail = String.format(LOG_KEY_ID, transactionPoid, detailDto.getDetRowId());
+                            chargeLogRequests.add(new LogRequestDto<>(oldEntity, toUpdateEntity, ArShSalesInvoiceChargDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), logDetail));
+                        } else {
+                            throw new ValidationException(ERR_DET_ROW_ID_NULL_CHARGE);
+                        }
+                    }
+                    default ->
+                            throw new ValidationException("Invalid Action Type : " + action);
                 }
-                chargDtlRepository.saveAndFlush(entity);
+            }
+            if (!chargeToUpdate.isEmpty()) {
+                chargDtlRepository.saveAll(chargeToUpdate);
+                if (!chargeLogRequests.isEmpty()) {
+                    loggingService.createLogBatch(chargeLogRequests);
+                }
             }
         }
     }
@@ -2054,4 +2170,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         }
     }
 
+    private String resolveAction(String rawAction) {
+        String action = (rawAction == null || rawAction.trim().isEmpty()) ? ACTION_NOCHANGES : rawAction.trim().toUpperCase();
+        return switch (action) {
+            case "ISCREATED", "CREATED", "NEW" -> ACTION_ISCREATED;
+            case "ISUPDATED", "UPDATED" -> ACTION_ISUPDATED;
+            case "ISDELETED", "DELETED" -> ACTION_ISDELETED;
+            default -> ACTION_NOCHANGES;
+        };
+    }
 }

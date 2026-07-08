@@ -308,5 +308,59 @@ public class SalesInvoiceMapper {
                 .printRateAmt(dto.getPrintRateAmt())
                 .build();
     }
+
+    public static ArShSalesInvoiceChargDtl mapChargesDtlFromDto(SalesInvoiceChargesDtlDto dto, Long transactionPoid, Long detRowId) {
+        return ArShSalesInvoiceChargDtl.builder()
+                .transactionPoid(transactionPoid)
+                .detRowId(detRowId)
+                .blPoid(dto.getBlPoid())
+                .chargesDetRowId(dto.getChargesDetRowId())
+                .chargePoid(dto.getChargePoid())
+                .amount(dto.getAmount())
+                .amountSelect(dto.getAmountSelect())
+                .buyAmount(dto.getBuyAmount())
+                .currencyCode(dto.getCurrencyCode())
+                .currencyExchange(dto.getCurrencyExchange())
+                .quantity(dto.getQuantity())
+                .lpoSrnDate(dto.getLpoSrnDate())
+                .lpoSrnNo(dto.getLpoSrnNo())
+                .perQtyBuyAmt(dto.getPerQtyBuyAmt())
+                .perQtySellAmt(dto.getPerQtySellAmt())
+                .printGroupTemp(dto.getPrintGroupTemp())
+                .chargeType(dto.getChargeType())
+                .chargeNewRecord(dto.getChargeNewRecord() != null ? dto.getChargeNewRecord() : "N")
+                .taxPoid(dto.getTaxPoid())
+                .taxPercentage(dto.getTaxPercentage())
+                .taxAmount(dto.getTaxAmount())
+                .cnRefDocId(dto.getCnRefDocId())
+                .cnRefDocPoid(dto.getCnRefDocPoid())
+                .cnRefDetRowId(dto.getCnRefDetRowId())
+                .printCurrencyCode(dto.getPrintCurrencyCode())
+                .printCurrencyExchange(dto.getPrintCurrencyExchange())
+                .printRateAmt(dto.getPrintRateAmt())
+                .build();
+    }
+
+    public static ArShSalesInvoiceContnrDtl mapContainerDtlFromDto(SalesInvoiceContainerDtlDto dto, Long transactionPoid, Long detRowId) {
+        return ArShSalesInvoiceContnrDtl.builder()
+                .transactionPoid(transactionPoid)
+                .detRowId(detRowId)
+                .blPoid(dto.getBlPoid())
+                .containerSocYn(dto.getContainerSocYn())
+                .containerNo(dto.getContainerNo())
+                .dmFrmDate(dto.getDmFrmDate())
+                .dmToDate(dto.getDmToDate())
+                .dmDays(dto.getDmDays())
+                .dmChargeAmt(dto.getDmChargeAmt())
+                .freeDays(dto.getFreeDays())
+                .equipmentIsoType(dto.getEquipmentIsoType())
+                .dlvFormPrinted(dto.getDlvFormPrinted() != null ? dto.getDlvFormPrinted() : "N")
+                .rtnFormPrinted(dto.getRtnFormPrinted() != null ? dto.getRtnFormPrinted() : "N")
+                .emptyIn(dto.getEmptyIn())
+                .cntTaxPoid(dto.getCntTaxPoid())
+                .cntTaxPercentage(dto.getCntTaxPercentage())
+                .cntTaxAmount(dto.getCntTaxAmount())
+                .build();
+    }
 }
 
