@@ -63,6 +63,7 @@ public class ShipDemDtnTransferBillDtl extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
+    @com.asg.common.lib.annotation.AuditIgnore
     private ShipDemDetnTransferHdr shipDemDetnTransferHdr;
 
     @PrePersist
