@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for AR_SH_SALES_INVOICE_CONTNR_DTL
@@ -34,5 +35,9 @@ public interface ArShSalesInvoiceContnrDtlRepository extends JpaRepository<ArShS
     Long findMaxDetRowIdByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
     List<ArShSalesInvoiceContnrDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
+
+    void deleteByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
+
+    Optional<ArShSalesInvoiceContnrDtl> findByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
 }
 
