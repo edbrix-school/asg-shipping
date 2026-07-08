@@ -65,6 +65,11 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     // Legacy DocId (DemurrageDettnTransferPayablePage.jsff line 204)
     private static final String DOC_ID = "100-151";
 
+    private static final String ACTION_NO_CHANGE = "noChange";
+    private static final String ACTION_IS_CREATED = "isCreated";
+    private static final String ACTION_IS_UPDATED = "isUpdated";
+    private static final String ACTION_IS_DELETED = "isDeleted";
+
     // GL codes used when querying VW_SHIP_BILLWISE_ACCOUNT_TRN (legacy bean lines 285-289)
     private static final String GL_CODE_IMPORT = "LINE_DEM";
     private static final String GL_CODE_EXPORT = "LINE_DET";
@@ -780,43 +785,109 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         }
     }
 
-    /**
-     * GAP-12 fix: batch log instead of per-row delete events to avoid audit noise.
-     */
     private void updateDetailRecords(Long transactionPoid,
                                      List<DemurrageDetentionTransferDetailDto> transferDetails,
                                      List<DemurrageDetentionTransferBillDetailDto> billDetails) {
-        List<ShipDemDetnTransferDtl> existingTransfer = transferDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
-        List<ShipDemDtnTransferBillDtl> existingBill = billDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        String docKeyPoid = transactionPoid.toString();
 
-        // Determine which transfer detail rows are being removed
-        java.util.Set<Long> incomingTransferRowIds = transferDetails == null ? java.util.Collections.emptySet() :
-                transferDetails.stream().map(DemurrageDetentionTransferDetailDto::getDetRowId)
-                        .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
-        for (ShipDemDetnTransferDtl row : existingTransfer) {
-            if (!incomingTransferRowIds.contains(row.getDetRowId())) {
-                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(),
-                        String.format("Row Deleted on Demurrage Detention Transfer Detail with detRowId: %s, containerNo: %s",
-                                row.getDetRowId(), row.getContainerNo()));
+        // ── Transfer detail rows ──────────────────────────────────────────────
+        if (transferDetails != null) {
+            List<ShipDemDetnTransferDtl> existing = transferDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+            Map<Long, ShipDemDetnTransferDtl> existingByDetRow = existing.stream()
+                    .filter(e -> e.getDetRowId() != null)
+                    .collect(Collectors.toMap(ShipDemDetnTransferDtl::getDetRowId, e -> e));
+            long maxDetRowId = existing.stream().map(ShipDemDetnTransferDtl::getDetRowId)
+                    .filter(java.util.Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
+
+            for (DemurrageDetentionTransferDetailDto dto : transferDetails) {
+                if (dto == null) continue;
+                String action = resolveActionType(dto.getActionType(), dto.getDetRowId());
+                switch (action) {
+                    case ACTION_NO_CHANGE -> { /* nothing to do */ }
+                    case ACTION_IS_CREATED -> {
+                        long newId = dto.getDetRowId() == null ? ++maxDetRowId : dto.getDetRowId();
+                        maxDetRowId = Math.max(maxDetRowId, newId);
+                        ShipDemDetnTransferDtl entity = mapper.mapTransferDtlFromDto(dto, transactionPoid);
+                        entity.setDetRowId(newId);
+                        ShipDemDetnTransferDtl saved = transferDtlRepository.save(entity);
+                        loggingService.createLogSummaryEntry(DOC_ID, docKeyPoid,
+                                String.format("Row Created on Demurrage Detention Transfer Detail with detRowId: %s", saved.getDetRowId()));
+                    }
+                    case ACTION_IS_UPDATED -> {
+                        ShipDemDetnTransferDtl entity = existingByDetRow.get(dto.getDetRowId());
+                        if (entity == null) throw new com.asg.common.lib.exception.ResourceNotFoundException("TransferDetail", "detRowId", dto.getDetRowId());
+                        ShipDemDetnTransferDtl oldEntity = new ShipDemDetnTransferDtl();
+                        org.springframework.beans.BeanUtils.copyProperties(entity, oldEntity);
+                        ShipDemDetnTransferDtl updated = mapper.mapTransferDtlFromDto(dto, transactionPoid);
+                        updated.setDetRowId(entity.getDetRowId());
+                        transferDtlRepository.save(updated);
+                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+                        loggingService.createLog(oldEntity, updated, ShipDemDetnTransferDtl.class, DOC_ID, docKeyPoid, logDetail);
+                    }
+                    case ACTION_IS_DELETED -> {
+                        ShipDemDetnTransferDtl entity = existingByDetRow.get(dto.getDetRowId());
+                        if (entity != null) {
+                            transferDtlRepository.delete(entity);
+                            loggingService.createLogSummaryEntry(DOC_ID, docKeyPoid,
+                                    String.format("Row Deleted on Demurrage Detention Transfer Detail with detRowId: %s, containerNo: %s",
+                                            entity.getDetRowId(), entity.getContainerNo()));
+                        }
+                    }
+                }
             }
         }
 
-        // Determine which bill detail rows are being removed
-        java.util.Set<Long> incomingBillRowIds = billDetails == null ? java.util.Collections.emptySet() :
-                billDetails.stream().map(DemurrageDetentionTransferBillDetailDto::getDetRowId)
-                        .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
-        for (ShipDemDtnTransferBillDtl row : existingBill) {
-            if (!incomingBillRowIds.contains(row.getDetRowId())) {
-                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(),
-                        String.format("Row Deleted on Demurrage Detention Bill Detail with detRowId: %s, containerNo: %s",
-                                row.getDetRowId(), row.getContainerNo()));
+        // ── Bill detail rows ──────────────────────────────────────────────────
+        if (billDetails != null) {
+            List<ShipDemDtnTransferBillDtl> existingBill = billDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+            Map<Long, ShipDemDtnTransferBillDtl> existingBillByDetRow = existingBill.stream()
+                    .filter(e -> e.getDetRowId() != null)
+                    .collect(Collectors.toMap(ShipDemDtnTransferBillDtl::getDetRowId, e -> e));
+            long maxBillDetRowId = existingBill.stream().map(ShipDemDtnTransferBillDtl::getDetRowId)
+                    .filter(java.util.Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
+
+            for (DemurrageDetentionTransferBillDetailDto dto : billDetails) {
+                if (dto == null) continue;
+                String action = resolveActionType(dto.getActionType(), dto.getDetRowId());
+                switch (action) {
+                    case ACTION_NO_CHANGE -> { /* nothing to do */ }
+                    case ACTION_IS_CREATED -> {
+                        long newId = dto.getDetRowId() == null ? ++maxBillDetRowId : dto.getDetRowId();
+                        maxBillDetRowId = Math.max(maxBillDetRowId, newId);
+                        ShipDemDtnTransferBillDtl entity = mapper.mapBillDtlFromDto(dto, transactionPoid);
+                        entity.setDetRowId(newId);
+                        ShipDemDtnTransferBillDtl saved = billDtlRepository.save(entity);
+                        loggingService.createLogSummaryEntry(DOC_ID, docKeyPoid,
+                                String.format("Row Created on Demurrage Detention Bill Detail with detRowId: %s", saved.getDetRowId()));
+                    }
+                    case ACTION_IS_UPDATED -> {
+                        ShipDemDtnTransferBillDtl entity = existingBillByDetRow.get(dto.getDetRowId());
+                        if (entity == null) throw new com.asg.common.lib.exception.ResourceNotFoundException("BillDetail", "detRowId", dto.getDetRowId());
+                        ShipDemDtnTransferBillDtl oldEntity = new ShipDemDtnTransferBillDtl();
+                        org.springframework.beans.BeanUtils.copyProperties(entity, oldEntity);
+                        ShipDemDtnTransferBillDtl updated = mapper.mapBillDtlFromDto(dto, transactionPoid);
+                        updated.setDetRowId(entity.getDetRowId());
+                        billDtlRepository.save(updated);
+                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s", transactionPoid, dto.getDetRowId());
+                        loggingService.createLog(oldEntity, updated, ShipDemDtnTransferBillDtl.class, DOC_ID, docKeyPoid, logDetail);
+                    }
+                    case ACTION_IS_DELETED -> {
+                        ShipDemDtnTransferBillDtl entity = existingBillByDetRow.get(dto.getDetRowId());
+                        if (entity != null) {
+                            billDtlRepository.delete(entity);
+                            loggingService.createLogSummaryEntry(DOC_ID, docKeyPoid,
+                                    String.format("Row Deleted on Demurrage Detention Bill Detail with detRowId: %s, containerNo: %s",
+                                            entity.getDetRowId(), entity.getContainerNo()));
+                        }
+                    }
+                }
             }
         }
+    }
 
-        transferDtlRepository.deleteByTransactionPoid(transactionPoid);
-        billDtlRepository.deleteByTransactionPoid(transactionPoid);
-
-        createDetailRecords(transactionPoid, transferDetails, billDetails);
+    private String resolveActionType(String actionType, Long detRowId) {
+        if (actionType != null && !actionType.isBlank()) return actionType.trim();
+        return detRowId == null ? ACTION_IS_CREATED : ACTION_IS_UPDATED;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

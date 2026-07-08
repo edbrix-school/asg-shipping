@@ -493,9 +493,6 @@ class DemurrageDetentionPayableTransferServiceImplTest {
                     .thenReturn(response);
             lenient().when(transferDtlRepository.getMaxDetRowId(any())).thenReturn(null);
             lenient().when(billDtlRepository.getMaxDetRowId(any())).thenReturn(null);
-            doNothing().when(transferDtlRepository).deleteByTransactionPoid(any());
-            doNothing().when(billDtlRepository).deleteByTransactionPoid(any());
-
             DemurrageDetentionPayableTransferDto result = 
                     service.updateDemurrageDetentionPayableTransfer(1L, updateDto, 1L, 100L);
 
