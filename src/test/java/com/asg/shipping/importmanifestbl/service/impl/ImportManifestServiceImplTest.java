@@ -576,10 +576,10 @@ class ImportManifestServiceImplTest {
         
         when(documentService.resolveOperator(req)).thenReturn("AND");
         when(documentService.resolveIsDeleted(req)).thenReturn("N");
-        when(documentService.resolveFilters(req)).thenReturn(new ArrayList<>());
+        when(documentService.resolveDateFilters(any(), any(), any(), any())).thenReturn(new ArrayList<>());
         when(documentService.search(any(), any(), any(), any(), any(), any(), any())).thenReturn(raw);
         
-        Map<String, Object> result = service.list(req, pageable);
+        Map<String, Object> result = service.list(req, null, null, pageable);
         assertNotNull(result);
     }
 
@@ -598,6 +598,6 @@ class ImportManifestServiceImplTest {
     @Test
     void list_Error() {
         when(documentService.resolveOperator(any())).thenThrow(new RuntimeException("Search failed"));
-        assertThrows(RuntimeException.class, () -> service.list(new FilterRequestDto("AND", "N", new ArrayList<>()), mock(Pageable.class)));
+        assertThrows(RuntimeException.class, () -> service.list(new FilterRequestDto("AND", "N", new ArrayList<>()), null, null, mock(Pageable.class)));
     }
 }

@@ -8,6 +8,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "SHIP_BL_MANIFEST_CHARGES_DTL")
 @Getter
@@ -23,17 +25,17 @@ public class ExportManifestBlChargesDtl extends BaseEntity {
     @Column(name = "CHARGE_POID")
     private Long chargePoid;
 
-    @Column(name = "CURRENCY_EXCHANGE")
-    private Long currencyExchange;
+    @Column(name = "CURRENCY_EXCHANGE", precision = 25, scale = 3)
+    private BigDecimal currencyExchange;
 
-    @Column(name = "QUANTITY", nullable = false)
-    private Long quantity;
+    @Column(name = "QUANTITY", nullable = false, precision = 25, scale = 3)
+    private BigDecimal quantity;
 
-    @Column(name = "BUY_PERCHARGE")
-    private Long buyPercharge;
+    @Column(name = "BUY_PERCHARGE", precision = 25, scale = 3)
+    private BigDecimal buyPercharge;
 
-    @Column(name = "PER_QUANTITY_AMOUNT")
-    private Long perQuantityAmount;
+    @Column(name = "PER_QUANTITY_AMOUNT", precision = 25, scale = 3)
+    private BigDecimal perQuantityAmount;
 
     @Column(name = "PAID_AT_PORT_POID")
     private Long paidAtPortPoid;
@@ -84,11 +86,11 @@ public class ExportManifestBlChargesDtl extends BaseEntity {
     @Column(name = "TAX_POID")
     private Long taxPoid;
 
-    @Column(name = "TAX_PERCENTAGE")
-    private Long taxPercentage;
+    @Column(name = "TAX_PERCENTAGE", precision = 25, scale = 3)
+    private BigDecimal taxPercentage;
 
-    @Column(name = "TAX_AMOUNT")
-    private Long taxAmount;
+    @Column(name = "TAX_AMOUNT", precision = 25, scale = 3)
+    private BigDecimal taxAmount;
 
     @Column(name = "CN_REF_DOC_ID", length = 100)
     private String cnRefDocId;

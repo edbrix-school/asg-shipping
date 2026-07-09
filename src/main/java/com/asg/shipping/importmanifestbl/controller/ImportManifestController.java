@@ -291,9 +291,13 @@ public class ImportManifestController {
     @PostMapping("/list")
     public ResponseEntity<?> list(
             @ParameterObject Pageable pageable,
-            @RequestBody(required = false) FilterRequestDto filters
+            @RequestBody(required = false) FilterRequestDto filters,
+            @Parameter(description = "Start date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate fromDate,
+            @Parameter(description = "End date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate toDate
     ) {
-            Map<String, Object> response = importManifestService.list(filters, pageable);
+            Map<String, Object> response = importManifestService.list(filters, fromDate, toDate, pageable);
             return com.asg.common.lib.dto.response.ApiResponse.success("Import Manifest BL list retrieved successfully", response);
 
 }

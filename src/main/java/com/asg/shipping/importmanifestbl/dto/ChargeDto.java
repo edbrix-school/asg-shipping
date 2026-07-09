@@ -4,6 +4,7 @@ import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -25,18 +26,18 @@ public class ChargeDto implements BlManifestValidationService.ChargeValidatable 
 
     private String currencyCode;
     private LovItem currencyCodeDet;
-    private Long rate;
+    private BigDecimal rate;
 
-    private Long quantity;
-    private Long buy;
-    private Long buyAmount;
+    private BigDecimal quantity;
+    private BigDecimal buy;
+    private BigDecimal buyAmount;
 
-    private Long sell;
-    private Long sellAmount;
+    private BigDecimal sell;
+    private BigDecimal sellAmount;
 
-    private Long taxPercentage;
-    private Long taxAmount;
-    private Long gain;
+    private BigDecimal taxPercentage;
+    private BigDecimal taxAmount;
+    private BigDecimal gain;
 
     private String freightType;
     private LovItem freightTypeDet;
@@ -55,8 +56,8 @@ public class ChargeDto implements BlManifestValidationService.ChargeValidatable 
 
     @Override public Long getChargePoidValue() { return chargePoid; }
     @Override public String getFreightTypeValue() { return freightType; }
-    @Override public Long getQuantityValue() { return quantity; }
-    @Override public Long getSellValue() { return sell; }
-    @Override public Long getBuyValue() { return buy; }
+    @Override public BigDecimal getQuantityValue() { return quantity; }
+    @Override public BigDecimal getSellValue() { return sell; }
+    @Override public BigDecimal getBuyValue() { return buy; }
 
 }

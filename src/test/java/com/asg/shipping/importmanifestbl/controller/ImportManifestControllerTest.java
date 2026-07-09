@@ -126,7 +126,7 @@ class ImportManifestControllerTest {
         FilterRequestDto filters = new FilterRequestDto("AND", "N", List.of());
         Map<String, Object> response = new HashMap<>();
 
-        when(service.list(any(), any())).thenReturn(response);
+        when(service.list(any(), any(), any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/v1/import-manifest-bl/list")
                         .contentType(MediaType.APPLICATION_JSON)

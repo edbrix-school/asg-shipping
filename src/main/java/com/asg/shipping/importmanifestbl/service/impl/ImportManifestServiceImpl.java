@@ -572,7 +572,9 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         String oldFreightStatus = existingEntity.getFreightStatus();
         String oldDoNo = existingEntity.getDoNo();
 
+        String existingDocRef = existingEntity.getDocRef();
         ShipBlManifestHdr entity = ImportManifestMapper.mapToEntity(dto, existingEntity);
+        entity.setDocRef(existingDocRef); // DOC_REF is DB-generated on INSERT, must never change on UPDATE
         if (hasAnyEdiChange(dto)) {
             updateService.formatEdiFields(entity);
         }
@@ -723,12 +725,11 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     }
 
     @Override
-    public Map<String, Object> list(FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> list(FilterRequestDto request, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         try {
-
             String operator = documentService.resolveOperator(request);
             String isDeleted = documentService.resolveIsDeleted(request);
-            List<FilterDto> filters = documentService.resolveFilters(request);
+            List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", fromDate, toDate);
 
             RawSearchResult raw = documentService.search(
                     UserContext.getDocumentId(),
@@ -1438,9 +1439,19 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Long taxPoid = (Long) taxData[0];
         BigDecimal taxPercentage = (BigDecimal) taxData[1];
 
-        return ChargeDefaultsResponseDto.builder()
+        ChargeDefaultsResponseDto.ChargeDefaultsResponseDtoBuilder builder = ChargeDefaultsResponseDto.builder()
                 .taxPoid(taxPoid)
-                .taxPercentage(taxPercentage != null ? taxPercentage : BigDecimal.ZERO)
-                .build();
+                .taxPercentage(taxPercentage != null ? taxPercentage : BigDecimal.ZERO);
+
+        if (taxPoid != null) {
+            try {
+                builder.taxDet(lovService.getLovItemByPoid(taxPoid, "TAX_MASTER",
+                        UserContext.getGroupPoid(), companyPoid, UserContext.getUserPoid()));
+            } catch (Exception e) {
+                log.warn("Failed to fetch TAX_MASTER LOV for taxPoid: {}", taxPoid, e);
+            }
+        }
+
+        return builder.build();
     }
 }
