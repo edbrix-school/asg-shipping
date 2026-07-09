@@ -31,4 +31,5 @@ public class DemurrageDetentionTransferBillDetailDto {
     private String containerNo;
     private BigDecimal billwiseBalance;
     private String checkall;
+    private String actionType;
 }

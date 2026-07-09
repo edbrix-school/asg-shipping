@@ -96,7 +96,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
         // Simple single-string view: all DESC / MARK rows joined via native query on string column
         response.setSimpleCargoDescription(joinDescriptionStrings(
-                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "DESC")));
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "CARGO")));
         response.setSimpleCargoMarks(joinDescriptionStrings(
                 cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
 
@@ -391,12 +391,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     private String saveSimpleCargoDescription(Long transactionPoid, String text) {
         log.info("Saving simple cargo description for Export BL: {}", transactionPoid);
-        cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "DESC");
+        cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "CARGO");
         if (text != null && !text.trim().isEmpty()) {
             ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
             entity.setTransactionPoid(transactionPoid);
             entity.setDetRowId(1L);
-            entity.setDescriptionType("DESC");
+            entity.setDescriptionType("CARGO");
             entity.setCargoDescription(text);
             cargoDtlRepository.save(entity);
         }
@@ -587,7 +587,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     }
 
     private List<CargoDescriptionDto> fetchCargoDescription(Long transactionPoid) {
-        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findCargoRowsByType(transactionPoid, "DESC");
+        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findCargoRowsByType(transactionPoid, "CARGO");
         return mapper.mapCargoDescriptionListToDto(entities);
     }
 
@@ -611,14 +611,14 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
                     case ISCREATED:
-                        detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "DESC");
+                        detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "CARGO");
                         ExportShipBlManifestCargoDtl newEntity = mapper.mapCargoDescriptionToEntity(dto, transactionPoid, detRowId, userId);
-                        newEntity.setDescriptionType("DESC");
+                        newEntity.setDescriptionType("CARGO");
                         cargoDtlRepository.save(newEntity);
                         break;
                     case ISUPDATED:
                         if (detRowId != null) {
-                            ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "DESC"))
+                            ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "CARGO"))
                                 .orElseThrow(() -> new RuntimeException("Cargo description detail not found"));
                             if (dto.getCargoDescription() != null) entity.setCargoDescription(dto.getCargoDescription());
                             cargoDtlRepository.save(entity);
@@ -627,7 +627,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 }
             }
             if (!deleteIds.isEmpty()) {
-                cargoDtlRepository.deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(transactionPoid, "DESC", deleteIds);
+                cargoDtlRepository.deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(transactionPoid, "CARGO", deleteIds);
             }
         }
     }
@@ -644,7 +644,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         response.setCargoMarks(fetchCargoMarks(transactionPoid));
         response.setContainerDetails(fetchContainerDetails(transactionPoid));
         response.setSimpleCargoDescription(joinDescriptionStrings(
-                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "DESC")));
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "CARGO")));
         response.setSimpleCargoMarks(joinDescriptionStrings(
                 cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
 

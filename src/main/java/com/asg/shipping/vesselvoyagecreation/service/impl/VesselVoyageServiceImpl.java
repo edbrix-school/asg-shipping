@@ -686,16 +686,20 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     public Resource downloadManifestReport(Long voyagePoid, String freightCargo, String importExport) {
-        // Functional implementation: serve PDFs from configured folder.
-        // Expected naming convention can be aligned with your report server output.
+        // Legacy RunCargoFreightManifestReport always generated IMPORT and EXPORT separately — never BOTH.
+        // Generate on-demand via JasperReports, matching the legacy behaviour.
         String fc = freightCargo != null ? freightCargo.toUpperCase() : "FALSE";
-        String ie = importExport != null ? importExport.toUpperCase() : "BOTH";
-        Path dir = Path.of(exportsDir, String.valueOf(voyagePoid), "reports");
-        String fileName = "MANIFEST_" + ie + "_" + (fc.equals("TRUE") ? "FREIGHT" : "CARGO") + ".pdf";
+        String ie = importExport != null && !importExport.equalsIgnoreCase("BOTH")
+                ? importExport.toUpperCase() : "IMPORT"; // default to IMPORT when BOTH/unset
         try {
-            return readSingle(dir, fileName);
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Unable to read report file: " + e.getMessage());
+            byte[] pdf = print(voyagePoid, fc, ie);
+            String fileName = "manifest-" + ie.toLowerCase() + "-" + voyagePoid + ".pdf";
+            return new ByteArrayResource(pdf) {
+                @Override
+                public String getFilename() { return fileName; }
+            };
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to generate manifest report: " + e.getMessage(), e);
         }
     }
 
@@ -771,8 +775,66 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             throws net.sf.jasperreports.engine.JRException, java.sql.SQLException {
 
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-101");
+        // JRXML declares DOC_KEY_POID, LOGIN_*_POID as java.lang.String — convert to avoid type mismatch in SQL
+        String docKeyPoidStr = transactionPoid != null ? transactionPoid.toString() : null;
+        String groupPoidStr = UserContext.getGroupPoid() != null ? UserContext.getGroupPoid().toString() : null;
+        String compPoidStr = UserContext.getCompanyPoid() != null ? UserContext.getCompanyPoid().toString() : null;
+        String userPoidStr = UserContext.getUserPoid() != null ? UserContext.getUserPoid().toString() : null;
+
+        params.put("DOC_KEY_POID", docKeyPoidStr);
+        params.put("LOGIN_GROUP_POID", groupPoidStr);
+        params.put("LOGIN_COMP_POID", compPoidStr);
+        params.put("LOGIN_USER_POID", userPoidStr);
         params.put("P_FREIGHTCARGO", freightCargo);
         params.put("P_IMPORT_EXPORT", importExport);
+
+        log.info("[MANIFEST-PRINT] transactionPoid={} DOC_KEY_POID={} freightCargo={} importExport={} groupPoid={} compPoid={} userPoid={}",
+                transactionPoid, docKeyPoidStr, freightCargo, importExport, groupPoidStr, compPoidStr, userPoidStr);
+
+        // Verify data exists before running report
+        try (java.sql.Connection debugConn = dataSource.getConnection()) {
+            String debugSql = "SELECT COUNT(*) FROM SHIP_BL_MANIFEST_HDR MFHDR " +
+                    "INNER JOIN SHIP_VOYAGE_HDR VOYAGE ON VOYAGE.TRANSACTION_POID = MFHDR.VOYAGE_TRANSACTION_POID " +
+                    "WHERE NVL(MFHDR.deleted,'N')='N' " +
+                    "AND (MFHDR.TRANSACTION_POID = ? OR VOYAGE.TRANSACTION_POID = ?)";
+            try (java.sql.PreparedStatement ps = debugConn.prepareStatement(debugSql)) {
+                ps.setLong(1, transactionPoid);
+                ps.setLong(2, transactionPoid);
+                java.sql.ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    log.info("[MANIFEST-PRINT] Total matching rows (ignoring P_IMPORT_EXPORT filter): {}", rs.getInt(1));
+                }
+            }
+            String debugSql2 = "SELECT COUNT(*) FROM SHIP_BL_MANIFEST_HDR MFHDR " +
+                    "INNER JOIN SHIP_VOYAGE_HDR VOYAGE ON VOYAGE.TRANSACTION_POID = MFHDR.VOYAGE_TRANSACTION_POID " +
+                    "WHERE NVL(MFHDR.deleted,'N')='N' " +
+                    "AND VOYAGE.TRANSACTION_POID = ? " +
+                    "AND DECODE(MFHDR.bl_type,'EXPORT','EXPORT','IMPORT') = ?";
+            try (java.sql.PreparedStatement ps = debugConn.prepareStatement(debugSql2)) {
+                ps.setLong(1, transactionPoid);
+                ps.setString(2, importExport);
+                java.sql.ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    log.info("[MANIFEST-PRINT] Rows matching VOYAGE.TRANSACTION_POID={} AND P_IMPORT_EXPORT={}: {}",
+                            transactionPoid, importExport, rs.getInt(1));
+                }
+            }
+            String debugSql3 = "SELECT DISTINCT MFHDR.TRANSACTION_POID, MFHDR.BL_TYPE, MFHDR.VOYAGE_TRANSACTION_POID " +
+                    "FROM SHIP_BL_MANIFEST_HDR MFHDR " +
+                    "INNER JOIN SHIP_VOYAGE_HDR VOYAGE ON VOYAGE.TRANSACTION_POID = MFHDR.VOYAGE_TRANSACTION_POID " +
+                    "WHERE NVL(MFHDR.deleted,'N')='N' AND VOYAGE.TRANSACTION_POID = ?";
+            try (java.sql.PreparedStatement ps = debugConn.prepareStatement(debugSql3)) {
+                ps.setLong(1, transactionPoid);
+                java.sql.ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    log.info("[MANIFEST-PRINT] BL found: TRANSACTION_POID={} BL_TYPE={} VOYAGE_TRANSACTION_POID={}",
+                            rs.getLong(1), rs.getString(2), rs.getLong(3));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[MANIFEST-PRINT] Debug query failed: {}", e.getMessage());
+        }
+
         params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
         params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
         params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));

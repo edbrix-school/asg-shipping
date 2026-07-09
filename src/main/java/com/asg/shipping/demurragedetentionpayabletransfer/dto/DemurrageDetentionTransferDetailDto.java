@@ -45,4 +45,5 @@ public class DemurrageDetentionTransferDetailDto {
     private BigDecimal totalIncomeAmount;
     private BigDecimal netIncomeAmt;
     private String isSelect;
+    private String actionType;
 }
