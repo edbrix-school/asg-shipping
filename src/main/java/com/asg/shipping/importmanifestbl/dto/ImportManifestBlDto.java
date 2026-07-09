@@ -46,9 +46,6 @@ public class ImportManifestBlDto {
     private String freightAllInOne;
     private String remarks;
 
-    private String createdBy;
-    private java.time.LocalDateTime createdDate;
-
     private String shipperName;
     private String shipperAddress;
 
