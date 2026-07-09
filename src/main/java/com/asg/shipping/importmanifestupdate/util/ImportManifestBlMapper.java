@@ -742,6 +742,14 @@ public class ImportManifestBlMapper {
     public ChargeRequestDto mapChargesDtlToDto(ShipBlManifestChargesDtl entity) {
         if (entity == null)
             return null;
+        long qty = entity.getQuantity() != null ? entity.getQuantity() : 1L;
+        long exch = entity.getCurrencyExchange() != null ? entity.getCurrencyExchange() : 1L;
+        java.math.BigDecimal buyAmt = entity.getBuyPercharge() != null
+                ? java.math.BigDecimal.valueOf(entity.getBuyPercharge()).multiply(java.math.BigDecimal.valueOf(qty)).multiply(java.math.BigDecimal.valueOf(exch))
+                : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal saleAmt = entity.getPerQuantityAmount() != null
+                ? java.math.BigDecimal.valueOf(entity.getPerQuantityAmount()).multiply(java.math.BigDecimal.valueOf(qty)).multiply(java.math.BigDecimal.valueOf(exch))
+                : java.math.BigDecimal.ZERO;
         return ChargeRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .chargePoid(entity.getChargePoid())
@@ -749,6 +757,8 @@ public class ImportManifestBlMapper {
                 .quantity(entity.getQuantity())
                 .buyPercharge(entity.getBuyPercharge())
                 .perQuantityAmount(entity.getPerQuantityAmount())
+                .buyAmount(buyAmt)
+                .saleAmount(saleAmt)
                 .paidAtPortPoid(entity.getPaidAtPortPoid())
                 .chargeType(entity.getChargeType())
                 .currencyCode(entity.getCurrencyCode())

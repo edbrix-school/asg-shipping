@@ -46,6 +46,11 @@ public class ChargeRequestDto implements BlManifestValidationService.ChargeValid
 
     private Long taxPercentage;
     private Long taxAmount;
+
+    // Computed display fields (buyPercharge * quantity, perQuantityAmount * quantity)
+    private java.math.BigDecimal buyAmount;
+    private java.math.BigDecimal saleAmount;
+
     private String cnRefDocId;
     private String cnRefDocPoid;
     private String cnRefDetRowId;
