@@ -97,11 +97,11 @@ public class BlManifestValidationService {
         BigDecimal totalSell = BigDecimal.ZERO;
         BigDecimal totalBuy = BigDecimal.ZERO;
         for (ChargeValidatable charge : charges) {
-            long qty = charge.getQuantityValue() != null ? charge.getQuantityValue() : 1L;
-            long sell = charge.getSellValue() != null ? charge.getSellValue() : 0L;
-            long buy = charge.getBuyValue() != null ? charge.getBuyValue() : 0L;
-            totalSell = totalSell.add(BigDecimal.valueOf(sell * qty));
-            totalBuy = totalBuy.add(BigDecimal.valueOf(buy * qty));
+            BigDecimal qty = charge.getQuantityValue() != null ? charge.getQuantityValue() : BigDecimal.ONE;
+            BigDecimal sell = charge.getSellValue() != null ? charge.getSellValue() : BigDecimal.ZERO;
+            BigDecimal buy = charge.getBuyValue() != null ? charge.getBuyValue() : BigDecimal.ZERO;
+            totalSell = totalSell.add(sell.multiply(qty));
+            totalBuy = totalBuy.add(buy.multiply(qty));
         }
         BigDecimal totalGain = totalSell.subtract(totalBuy);
         if (totalGain.compareTo(BigDecimal.ZERO) < 0) {
@@ -192,8 +192,8 @@ public class BlManifestValidationService {
     public interface ChargeValidatable {
         Long getChargePoidValue();
         String getFreightTypeValue();
-        Long getQuantityValue();
-        Long getSellValue();
-        Long getBuyValue();
+        BigDecimal getQuantityValue();
+        BigDecimal getSellValue();
+        BigDecimal getBuyValue();
     }
 }

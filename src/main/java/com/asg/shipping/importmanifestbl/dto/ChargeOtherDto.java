@@ -3,6 +3,8 @@ package com.asg.shipping.importmanifestbl.dto;
 import com.asg.shipping.common.dto.LovItem;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -19,13 +21,13 @@ public class ChargeOtherDto {
     private LovItem chargeDet;
     private LovItem basisDet;
 
-    private Long quantity;
+    private BigDecimal quantity;
     private String currencyCode;
     private LovItem currencyCodeDet;
-    private Long exchangeRate;
+    private BigDecimal exchangeRate;
 
-    private Long buy;
-    private Long sell;
+    private BigDecimal buy;
+    private BigDecimal sell;
 
     private String freightType;
     private Long freightTypePoid;
