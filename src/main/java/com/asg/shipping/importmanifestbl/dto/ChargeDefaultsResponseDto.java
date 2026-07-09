@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class ChargeDefaultsResponseDto {
     private Long taxPoid;
+    private LovItem taxDet;
     private BigDecimal taxPercentage;
     private LovItem taxDet;
 }

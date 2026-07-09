@@ -26,7 +26,7 @@ public interface ImportManifestService {
 
     BlStatusResponseDto getBlStatus(Long transactionPoId);
 
-    Map<String, Object> list(FilterRequestDto filters, Pageable pageable);
+    Map<String, Object> list(FilterRequestDto filters, LocalDate fromDate, LocalDate toDate, Pageable pageable);
 
     ImportManifestBlResponseDto createImportManifestBl(ImportManifestBlDto request, Long companyPoid, Long groupPoid);
 

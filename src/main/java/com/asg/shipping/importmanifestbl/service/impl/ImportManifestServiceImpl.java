@@ -725,12 +725,11 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     }
 
     @Override
-    public Map<String, Object> list(FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> list(FilterRequestDto request, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         try {
-
             String operator = documentService.resolveOperator(request);
             String isDeleted = documentService.resolveIsDeleted(request);
-            List<FilterDto> filters = documentService.resolveFilters(request);
+            List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", fromDate, toDate);
 
             RawSearchResult raw = documentService.search(
                     UserContext.getDocumentId(),
