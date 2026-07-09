@@ -136,6 +136,8 @@ public class ImportManifestMapper {
                 .manualCanSend(entity.getManuallyCanSend())
                 .holdReason(entity.getHoldReason())
                 .holdRemarks(entity.getHoldRemarks())
+                .createdBy(entity.getCreatedBy())
+                .createdDate(entity.getCreatedDate())
                 .otherNotifies(OtherNotifyDto.builder()
                         .notify2EdiName(entity.getNotify2EdiName())
                         .notify2EdiAddress(entity.getNotify2EdiAddress())

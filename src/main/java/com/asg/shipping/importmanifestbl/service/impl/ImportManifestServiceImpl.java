@@ -572,7 +572,9 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         String oldFreightStatus = existingEntity.getFreightStatus();
         String oldDoNo = existingEntity.getDoNo();
 
+        String existingDocRef = existingEntity.getDocRef();
         ShipBlManifestHdr entity = ImportManifestMapper.mapToEntity(dto, existingEntity);
+        entity.setDocRef(existingDocRef); // DOC_REF is DB-generated on INSERT, must never change on UPDATE
         if (hasAnyEdiChange(dto)) {
             updateService.formatEdiFields(entity);
         }
@@ -1437,15 +1439,19 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Long taxPoid = (Long) taxData[0];
         BigDecimal taxPercentage = (BigDecimal) taxData[1];
 
-        LovItem taxDet = null;
+        ChargeDefaultsResponseDto.ChargeDefaultsResponseDtoBuilder builder = ChargeDefaultsResponseDto.builder()
+                .taxPoid(taxPoid)
+                .taxPercentage(taxPercentage != null ? taxPercentage : BigDecimal.ZERO);
+
         if (taxPoid != null) {
-            taxDet = lovService.getLovItemByPoid(taxPoid, "TAX_MASTER", UserContext.getGroupPoid(), companyPoid, UserContext.getUserPoid());
+            try {
+                builder.taxDet(lovService.getLovItemByPoid(taxPoid, "TAX_MASTER",
+                        UserContext.getGroupPoid(), companyPoid, UserContext.getUserPoid()));
+            } catch (Exception e) {
+                log.warn("Failed to fetch TAX_MASTER LOV for taxPoid: {}", taxPoid, e);
+            }
         }
 
-        return ChargeDefaultsResponseDto.builder()
-                .taxPoid(taxPoid)
-                .taxDet(taxDet)
-                .taxPercentage(taxPercentage != null ? taxPercentage : BigDecimal.ZERO)
-                .build();
+        return builder.build();
     }
 }
