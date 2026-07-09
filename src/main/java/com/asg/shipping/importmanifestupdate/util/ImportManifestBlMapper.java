@@ -5,6 +5,8 @@ import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestupdate.entity.*;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +17,14 @@ public class ImportManifestBlMapper {
 
     private static final String CONTAINER_OWN_CUSTOMER = "C";
     private static final String CONTAINER_OWN_SHIPPER = "S";
+
+    /** Matches the NUMBER(25,3) precision of the charge amount columns. */
+    private static final int AMOUNT_SCALE = 3;
+    private static final BigDecimal ZERO_AMOUNT = BigDecimal.ZERO.setScale(AMOUNT_SCALE);
+
+    private static BigDecimal scaledAmount(BigDecimal value) {
+        return value.setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+    }
 
     public ImportManifestUpdateOpsDto mapToScreenDto(ImportManifestBlRequestDto requestDto) {
         if (requestDto == null) {
@@ -742,14 +752,14 @@ public class ImportManifestBlMapper {
     public ChargeRequestDto mapChargesDtlToDto(ShipBlManifestChargesDtl entity) {
         if (entity == null)
             return null;
-        long qty = entity.getQuantity() != null ? entity.getQuantity() : 1L;
-        long exch = entity.getCurrencyExchange() != null ? entity.getCurrencyExchange() : 1L;
-        java.math.BigDecimal buyAmt = entity.getBuyPercharge() != null
-                ? java.math.BigDecimal.valueOf(entity.getBuyPercharge()).multiply(java.math.BigDecimal.valueOf(qty)).multiply(java.math.BigDecimal.valueOf(exch))
-                : java.math.BigDecimal.ZERO;
-        java.math.BigDecimal saleAmt = entity.getPerQuantityAmount() != null
-                ? java.math.BigDecimal.valueOf(entity.getPerQuantityAmount()).multiply(java.math.BigDecimal.valueOf(qty)).multiply(java.math.BigDecimal.valueOf(exch))
-                : java.math.BigDecimal.ZERO;
+        BigDecimal qty = entity.getQuantity() != null ? entity.getQuantity() : BigDecimal.ONE;
+        BigDecimal exch = entity.getCurrencyExchange() != null ? entity.getCurrencyExchange() : BigDecimal.ONE;
+        BigDecimal buyAmt = entity.getBuyPercharge() != null
+                ? scaledAmount(entity.getBuyPercharge().multiply(qty).multiply(exch))
+                : ZERO_AMOUNT;
+        BigDecimal saleAmt = entity.getPerQuantityAmount() != null
+                ? scaledAmount(entity.getPerQuantityAmount().multiply(qty).multiply(exch))
+                : ZERO_AMOUNT;
         return ChargeRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .chargePoid(entity.getChargePoid())

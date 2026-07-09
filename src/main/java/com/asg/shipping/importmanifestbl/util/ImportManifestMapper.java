@@ -4,6 +4,7 @@ import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestupdate.entity.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public class ImportManifestMapper {
@@ -170,7 +171,10 @@ public class ImportManifestMapper {
                         .rate(charge.getCurrencyExchange())
                         .quantity(charge.getQuantity())
                         .buy(charge.getBuyPercharge())
-                        .buyAmount(charge.getPerQuantityAmount())
+                        .buyAmount(charge.getBuyAmount())
+                        .sell(charge.getPerQuantityAmount())
+                        .sellAmount(charge.getSaleAmount())
+                        .gain(zeroIfNull(charge.getSaleAmount()).subtract(zeroIfNull(charge.getBuyAmount())))
                         .taxPercentage(charge.getTaxPercentage())
                         .taxAmount(charge.getTaxAmount())
                         .freightType(charge.getFreightType())
@@ -185,6 +189,10 @@ public class ImportManifestMapper {
                         .actionType(charge.getActionType())
                         .build())
                 .toList();
+    }
+
+    private static BigDecimal zeroIfNull(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     public static List<ChargeOtherDto> mapToChargesOther(List<ChargeRequestDto> chargeDetails) {
@@ -586,7 +594,7 @@ public class ImportManifestMapper {
         entity.setCurrencyCode(dto.getCurrencyCode());
         entity.setQuantity(dto.getQuantity());
         entity.setBuyPercharge(dto.getBuy());
-        entity.setPerQuantityAmount(dto.getBuyAmount());
+        entity.setPerQuantityAmount(dto.getSell());
         entity.setTaxPercentage(dto.getTaxPercentage());
         entity.setTaxAmount(dto.getTaxAmount());
         entity.setPaidAtPortPoid(dto.getPaidAtPortPoid());
