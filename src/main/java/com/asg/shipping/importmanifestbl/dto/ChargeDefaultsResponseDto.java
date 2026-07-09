@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,4 +15,5 @@ import java.math.BigDecimal;
 public class ChargeDefaultsResponseDto {
     private Long taxPoid;
     private BigDecimal taxPercentage;
+    private LovItem taxDet;
 }
