@@ -1342,6 +1342,11 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                 || (newFreightStatus != null
                         && !newFreightStatus.equals(oldFreightStatus));
 
+        boolean hasManualTotals = saved.getTotalNetVolume() != null
+                || saved.getTotalWeight() != null
+                || saved.getTotalNetWeight() != null
+                || saved.getTotalNoOfPacks() != null;
+
         Long transactionPoid = saved.getTransactionPoid();
 
         TransactionSynchronizationManager.registerSynchronization(
@@ -1354,11 +1359,13 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                             updateDoBlStatus(transactionPoid, groupPoid, companyPoid);
                         }
 
-                        callAfterSaveProcedure(
-                                saved,
-                                groupPoid,
-                                companyPoid,
-                                "AUTOSUMWEIGHTPACKATE");
+                        if (!hasManualTotals) {
+                            callAfterSaveProcedure(
+                                    saved,
+                                    groupPoid,
+                                    companyPoid,
+                                    "AUTOSUMWEIGHTPACKATE");
+                        }
                     }
                 });
     }

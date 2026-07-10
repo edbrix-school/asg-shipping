@@ -522,6 +522,9 @@ public class ImportManifestBlMapper {
         entity.setForwarderPin(dto.getForwarderPin());
         entity.setManifestEmailVerified(dto.getManifestEmailVerified());
         entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
+        if (entity.getDeleted() == null) {
+            entity.setDeleted("N");
+        }
         return entity;
     }
 
