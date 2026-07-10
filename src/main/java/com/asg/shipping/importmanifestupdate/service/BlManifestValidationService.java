@@ -114,12 +114,22 @@ public class BlManifestValidationService {
 
     public void validateFreightType(String freightStatus, String holdReason,
                                      List<? extends ChargeValidatable> charges) {
+        validateFreightType(freightStatus, holdReason, charges, List.of());
+    }
+
+
+    public void validateFreightType(String freightStatus, String holdReason,
+                                     List<? extends ChargeValidatable> charges,
+                                     List<? extends ChargeValidatable> otherCharges) {
         if (StringUtils.isBlank(freightStatus)) {
             return;
         }
 
         String reason = holdReason != null ? holdReason : "5";
-        String globalFreightType = determineGlobalFreightType(charges);
+        String globalFreightType = determineGlobalFreightType(otherCharges);
+        if ("XX".equals(globalFreightType)) {
+            globalFreightType = determineGlobalFreightType(charges);
+        }
 
         if ("XX".equals(globalFreightType) && !"5".equalsIgnoreCase(reason)) {
             throw new ValidationException(BlManifestValidationMessages.FREIGHT_TYPE_NOT_ENTERED);

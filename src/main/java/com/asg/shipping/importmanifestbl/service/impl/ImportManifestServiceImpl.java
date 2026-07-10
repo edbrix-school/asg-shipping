@@ -768,14 +768,35 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 dto.getHoldReason(), dto.getConsigneePoid(), dto.getNotify1Poid(),
                 dto.getManualCanSend(), addressFound);
 
-        blManifestValidationService.validateContainerFields(dto.getContainers());
+        List<ContainerDto> activeContainers = filterActiveContainers(dto.getContainers());
+        List<ChargeDto> activeCharges = filterActiveCharges(dto.getCharges());
 
-        blManifestValidationService.validateFinancialGain(dto.getCharges());
+        blManifestValidationService.validateContainerFields(activeContainers);
+
+        blManifestValidationService.validateFinancialGain(activeCharges);
 
         blManifestValidationService.validateFreightType(
-                dto.getFreight(), dto.getHoldReason(), dto.getCharges());
+                dto.getFreight(), dto.getHoldReason(), activeCharges, dto.getOtherCharges());
 
-        blManifestValidationService.validateDemurrageChargeCode(dto.getCharges());
+        blManifestValidationService.validateDemurrageChargeCode(activeCharges);
+    }
+
+    private List<ContainerDto> filterActiveContainers(List<ContainerDto> containers) {
+        if (containers == null) {
+            return List.of();
+        }
+        return containers.stream()
+                .filter(c -> !ACTION_ISDELETED.equals(resolveAction(c.getActionType())))
+                .toList();
+    }
+
+    private List<ChargeDto> filterActiveCharges(List<ChargeDto> charges) {
+        if (charges == null) {
+            return List.of();
+        }
+        return charges.stream()
+                .filter(c -> !ACTION_ISDELETED.equals(resolveAction(c.getActionType())))
+                .toList();
     }
 
     private void validateBlManifestDTO(ImportManifestBlDto dto, Long excludePoid) {
