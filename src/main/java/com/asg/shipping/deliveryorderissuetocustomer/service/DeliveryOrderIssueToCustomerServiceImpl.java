@@ -137,7 +137,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         blManifestRepository.save(blManifest);
-        loggingService.logChanges(oldBlManifest, blManifest, ShipBlManifestHDR.class, UserContext.getDocumentId(), blManifest.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         DoShPrintingDtl doShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery order ship printing detail", TRANSACTIONPOID, transactionPoid.toString()));
