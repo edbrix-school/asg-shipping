@@ -35,6 +35,7 @@ public class ChargeOtherDto implements BlManifestValidationService.ChargeValidat
     private LovItem freightTypeDet;
     private Long paidAtPortPoid;
     private LovItem paidAtPortDet;
+    private String actionType;
 
     @Override public Long getChargePoidValue() { return chargePoid; }
     @Override public String getFreightTypeValue() { return freightType; }

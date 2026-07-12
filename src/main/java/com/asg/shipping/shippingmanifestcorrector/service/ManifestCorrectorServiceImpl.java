@@ -104,7 +104,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     public ManifestCorrectorDto getManifestCorrectorById(Long transactionPoid) {
         log.info("Getting Shipping Manifest Corrector with id: {}", transactionPoid);
 
-        ShipBlReprintHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
+        ShipBlReprintHdr entity = hdrRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipping Manifest Corrector", "transactionPoid", transactionPoid.toString()));
 
         ManifestCorrectorDto dto = mapper.mapToDto(entity);
