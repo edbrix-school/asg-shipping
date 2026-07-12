@@ -687,7 +687,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
 
         String lineCode = validationRepository.getLineCode(voyageTransactionPoid);
-        String jrxmlPath = "Shipping/CAN_SHIPPING.jrxml";
+        String jrxmlPath = "Shipping/SH/CAN_SHIPPING.jrxml";
         if ("MSC".equalsIgnoreCase(lineCode)) {
             jrxmlPath = "Shipping/SH/CAN_SHIPPING_msc.jrxml";
         } else if ("COS".equalsIgnoreCase(lineCode)) {
