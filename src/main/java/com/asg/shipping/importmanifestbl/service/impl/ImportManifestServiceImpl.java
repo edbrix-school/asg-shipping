@@ -539,6 +539,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         saveCargoDescriptions(buildSimpleCargoDescriptions(dto), transactionPoid, logEntries);
         saveContainers(dto.getContainers(), transactionPoid, logEntries);
         saveChargeDetails(dto.getCharges(), transactionPoid, logEntries);
+        saveOtherChargeDetails(dto.getOtherCharges(), transactionPoid, logEntries);
         savePartBls(dto.getPartBls(), transactionPoid, logEntries);
         saveNotifyParties(dto.getAddressDetails(), transactionPoid, logEntries, dto);
         saveMafiDetails(dto.getMafiDetails(), transactionPoid, logEntries);
@@ -947,6 +948,29 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
     }
 
+    private void saveOtherChargeDetails(List<ChargeOtherDto> chargeDetails, Long transactionPoid, List<String> logEntries) {
+        if (CollectionUtils.isEmpty(chargeDetails))
+            return;
+
+        Long nextDetRowId = getNextDetRowId(chargesDtlRepository.getMaxDetRowId(transactionPoid));
+
+        for (ChargeOtherDto detailDto : chargeDetails) {
+            Long detRowId = detailDto.getDetRowId() != null ? detailDto.getDetRowId() : nextDetRowId++;
+
+            ShipBlManifestChargesDtl entity = ImportManifestMapper.mapChargesDtlFromDto(detailDto, transactionPoid,
+                    new ShipBlManifestChargesDtl());
+
+            if (entity.getId() == null) {
+                entity.setId(new ShipBlManifestDtlId(transactionPoid, detRowId));
+            } else {
+                entity.getId().setDetRowId(detRowId);
+            }
+
+            chargesDtlRepository.save(entity);
+            logEntries.add(String.format("Row Created on Other Charge Detail with DetRowId: %s", detRowId));
+        }
+    }
+
     private void saveChargeDetails(List<ChargeDto> chargeDetails, Long transactionPoid, List<String> logEntries) {
         if (CollectionUtils.isEmpty(chargeDetails))
             return;
@@ -1064,6 +1088,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         updateCargoDescriptions(buildSimpleCargoDescriptions(dto), transactionPoid, docId, docKeyPoid);
         updateContainers(dto.getContainers(), transactionPoid, docId, docKeyPoid);
         updateCharges(dto.getCharges(), transactionPoid, docId, docKeyPoid);
+        updateOtherCharges(dto.getOtherCharges(), transactionPoid, docId, docKeyPoid);
         updatePartBls(dto.getPartBls(), transactionPoid, docId, docKeyPoid);
         updateNotifyParties(dto.getAddressDetails(), transactionPoid, docId, docKeyPoid, dto);
         updateMafiDetails(dto.getMafiDetails(), transactionPoid, docId, docKeyPoid);
@@ -1194,6 +1219,46 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         if (!toDelete.isEmpty()) {
             List<ShipBlManifestContainerDtl> entitiesToDelete = containerDtlRepository.findAllById(toDelete);
             containerDtlRepository.deleteAllInBatch(entitiesToDelete);
+            entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
+        }
+    }
+
+    private void updateOtherCharges(List<ChargeOtherDto> details, Long transactionPoid, String docId, String docKeyPoid) {
+        if (details == null) return;
+
+        List<String> logEntries = new ArrayList<>();
+        List<ShipBlManifestChargesDtl> toUpdate = new ArrayList<>();
+        List<ShipBlManifestDtlId> toDelete = new ArrayList<>();
+        List<LogRequestDto<ShipBlManifestChargesDtl>> logRequests = new ArrayList<>();
+
+        for (ChargeOtherDto detailDto : details) {
+            String action = resolveAction(detailDto.getActionType());
+            switch (action) {
+                case ACTION_ISCREATED -> saveOtherChargeDetails(List.of(detailDto), transactionPoid, logEntries);
+                case ACTION_ISUPDATED -> {
+                    ShipBlManifestChargesDtl existing = chargesDtlRepository.findById(new ShipBlManifestDtlId(transactionPoid, detailDto.getDetRowId()))
+                            .orElseThrow(() -> new ResourceNotFoundException("Other Charge Detail", "detRowId", detailDto.getDetRowId()));
+                    ShipBlManifestChargesDtl oldEntity = new ShipBlManifestChargesDtl();
+                    BeanUtils.copyProperties(existing, oldEntity);
+                    ImportManifestMapper.mapChargesDtlFromDto(detailDto, transactionPoid, existing);
+                    toUpdate.add(existing);
+                    String logDetail = String.format(LOG_KEY_ID_FORMAT, transactionPoid, detailDto.getDetRowId());
+                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipBlManifestChargesDtl.class, docId, docKeyPoid, logDetail));
+                }
+                case ACTION_ISDELETED -> {
+                    if (detailDto.getDetRowId() != null) {
+                        toDelete.add(new ShipBlManifestDtlId(transactionPoid, detailDto.getDetRowId()));
+                    }
+                }
+                default -> {}
+            }
+        }
+        processUpdates(chargesDtlRepository, toUpdate, logRequests);
+        logSummaryEntries(logEntries, docId, docKeyPoid);
+
+        if (!toDelete.isEmpty()) {
+            List<ShipBlManifestChargesDtl> entitiesToDelete = chargesDtlRepository.findAllById(toDelete);
+            chargesDtlRepository.deleteAllInBatch(entitiesToDelete);
             entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
         }
     }

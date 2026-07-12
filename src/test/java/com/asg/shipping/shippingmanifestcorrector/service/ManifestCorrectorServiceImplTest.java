@@ -123,7 +123,7 @@ class ManifestCorrectorServiceImplTest {
 
     @Test
     void getManifestCorrectorById_Success() {
-        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(hdrRepository.findByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
         when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(mapper.mapToDto(any())).thenReturn(responseDTO);
@@ -141,7 +141,7 @@ class ManifestCorrectorServiceImplTest {
 
     @Test
     void getManifestCorrectorById_NotFound() {
-        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.empty());
+        when(hdrRepository.findByTransactionPoid(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getManifestCorrectorById(1L));
     }
@@ -266,7 +266,7 @@ class ManifestCorrectorServiceImplTest {
         var chargeDtl = new com.asg.shipping.shippingmanifestcorrector.entity.ShipBlReprintChargeDtl();
         var containerDtl = new com.asg.shipping.shippingmanifestcorrector.entity.ShipBlReprintContainerDtl();
 
-        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(hdrRepository.findByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
         when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of(chargeDtl));
         when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of(containerDtl));
         when(mapper.mapToDto(any())).thenReturn(responseDTO);
