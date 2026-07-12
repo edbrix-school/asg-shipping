@@ -1,5 +1,6 @@
 package com.asg.shipping.collectionhandover.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -42,9 +43,11 @@ public class ArShDayEndCloseHdr extends BaseEntity {
     @Column(name = "TRANSACTION_DATE")
     private LocalDate transactionDate;
 
+    @AuditIgnore
     @Column(name = "GROUP_POID")
     private Long groupPoid;
 
+    @AuditIgnore
     @Column(name = "COMPANY_POID")
     private Long companyPoid;
 
@@ -56,6 +59,7 @@ public class ArShDayEndCloseHdr extends BaseEntity {
     private String docRef;
 
     /** DB default 'PORT' */
+    @AuditIgnore
     @Column(name = "LOCATION_CODE", length = 20)
     @Builder.Default
     private String locationCode = "PORT";
@@ -66,6 +70,7 @@ public class ArShDayEndCloseHdr extends BaseEntity {
     @Column(name = "CHEQUE_AMOUNT")
     private BigDecimal chequeAmount;
 
+    @AuditIgnore
     @Column(name = "OUTSTANDING_AMOUNT")
     private BigDecimal outstandingAmount;
 
@@ -86,6 +91,7 @@ public class ArShDayEndCloseHdr extends BaseEntity {
     @Column(name = "MAIN_OFC_REMARKS", length = 500)
     private String mainOfcRemarks;
 
+    @AuditIgnore
     @Column(name = "DELETED", length = 1)
     private String deleted;
 
