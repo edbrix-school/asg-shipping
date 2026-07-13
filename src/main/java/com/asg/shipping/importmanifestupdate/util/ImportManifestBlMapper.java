@@ -135,6 +135,7 @@ public class ImportManifestBlMapper {
                 .noOfOrgnlBls(screenDto.getNoOfOrgnlBls())
                 .exportReference(screenDto.getExportReference())
                 .typeOfMove(screenDto.getTypeOfMove())
+                .demFreeDays(screenDto.getDemFreeDays())
                 .preCarriedBy(screenDto.getPreCarriedBy())
                 .totalNetVolume(screenDto.getTotalNetVolume())
                 .totalWeight(screenDto.getTotalWeight())
@@ -515,6 +516,7 @@ public class ImportManifestBlMapper {
         entity.setDoCntToRegsMails(dto.getDoCntToRegsMails());
         entity.setDeliverySentTo(dto.getDeliverySentTo());
         entity.setFfBillToPoid(dto.getFfBillToPoid());
+        entity.setDemFreeDays(dto.getDemFreeDays());
         entity.setDemActualNextDay(dto.getDemActualNextDay());
         entity.setPrincipalDoNumber(dto.getPrincipalDoNumber());
         entity.setStopUcanAlert(dto.getStopUcanAlert());

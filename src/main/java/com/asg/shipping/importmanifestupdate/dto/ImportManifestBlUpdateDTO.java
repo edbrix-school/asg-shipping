@@ -220,6 +220,8 @@ public class ImportManifestBlUpdateDTO {
     private String manifestEmailVerified;
     private String emailVerifiedWithSpecialC;
 
+    private Long demFreeDays;
+
     @Pattern(regexp = "^[YN]?$", message = "Demurrage actual next day must be Y or N")
     private String demActualNextDay;
 
