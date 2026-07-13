@@ -70,6 +70,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
+        viewRepository.findRemarksByTransactionPoid(transactionPoid).ifPresent(dto::setRemarks);
         enrichWithLovData(dto);
         return dto;
     }
@@ -158,7 +159,10 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         doShPrintingDtlRepository.save(doShPrintingDtl);
-        loggingService.logChanges(oldDoShPrintingDtl, doShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), doShPrintingDtl.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), transactionPoid.toString());
+        loggingService.logDetails(oldBlManifest, blManifest, ShipBlManifestHDR.class, UserContext.getDocumentId(), transactionPoid.toString(), "TRANSACTION_POID");
+        loggingService.logDetails(oldDoShPrintingDtl, doShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), "TRANSACTION_POID");
         return transactionPoid;
     }
 
