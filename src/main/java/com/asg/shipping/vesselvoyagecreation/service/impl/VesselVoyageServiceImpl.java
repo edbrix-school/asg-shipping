@@ -2,8 +2,10 @@ package com.asg.shipping.vesselvoyagecreation.service.impl;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
@@ -66,6 +68,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     private final DocumentSearchService documentSearchService;
     private final VoyageBillsRepository voyageBillsRepository;
     private final LoggingService loggingService;
+    private final DocumentDeleteService documentDeleteService;
     private final PrintService printService;
     private final ExcelExportService excelExportService;
     private final DataSource dataSource;
@@ -743,28 +746,20 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     @Transactional
-    public void deleteVoyage(Long voyagePoid) {
+    public void deleteVoyage(Long voyagePoid, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting vessel voyage with id: {}", voyagePoid);
 
         Long groupPoid = UserContext.getGroupPoid();
-
-        ShipVoyageHdrEntity entity = voyageHdrRepository.findByTransactionPoidAndGroupPoid(voyagePoid, groupPoid)
+        voyageHdrRepository.findByTransactionPoidAndGroupPoid(voyagePoid, groupPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(VESSEL_VOYAGE_NOT_FOUND_PREFIX + voyagePoid));
 
-        // Check if already deleted
-        if ("Y".equals(entity.getDeleted())) {
-            log.info("Vessel Voyage with id: {} is already deleted", voyagePoid);
-            return;
-        }
-
-        entity.setDeleted("Y");
-        voyageHdrRepository.save(entity);
-
-        // Add logging
-        String docId = UserContext.getDocumentId();
-        String key = entity.getTransactionPoid().toString();
-        loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, docId, key);
-        loggingService.logSimpleFieldChange(ShipVoyageHdrEntity.class, docId, key, "deleted", "N", "Y", "VesselVoyage soft deleted");
+        documentDeleteService.deleteDocument(
+                voyagePoid,
+                "SHIP_VOYAGE_HDR",
+                "TRANSACTION_POID",
+                deleteReasonDto,
+                null
+        );
 
         log.info("Successfully deleted vessel voyage with id: {}", voyagePoid);
     }
