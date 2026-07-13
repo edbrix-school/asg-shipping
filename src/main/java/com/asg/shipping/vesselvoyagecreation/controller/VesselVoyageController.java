@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.asg.common.lib.annotation.AllowedAction;
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
@@ -264,9 +265,10 @@ public class VesselVoyageController {
 
 	@AllowedAction(UserRolesRightsEnum.DELETE)
 	@DeleteMapping("/{voyagePoid}")
-	public ResponseEntity<?> deleteVoyage(@PathVariable Long voyagePoid) {
+	public ResponseEntity<?> deleteVoyage(@PathVariable Long voyagePoid,
+			@Valid @RequestBody(required = false) DeleteReasonDto deleteReasonDto) {
 		log.info("Action={} | Delete voyage | voyagePoid={}", UserContext.getActionRequested(), voyagePoid);
-		vesselVoyageService.deleteVoyage(voyagePoid);
+		vesselVoyageService.deleteVoyage(voyagePoid, deleteReasonDto);
 		return ApiResponse.success("Vessel voyage deleted successfully");
 	}
 
