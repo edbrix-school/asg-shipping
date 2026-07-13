@@ -5,6 +5,7 @@ import jakarta.persistence.ParameterMode;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.StoredProcedureQuery;
 import java.sql.ResultSet;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -15,6 +16,13 @@ public class ExportManifestBlCustomRepositoryImpl implements ExportManifestBlCus
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    private final String defaultSchema;
+
+    public ExportManifestBlCustomRepositoryImpl(
+            @Value("${spring.jpa.properties.hibernate.default_schema}") String defaultSchema) {
+        this.defaultSchema = defaultSchema;
+    }
 
     @Override
     public String validateBlNumberDuplicate(String blNumber, String oldBlNumber, String action) {
@@ -125,14 +133,14 @@ public class ExportManifestBlCustomRepositoryImpl implements ExportManifestBlCus
     @Override
     public String getBlPrintReport(Long groupPoid, Long companyPoid, String docId, Long transactionPoid, String returnType) {
     	String sql = """
-				SELECT PRODUCTION.FUNC_SHIP_GET_BL_PRINT_REPORT(
+				SELECT %s.FUNC_SHIP_GET_BL_PRINT_REPORT(
 				    :groupPoid,
 				    :companyPoid,
 				    :docId,
 				    :transactionPoid,
 				    :returnType
 				) FROM DUAL
-				""";
+				""".formatted(defaultSchema);
 
 		return (String) entityManager.createNativeQuery(sql).setParameter("groupPoid", groupPoid)
 				.setParameter("companyPoid", companyPoid).setParameter("docId", docId)

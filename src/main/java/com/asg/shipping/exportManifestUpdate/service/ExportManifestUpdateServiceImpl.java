@@ -842,6 +842,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     		throw new ValidationException(jrxmlFile.trim());
     	}
     	Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-140");
+		params.put("DOC_KEY_POID", String.valueOf(transactionPoid));
 		JasperReport mainReport = printService.load("Shipping/" + jrxmlFile);
 		params.put("DRAFT_ORIGINAL", request.getDraftOriginalParam());
 		return printService.fillReportToPdf(mainReport, params, dataSource);
