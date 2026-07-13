@@ -734,6 +734,8 @@ public class SalesInvoiceShippingController {
             case "CREATED_DATE" -> "CREATED_DATE";
             case "LASTMODIFIED_BY" -> "LASTMODIFIED_BY";
             case "LASTMODIFIED_DATE" -> "LASTMODIFIED_DATE";
+            case "CUSTOMER_NAME" -> "CUSTOMER_NAME";
+            case "BL_NUMBER" -> "BL_NUMBER";
             default -> "INV_DATE";
         };
     }
