@@ -32,6 +32,16 @@ public class DeliveryOrderIssueToCustomerRepository {
     /**
      * Find delivery order by transaction POID
      */
+    public Optional<String> findRemarksByTransactionPoid(Long transactionPoid) {
+        String sql = "SELECT REMARKS FROM SHIP_BL_MANIFEST_HDR WHERE TRANSACTION_POID = ?";
+        try {
+            String remarks = jdbcTemplate.queryForObject(sql, String.class, transactionPoid);
+            return Optional.ofNullable(remarks);
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
     public Optional<DeliveryOrderIssueToCustomerDto> findByTransactionPoid(Long transactionPoid) {
         String sql = "SELECT COMPANY_POID, TRANSACTION_POID, TRANSACTION_DATE, DOC_REF, JOBNO, " +
                 "ARRIVAL_DATE, BL_NUMBER, LINE, CONSIGNEE, NOTIFY, C_20, C_40, HOLD_DO, " +
@@ -47,8 +57,8 @@ public class DeliveryOrderIssueToCustomerRepository {
             List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid);
             return results.isEmpty() ? Optional.empty() : Optional.of(results.getFirst());
         } catch (Exception e) {
-            // Log error and return empty
-            return Optional.empty();
+            log.error("Error fetching delivery order for transactionPoid={}: {}", transactionPoid, e.getMessage(), e);
+            throw e;
         }
     }
 
