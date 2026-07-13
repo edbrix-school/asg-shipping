@@ -136,273 +136,273 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Long groupPoid = UserContext.getGroupPoid();
         Long companyPoid = UserContext.getCompanyPoid();
         Long userPoid = UserContext.getUserPoid();
-        enrichHeaderLovData(dto, groupPoid, companyPoid, userPoid);
-        enrichGeneralCargoLovData(dto.getGeneralCargoDetails(), groupPoid, companyPoid, userPoid);
-        enrichContainerLovData(dto.getContainers(), groupPoid, companyPoid, userPoid);
-        enrichChargeLovData(dto.getCharges(), groupPoid, companyPoid, userPoid);
-        enrichOtherChargeLovData(dto.getOtherCharges(), groupPoid, companyPoid, userPoid);
-        enrichPartBlLovData(dto.getPartBls(), groupPoid, companyPoid, userPoid);
+//        enrichHeaderLovData(dto, groupPoid, companyPoid, userPoid);
+//        enrichGeneralCargoLovData(dto.getGeneralCargoDetails(), groupPoid, companyPoid, userPoid);
+//        enrichContainerLovData(dto.getContainers(), groupPoid, companyPoid, userPoid);
+//        enrichChargeLovData(dto.getCharges(), groupPoid, companyPoid, userPoid);
+//        enrichOtherChargeLovData(dto.getOtherCharges(), groupPoid, companyPoid, userPoid);
+//        enrichPartBlLovData(dto.getPartBls(), groupPoid, companyPoid, userPoid);
     }
 
-    private void enrichHeaderLovData(ImportManifestBlDto dto, Long groupPoid, Long companyPoid,
-                                     Long userPoid) {
-        try {
-            if (dto.getVesselVoyagePoid() != null) {
-                dto.setVesselVoyagePoidDet(
-                        lovService.getLovItemByPoid(dto.getVesselVoyagePoid(), "VESSAL_VOYAGE", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getQuotationPoid() != null) {
-                dto.setQuotationDet(
-                        lovService.getLovItemByPoid(dto.getQuotationPoid(), "SHIP_QUOTATION_IMPORT",
-                                groupPoid, companyPoid, userPoid));
-            }
-            if (dto.getSalesmanPoid() != null) {
-                dto.setSalesmanDet(
-                        lovService.getLovItemByPoid(dto.getSalesmanPoid(), "SALESMAN", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getCommodityPoid() != null) {
-                dto.setCommodityDet(
-                        lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getCargo() != null) {
-                dto.setCargoDet(
-                        lovService.getLovItemByCode(dto.getCargo(), "CARGO_TYPE", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getBlType() != null) {
-                dto.setBlTypeDet(
-                        lovService.getLovItemByCode(dto.getBlType(), "BL_TYPE_IMPORT", groupPoid, companyPoid,
-                                userPoid));
-            }
-            String issueType = dto.getBlIssueType() != null ? dto.getBlIssueType() : dto.getIssueType();
-            if (issueType != null) {
-                dto.setBlIssueTypeDet(
-                        lovService.getLovItemByCode(issueType, "BL_ISSUE_TYPE", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getConsigneePoid() != null) {
-                dto.setConsigneeDet(
-                        lovService.getLovItemByPoid(dto.getConsigneePoid(), "ADDRESS_MASTER", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getNotify1Poid() != null) {
-                dto.setNotify1Det(
-                        lovService.getLovItemByPoid(dto.getNotify1Poid(), "ADDRESS_MASTER", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getBookingCustomerPoid() != null) {
-                dto.setBookingCustomerDet(
-                        lovService.getLovItemByPoid(dto.getBookingCustomerPoid(), "CUSTOMER_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getReceiptPortPoid() != null) {
-                dto.setReceiptPortDet(
-                        lovService.getLovItemByPoid(dto.getReceiptPortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getDeliveryPortPoid() != null) {
-                dto.setDeliveryPortDet(
-                        lovService.getLovItemByPoid(dto.getDeliveryPortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getLoadPortPoid() != null) {
-                dto.setLoadPortDet(
-                        lovService.getLovItemByPoid(dto.getLoadPortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getDischargePortPoid() != null) {
-                dto.setDischargePortDet(
-                        lovService.getLovItemByPoid(dto.getDischargePortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getHoldReason() != null) {
-                dto.setHoldReasonDet(
-                        lovService.getLovItemByCode(dto.getHoldReason(), "SHIP_DO_ANOTICE_HOLD", groupPoid,
-                                companyPoid, userPoid));
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch LOV data for header detail with transactionPoid: {}", dto.getTransactionPoid(),
-                    e);
-        }
-    }
-
-    private void enrichGeneralCargoLovData(List<GeneralCargoDto> dtos,
-                                           Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (GeneralCargoDto dto : dtos) {
-            try {
-                if (dto.getCommodityPoid() != null) {
-                    dto.setCommodityDet(
-                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getDestinationPortPoid() != null) {
-                    dto.setDestinationPortDet(
-                            lovService.getLovItemByPoid(dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
-
-    private void enrichContainerLovData(List<ContainerDto> dtos,
-                                        Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (ContainerDto dto : dtos) {
-            try {
-                if (dto.getCommodityPoid() != null) {
-                    dto.setCommodityDet(
-                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getEquipmentIsoType() != null) {
-                    dto.setEquipmentIsoTypeDet(
-                            lovService.getLovItemByCode(dto.getEquipmentIsoType(), "CONTAINER_TYPE_MASTER",
-                                    groupPoid, companyPoid, userPoid));
-                }
-                if (dto.getImcoType() != null) {
-                    dto.setImcoTypeDet(
-                            lovService.getLovItemByCode(dto.getImcoType(), "IMCO_CLASS", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getOogType() != null) {
-                    dto.setOogTypeDet(
-                            lovService.getLovItemByCode(dto.getOogType(), "OOG_TYPE", groupPoid, companyPoid,
-                                    userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
-
-    private void enrichChargeLovData(List<ChargeDto> dtos,
-            Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (ChargeDto dto : dtos) {
-            try {
-                if (dto.getChargePoid() != null) {
-                    dto.setChargeDet(
-                            lovService.getLovItemByPoid(dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getChargeType() != null) {
-                    dto.setChargeTypeDet(
-                            lovService.getLovItemByCode(dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getCurrencyCode() != null) {
-                    dto.setCurrencyCodeDet(
-                            lovService.getLovItemByCode(dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getFreightType() != null) {
-                    dto.setFreightTypeDet(
-                            lovService.getLovItemByCode(dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getBasisPoid() != null) {
-                    dto.setBasisDet(
-                            lovService.getLovItemByCode(dto.getBasisPoid(), "CONTAINER_TYPE_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getPaidAtPortPoid() != null) {
-                    dto.setPaidAtPortDet(
-                            lovService.getLovItemByPoid(dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getReceiptInvoicePoid() != null) {
-                    dto.setReceiptInvoiceDet(
-                            lovService.getLovItemByPoid(dto.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE",
-                                    groupPoid, companyPoid, userPoid));
-                }
-                if (dto.getTaxPoid() != null) {
-                    dto.setTaxDet(
-                            lovService.getLovItemByPoid(dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid,
-                                    userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
-
-    private void enrichOtherChargeLovData(List<ChargeOtherDto> dtos,
-            Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (ChargeOtherDto dto : dtos) {
-            try {
-                if (dto.getChargePoid() != null) {
-                    dto.setChargeDet(
-                            lovService.getLovItemByPoid(dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getChargeType() != null) {
-                    dto.setChargeTypeDet(
-                            lovService.getLovItemByCode(dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getCurrencyCode() != null) {
-                    dto.setCurrencyCodeDet(
-                            lovService.getLovItemByCode(dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getFreightType() != null) {
-                    dto.setFreightTypeDet(
-                            lovService.getLovItemByCode(dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getBasis() != null) {
-                    dto.setBasisDet(
-                            lovService.getLovItemByCode(dto.getBasis(), "CONTAINER_TYPE_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getPaidAtPortPoid() != null) {
-                    dto.setPaidAtPortDet(
-                            lovService.getLovItemByPoid(dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for other charge detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
-
-    private void enrichPartBlLovData(List<PartBlDto> dtos,
-                                     Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (PartBlDto dto : dtos) {
-            try {
-                if (dto.getCommodityPoid() != null) {
-                    dto.setCommodityDet(
-                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getContainerNo() != null && !dto.getContainerNo().trim().isEmpty()) {
-                    dto.setContainerNoDet(
-                            lovService.getLovItemByCode(dto.getContainerNo(), "SH_CONTAINER_PART", groupPoid,
-                                    companyPoid, userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for part BL detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
+//    private void enrichHeaderLovData(ImportManifestBlDto dto, Long groupPoid, Long companyPoid,
+//                                     Long userPoid) {
+//        try {
+//            if (dto.getVesselVoyagePoid() != null) {
+//                dto.setVesselVoyagePoidDet(
+//                        lovService.getLovItemByPoid(dto.getVesselVoyagePoid(), "VESSAL_VOYAGE", groupPoid,
+//                                companyPoid, userPoid));
+//            }
+//            if (dto.getQuotationPoid() != null) {
+//                dto.setQuotationDet(
+//                        lovService.getLovItemByPoid(dto.getQuotationPoid(), "SHIP_QUOTATION_IMPORT",
+//                                groupPoid, companyPoid, userPoid));
+//            }
+//            if (dto.getSalesmanPoid() != null) {
+//                dto.setSalesmanDet(
+//                        lovService.getLovItemByPoid(dto.getSalesmanPoid(), "SALESMAN", groupPoid, companyPoid,
+//                                userPoid));
+//            }
+//            if (dto.getCommodityPoid() != null) {
+//                dto.setCommodityDet(
+//                        lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
+//                                userPoid));
+//            }
+//            if (dto.getCargo() != null) {
+//                dto.setCargoDet(
+//                        lovService.getLovItemByCode(dto.getCargo(), "CARGO_TYPE", groupPoid, companyPoid,
+//                                userPoid));
+//            }
+//            if (dto.getBlType() != null) {
+//                dto.setBlTypeDet(
+//                        lovService.getLovItemByCode(dto.getBlType(), "BL_TYPE_IMPORT", groupPoid, companyPoid,
+//                                userPoid));
+//            }
+//            String issueType = dto.getBlIssueType() != null ? dto.getBlIssueType() : dto.getIssueType();
+//            if (issueType != null) {
+//                dto.setBlIssueTypeDet(
+//                        lovService.getLovItemByCode(issueType, "BL_ISSUE_TYPE", groupPoid, companyPoid,
+//                                userPoid));
+//            }
+//            if (dto.getConsigneePoid() != null) {
+//                dto.setConsigneeDet(
+//                        lovService.getLovItemByPoid(dto.getConsigneePoid(), "ADDRESS_MASTER", groupPoid, companyPoid,
+//                                userPoid));
+//            }
+//            if (dto.getNotify1Poid() != null) {
+//                dto.setNotify1Det(
+//                        lovService.getLovItemByPoid(dto.getNotify1Poid(), "ADDRESS_MASTER", groupPoid, companyPoid,
+//                                userPoid));
+//            }
+//            if (dto.getBookingCustomerPoid() != null) {
+//                dto.setBookingCustomerDet(
+//                        lovService.getLovItemByPoid(dto.getBookingCustomerPoid(), "CUSTOMER_MASTER", groupPoid,
+//                                companyPoid, userPoid));
+//            }
+//            if (dto.getReceiptPortPoid() != null) {
+//                dto.setReceiptPortDet(
+//                        lovService.getLovItemByPoid(dto.getReceiptPortPoid(), "PORT_MASTER", groupPoid,
+//                                companyPoid, userPoid));
+//            }
+//            if (dto.getDeliveryPortPoid() != null) {
+//                dto.setDeliveryPortDet(
+//                        lovService.getLovItemByPoid(dto.getDeliveryPortPoid(), "PORT_MASTER", groupPoid,
+//                                companyPoid, userPoid));
+//            }
+//            if (dto.getLoadPortPoid() != null) {
+//                dto.setLoadPortDet(
+//                        lovService.getLovItemByPoid(dto.getLoadPortPoid(), "PORT_MASTER", groupPoid,
+//                                companyPoid, userPoid));
+//            }
+//            if (dto.getDischargePortPoid() != null) {
+//                dto.setDischargePortDet(
+//                        lovService.getLovItemByPoid(dto.getDischargePortPoid(), "PORT_MASTER", groupPoid,
+//                                companyPoid, userPoid));
+//            }
+//            if (dto.getHoldReason() != null) {
+//                dto.setHoldReasonDet(
+//                        lovService.getLovItemByCode(dto.getHoldReason(), "SHIP_DO_ANOTICE_HOLD", groupPoid,
+//                                companyPoid, userPoid));
+//            }
+//        } catch (Exception e) {
+//            log.warn("Failed to fetch LOV data for header detail with transactionPoid: {}", dto.getTransactionPoid(),
+//                    e);
+//        }
+//    }
+//
+//    private void enrichGeneralCargoLovData(List<GeneralCargoDto> dtos,
+//                                           Long groupPoid, Long companyPoid, Long userPoid) {
+//        if (dtos == null || dtos.isEmpty()) {
+//            return;
+//        }
+//        for (GeneralCargoDto dto : dtos) {
+//            try {
+//                if (dto.getCommodityPoid() != null) {
+//                    dto.setCommodityDet(
+//                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getDestinationPortPoid() != null) {
+//                    dto.setDestinationPortDet(
+//                            lovService.getLovItemByPoid(dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//            } catch (Exception e) {
+//                log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
+//            }
+//        }
+//    }
+//
+//    private void enrichContainerLovData(List<ContainerDto> dtos,
+//                                        Long groupPoid, Long companyPoid, Long userPoid) {
+//        if (dtos == null || dtos.isEmpty()) {
+//            return;
+//        }
+//        for (ContainerDto dto : dtos) {
+//            try {
+//                if (dto.getCommodityPoid() != null) {
+//                    dto.setCommodityDet(
+//                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getEquipmentIsoType() != null) {
+//                    dto.setEquipmentIsoTypeDet(
+//                            lovService.getLovItemByCode(dto.getEquipmentIsoType(), "CONTAINER_TYPE_MASTER",
+//                                    groupPoid, companyPoid, userPoid));
+//                }
+//                if (dto.getImcoType() != null) {
+//                    dto.setImcoTypeDet(
+//                            lovService.getLovItemByCode(dto.getImcoType(), "IMCO_CLASS", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getOogType() != null) {
+//                    dto.setOogTypeDet(
+//                            lovService.getLovItemByCode(dto.getOogType(), "OOG_TYPE", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//            } catch (Exception e) {
+//                log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
+//            }
+//        }
+//    }
+//
+//    private void enrichChargeLovData(List<ChargeDto> dtos,
+//            Long groupPoid, Long companyPoid, Long userPoid) {
+//        if (dtos == null || dtos.isEmpty()) {
+//            return;
+//        }
+//        for (ChargeDto dto : dtos) {
+//            try {
+//                if (dto.getChargePoid() != null) {
+//                    dto.setChargeDet(
+//                            lovService.getLovItemByPoid(dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getChargeType() != null) {
+//                    dto.setChargeTypeDet(
+//                            lovService.getLovItemByCode(dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getCurrencyCode() != null) {
+//                    dto.setCurrencyCodeDet(
+//                            lovService.getLovItemByCode(dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getFreightType() != null) {
+//                    dto.setFreightTypeDet(
+//                            lovService.getLovItemByCode(dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//                if (dto.getBasisPoid() != null) {
+//                    dto.setBasisDet(
+//                            lovService.getLovItemByCode(dto.getBasisPoid(), "CONTAINER_TYPE_MASTER", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//                if (dto.getPaidAtPortPoid() != null) {
+//                    dto.setPaidAtPortDet(
+//                            lovService.getLovItemByPoid(dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//                if (dto.getReceiptInvoicePoid() != null) {
+//                    dto.setReceiptInvoiceDet(
+//                            lovService.getLovItemByPoid(dto.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE",
+//                                    groupPoid, companyPoid, userPoid));
+//                }
+//                if (dto.getTaxPoid() != null) {
+//                    dto.setTaxDet(
+//                            lovService.getLovItemByPoid(dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//            } catch (Exception e) {
+//                log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);
+//            }
+//        }
+//    }
+//
+//    private void enrichOtherChargeLovData(List<ChargeOtherDto> dtos,
+//            Long groupPoid, Long companyPoid, Long userPoid) {
+//        if (dtos == null || dtos.isEmpty()) {
+//            return;
+//        }
+//        for (ChargeOtherDto dto : dtos) {
+//            try {
+//                if (dto.getChargePoid() != null) {
+//                    dto.setChargeDet(
+//                            lovService.getLovItemByPoid(dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getChargeType() != null) {
+//                    dto.setChargeTypeDet(
+//                            lovService.getLovItemByCode(dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getCurrencyCode() != null) {
+//                    dto.setCurrencyCodeDet(
+//                            lovService.getLovItemByCode(dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getFreightType() != null) {
+//                    dto.setFreightTypeDet(
+//                            lovService.getLovItemByCode(dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//                if (dto.getBasis() != null) {
+//                    dto.setBasisDet(
+//                            lovService.getLovItemByCode(dto.getBasis(), "CONTAINER_TYPE_MASTER", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//                if (dto.getPaidAtPortPoid() != null) {
+//                    dto.setPaidAtPortDet(
+//                            lovService.getLovItemByPoid(dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//            } catch (Exception e) {
+//                log.warn("Failed to fetch LOV data for other charge detail with detRowId: {}", dto.getDetRowId(), e);
+//            }
+//        }
+//    }
+//
+//    private void enrichPartBlLovData(List<PartBlDto> dtos,
+//                                     Long groupPoid, Long companyPoid, Long userPoid) {
+//        if (dtos == null || dtos.isEmpty()) {
+//            return;
+//        }
+//        for (PartBlDto dto : dtos) {
+//            try {
+//                if (dto.getCommodityPoid() != null) {
+//                    dto.setCommodityDet(
+//                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
+//                                    userPoid));
+//                }
+//                if (dto.getContainerNo() != null && !dto.getContainerNo().trim().isEmpty()) {
+//                    dto.setContainerNoDet(
+//                            lovService.getLovItemByCode(dto.getContainerNo(), "SH_CONTAINER_PART", groupPoid,
+//                                    companyPoid, userPoid));
+//                }
+//            } catch (Exception e) {
+//                log.warn("Failed to fetch LOV data for part BL detail with detRowId: {}", dto.getDetRowId(), e);
+//            }
+//        }
+//    }
 
     @Override
     @Transactional
@@ -674,8 +674,8 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     public byte[] printProformaInvoice(Long transactionPoid, LocalDate demChargesTill, Long percentage)
             throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
-        params.put("P_DEMURRAGE_DATE", demChargesTill != null ? demChargesTill : LocalDate.now());
-        params.put("P_DISCOUNT", percentage != null ? percentage : 0);
+        params.put("P_DEMURRAGE_DATE", (demChargesTill != null ? demChargesTill : LocalDate.now()).format(java.time.format.DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
+        params.put("P_DISCOUNT", String.valueOf(percentage != null ? percentage : 0));
         params.put("SUBREPORT2", printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT2.jrxml"));
         params.put("SUBREPORT3", printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT3.jrxml"));
         JasperReport mainReport = printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL.jrxml");
@@ -932,6 +932,40 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         return details;
     }
 
+    private List<DescriptionAndMarksDto> buildSimpleCargoDescriptionsForUpdate(ImportManifestBlDto dto) {
+        // During update, if descriptionsAndMarks is explicitly provided, use it directly
+        if (dto.getDescriptionsAndMarks() != null && !dto.getDescriptionsAndMarks().isEmpty()) {
+            return new ArrayList<>(dto.getDescriptionsAndMarks());
+        }
+        // Build from simple fields; null value = delete existing rows of that type
+        List<DescriptionAndMarksDto> details = new ArrayList<>();
+        if (dto.getSimpleCargoDescription() != null) {
+            details.add(DescriptionAndMarksDto.builder()
+                    .descriptionType(CARGO_TYPE_DESCRIPTION)
+                    .cargoDescription(dto.getSimpleCargoDescription())
+                    .actionType(ACTION_ISUPDATED)
+                    .build());
+        } else {
+            details.add(DescriptionAndMarksDto.builder()
+                    .descriptionType(CARGO_TYPE_DESCRIPTION)
+                    .actionType(ACTION_ISDELETED)
+                    .build());
+        }
+        if (dto.getSimpleCargoMarks() != null) {
+            details.add(DescriptionAndMarksDto.builder()
+                    .descriptionType(CARGO_TYPE_MARKS)
+                    .cargoDescription(dto.getSimpleCargoMarks())
+                    .actionType(ACTION_ISUPDATED)
+                    .build());
+        } else {
+            details.add(DescriptionAndMarksDto.builder()
+                    .descriptionType(CARGO_TYPE_MARKS)
+                    .actionType(ACTION_ISDELETED)
+                    .build());
+        }
+        return details;
+    }
+
     private void saveContainers(List<ContainerDto> containers, Long transactionPoid, List<String> logEntries) {
         if (containers == null)
             return;
@@ -1085,7 +1119,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         String docKeyPoid = transactionPoid.toString();
 
         updateGeneralCargo(dto.getGeneralCargoDetails(), transactionPoid, docId, docKeyPoid);
-        updateCargoDescriptions(buildSimpleCargoDescriptions(dto), transactionPoid, docId, docKeyPoid);
+        updateCargoDescriptions(buildSimpleCargoDescriptionsForUpdate(dto), transactionPoid, docId, docKeyPoid);
         updateContainers(dto.getContainers(), transactionPoid, docId, docKeyPoid);
         updateCharges(dto.getCharges(), transactionPoid, docId, docKeyPoid);
         updateOtherCharges(dto.getOtherCharges(), transactionPoid, docId, docKeyPoid);
@@ -1147,19 +1181,39 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 case ACTION_ISDELETED -> {
                     if (detailDto.getDetRowId() != null) {
                         toDelete.add(new ShipBlManifestCargoDtlId(transactionPoid, detailDto.getDetRowId(), detailDto.getDescriptionType()));
+                    } else if (detailDto.getDescriptionType() != null) {
+                        // delete all rows of this type (used when simple cargo fields are cleared)
+                        cargoDtlRepository.deleteByIdTransactionPoidAndIdDescriptionType(transactionPoid, detailDto.getDescriptionType());
                     }
                 }
                 case ACTION_ISCREATED -> saveCargoDescriptions(List.of(detailDto), transactionPoid, logEntries);
                 case ACTION_ISUPDATED -> {
-                    ShipBlManifestCargoDtlId id = new ShipBlManifestCargoDtlId(transactionPoid, detailDto.getDetRowId(), detailDto.getDescriptionType());
-                    ShipBlManifestCargoDtl existing = cargoDtlRepository.findById(id)
-                            .orElseThrow(() -> new ResourceNotFoundException("Cargo Description Detail", "detRowId", detailDto.getDetRowId()));
-                    ShipBlManifestCargoDtl oldEntity = new ShipBlManifestCargoDtl();
-                    BeanUtils.copyProperties(existing, oldEntity);
-                    ImportManifestMapper.mapCargoDescriptionAndMarksFromDto(detailDto, transactionPoid, existing);
-                    toUpdate.add(existing);
-                    String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s TYPE: %s", transactionPoid, detailDto.getDetRowId(), detailDto.getDescriptionType());
-                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipBlManifestCargoDtl.class, docId, docKeyPoid, logDetail));
+                    // find existing row(s) by type when detRowId is not known
+                    if (detailDto.getDetRowId() == null) {
+                        List<ShipBlManifestCargoDtl> existing = cargoDtlRepository
+                                .findByIdTransactionPoidAndIdDescriptionTypeOrderByIdDetRowId(transactionPoid, detailDto.getDescriptionType());
+                        if (existing.isEmpty()) {
+                            saveCargoDescriptions(List.of(detailDto), transactionPoid, logEntries);
+                        } else {
+                            ShipBlManifestCargoDtl first = existing.get(0);
+                            ShipBlManifestCargoDtl oldEntity = new ShipBlManifestCargoDtl();
+                            BeanUtils.copyProperties(first, oldEntity);
+                            first.setCargoDescription(detailDto.getCargoDescription());
+                            toUpdate.add(first);
+                            String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s TYPE: %s", transactionPoid, first.getId().getDetRowId(), detailDto.getDescriptionType());
+                            logRequests.add(new LogRequestDto<>(oldEntity, first, ShipBlManifestCargoDtl.class, docId, docKeyPoid, logDetail));
+                        }
+                    } else {
+                        ShipBlManifestCargoDtlId id = new ShipBlManifestCargoDtlId(transactionPoid, detailDto.getDetRowId(), detailDto.getDescriptionType());
+                        ShipBlManifestCargoDtl existing = cargoDtlRepository.findById(id)
+                                .orElseThrow(() -> new ResourceNotFoundException("Cargo Description Detail", "detRowId", detailDto.getDetRowId()));
+                        ShipBlManifestCargoDtl oldEntity = new ShipBlManifestCargoDtl();
+                        BeanUtils.copyProperties(existing, oldEntity);
+                        ImportManifestMapper.mapCargoDescriptionAndMarksFromDto(detailDto, transactionPoid, existing);
+                        toUpdate.add(existing);
+                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s TYPE: %s", transactionPoid, detailDto.getDetRowId(), detailDto.getDescriptionType());
+                        logRequests.add(new LogRequestDto<>(oldEntity, existing, ShipBlManifestCargoDtl.class, docId, docKeyPoid, logDetail));
+                    }
                 }
                 default -> {}
             }
