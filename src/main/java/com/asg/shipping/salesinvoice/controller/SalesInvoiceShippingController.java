@@ -604,7 +604,13 @@ public class SalesInvoiceShippingController {
         try {
             log.info("Load BL data request for invoice id: {}", blPoid);
             var result = service.loadBlData(blPoid, request);
-            return success("BL data loaded successfully", result);
+            String message;
+            if (result.getLPO_SRN_NO() != null) {
+                 message = "Document is already locked by another user: " + UserContext.getCurrentUser().getUserName();
+            } else {
+                message = "BL data loaded successfully";
+            }
+            return success(message, result);
         } catch (Exception e) {
             return internalServerError("Error loading BL data: " + e.getMessage());
         }

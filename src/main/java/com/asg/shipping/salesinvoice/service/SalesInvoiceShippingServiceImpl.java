@@ -37,6 +37,7 @@ import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -518,6 +519,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 .invDate(procResult.get("invDate"))
                 .ownInvoiceNo(procResult.get("ownInvoiceNo"))
                 .blTypeInvoice(procResult.get("blTypeInvoice"))
+                .LPO_SRN_NO(procResult.getOrDefault("LPO_SRN_NO", null))
                 .build();
 
         log.info("Successfully loaded BL data");
@@ -1254,6 +1256,14 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                             result.put("ownInvoiceNo", rs.getString("OWN_INVOICE_NO"));
                             result.put("bookingPartyPoid", rs.getString("BOOKING_PARTY_POID"));
                             result.put("creditDays", rs.getString("CREDIT_DAYS"));
+
+                            try {
+                                rs.findColumn("LPO_SRN_NO");
+                                result.put("LPO_SRN_NO", rs.getString("LPO_SRN_NO"));
+                            } catch (SQLException e) {
+                                result.put("LPO_SRN_NO", null);
+                            }
+
                         } else if (lovName.equals("ALLBLNUMBER")) {
 
                             result.put("blTypeInvoice", rs.getString("BL_TYPE_INVOICE"));
