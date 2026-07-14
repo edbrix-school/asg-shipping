@@ -422,7 +422,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                         while (rs.next()) {
                             result.add(LinePayableTransferReportingDtlDto.builder()
                                     .detRowId((long) (result.size() + 1))
-                                    .mainfestTransactionPoid(getLongOrNull(rs, "MAINFEST_TRANSACTION_POID"))
+                                    .mainfestTransactionPoid(getLongOrNull(rs, "TRANSACTION_POID"))
                                     .blNumber(rs.getString("BL_NUMBER"))
                                     .acutalAmount(getBigDecimalOrNull(rs, "ACTUAL_AMOUNT"))
                                     .totalAmountTransfer(getBigDecimalOrNull(rs, "ACTUAL_AMOUNT"))
