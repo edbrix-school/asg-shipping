@@ -61,7 +61,7 @@ import javax.sql.DataSource;
 @RequiredArgsConstructor
 public class ImportManifestServiceImpl implements ImportManifestService {
 
-    private static final String CARGO_TYPE_DESCRIPTION = "DESC";
+    private static final String CARGO_TYPE_DESCRIPTION = "CARGO";
     private static final String CARGO_TYPE_MARKS = "MARKS";
 
     private final ShipBlManifestHdrRepository headerRepository;
