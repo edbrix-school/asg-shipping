@@ -20,6 +20,7 @@ import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
+import com.asg.shipping.receipts.repository.ReceiptHdrRepository;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final DataSource dataSource;
     private final LoggingService loggingService;
     private final DocumentSearchService documentSearchService;
+    private final ReceiptHdrRepository receiptHdrRepository;
 
     private static final String ARSHRCPTPRINTUPDATE = "ARSHRCPTPRINTUPDATE";
     private static final String TRANSACTIONPOID = "transactionPoid";
@@ -72,6 +74,9 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
         viewRepository.findRemarksByTransactionPoid(transactionPoid).ifPresent(dto::setRemarks);
         enrichWithLovData(dto);
+        receiptHdrRepository.findByBlPoid(transactionPoid).ifPresent(receipt -> {
+            dto.setReceiptsDocRef(receipt.getDocRef());
+        });
         return dto;
     }
 
