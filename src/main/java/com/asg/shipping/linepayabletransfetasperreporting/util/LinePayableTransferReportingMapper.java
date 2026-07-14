@@ -11,6 +11,7 @@ import com.asg.shipping.linepayabletransfetasperreporting.entity.ShipLineReportT
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -97,15 +98,22 @@ public class LinePayableTransferReportingMapper {
                 .detRowId(entity.getDetRowId())
                 .mainfestTransactionPoid(entity.getMainfestTransactionPoid())
                 .blNumber(entity.getBlNumber())
-                .acutalAmount(entity.getAcutalAmount())
-                .totalAmountTransfer(entity.getTotalAmountTransfer())
+                .acutalAmount(toThreeDecimals(entity.getAcutalAmount()))
+                .totalAmountTransfer(toThreeDecimals(entity.getTotalAmountTransfer()))
                 .isSelect(entity.getIsSelect())
                 .chargePoid(entity.getChargePoid())
                 .freightType(entity.getFreightType())
                 .currencyCode(entity.getCurrencyCode())
-                .currencyExchange(entity.getCurrencyExchange())
-                .currencyAmount(entity.getCurrencyAmount())
+                .currencyExchange(toThreeDecimals(entity.getCurrencyExchange()))
+                .currencyAmount(toThreeDecimals(entity.getCurrencyAmount()))
                 .build();
+    }
+
+    /**
+     * Amounts are exposed with a fixed scale of 3 so the UI always receives 3 decimals.
+     */
+    private BigDecimal toThreeDecimals(BigDecimal value) {
+        return value == null ? null : value.setScale(3, RoundingMode.HALF_UP);
     }
 
     /**
