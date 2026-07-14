@@ -606,7 +606,7 @@ public class SalesInvoiceShippingController {
             var result = service.loadBlData(blPoid, request);
             String message;
             if (result.getLPO_SRN_NO() != null) {
-                 message = "Document is already locked by another user: " + UserContext.getCurrentUser().getUserName();
+                 message = result.getLPO_SRN_NO();
             } else {
                 message = "BL data loaded successfully";
             }
