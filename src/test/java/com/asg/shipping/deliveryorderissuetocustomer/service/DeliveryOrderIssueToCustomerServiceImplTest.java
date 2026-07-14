@@ -12,6 +12,7 @@ import com.asg.shipping.deliveryorderissuetocustomer.entity.ShipBlManifestHDR;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
+import com.asg.shipping.receipts.repository.ReceiptHdrRepository;
 import jakarta.validation.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -51,6 +52,9 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
 
     @Mock
     private LoggingService loggingService;
+
+    @Mock
+    private ReceiptHdrRepository receiptHdrRepository;
 
     @InjectMocks
     private DeliveryOrderIssueToCustomerServiceImpl service;
