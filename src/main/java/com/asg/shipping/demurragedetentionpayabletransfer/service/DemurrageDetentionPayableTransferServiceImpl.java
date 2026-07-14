@@ -12,6 +12,7 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.service.LovDataService;
+import com.asg.shipping.annotation.PerformGlPosting;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.entity.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.repository.*;
@@ -133,6 +134,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     @Override
     @Transactional
+    @PerformGlPosting
     public DemurrageDetentionPayableTransferDto createDemurrageDetentionPayableTransfer(
             DemurrageDetentionPayableTransferCreateDTO dto, Long companyPoid, Long groupPoid) {
         log.info("Creating demurrage/detention payable transfer");
@@ -197,6 +199,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     @Override
     @Transactional
+    @PerformGlPosting
     public DemurrageDetentionPayableTransferDto updateDemurrageDetentionPayableTransfer(
             Long id, DemurrageDetentionPayableTransferUpdateDTO dto, Long companyPoid, Long groupPoid) {
         log.info("Updating demurrage/detention payable transfer with id: {}", id);
