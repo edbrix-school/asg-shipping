@@ -200,9 +200,6 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         //entity.setDeleted("Y");
         hdrRepository.saveAndFlush(entity);
 
-        chargeDtlRepository.deleteByTransactionPoid(transactionPoid);
-        containerDtlRepository.deleteByTransactionPoid(transactionPoid);
-
         loggingService.createLogSummaryEntry(LogDetailsEnum.DELETED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
 
         log.info("Successfully deleted Shipping Manifest Corrector with id: {}", transactionPoid);
