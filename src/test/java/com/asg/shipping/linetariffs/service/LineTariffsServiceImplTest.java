@@ -15,12 +15,14 @@ import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.linetariffs.dto.CopySlabsToPayableResponseDto;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
 import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
 import com.asg.shipping.linetariffs.dto.TariffDetailDto;
+import com.asg.shipping.linetariffs.dto.TariffDetailCreateDTO;
 import com.asg.shipping.linetariffs.dto.TariffDetailUpdateDTO;
 import com.asg.shipping.linetariffs.entity.*;
 import com.asg.shipping.linetariffs.repository.*;
@@ -640,6 +642,63 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
+    void updateLineTariff_InvalidSlabOrder_ThrowsValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
+
+            TariffDetailUpdateDTO detail = TariffDetailUpdateDTO.builder()
+                    .detRowId(1L)
+                    .containerTypePoid(50L)
+                    .slab1Tilldays(2)
+                    .slab1Rate(BigDecimal.TEN)
+                    .slab2Tilldays(3)
+                    .slab2Rate(BigDecimal.TEN)
+                    .slab3Tilldays(2)
+                    .slab3Rate(BigDecimal.TEN)
+                    .build();
+            updateDTO.setImportDemurrageCollectable(List.of(detail));
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
+
+            ValidationException ex = assertThrows(ValidationException.class,
+                    () -> service.updateLineTariff(1L, updateDTO, 1L, 2L));
+
+            assertTrue(ex.getMessage().contains("Slab days should be in incremental order"));
+            assertTrue(ex.getMessage().contains("Slab 3 days (2) must be greater than Slab 2 days (3)"));
+        }
+    }
+
+    @Test
+    void updateLineTariff_DuplicateSlabDays_ThrowsValidationException() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
+
+            TariffDetailUpdateDTO detail = TariffDetailUpdateDTO.builder()
+                    .detRowId(1L)
+                    .containerTypePoid(50L)
+                    .slab1Tilldays(2)
+                    .slab1Rate(BigDecimal.TEN)
+                    .slab2Tilldays(2)
+                    .slab2Rate(BigDecimal.TEN)
+                    .build();
+            updateDTO.setImportDemurrageCollectable(List.of(detail));
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
+
+            ValidationException ex = assertThrows(ValidationException.class,
+                    () -> service.updateLineTariff(1L, updateDTO, 1L, 2L));
+
+            assertTrue(ex.getMessage().contains("Slab 2 days (2) must be greater than Slab 1 days (2)"));
+        }
+    }
+
+    @Test
     void copySlabsToPayable_DMG_CopiesMatchingContainerType() {
         ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
         col.setContainerTypePoid(1L);
@@ -657,12 +716,39 @@ class LineTariffsServiceImplTest {
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
         when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
-        service.copySlabsToPayable(1L, "DMG");
+        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DMG", true);
 
         verify(impPayDtlRepository).save(pay);
+        assertTrue(result.isCopied());
+        assertFalse(result.isRequiresConfirmation());
         assertEquals(5, pay.getFreeDays());
         assertEquals(10, pay.getSlab1Tilldays());
         assertEquals(BigDecimal.valueOf(100), pay.getSlab1Rate());
+    }
+
+    @Test
+    void copySlabsToPayable_DMG_PayableHasData_ThrowsWithoutConfirm() {
+        ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
+        col.setContainerTypePoid(50L);
+        col.setFreeDays(1);
+        col.setSlab1Tilldays(10);
+
+        ShipLineTariffImpPayDtl pay = ShipLineTariffImpPayDtl.builder()
+                .transactionPoid(1L)
+                .detRowId(1L)
+                .containerTypePoid(50L)
+                .freeDays(20)
+                .slab1Tilldays(10)
+                .build();
+
+        when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
+        when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
+
+        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DMG", false);
+
+        assertTrue(result.isRequiresConfirmation());
+        assertFalse(result.isCopied());
+        verify(impPayDtlRepository, never()).save(any());
     }
 
     @Test
@@ -682,9 +768,10 @@ class LineTariffsServiceImplTest {
         when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
         when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
-        service.copySlabsToPayable(1L, "DTN");
+        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DTN", true);
 
         verify(expPayDtlRepository).save(pay);
+        assertTrue(result.isCopied());
         assertEquals(7, pay.getFreeDays());
         assertEquals(14, pay.getSlab1Tilldays());
         assertEquals(BigDecimal.valueOf(80), pay.getSlab1Rate());
@@ -704,7 +791,9 @@ class LineTariffsServiceImplTest {
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
         when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
-        service.copySlabsToPayable(1L, "DMG");
+        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DMG", false);
+
+        assertTrue(result.isCopied());
 
         // new payable row created for containerTypePoid=1 since no match existed
         verify(impPayDtlRepository).save(argThat(p ->
@@ -713,7 +802,7 @@ class LineTariffsServiceImplTest {
 
     @Test
     void copySlabsToPayable_InvalidType_ThrowsValidationException() {
-        assertThrows(ValidationException.class, () -> service.copySlabsToPayable(1L, "INVALID"));
+        assertThrows(ValidationException.class, () -> service.copySlabsToPayable(1L, "INVALID", false));
     }
 
     @Test
