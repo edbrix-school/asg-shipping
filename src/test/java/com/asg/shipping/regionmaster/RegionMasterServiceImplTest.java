@@ -137,9 +137,9 @@ class RegionMasterServiceImplTest {
     // ---------- CREATE ----------
     @Test
     void testCreate_Success() {
-        when(repository.existsByRegionCodeAndGroupPoidAndDeletedNot(any(), any(), any()))
+        when(repository.existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNot(any(), any(), any()))
                 .thenReturn(false);
-        when(repository.existsByRegionNameAndGroupPoidAndDeletedNot(any(), any(), any()))
+        when(repository.existsByRegionNameIgnoreCaseAndGroupPoidAndDeletedNot(any(), any(), any()))
                 .thenReturn(false);
         when(mapper.toEntity(any(), any(), any())).thenReturn(entity);
         when(repository.save(any())).thenReturn(entity);
@@ -156,7 +156,7 @@ class RegionMasterServiceImplTest {
 
     @Test
     void testCreate_DuplicateCode() {
-        when(repository.existsByRegionCodeAndGroupPoidAndDeletedNot(any(), any(), any()))
+        when(repository.existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNot(any(), any(), any()))
                 .thenReturn(true);
 
         assertThrows(ValidationException.class,
@@ -165,9 +165,9 @@ class RegionMasterServiceImplTest {
 
     @Test
     void testCreate_DuplicateName() {
-        when(repository.existsByRegionCodeAndGroupPoidAndDeletedNot(any(), any(), any()))
+        when(repository.existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNot(any(), any(), any()))
                 .thenReturn(false);
-        when(repository.existsByRegionNameAndGroupPoidAndDeletedNot(any(), any(), any()))
+        when(repository.existsByRegionNameIgnoreCaseAndGroupPoidAndDeletedNot(any(), any(), any()))
                 .thenReturn(true);
 
         assertThrows(ValidationException.class,
@@ -206,7 +206,7 @@ class RegionMasterServiceImplTest {
         request.setRegionCode("NEW");
         when(repository.findByRegionPoidAndGroupPoid(1L, 10L))
                 .thenReturn(Optional.of(entity));
-        when(repository.existsByRegionCodeAndGroupPoidAndDeletedNotAndRegionPoidNot("NEW", 10L, "Y", 1L))
+        when(repository.existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNotAndRegionPoidNot("NEW", 10L, "Y", 1L))
                 .thenReturn(true);
 
         assertThrows(ValidationException.class,
@@ -218,7 +218,7 @@ class RegionMasterServiceImplTest {
         request.setRegionName("NEWNAME");
         when(repository.findByRegionPoidAndGroupPoid(1L, 10L))
                 .thenReturn(Optional.of(entity));
-        when(repository.existsByRegionNameAndGroupPoidAndDeletedNotAndRegionPoidNot("NEWNAME", 10L, "Y", 1L))
+        when(repository.existsByRegionNameIgnoreCaseAndGroupPoidAndDeletedNotAndRegionPoidNot("NEWNAME", 10L, "Y", 1L))
                 .thenReturn(true);
 
         assertThrows(ValidationException.class,
