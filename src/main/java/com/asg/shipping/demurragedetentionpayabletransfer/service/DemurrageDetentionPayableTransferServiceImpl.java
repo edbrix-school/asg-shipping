@@ -973,7 +973,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
      * No DEMURRAGE_ACUTAL filter — legacy doesn't have this condition.
      */
     private String buildContainerQuerySql() {
-        return "SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER V " +
+        return "SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER_TEMP V " +
                 "WHERE (V.MAINFEST_TRANSACTION_POID, V.CONTAINER_NO) NOT IN (" +
                 "  SELECT D.MAINFEST_TRANSACTION_POID, D.CONTAINER_NO " +
                 "  FROM SHIP_DEM_DETN_TRANSFER_HDR H " +
