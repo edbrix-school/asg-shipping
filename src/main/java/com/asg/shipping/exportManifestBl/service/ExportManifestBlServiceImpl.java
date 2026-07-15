@@ -18,6 +18,7 @@ import com.asg.shipping.exportManifestBl.entity.*;
 import com.asg.shipping.exportManifestBl.repository.*;
 import com.asg.shipping.exportManifestBl.repository.ShipBlToFfRepository;
 import com.asg.shipping.exportManifestBl.util.ExportManifestBlMapper;
+import com.asg.shipping.common.service.LovService;
 import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
@@ -65,6 +66,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
+    private final LovService lovService;
 
     private String normalizeActionType(String actionType) {
         return actionType == null ? "" : actionType.trim().toLowerCase();
@@ -1108,6 +1110,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .build())
                 .toList();
         dto.setGeneralCargoDetails(generalDetails);
+        enrichGeneralCargoLovData(generalDetails);
 
         // Load Cargo Details
         List<CargoDescriptionRequestDto> cargoDetails = cargoDtlRepository.findById_TransactionPoid(transactionPoid)
@@ -1181,6 +1184,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .build())
                 .toList();
         dto.setContainers(containerDetails);
+        enrichContainerLovData(containerDetails);
 
         // Load Charges Details
         List<ChargeRequestDto> chargeDetails = chargesDtlRepository.findById_TransactionPoid(transactionPoid)
@@ -1218,6 +1222,133 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .build())
                 .toList();
         dto.setChargeDetails(chargeDetails);
+        enrichChargeLovData(chargeDetails);
+    }
+
+    private void enrichGeneralCargoLovData(List<GeneralCargoRequestDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        for (GeneralCargoRequestDto dto : dtos) {
+            try {
+                if (dto.getComodityPoid() != null && dto.getComodityPoid() > 0) {
+                    dto.setComodityDet(
+                            lovService.getLovItemByPoid(dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getDestinationPortPoid() != null && dto.getDestinationPortPoid() > 0) {
+                    dto.setDestinationPortDet(
+                            lovService.getLovItemByPoid(dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid,
+                                    companyPoid, userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private void enrichContainerLovData(List<ContainerRequestDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        for (ContainerRequestDto dto : dtos) {
+            try {
+                if (dto.getComodityPoid() != null && dto.getComodityPoid() > 0) {
+                    dto.setComodityDet(
+                            lovService.getLovItemByPoid(dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getDestinationPortPoid() != null && dto.getDestinationPortPoid() > 0) {
+                    dto.setDestinationPortDet(
+                            lovService.getLovItemByPoid(dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid,
+                                    companyPoid, userPoid));
+                }
+                if (dto.getEquipmentIsoType() != null) {
+                    dto.setEquipmentIsoTypeDet(
+                            lovService.getLovItemByCode(dto.getEquipmentIsoType(), "CONTAINER_TYPE_MASTER",
+                                    groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getImcoClassType() != null) {
+                    dto.setImcoClassTypeDet(
+                            lovService.getLovItemByCode(dto.getImcoClassType(), "IMCO_CLASS", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getOogType() != null) {
+                    dto.setOogTypeDet(
+                            lovService.getLovItemByCode(dto.getOogType(), "OOG_TYPE", groupPoid, companyPoid,
+                                    userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private void enrichChargeLovData(List<ChargeRequestDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        for (ChargeRequestDto dto : dtos) {
+            try {
+                if (dto.getChargePoid() != null) {
+                    dto.setChargeDet(
+                            lovService.getLovItemByPoid(dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getChargeType() != null) {
+                    dto.setChargeTypeDet(
+                            lovService.getLovItemByCode(dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getCurrencyCode() != null) {
+                    dto.setCurrencyCodeDet(
+                            lovService.getLovItemByCode(dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getFreightType() != null) {
+                    dto.setFreightTypeDet(
+                            lovService.getLovItemByCode(dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid,
+                                    companyPoid, userPoid));
+                }
+                if (dto.getChargeBasisOn() != null) {
+                    dto.setBasisDet(
+                            lovService.getLovItemByCode(dto.getChargeBasisOn(), "CONTAINER_TYPE_MASTER", groupPoid,
+                                    companyPoid, userPoid));
+                }
+                if (dto.getPaidAtPortPoid() != null) {
+                    dto.setPaidAtPortDet(
+                            lovService.getLovItemByPoid(dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
+                                    companyPoid, userPoid));
+                }
+                if (dto.getReceiptInvoicePoid() != null) {
+                    dto.setReceiptInvoiceDet(
+                            lovService.getLovItemByPoid(dto.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE",
+                                    groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getTaxPoid() != null) {
+                    dto.setTaxDet(
+                            lovService.getLovItemByPoid(dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid,
+                                    userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
     }
 }
 

@@ -10,6 +10,7 @@ import com.asg.shipping.exportManifestBl.dto.ShipBlToFfDto;
 import com.asg.shipping.exportManifestBl.entity.ExportManifestBlHdr;
 import com.asg.shipping.exportManifestBl.repository.*;
 import com.asg.shipping.exportManifestBl.util.ExportManifestBlMapper;
+import com.asg.shipping.common.service.LovService;
 import com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +43,7 @@ class ExportManifestBlFfJobsServiceTest {
     @Mock private PrintService printService;
     @Mock private DataSource dataSource;
     @Mock private LoggingService loggingService;
+    @Mock private LovService lovService;
 
     @InjectMocks
     private ExportManifestBlServiceImpl service;
