@@ -3,8 +3,10 @@ package com.asg.shipping.linetariffs.controller;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
+import com.asg.shipping.linetariffs.dto.CopySlabsToPayableResponseDto;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
@@ -281,24 +283,36 @@ class LineTariffsControllerTest {
 
     @Test
     void copySlabsToPayable_DMG_Success() {
-        doNothing().when(lineTariffsService).copySlabsToPayable(1L, "DMG");
+        when(lineTariffsService.copySlabsToPayable(1L, "DMG", false))
+                .thenReturn(CopySlabsToPayableResponseDto.builder().copied(true).build());
 
-        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG");
+        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG", false);
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).copySlabsToPayable(1L, "DMG");
+        verify(lineTariffsService).copySlabsToPayable(1L, "DMG", false);
+    }
+
+    @Test
+    void copySlabsToPayable_DMG_ConfirmationRequired_ReturnsSuccessWithMessage() {
+        when(lineTariffsService.copySlabsToPayable(1L, "DMG", false))
+                .thenReturn(CopySlabsToPayableResponseDto.builder().requiresConfirmation(true).build());
+
+        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG", false);
+
+        assertEquals(200, response.getStatusCode().value());
     }
 
     @Test
     void copySlabsToPayable_DTN_Success() {
-        doNothing().when(lineTariffsService).copySlabsToPayable(1L, "DTN");
+        when(lineTariffsService.copySlabsToPayable(1L, "DTN", false))
+                .thenReturn(CopySlabsToPayableResponseDto.builder().copied(true).build());
 
-        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DTN");
+        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DTN", false);
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).copySlabsToPayable(1L, "DTN");
+        verify(lineTariffsService).copySlabsToPayable(1L, "DTN", false);
     }
 
     @Test
