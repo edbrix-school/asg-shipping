@@ -1,5 +1,6 @@
 package com.asg.shipping.demurragedetentionpayabletransfer.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,7 @@ import java.util.List;
 public class UpdateFreeDaysRequestDTO {
 
     @NotNull(message = "Container updates are required")
+    @Valid
     private List<ContainerFreeDaysUpdate> containerUpdates;
 
     @Data
