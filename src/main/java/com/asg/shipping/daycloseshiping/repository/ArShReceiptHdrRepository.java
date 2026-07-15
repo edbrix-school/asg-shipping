@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -80,18 +79,8 @@ public class ArShReceiptHdrRepository {
         @SuppressWarnings("unchecked")
         List<Object[]> result = entityManager.createNativeQuery(sql).getResultList();
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        LocalDate castedTxndate = LocalDate.parse(txnDate, formatter);
-        @SuppressWarnings("unchecked")
-        List<Object> totalAmountResult = entityManager.createNativeQuery(totalAmountSql)
-                .setParameter("txnDate", castedTxndate).getResultList();
-        BigDecimal totalAmount = BigDecimal.ZERO;
         if (result.isEmpty()) {
             return Optional.empty();
-        }
-        if (!totalAmountResult.isEmpty()) {
-            Object totalAmt = totalAmountResult.get(0);
-            totalAmount = (BigDecimal) totalAmt;
         }
 
         Object[] row = result.get(0);
@@ -103,6 +92,17 @@ public class ArShReceiptHdrRepository {
                 transactionDate = d.toLocalDate();
             } else if (row[4] instanceof java.sql.Timestamp ts) {
                 transactionDate = ts.toLocalDateTime().toLocalDate();
+            }
+        }
+
+        // Use the pending date derived from DB result, not the frontend-supplied txnDate
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        if (transactionDate != null) {
+            @SuppressWarnings("unchecked")
+            List<Object> totalAmountResult = entityManager.createNativeQuery(totalAmountSql)
+                    .setParameter("txnDate", transactionDate).getResultList();
+            if (!totalAmountResult.isEmpty() && totalAmountResult.get(0) != null) {
+                totalAmount = (BigDecimal) totalAmountResult.get(0);
             }
         }
 

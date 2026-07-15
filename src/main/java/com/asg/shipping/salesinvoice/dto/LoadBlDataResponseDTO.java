@@ -25,6 +25,6 @@ public class LoadBlDataResponseDTO {
     private String invDate;
     private String ownInvoiceNo;
     private String blTypeInvoice;
-
+    private String LPO_SRN_NO;
 }
 

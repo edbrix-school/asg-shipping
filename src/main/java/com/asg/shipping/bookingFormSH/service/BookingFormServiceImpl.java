@@ -388,7 +388,7 @@ public class BookingFormServiceImpl implements BookingFormService {
                 if (status == null || status.toUpperCase().contains("ERROR") || !status.toUpperCase().contains("SUCCESS")) {
                     return status;
                 }
-                return "Successfully uploaded Empty containers";
+                return "Containers Uploaded and Saved Successfully";
             });
         } catch (Exception e) {
             log.error("Error processing empty container load for transaction: {}", transactionPoid, e);

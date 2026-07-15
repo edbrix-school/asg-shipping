@@ -87,12 +87,11 @@ public class SalesInvoiceMapper {
         if (dto.getCurrencyCode() != null) {
             entity.setCurrencyCode(dto.getCurrencyCode());
         }
-        if (dto.getCurrencyRate() != null) {
-            entity.setCurrencyRate(dto.getCurrencyRate());
-        }
-        if (dto.getCreditDays() != null) {
-            entity.setCreditDays(dto.getCreditDays());
-        }
+
+        entity.setCurrencyRate(dto.getCurrencyRate());
+
+        entity.setCreditDays(dto.getCreditDays());
+
         if (dto.getInvoiceAgainst() != null) {
             entity.setInvoiceAgainst(dto.getInvoiceAgainst());
         }

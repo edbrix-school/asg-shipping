@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselvoyagecreation.controller;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.vesselvoyagecreation.dto.*;
@@ -229,8 +230,8 @@ class VesselVoyageControllerTest {
         doNothing().when(vesselVoyageService).ediMovesLoadDischarge(eq(10L), eq("2026-04-15"));
         assertEquals(200, controller.ediMovesLoadDischarge(10L, "2026-04-15").getStatusCode().value());
 
-        doNothing().when(vesselVoyageService).deleteVoyage(10L);
-        assertEquals(200, controller.deleteVoyage(10L).getStatusCode().value());
+        doNothing().when(vesselVoyageService).deleteVoyage(eq(10L), nullable(DeleteReasonDto.class));
+        assertEquals(200, controller.deleteVoyage(10L, null).getStatusCode().value());
     }
 
     @Test

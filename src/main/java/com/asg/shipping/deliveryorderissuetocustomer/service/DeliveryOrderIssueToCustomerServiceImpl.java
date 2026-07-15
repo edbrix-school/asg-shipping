@@ -20,6 +20,7 @@ import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
+import com.asg.shipping.receipts.repository.ReceiptHdrRepository;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final DataSource dataSource;
     private final LoggingService loggingService;
     private final DocumentSearchService documentSearchService;
+    private final ReceiptHdrRepository receiptHdrRepository;
 
     private static final String ARSHRCPTPRINTUPDATE = "ARSHRCPTPRINTUPDATE";
     private static final String TRANSACTIONPOID = "transactionPoid";
@@ -70,7 +72,11 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         DeliveryOrderIssueToCustomerDto dto = viewRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(DELIVERYORDER, TRANSACTIONPOID, transactionPoid.toString()));
 
+        viewRepository.findRemarksByTransactionPoid(transactionPoid).ifPresent(dto::setRemarks);
         enrichWithLovData(dto);
+        receiptHdrRepository.findByBlPoid(transactionPoid).ifPresent(receipt -> {
+            dto.setReceiptsDocRef(receipt.getDocRef());
+        });
         return dto;
     }
 
@@ -137,7 +143,6 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         blManifestRepository.save(blManifest);
-        loggingService.logChanges(oldBlManifest, blManifest, ShipBlManifestHDR.class, UserContext.getDocumentId(), blManifest.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         DoShPrintingDtl doShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Delivery order ship printing detail", TRANSACTIONPOID, transactionPoid.toString()));
@@ -159,7 +164,10 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
 
         doShPrintingDtlRepository.save(doShPrintingDtl);
-        loggingService.logChanges(oldDoShPrintingDtl, doShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), doShPrintingDtl.getTransactionPoid().toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), transactionPoid.toString());
+        loggingService.logDetails(oldBlManifest, blManifest, ShipBlManifestHDR.class, UserContext.getDocumentId(), transactionPoid.toString(), "TRANSACTION_POID");
+        loggingService.logDetails(oldDoShPrintingDtl, doShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), "TRANSACTION_POID");
         return transactionPoid;
     }
 

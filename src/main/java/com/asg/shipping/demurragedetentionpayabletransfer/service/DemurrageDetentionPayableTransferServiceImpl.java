@@ -12,6 +12,7 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.service.LovDataService;
+import com.asg.shipping.annotation.PerformGlPosting;
 import com.asg.shipping.demurragedetentionpayabletransfer.dto.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.entity.*;
 import com.asg.shipping.demurragedetentionpayabletransfer.repository.*;
@@ -19,6 +20,7 @@ import com.asg.shipping.demurragedetentionpayabletransfer.util.DemurrageDetentio
 import com.asg.shipping.exceptions.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -31,11 +33,7 @@ import java.sql.CallableStatement;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -140,6 +138,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     @Override
     @Transactional
+    @PerformGlPosting
     public DemurrageDetentionPayableTransferDto createDemurrageDetentionPayableTransfer(
             DemurrageDetentionPayableTransferCreateDTO dto, Long companyPoid, Long groupPoid) {
         log.info("Creating demurrage/detention payable transfer");
@@ -204,6 +203,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
     @Override
     @Transactional
+    @PerformGlPosting
     public DemurrageDetentionPayableTransferDto updateDemurrageDetentionPayableTransfer(
             Long id, DemurrageDetentionPayableTransferUpdateDTO dto, Long companyPoid, Long groupPoid) {
         log.info("Updating demurrage/detention payable transfer with id: {}", id);
@@ -1158,19 +1158,77 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
 
         // Transfer detail LOVs
         if (dto.getTransferDetails() != null) {
-            for (DemurrageDetentionTransferDetailDto detail : dto.getTransferDetails()) {
-                enrichLovByPoid(detail.getMainfestTransactionPoid(), detail::setMainfestTransactionPoidDet, "MANIFEST");
-                enrichLovByPoid(detail.getLinePoid(), detail::setLinePoidDet, "LINE_MASTER");
-                // equipmentIsoType is a code string, not a POID
-                enrichLovByCode(detail.getEquipmentIsoType(), detail::setEquipmentIsoTypeDet, "CONTAINER_TYPE_MASTER");
-            }
+            transferDetailLOVs(dto);
         }
 
         // Bill detail LOVs
         if (dto.getBillDetails() != null) {
-            for (DemurrageDetentionTransferBillDetailDto detail : dto.getBillDetails()) {
-                enrichLovByPoid(detail.getGlPoid(), detail::setGlPoidDet, "GL_MASTER_LEDGERS");
+            billDetailLOVs(dto);
+        }
+    }
+
+    void transferDetailLOVs(DemurrageDetentionPayableTransferDto dto) {
+        Set<Long> manifestPoids = new HashSet<>();
+        Set<Long> linePoids = new HashSet<>();
+        Set<String> containerTypes = new HashSet<>();
+
+        // Collect all ids
+        for (DemurrageDetentionTransferDetailDto detail : dto.getTransferDetails()) {
+            if (detail.getMainfestTransactionPoid() != null) {
+                manifestPoids.add(detail.getMainfestTransactionPoid());
             }
+
+            if (detail.getLinePoid() != null) {
+                linePoids.add(detail.getLinePoid());
+            }
+
+            if (detail.getEquipmentIsoType() != null) {
+                containerTypes.add(detail.getEquipmentIsoType());
+            }
+        }
+
+        Map<Long, LovGetListDto> manifestMap = manifestPoids.isEmpty()
+                ? Collections.emptyMap()
+                : lovService.getDetailsByPoidsAndLovName(new ArrayList<>(manifestPoids), "MANIFEST");
+
+        Map<Long, LovGetListDto> lineMap = linePoids.isEmpty()
+                ? Collections.emptyMap()
+                : lovService.getDetailsByPoidsAndLovName(new ArrayList<>(linePoids), "LINE_MASTER");
+
+        Map<String, LovGetListDto> containerMap = containerTypes.isEmpty()
+                ? Collections.emptyMap()
+                : lovService.getDetailsByCodesAndLovName(new ArrayList<>(containerTypes), "CONTAINER_TYPE_MASTER");
+
+        // Set values
+        for (DemurrageDetentionTransferDetailDto detail : dto.getTransferDetails()) {
+
+            detail.setMainfestTransactionPoidDet(
+                    manifestMap.get(detail.getMainfestTransactionPoid()));
+
+            detail.setLinePoidDet(
+                    lineMap.get(detail.getLinePoid()));
+
+            detail.setEquipmentIsoTypeDet(
+                    containerMap.get(detail.getEquipmentIsoType()));
+        }
+    }
+
+    void billDetailLOVs(DemurrageDetentionPayableTransferDto dto) {
+        Set<Long> glPoids = new HashSet<>();
+
+        for (DemurrageDetentionTransferBillDetailDto detail : dto.getBillDetails()) {
+            if (detail.getGlPoid() != null) {
+                glPoids.add(detail.getGlPoid());
+            }
+        }
+
+        Map<Long, LovGetListDto> lovGetListDtoMap = glPoids.isEmpty()
+                ? Collections.emptyMap()
+                : lovService.getDetailsByPoidsAndLovName(new ArrayList<>(glPoids), "GL_MASTER_LEDGERS");
+
+        // Set Values
+        for (DemurrageDetentionTransferBillDetailDto detail : dto.getBillDetails()) {
+            detail.setGlPoidDet(lovGetListDtoMap.get(detail.getGlPoid()));
         }
     }
 

@@ -577,6 +577,30 @@ public class ImportManifestMapper {
         return entity;
     }
 
+    public static ShipBlManifestChargesDtl mapChargesDtlFromDto(ChargeOtherDto dto, Long transactionPoid, ShipBlManifestChargesDtl entity) {
+        if (dto == null)
+            return null;
+
+        if (dto.getDetRowId() != null) {
+            ShipBlManifestDtlId id = new ShipBlManifestDtlId();
+            id.setTransactionPoid(transactionPoid);
+            id.setDetRowId(dto.getDetRowId());
+            entity.setId(id);
+        }
+
+        entity.setChargePoid(dto.getChargePoid());
+        entity.setCurrencyCode(dto.getCurrencyCode());
+        entity.setCurrencyExchange(dto.getExchangeRate());
+        entity.setQuantity(dto.getQuantity());
+        entity.setBuyPercharge(dto.getBuy());
+        entity.setPerQuantityAmount(dto.getSell());
+        entity.setPaidAtPortPoid(dto.getPaidAtPortPoid());
+        entity.setFreightType(dto.getFreightType());
+        entity.setChargeType(dto.getChargeType());
+        entity.setChargeBasisOn(dto.getBasis());
+        return entity;
+    }
+
     public static ShipBlManifestChargesDtl mapChargesDtlFromDto(ChargeDto dto, Long transactionPoid, ShipBlManifestChargesDtl entity) {
         if (dto == null)
             return null;
@@ -592,6 +616,7 @@ public class ImportManifestMapper {
         entity.setChargePoid(dto.getChargePoid());
         entity.setPrintGroup(dto.getPrintGroup());
         entity.setCurrencyCode(dto.getCurrencyCode());
+        entity.setCurrencyExchange(dto.getRate());
         entity.setQuantity(dto.getQuantity());
         entity.setBuyPercharge(dto.getBuy());
         entity.setPerQuantityAmount(dto.getSell());

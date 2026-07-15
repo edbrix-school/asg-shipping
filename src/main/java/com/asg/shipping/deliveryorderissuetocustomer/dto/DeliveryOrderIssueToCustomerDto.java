@@ -45,4 +45,6 @@ public class DeliveryOrderIssueToCustomerDto {
     private LovGetListDto deliverySentToDet;
     private String principalDoNumber;
     private String principalDoRequired;
+    private String remarks;
+    private String receiptsDocRef;
 }

@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestupdate.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -297,9 +298,11 @@ public class ShipBlManifestHdr extends BaseEntity {
 
     /* ================= DOCUMENT COMPANY ================= */
 
+    @AuditIgnore
     @Column(name = "DOCUMENT_COMPANY_POID")
     private Long documentCompanyPoid;
 
+    @AuditIgnore
     @Column(name = "DOCUMENT_COMPANY_DIVISION_POID")
     private Long documentCompanyDivisionPoid;
 

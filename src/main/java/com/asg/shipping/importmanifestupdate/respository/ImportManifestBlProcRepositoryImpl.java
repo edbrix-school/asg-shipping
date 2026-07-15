@@ -2,6 +2,7 @@ package com.asg.shipping.importmanifestupdate.respository;
 
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.shipping.importmanifestupdate.constants.BlManifestValidationMessages;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.importmanifestupdate.dto.EmailVerificationRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.EmailVerificationResponseDto;
@@ -293,12 +294,14 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
 
             String result = (String) query.getOutputParameterValue("P_RESULT");
 
-            if (!"TRUE".equalsIgnoreCase(result)) {
+            // Legacy GetBlValidate() is true when P_RESULT is "TRUE", and the bean raises
+            // "Map Quotation in manifest" in exactly that case (blmanifestpagebn:846-855).
+            if ("TRUE".equalsIgnoreCase(result)) {
                 if (quotationPoid == null
                         && "2".equals(freight)
                         && "N".equals(bookedByPrincipal)) {
                     log.error("Validation failed: Quotation mapping required for transaction {}", transactionPoid);
-                    throw new ValidationException("Map Quotation in manifest");
+                    throw new ValidationException(BlManifestValidationMessages.QUOTATION_MAPPING_REQUIRED);
                 }
             }
 

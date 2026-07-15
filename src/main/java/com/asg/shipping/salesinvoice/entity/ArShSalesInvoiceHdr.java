@@ -1,5 +1,6 @@
 package com.asg.shipping.salesinvoice.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -60,6 +61,7 @@ public class ArShSalesInvoiceHdr extends BaseEntity {
     private Integer creditDays;
 
     @Column(name = "DUE_DATE")
+    @AuditIgnore
     private LocalDate dueDate;
 
     @Column(name = "RELASED_ID_PERSON", length = 50)

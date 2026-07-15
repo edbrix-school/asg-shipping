@@ -604,7 +604,13 @@ public class SalesInvoiceShippingController {
         try {
             log.info("Load BL data request for invoice id: {}", blPoid);
             var result = service.loadBlData(blPoid, request);
-            return success("BL data loaded successfully", result);
+            String message;
+            if (result.getLPO_SRN_NO() != null) {
+                 message = result.getLPO_SRN_NO();
+            } else {
+                message = "BL data loaded successfully";
+            }
+            return success(message, result);
         } catch (Exception e) {
             return internalServerError("Error loading BL data: " + e.getMessage());
         }
@@ -734,6 +740,8 @@ public class SalesInvoiceShippingController {
             case "CREATED_DATE" -> "CREATED_DATE";
             case "LASTMODIFIED_BY" -> "LASTMODIFIED_BY";
             case "LASTMODIFIED_DATE" -> "LASTMODIFIED_DATE";
+            case "CUSTOMER_NAME" -> "CUSTOMER_NAME";
+            case "BL_NUMBER" -> "BL_NUMBER";
             default -> "INV_DATE";
         };
     }

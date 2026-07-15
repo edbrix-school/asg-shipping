@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.*;
 import java.util.concurrent.CompletableFuture;
 import java.sql.Date;
@@ -286,16 +287,16 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                             detRowId++;
 
                             LinePayableTransferReportingDtlDto dto = LinePayableTransferReportingDtlDto.builder()
-                                    .mainfestTransactionPoid(getLongOrNull(rs, "MAINFEST_TRANSACTION_POID"))
+                                    .mainfestTransactionPoid(getLongOrNull(rs, "TRANSACTION_POID"))
                                     .blNumber(rs.getString("BL_NUMBER"))
-                                    .acutalAmount(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT"))
-                                    .totalAmountTransfer(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT")) // Default to actual amount
-                                    .isSelect("N") // Default to not selected
+                                    .acutalAmount(toThreeDecimals(getBigDecimalOrNull(rs, "ACTUAL_AMOUNT")))
+                                    .totalAmountTransfer(toThreeDecimals(getBigDecimalOrNull(rs, "ACTUAL_AMOUNT"))) // Default to actual amount
+                                    .isSelect("Y") // Default to not selected
                                     .chargePoid(getLongOrNull(rs, "CHARGE_POID"))
                                     .freightType(rs.getString("FREIGHT_TYPE"))
                                     .currencyCode(rs.getString("CURRENCY_CODE"))
-                                    .currencyExchange(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE"))
-                                    .currencyAmount(getBigDecimalOrNull(rs, "CURRENCY_AMOUNT"))
+                                    .currencyExchange(toThreeDecimals(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE")))
+                                    .currencyAmount(toThreeDecimals(getBigDecimalOrNull(rs, "CURRENCY_AMOUNT")))
                                     .build();
 
                             result.add(dto);
@@ -422,16 +423,16 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                         while (rs.next()) {
                             result.add(LinePayableTransferReportingDtlDto.builder()
                                     .detRowId((long) (result.size() + 1))
-                                    .mainfestTransactionPoid(getLongOrNull(rs, "MAINFEST_TRANSACTION_POID"))
+                                    .mainfestTransactionPoid(getLongOrNull(rs, "TRANSACTION_POID"))
                                     .blNumber(rs.getString("BL_NUMBER"))
-                                    .acutalAmount(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT"))
-                                    .totalAmountTransfer(getBigDecimalOrNull(rs, "ACUTAL_AMOUNT"))
-                                    .isSelect("N")
+                                    .acutalAmount(toThreeDecimals(getBigDecimalOrNull(rs, "ACTUAL_AMOUNT")))
+                                    .totalAmountTransfer(toThreeDecimals(getBigDecimalOrNull(rs, "ACTUAL_AMOUNT")))
+                                    .isSelect("Y")
                                     .chargePoid(getLongOrNull(rs, "CHARGE_POID"))
                                     .freightType(rs.getString("FREIGHT_TYPE"))
                                     .currencyCode(rs.getString("CURRENCY_CODE"))
-                                    .currencyExchange(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE"))
-                                    .currencyAmount(getBigDecimalOrNull(rs, "CURRENCY_AMOUNT"))
+                                    .currencyExchange(toThreeDecimals(getBigDecimalOrNull(rs, "CURRENCY_EXCHANGE")))
+                                    .currencyAmount(toThreeDecimals(getBigDecimalOrNull(rs, "CURRENCY_AMOUNT")))
                                     .build());
                         }
                     }
@@ -804,5 +805,9 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private BigDecimal toThreeDecimals(BigDecimal value) {
+        return value == null ? null : value.setScale(3, RoundingMode.HALF_UP);
     }
 }
