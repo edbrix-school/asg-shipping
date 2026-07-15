@@ -642,63 +642,6 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
-    void updateLineTariff_InvalidSlabOrder_ThrowsValidationException() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
-
-            TariffDetailUpdateDTO detail = TariffDetailUpdateDTO.builder()
-                    .detRowId(1L)
-                    .containerTypePoid(50L)
-                    .slab1Tilldays(2)
-                    .slab1Rate(BigDecimal.TEN)
-                    .slab2Tilldays(3)
-                    .slab2Rate(BigDecimal.TEN)
-                    .slab3Tilldays(2)
-                    .slab3Rate(BigDecimal.TEN)
-                    .build();
-            updateDTO.setImportDemurrageCollectable(List.of(detail));
-
-            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
-
-            ValidationException ex = assertThrows(ValidationException.class,
-                    () -> service.updateLineTariff(1L, updateDTO, 1L, 2L));
-
-            assertTrue(ex.getMessage().contains("Slab days should be in incremental order"));
-            assertTrue(ex.getMessage().contains("Slab 3 days (2) must be greater than Slab 2 days (3)"));
-        }
-    }
-
-    @Test
-    void updateLineTariff_DuplicateSlabDays_ThrowsValidationException() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
-
-            TariffDetailUpdateDTO detail = TariffDetailUpdateDTO.builder()
-                    .detRowId(1L)
-                    .containerTypePoid(50L)
-                    .slab1Tilldays(2)
-                    .slab1Rate(BigDecimal.TEN)
-                    .slab2Tilldays(2)
-                    .slab2Rate(BigDecimal.TEN)
-                    .build();
-            updateDTO.setImportDemurrageCollectable(List.of(detail));
-
-            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
-            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
-
-            ValidationException ex = assertThrows(ValidationException.class,
-                    () -> service.updateLineTariff(1L, updateDTO, 1L, 2L));
-
-            assertTrue(ex.getMessage().contains("Slab 2 days (2) must be greater than Slab 1 days (2)"));
-        }
-    }
-
-    @Test
     void copySlabsToPayable_DMG_CopiesMatchingContainerType() {
         ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
         col.setContainerTypePoid(1L);
