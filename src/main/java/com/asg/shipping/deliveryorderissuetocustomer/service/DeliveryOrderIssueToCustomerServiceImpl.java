@@ -76,6 +76,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         enrichWithLovData(dto);
         receiptHdrRepository.findByBlPoid(transactionPoid).ifPresent(receipt -> {
             dto.setReceiptsDocRef(receipt.getDocRef());
+            dto.setReceiptsPoid(receipt.getTransactionPoid());
         });
         return dto;
     }
