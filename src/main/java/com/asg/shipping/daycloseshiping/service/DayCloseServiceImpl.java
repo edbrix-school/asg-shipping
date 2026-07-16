@@ -81,8 +81,8 @@ public class DayCloseServiceImpl implements DayCloseService {
     @Override
     public DayCloseDto getDayClose(Long transactionPoid, Long groupPoid, Long companyPoid) {
 
-        ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid).filter(h -> !"Y".equals(h.getDeleted())).orElseThrow(
-                () -> new ResourceNotFoundException("Day Close", TRANSACTIONPOID, transactionPoid.toString()));
+        ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Day Close", TRANSACTIONPOID, transactionPoid.toString()));
 
         List<ArShDayEndCloseDtl> details = dtlRepo.findByTransactionPoid(transactionPoid);
 
