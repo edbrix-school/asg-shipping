@@ -26,7 +26,6 @@ public interface ExportShipBlManifestHdrRepository extends JpaRepository<ExportS
      */
     @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
            "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid " +
-           "AND (h.deleted IS NULL OR h.deleted = 'N') " +
            "AND h.blType = 'EXPORT'")
     Optional<ExportShipBlManifestHdr> findExportBlByTransactionPoid(
             @Param("transactionPoid") Long transactionPoid,
