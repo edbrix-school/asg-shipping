@@ -64,6 +64,7 @@ public class ShipDemDetnTransferHdr extends BaseEntity {
     private Long incomeGlPoid;
 
     @Column(name = "DELETED", length = 1)
+    @AuditIgnore
     private String deleted;
 
     @PrePersist
