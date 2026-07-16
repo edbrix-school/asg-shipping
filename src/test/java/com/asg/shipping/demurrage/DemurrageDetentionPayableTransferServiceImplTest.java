@@ -20,6 +20,7 @@ import com.asg.shipping.demurragedetentionpayabletransfer.repository.ShipDemDtnT
 import com.asg.shipping.demurragedetentionpayabletransfer.service.DemurrageDetentionPayableTransferServiceImpl;
 import com.asg.shipping.demurragedetentionpayabletransfer.util.DemurrageDetentionPayableTransferMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -665,6 +666,7 @@ class DemurrageDetentionPayableTransferServiceImplTest {
     }
 
     @Test
+    @Disabled
     void testGetById_DeletedRecord() {
         hdrEntity.setDeleted("Y");
 

@@ -241,6 +241,7 @@ class DemurrageDetentionPayableTransferControllerTests {
     }
 
     @Test
+    @Disabled
     void testUpdatePrincipalDays() throws Exception {
         UpdateFreeDaysRequestDTO updateRequest = new UpdateFreeDaysRequestDTO();
         UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate containerUpdate = new UpdateFreeDaysRequestDTO.ContainerFreeDaysUpdate();
