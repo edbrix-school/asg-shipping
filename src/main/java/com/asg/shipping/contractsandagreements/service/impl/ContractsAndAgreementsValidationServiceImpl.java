@@ -115,5 +115,11 @@ public class ContractsAndAgreementsValidationServiceImpl implements ContractsAnd
         return !result.isEmpty();
     }
 
+    @Override
+    public void validatePicPeriodDates(LocalDate periodFrom, LocalDate periodTo) {
+        if (periodFrom != null && periodTo != null && periodFrom.isAfter(periodTo)) {
+            throw new ValidationException("Period From cannot be after Period To");
+        }
+    }
 
 }

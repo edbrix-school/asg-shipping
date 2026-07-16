@@ -8,4 +8,6 @@ public interface ContractsAndAgreementsValidationService {
     void partyValidation(String partyType, Long partyPoid);
      boolean checkForDuplicateAgreementName(String agreementName, Long transactionPoid);
      void expiryDateValidationForRenew(LocalDate expiryDate, LocalDate effectiveStartDate);
+
+    void validatePicPeriodDates(LocalDate periodFrom, LocalDate periodTo);
 }
