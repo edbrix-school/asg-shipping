@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.CallableStatement;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -180,12 +181,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchExportManifestBl(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchExportManifestBl(String docId, FilterRequestDto request, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         log.info("Searching Export Manifest BL with docId: {}", docId);
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", fromDate, toDate);
 
         // Add BL_TYPE = 'EXPORT' filter
         if (filters == null) {

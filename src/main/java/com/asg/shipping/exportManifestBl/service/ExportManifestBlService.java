@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public interface ExportManifestBlService {
     ExportManifestBlRequestDto updateExportManifestBl(Long id, ExportManifestBlUpdateDto dto, Long companyPoid, Long groupPoid);
 
    
-    Map<String, Object> searchExportManifestBl(String docId, FilterRequestDto request, Pageable pageable);
+    Map<String, Object> searchExportManifestBl(String docId, FilterRequestDto request, LocalDate fromDate, LocalDate toDate, Pageable pageable);
 
    
     ExportManifestBlRequestDto getExportManifestBl(Long id);
