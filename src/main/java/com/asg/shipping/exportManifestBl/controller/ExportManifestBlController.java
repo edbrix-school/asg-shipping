@@ -11,6 +11,8 @@ import com.asg.shipping.exportManifestBl.dto.*;
 import com.asg.shipping.exportManifestBl.service.ExportManifestBlService;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
+import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsRequestDto;
+import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -441,6 +443,105 @@ public class ExportManifestBlController {
 			return ApiResponse.error("Failed to generate PDF: " + e.getMessage(), 500);
 		}
 	}
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Charge Tax Defaults",
+            description = "Fetch tax POID and tax percentage for a selected charge. Called when the user selects a charge from the LOV."
+    )
+    @GetMapping("/get-tax-rate")
+    public ResponseEntity<?> getChargeDefaults(
+            @Parameter(description = "Charge POID", required = true) @RequestParam Long chargePoid,
+            @Parameter(description = "Transaction Date") @RequestParam(required = false) LocalDate transactionDate) {
+        try {
+            ChargeDefaultsRequestDto request = ChargeDefaultsRequestDto.builder()
+                    .chargePoid(chargePoid)
+                    .transactionDate(transactionDate)
+                    .build();
+            ChargeDefaultsResponseDto response = service.getChargeDefaults(request);
+            return ApiResponse.success("Charge defaults retrieved successfully", response);
+        } catch (ValidationException e) {
+            log.warn("Validation failed for charge tax defaults: {}", e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (Exception e) {
+            log.error("Failed to fetch charge tax defaults for chargePoid: {}", chargePoid, e);
+            return error("Failed to fetch charge tax defaults: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Update Local Charges",
+            description = "Press for Local Charges — fetches and loads port local charges from Port Charges Master into the charges tab."
+    )
+    @PostMapping("/{transactionPoid}/update-local-charges")
+    public ResponseEntity<?> updateLocalCharges(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        try {
+            return success("Local charges loaded successfully", service.loadLocalCharges(transactionPoid));
+        } catch (ValidationException e) {
+            log.warn("Validation failed while loading local charges for {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed to load local charges for Export Manifest BL: {}", transactionPoid, e);
+            return error("Failed to load local charges: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Load Port Local Charges",
+            description = "Alias for update-local-charges. Loads local charges from Port Charges Master via PROC_SHIP_BL_PAGE_SAVE_AFTER."
+    )
+    @PostMapping("/{transactionPoid}/load-local-charges")
+    public ResponseEntity<?> loadLocalCharges(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        return updateLocalCharges(transactionPoid);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Load Customer Local Charges",
+            description = "Loads customer-mapped export charges into the BL charges tab via PROC_SHIP_BL_CUSTOMER_AUTO."
+    )
+    @PostMapping("/{transactionPoid}/load-customer-local-charges")
+    public ResponseEntity<?> loadCustomerLocalCharges(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        try {
+            return success("Customer local charges loaded successfully", service.loadCustomerLocalCharges(transactionPoid));
+        } catch (ValidationException e) {
+            log.warn("Validation failed while loading customer local charges for {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed to load customer local charges for Export Manifest BL: {}", transactionPoid, e);
+            return error("Failed to load customer local charges: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Select for Invoice",
+            description = "Validates BL approval and returns Sales Invoice (Shipping) navigation details for invoicing."
+    )
+    @PostMapping("/{transactionPoid}/select-for-invoice")
+    public ResponseEntity<?> selectForInvoice(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        try {
+            return success("BL is approved and ready for invoicing", service.selectForInvoice(transactionPoid));
+        } catch (ValidationException e) {
+            log.warn("Validation failed for select-for-invoice on {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed select-for-invoice for Export Manifest BL: {}", transactionPoid, e);
+            return error("Failed to select BL for invoice: " + e.getMessage(), 500);
+        }
+    }
 }
 
 
