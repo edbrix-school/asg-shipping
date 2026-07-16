@@ -47,4 +47,5 @@ public class DeliveryOrderIssueToCustomerDto {
     private String principalDoRequired;
     private String remarks;
     private String receiptsDocRef;
+    private Long receiptsPoid;
 }

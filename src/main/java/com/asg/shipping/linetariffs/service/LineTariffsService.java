@@ -1,5 +1,6 @@
 package com.asg.shipping.linetariffs.service;
 
+import com.asg.shipping.linetariffs.dto.CopySlabsToPayableResponseDto;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
@@ -13,6 +14,8 @@ import java.util.Map;
  * Service interface for Line Tariffs operations
  */
 public interface LineTariffsService {
+
+    String COPY_SLABS_CONFIRMATION_MESSAGE = "Changes may affect the previous payable";
 
     /**
      * Search/list line tariffs with filters and pagination
@@ -82,8 +85,9 @@ public interface LineTariffsService {
      *
      * @param id TRANSACTION_POID
      * @param type "DMG" for import demurrage, "DTN" for export detention
+     * @param confirmed when true, proceeds even if payable already has data for matching containers
      */
-    void copySlabsToPayable(Long id, String type);
+    CopySlabsToPayableResponseDto copySlabsToPayable(Long id, String type, boolean confirmed);
 
     /**
      * Load container types into both collectable and payable detail tables.

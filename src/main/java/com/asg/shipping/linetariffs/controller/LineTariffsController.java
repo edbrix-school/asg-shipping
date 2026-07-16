@@ -14,6 +14,7 @@ import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.linetariffs.dto.CopySlabsToPayableResponseDto;
 import com.asg.shipping.linetariffs.service.LineTariffsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -342,15 +343,28 @@ public class LineTariffsController {
     @PostMapping("/{id}/copy-slabs")
     @Operation(
             summary = "Copy collectable slabs to payable",
-            description = "Copy slab data from collectable to payable matched by container type. type=DMG copies import demurrage, type=DTN copies export detention.",
+            description = "Copy slab data from collectable to payable matched by container type. "
+                    + "When payable already has data for the same container, returns success with message "
+                    + "'Changes may affect the previous payable'. Pass confirmed=true after user confirms to copy.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     public ResponseEntity<?> copySlabsToPayable(
             @PathVariable Long id,
-            @RequestParam String type) {
-        log.info("Copying slabs to payable for id: {}, type: {}", id, type);
-        lineTariffsService.copySlabsToPayable(id, type);
-        return ApiResponse.success("Slabs copied to payable successfully", null);
+            @RequestParam String type,
+            @RequestParam(defaultValue = "false") boolean confirmed) {
+        log.info("Copying slabs to payable for id: {}, type: {}, confirmed: {}", id, type, confirmed);
+        try {
+            CopySlabsToPayableResponseDto result = lineTariffsService.copySlabsToPayable(id, type, confirmed);
+            if (result.isRequiresConfirmation()) {
+                return ApiResponse.success(LineTariffsService.COPY_SLABS_CONFIRMATION_MESSAGE, null);
+            }
+            return ApiResponse.success("Slabs copied to payable successfully", null);
+        } catch (ValidationException e) {
+            return ApiResponse.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error copying slabs to payable for id {}: {}", id, e.getMessage(), e);
+            return ApiResponse.internalServerError("Failed to copy slabs to payable: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)

@@ -75,6 +75,8 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
     // Fallback income GL POID (legacy: common.GetParameterValue("DEM_DET_ACCOUNT_INCOME","Group","1","13653"))
     private static final long DEFAULT_INCOME_GL_POID = 13653L;
 
+    private static final String LOG_KEY_ID = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
+
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> searchDemurrageDetentionPayableTransfer(String docId, com.asg.common.lib.dto.FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable) {
@@ -593,13 +595,14 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     update.getContainerNo()
             );
 
+            String logDetail = String.format(LOG_KEY_ID, update.getTransactionPoid(), update.getDetRowId());
             loggingService.createLogDetailsEntry(
                     DOC_ID,
-                    String.valueOf(update.getMainfestTransactionPoid()),
-                    "EXTRA_FREE_DAYS_PRNPLS",
+                    String.valueOf(update.getTransactionPoid()),
+                    "ExtraFreeDaysPrnpls",
                     oldValue != null ? oldValue.toPlainString() : "",
                     update.getExtraFreeDaysPrnpls() != null ? update.getExtraFreeDaysPrnpls().toPlainString() : "",
-                    String.format("Principal Days Updated for containerNo: %s", update.getContainerNo()),
+                    logDetail,
                     "SHIP_DEM_DETN_TRANSFER_DTL"
             );
         }
@@ -973,7 +976,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
      * No DEMURRAGE_ACUTAL filter — legacy doesn't have this condition.
      */
     private String buildContainerQuerySql() {
-        return "SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER V " +
+        return "SELECT * FROM VW_SHIP_DEM_DTN_TRANSFER_TEMP V " +
                 "WHERE (V.MAINFEST_TRANSACTION_POID, V.CONTAINER_NO) NOT IN (" +
                 "  SELECT D.MAINFEST_TRANSACTION_POID, D.CONTAINER_NO " +
                 "  FROM SHIP_DEM_DETN_TRANSFER_HDR H " +

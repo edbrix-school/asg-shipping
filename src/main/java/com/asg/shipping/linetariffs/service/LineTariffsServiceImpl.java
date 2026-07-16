@@ -21,6 +21,7 @@ import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.linetariffs.repository.*;
 import com.asg.shipping.linetariffs.util.LineTariffMapper;
+import com.asg.shipping.linetariffs.util.LineTariffSlabValidator;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -517,6 +519,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getImportDemurrageCollectable() != null) {
             Long maxDetRowId = impDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getImportDemurrageCollectable()) {
+                LineTariffSlabValidator.validate(detailDto);
                 validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffImpDtl detail = mapper.mapImpDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
@@ -528,6 +531,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getImportDemurragePayable() != null) {
             Long maxDetRowId = impPayDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getImportDemurragePayable()) {
+                LineTariffSlabValidator.validate(detailDto);
                 validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffImpPayDtl detail = mapper.mapImpPayDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
@@ -539,6 +543,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getExportDetentionCollectable() != null) {
             Long maxDetRowId = expDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getExportDetentionCollectable()) {
+                LineTariffSlabValidator.validate(detailDto);
                 validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffExpDtl detail = mapper.mapExpDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
@@ -550,6 +555,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         if (dto.getExportDetentionPayable() != null) {
             Long maxDetRowId = expPayDtlRepository.getMaxDetRowId(transactionPoid);
             for (TariffDetailCreateDTO detailDto : dto.getExportDetentionPayable()) {
+                LineTariffSlabValidator.validate(detailDto);
                 validateContainerTypeExists(detailDto.getContainerTypePoid());
                 maxDetRowId++;
                 ShipLineTariffExpPayDtl detail = mapper.mapExpPayDtlCreateDTOToEntity(detailDto, transactionPoid, maxDetRowId);
@@ -612,6 +618,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             String action = resolveDetailAction(dto.getActionType(), dto.getDetRowId());
             switch (action) {
                 case ACTION_ISCREATED -> {
+                    LineTariffSlabValidator.validate(dto);
                     validateContainerTypeExists(dto.getContainerTypePoid());
                     maxDetRowId++;
                     ShipLineTariffImpDtl entity = mapper.mapImpDtlUpdateDTOToEntity(dto, transactionPoid, maxDetRowId);
@@ -622,6 +629,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     if (dto.getDetRowId() == null) {
                         continue;
                     }
+                    LineTariffSlabValidator.validate(dto);
                     ShipLineTariffImpDtl existing = impDtlRepository
                             .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
                             .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, dto.getDetRowId().toString()));
@@ -672,6 +680,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             String action = resolveDetailAction(dto.getActionType(), dto.getDetRowId());
             switch (action) {
                 case ACTION_ISCREATED -> {
+                    LineTariffSlabValidator.validate(dto);
                     validateContainerTypeExists(dto.getContainerTypePoid());
                     maxDetRowId++;
                     ShipLineTariffImpPayDtl entity = mapper.mapImpPayDtlUpdateDTOToEntity(dto, transactionPoid, maxDetRowId);
@@ -682,6 +691,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     if (dto.getDetRowId() == null) {
                         continue;
                     }
+                    LineTariffSlabValidator.validate(dto);
                     ShipLineTariffImpPayDtl existing = impPayDtlRepository
                             .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
                             .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, dto.getDetRowId().toString()));
@@ -732,6 +742,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             String action = resolveDetailAction(dto.getActionType(), dto.getDetRowId());
             switch (action) {
                 case ACTION_ISCREATED -> {
+                    LineTariffSlabValidator.validate(dto);
                     validateContainerTypeExists(dto.getContainerTypePoid());
                     maxDetRowId++;
                     ShipLineTariffExpDtl entity = mapper.mapExpDtlUpdateDTOToEntity(dto, transactionPoid, maxDetRowId);
@@ -742,6 +753,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     if (dto.getDetRowId() == null) {
                         continue;
                     }
+                    LineTariffSlabValidator.validate(dto);
                     ShipLineTariffExpDtl existing = expDtlRepository
                             .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
                             .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, dto.getDetRowId().toString()));
@@ -792,6 +804,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             String action = resolveDetailAction(dto.getActionType(), dto.getDetRowId());
             switch (action) {
                 case ACTION_ISCREATED -> {
+                    LineTariffSlabValidator.validate(dto);
                     validateContainerTypeExists(dto.getContainerTypePoid());
                     maxDetRowId++;
                     ShipLineTariffExpPayDtl entity = mapper.mapExpPayDtlUpdateDTOToEntity(dto, transactionPoid, maxDetRowId);
@@ -802,6 +815,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
                     if (dto.getDetRowId() == null) {
                         continue;
                     }
+                    LineTariffSlabValidator.validate(dto);
                     ShipLineTariffExpPayDtl existing = expPayDtlRepository
                             .findByTransactionPoidAndDetRowId(transactionPoid, dto.getDetRowId())
                             .orElseThrow(() -> new ResourceNotFoundException(TARIFF_DETAIL, DET_ROW_ID, dto.getDetRowId().toString()));
@@ -1224,17 +1238,34 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional
-    public void copySlabsToPayable(Long id, String type) {
-        log.info("Copying slabs to payable for transactionPoid: {}, type: {}", id, type);
+    public CopySlabsToPayableResponseDto copySlabsToPayable(Long id, String type, boolean confirmed) {
+        log.info("Copying slabs to payable for transactionPoid: {}, type: {}, confirmed: {}", id, type, confirmed);
+        if (!confirmed && requiresCopySlabsConfirmation(id, type)) {
+            log.info("Copy slabs confirmation required for transactionPoid: {}, type: {}", id, type);
+            return CopySlabsToPayableResponseDto.builder()
+                    .requiresConfirmation(true)
+                    .copied(false)
+                    .build();
+        }
         if ("DMG".equalsIgnoreCase(type)) {
             List<ShipLineTariffImpDtl> collectables = impDtlRepository.findByTransactionPoidOrderByDetRowId(id);
             List<ShipLineTariffImpPayDtl> payables = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
             Map<Long, ShipLineTariffImpPayDtl> payableByContainerType = payables.stream()
                     .filter(p -> p.getContainerTypePoid() != null)
                     .collect(Collectors.toMap(ShipLineTariffImpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
-            long maxDetRowId = payables.stream().map(ShipLineTariffImpPayDtl::getDetRowId).filter(java.util.Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
+            long maxDetRowId = payables.stream().map(ShipLineTariffImpPayDtl::getDetRowId).filter(Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
             for (ShipLineTariffImpDtl col : collectables) {
-                if (col.getContainerTypePoid() == null) continue;
+                if (col.getContainerTypePoid() == null || !hasTariffDetailData(
+                        col.getFreeDays(),
+                        col.getSlab1Tilldays(), col.getSlab1Rate(),
+                        col.getSlab2Tilldays(), col.getSlab2Rate(),
+                        col.getSlab3Tilldays(), col.getSlab3Rate(),
+                        col.getSlab4Tilldays(), col.getSlab4Rate(),
+                        col.getSlab5Tilldays(), col.getSlab5Rate(),
+                        col.getSlab6Tilldays(), col.getSlab6Rate(),
+                        col.getSlab7Tilldays(), col.getSlab7Rate())) {
+                    continue;
+                }
                 ShipLineTariffImpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
                 if (pay == null) {
                     pay = new ShipLineTariffImpPayDtl();
@@ -1259,9 +1290,19 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             Map<Long, ShipLineTariffExpPayDtl> payableByContainerType = payables.stream()
                     .filter(p -> p.getContainerTypePoid() != null)
                     .collect(Collectors.toMap(ShipLineTariffExpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
-            long maxDetRowId = payables.stream().map(ShipLineTariffExpPayDtl::getDetRowId).filter(java.util.Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
+            long maxDetRowId = payables.stream().map(ShipLineTariffExpPayDtl::getDetRowId).filter(Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
             for (ShipLineTariffExpDtl col : collectables) {
-                if (col.getContainerTypePoid() == null) continue;
+                if (col.getContainerTypePoid() == null || !hasTariffDetailData(
+                        col.getFreeDays(),
+                        col.getSlab1Tilldays(), col.getSlab1Rate(),
+                        col.getSlab2Tilldays(), col.getSlab2Rate(),
+                        col.getSlab3Tilldays(), col.getSlab3Rate(),
+                        col.getSlab4Tilldays(), col.getSlab4Rate(),
+                        col.getSlab5Tilldays(), col.getSlab5Rate(),
+                        col.getSlab6Tilldays(), col.getSlab6Rate(),
+                        col.getSlab7Tilldays(), col.getSlab7Rate())) {
+                    continue;
+                }
                 ShipLineTariffExpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
                 if (pay == null) {
                     pay = new ShipLineTariffExpPayDtl();
@@ -1284,6 +1325,87 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             throw new ValidationException("Invalid type. Must be DMG or DTN");
         }
         log.info("Successfully copied slabs to payable for transactionPoid: {}, type: {}", id, type);
+        return CopySlabsToPayableResponseDto.builder()
+                .requiresConfirmation(false)
+                .copied(true)
+                .build();
+    }
+
+    private boolean requiresCopySlabsConfirmation(Long id, String type) {
+        if ("DMG".equalsIgnoreCase(type)) {
+            List<ShipLineTariffImpDtl> collectables = impDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+            Map<Long, ShipLineTariffImpPayDtl> payableByContainerType =
+                    impPayDtlRepository.findByTransactionPoidOrderByDetRowId(id).stream()
+                            .filter(p -> p.getContainerTypePoid() != null)
+                            .collect(Collectors.toMap(ShipLineTariffImpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
+            return collectables.stream()
+                    .filter(col -> col.getContainerTypePoid() != null && hasTariffDetailData(
+                            col.getFreeDays(),
+                            col.getSlab1Tilldays(), col.getSlab1Rate(),
+                            col.getSlab2Tilldays(), col.getSlab2Rate(),
+                            col.getSlab3Tilldays(), col.getSlab3Rate(),
+                            col.getSlab4Tilldays(), col.getSlab4Rate(),
+                            col.getSlab5Tilldays(), col.getSlab5Rate(),
+                            col.getSlab6Tilldays(), col.getSlab6Rate(),
+                            col.getSlab7Tilldays(), col.getSlab7Rate()))
+                    .map(col -> payableByContainerType.get(col.getContainerTypePoid()))
+                    .filter(Objects::nonNull)
+                    .anyMatch(pay -> hasTariffDetailData(
+                            pay.getFreeDays(),
+                            pay.getSlab1Tilldays(), pay.getSlab1Rate(),
+                            pay.getSlab2Tilldays(), pay.getSlab2Rate(),
+                            pay.getSlab3Tilldays(), pay.getSlab3Rate(),
+                            pay.getSlab4Tilldays(), pay.getSlab4Rate(),
+                            pay.getSlab5Tilldays(), pay.getSlab5Rate(),
+                            pay.getSlab6Tilldays(), pay.getSlab6Rate(),
+                            pay.getSlab7Tilldays(), pay.getSlab7Rate()));
+        }
+        if ("DTN".equalsIgnoreCase(type)) {
+            List<ShipLineTariffExpDtl> collectables = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
+            Map<Long, ShipLineTariffExpPayDtl> payableByContainerType =
+                    expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id).stream()
+                            .filter(p -> p.getContainerTypePoid() != null)
+                            .collect(Collectors.toMap(ShipLineTariffExpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
+            return collectables.stream()
+                    .filter(col -> col.getContainerTypePoid() != null && hasTariffDetailData(
+                            col.getFreeDays(),
+                            col.getSlab1Tilldays(), col.getSlab1Rate(),
+                            col.getSlab2Tilldays(), col.getSlab2Rate(),
+                            col.getSlab3Tilldays(), col.getSlab3Rate(),
+                            col.getSlab4Tilldays(), col.getSlab4Rate(),
+                            col.getSlab5Tilldays(), col.getSlab5Rate(),
+                            col.getSlab6Tilldays(), col.getSlab6Rate(),
+                            col.getSlab7Tilldays(), col.getSlab7Rate()))
+                    .map(col -> payableByContainerType.get(col.getContainerTypePoid()))
+                    .filter(Objects::nonNull)
+                    .anyMatch(pay -> hasTariffDetailData(
+                            pay.getFreeDays(),
+                            pay.getSlab1Tilldays(), pay.getSlab1Rate(),
+                            pay.getSlab2Tilldays(), pay.getSlab2Rate(),
+                            pay.getSlab3Tilldays(), pay.getSlab3Rate(),
+                            pay.getSlab4Tilldays(), pay.getSlab4Rate(),
+                            pay.getSlab5Tilldays(), pay.getSlab5Rate(),
+                            pay.getSlab6Tilldays(), pay.getSlab6Rate(),
+                            pay.getSlab7Tilldays(), pay.getSlab7Rate()));
+        }
+        throw new ValidationException("Invalid type. Must be DMG or DTN");
+    }
+
+    private boolean hasTariffDetailData(Integer freeDays, Integer slab1Tilldays, BigDecimal slab1Rate,
+                                        Integer slab2Tilldays, BigDecimal slab2Rate,
+                                        Integer slab3Tilldays, BigDecimal slab3Rate,
+                                        Integer slab4Tilldays, BigDecimal slab4Rate,
+                                        Integer slab5Tilldays, BigDecimal slab5Rate,
+                                        Integer slab6Tilldays, BigDecimal slab6Rate,
+                                        Integer slab7Tilldays, BigDecimal slab7Rate) {
+        return freeDays != null
+                || slab1Tilldays != null || slab1Rate != null
+                || slab2Tilldays != null || slab2Rate != null
+                || slab3Tilldays != null || slab3Rate != null
+                || slab4Tilldays != null || slab4Rate != null
+                || slab5Tilldays != null || slab5Rate != null
+                || slab6Tilldays != null || slab6Rate != null
+                || slab7Tilldays != null || slab7Rate != null;
     }
 }
 
