@@ -37,6 +37,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.Statement;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
@@ -617,7 +619,17 @@ class ImportManifestServiceImplTest {
         when(printService.buildBaseParams(anyLong(), anyString())).thenReturn(new HashMap<>());
         when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
         when(printService.fillReportToPdf(any(), any(), any())).thenReturn(new byte[0]);
-        
+
+        Connection mockConn = mock(Connection.class);
+        Statement mockStmt = mock(Statement.class);
+        java.sql.PreparedStatement mockPs = mock(java.sql.PreparedStatement.class);
+        java.sql.ResultSet mockRs = mock(java.sql.ResultSet.class);
+        when(dataSource.getConnection()).thenReturn(mockConn);
+        when(mockConn.createStatement()).thenReturn(mockStmt);
+        when(mockConn.prepareStatement(anyString())).thenReturn(mockPs);
+        when(mockPs.executeQuery()).thenReturn(mockRs);
+        when(mockRs.next()).thenReturn(false);
+
         assertNotNull(service.printUnclearedCargoNotice(1L));
         assertNotNull(service.printProformaInvoice(1L, LocalDate.now(), 0L));
         
