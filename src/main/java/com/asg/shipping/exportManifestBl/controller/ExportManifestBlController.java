@@ -31,6 +31,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -129,10 +130,14 @@ public class ExportManifestBlController {
             @Parameter(description = "Document ID for search configuration", required = true, example = "TBD")
             @RequestParam(required = false) String docId,
             @ParameterObject Pageable pageable,
-            @RequestBody(required = false) FilterRequestDto filters) {
+            @RequestBody(required = false) FilterRequestDto filters,
+            @Parameter(description = "Start date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate fromDate,
+            @Parameter(description = "End date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate toDate) {
         try {
             String documentId = docId != null ? docId : UserContext.getDocumentId();
-            Map<String, Object> result = service.searchExportManifestBl(documentId, filters, pageable);
+            Map<String, Object> result = service.searchExportManifestBl(documentId, filters, fromDate, toDate, pageable);
             return success("Export Manifest BL list fetched successfully", result);
         } catch (Exception e) {
             log.error("Error fetching Export Manifest BL List", e);
