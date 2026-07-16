@@ -122,4 +122,24 @@ class ContractsAndAgreementsValidationServiceImplTest {
                 .thenReturn(List.of(1));
         assertDoesNotThrow(() -> validationService.partyValidation("supplier", 1L));
     }
+
+    @Test
+    void testValidatePicPeriodDates_Success() {
+        LocalDate periodFrom = LocalDate.of(2026, 1, 1);
+        LocalDate periodTo = LocalDate.of(2026, 12, 31);
+
+        assertDoesNotThrow(() -> validationService.validatePicPeriodDates(periodFrom, periodTo));
+        assertDoesNotThrow(() -> validationService.validatePicPeriodDates(periodFrom, null));
+        assertDoesNotThrow(() -> validationService.validatePicPeriodDates(periodFrom, periodFrom));
+    }
+
+    @Test
+    void testValidatePicPeriodDates_PeriodFromAfterPeriodTo() {
+        LocalDate periodFrom = LocalDate.of(2026, 12, 31);
+        LocalDate periodTo = LocalDate.of(2026, 1, 1);
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> validationService.validatePicPeriodDates(periodFrom, periodTo));
+        assertEquals("Period From cannot be after Period To", ex.getMessage());
+    }
 }

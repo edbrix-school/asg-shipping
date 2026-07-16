@@ -32,6 +32,7 @@ import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -319,6 +320,52 @@ class ContractsAndAgreementsServiceImplTest {
         assertThrows(ValidationException.class, () -> service.renewContractsAndAgreements(req));
         
         verify(validationService).expiryDateValidation(req.getExpiryDate(), req.getEffectiveDate(), null);
+    }
+
+    @Test
+    void testCreate_InvalidPicPeriodDates() {
+        AdminContractsAgreementHdrDto dto = new AdminContractsAgreementHdrDto();
+        dto.setAgreementName("Test");
+
+        AdminContractsAgreementPicDtlDto picDto = new AdminContractsAgreementPicDtlDto();
+        picDto.setPeriodFrom(LocalDate.of(2026, 12, 31));
+        picDto.setPeriodTo(LocalDate.of(2026, 1, 1));
+        dto.setAgreementContentDetails(List.of(picDto));
+
+        when(validationService.checkForDuplicateAgreementName("Test")).thenReturn(false);
+        doThrow(new ValidationException("Period From cannot be after Period To"))
+                .when(validationService).validatePicPeriodDates(picDto.getPeriodFrom(), picDto.getPeriodTo());
+
+        AdminContractsAgreementHdr savedEntity = new AdminContractsAgreementHdr();
+        savedEntity.setTransactionPoid(10L);
+        when(headerRepo.saveAndFlush(any())).thenReturn(savedEntity);
+
+        assertThrows(ValidationException.class, () -> service.createContractsAndAgreements(dto));
+        verify(picDtlRepository, never()).save(any());
+    }
+
+    @Test
+    void testUpdate_InvalidPicPeriodDates() {
+        AdminContractsAgreementHdr existing = new AdminContractsAgreementHdr();
+        existing.setTransactionPoid(10L);
+        existing.setAgreementName("OldName");
+
+        AdminContractsAgreementHdrDto updateDto = new AdminContractsAgreementHdrDto();
+        updateDto.setAgreementName("OldName");
+
+        AdminContractsAgreementPicDtlDto picUpDto = new AdminContractsAgreementPicDtlDto();
+        picUpDto.setDetRowId(2L);
+        picUpDto.setActionType("ISUPDATED");
+        picUpDto.setPeriodFrom(LocalDate.of(2026, 12, 31));
+        picUpDto.setPeriodTo(LocalDate.of(2026, 1, 1));
+        updateDto.setAgreementContentDetails(List.of(picUpDto));
+
+        when(headerRepo.findById(10L)).thenReturn(Optional.of(existing));
+        doThrow(new ValidationException("Period From cannot be after Period To"))
+                .when(validationService).validatePicPeriodDates(picUpDto.getPeriodFrom(), picUpDto.getPeriodTo());
+
+        assertThrows(ValidationException.class, () -> service.updateContractsAndAgreements(10L, updateDto));
+        verify(picDtlRepository, never()).saveAll(anyList());
     }
 
     @Test
