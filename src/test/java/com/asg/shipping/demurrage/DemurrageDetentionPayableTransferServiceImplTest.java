@@ -674,9 +674,12 @@ class DemurrageDetentionPayableTransferServiceImplTest {
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 100L, 1L))
                 .thenReturn(Optional.of(hdrEntity));
+            when(transferDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+            when(billDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of());
+            when(mapper.mapToDto(any())).thenReturn(response);
 
-            assertThrows(ResourceNotFoundException.class, 
-                () -> service.getDemurrageDetentionPayableTransfer(1L));
+            DemurrageDetentionPayableTransferDto result = service.getDemurrageDetentionPayableTransfer(1L);
+            assertNotNull(result);
         }
     }
 

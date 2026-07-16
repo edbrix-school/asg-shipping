@@ -28,6 +28,7 @@ public class UpdateFreeDaysRequestDTO {
     @AllArgsConstructor
     @Builder
     public static class ContainerFreeDaysUpdate {
+        @NotNull(message = "Transaction POID is required")
         private Long transactionPoid;
         
         @NotNull(message = "Detail row ID is required")
