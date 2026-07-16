@@ -69,4 +69,3 @@ public interface ExportManifestBlService {
 
     ExportManifestAddressDto getAddressDetails(Long addressMasterPoid, String addressType);
 }
-

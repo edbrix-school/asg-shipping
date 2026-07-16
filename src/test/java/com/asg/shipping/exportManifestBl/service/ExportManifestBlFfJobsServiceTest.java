@@ -36,6 +36,7 @@ class ExportManifestBlFfJobsServiceTest {
     @Mock private ExportManifestBlContainerDtlRepository containerDtlRepository;
     @Mock private ExportManifestBlChargesDtlRepository chargesDtlRepository;
     @Mock private ExportManifestBlService manifestUpdateService;
+    @Mock private ExportManifestBlProcRepository procRepository;
     @Mock private DocumentSearchService documentService;
     @Mock private ExportManifestBlMapper mapper;
     @Mock private JdbcTemplate jdbcTemplate;
