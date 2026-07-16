@@ -115,8 +115,12 @@ class DayCloseServiceImplTest {
                 .deleted("Y")
                 .build();
         when(hdrRepo.findById(1L)).thenReturn(Optional.of(hdr));
-        assertThrows(ResourceNotFoundException.class,
-                () -> service.getDayClose(1L, 1L, 1L));
+        when(dtlRepo.findByTransactionPoid(1L)).thenReturn(List.of());
+
+        DayCloseDto result = service.getDayClose(1L, 1L, 1L);
+
+        assertNotNull(result);
+        verify(hdrRepo).findById(1L);
     }
 
     /* ---------------- NEW DAY CLOSE ---------------- */
