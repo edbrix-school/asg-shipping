@@ -36,7 +36,7 @@ public interface ExportShipBlManifestHdrRepository extends JpaRepository<ExportS
      * Find active Export BL by transaction POID — aligned with export-manifest-bl (100-104).
      */
     @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
-           "AND h.blType = 'EXPORT' AND (h.deleted IS NULL OR h.deleted = 'N')")
+           "AND h.blType = 'EXPORT'")
     Optional<ExportShipBlManifestHdr> findActiveExportBlByTransactionPoid(
             @Param("transactionPoid") Long transactionPoid);
 
