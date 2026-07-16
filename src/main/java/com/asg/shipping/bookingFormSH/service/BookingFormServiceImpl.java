@@ -271,9 +271,11 @@ public class BookingFormServiceImpl implements BookingFormService {
             entity.setBookingIssueNo(updateDTO.getBookingIssueNo());
         }
 
-        // Validate containers before saving details
+        // Validate containers before saving details.
+        // Fall back to the pre-update linePoid (existingData) — entity has already been overwritten
+        // by mapUpdateDTOToEntity, which uses full-replace semantics and may have set it to null.
         if (updateDTO.getContainerDetails() != null) {
-            Long linePoid = updateDTO.getLinePoid() != null ? updateDTO.getLinePoid() : entity.getLinePoid();
+            Long linePoid = updateDTO.getLinePoid() != null ? updateDTO.getLinePoid() : existingData.getLinePoid();
             for (BookingFormContainerDetailDto containerDto : updateDTO.getContainerDetails()) {
                 if (containerDto.getContainerNo() != null && containerDto.getContainerNo().length() >= 3) {
                     validateContainerLoad(containerDto.getContainerNo(), linePoid, id, groupPoid, companyPoid);
