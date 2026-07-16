@@ -121,6 +121,10 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
         ShipDemDetnTransferHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString()));
 
+        if ("Y".equals(entity.getDeleted())) {
+            throw new ResourceNotFoundException("Demurrage/Detention Payable Transfer", "transactionPoid", id.toString());
+        }
+
         List<ShipDemDetnTransferDtl> transferDetails = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
         List<ShipDemDtnTransferBillDtl> billDetails = billDtlRepository.findByTransactionPoidOrderByDetRowId(id);
 
