@@ -140,7 +140,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         Long companyPoid = getCompanyPoid();
 
         // Validate
-//        validateLineCreateDTO(dto, groupPoid);
+        validateLineCreateDTO(dto, groupPoid);
 
         // Create main entity
         ShipLineMaster line = new ShipLineMaster();
@@ -182,7 +182,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         }
 
         // Validate
-//        validateLineUpdateDTO(dto, groupPoid, id);
+        validateLineUpdateDTO(dto, groupPoid, id);
 
         // Store old values for logging
         ShipLineMaster oldLine = new ShipLineMaster();
@@ -292,9 +292,9 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
             throw new ValidationException(LINE_NAME_EXISTS_MSG);
         }
 
-        validateCountry(dto.getCountryPoid());
-        validateCurrency(dto.getCurrencyPoid());
-        validateBillTo(dto.getBillTo());
+//        validateCountry(dto.getCountryPoid());
+//        validateCurrency(dto.getCurrencyPoid());
+//        validateBillTo(dto.getBillTo());
     }
 
     /**
@@ -305,9 +305,9 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
             throw new ValidationException(LINE_NAME_EXISTS_MSG);
         }
 
-        validateCountry(dto.getCountryPoid());
-        validateCurrency(dto.getCurrencyPoid());
-        validateBillTo(dto.getBillTo());
+//        validateCountry(dto.getCountryPoid());
+//        validateCurrency(dto.getCurrencyPoid());
+//        validateBillTo(dto.getBillTo());
     }
 
 

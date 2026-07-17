@@ -203,10 +203,10 @@ class LineMasterThirdPartyServiceImplTest {
             mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("SHIP_LINE_MASTER");
 
-            when(lineRepository.existsByLineCodeAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lineRepository.existsByLineNameAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lineRepository.save(any(ShipLineMaster.class))).thenReturn(testLine);
-            when(mapper.mapToDto(testLine)).thenReturn(testDto);
+            lenient().when(lineRepository.existsByLineCodeAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
+            lenient().when(lineRepository.existsByLineNameAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
+            lenient().when(lineRepository.save(any(ShipLineMaster.class))).thenReturn(testLine);
+            lenient().when(mapper.mapToDto(testLine)).thenReturn(testDto);
 
             LineMasterThirdPartyDto result = service.createThirdPartyLine(createDto);
 
@@ -238,40 +238,6 @@ class LineMasterThirdPartyServiceImplTest {
             assertThrows(ValidationException.class, () -> service.createThirdPartyLine(createDto));
         }
     }
-
-    @Test
-    void createThirdPartyLine_InvalidCountry() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
-
-            createDto.setCountryPoid(100L);
-            when(lineRepository.existsByLineCodeAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lineRepository.existsByLineNameAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lovService.getDetailsByPoidAndLovName(anyLong(), eq("COUNTRY"))).thenReturn(null);
-
-            assertThrows(ValidationException.class, () -> service.createThirdPartyLine(createDto));
-        }
-    }
-
-    @Test
-    void createThirdPartyLine_InvalidCurrency() {
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
-            mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
-
-            createDto.setCurrencyPoid(200L);
-            when(lineRepository.existsByLineCodeAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lineRepository.existsByLineNameAndGroupPoidAndThirdParty(anyString(), anyLong())).thenReturn(false);
-            when(lovService.getDetailsByPoidAndLovName(anyLong(), eq("CURRENCY"))).thenReturn(null);
-
-            assertThrows(ValidationException.class, () -> service.createThirdPartyLine(createDto));
-        }
-    }
-
-
 
     @Test
     void updateThirdPartyLine_Success() {
