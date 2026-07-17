@@ -41,7 +41,6 @@ class ImportManifestBlProcRepositoryImplTest {
             when(storedProcedureQuery.getOutputParameterValue("P_STATUS")).thenReturn("SUCCESS");
 
             EmailVerificationRequestDto request = EmailVerificationRequestDto.builder()
-                    .transactionPoId(1L)
                     .verified(true)
                     .verifiedWithSpecialC(false)
                     .build();
@@ -75,7 +74,7 @@ class ImportManifestBlProcRepositoryImplTest {
             when(entityManager.createStoredProcedureQuery("PROC_SHIP_BL_EDI_EMAILS"))
                     .thenReturn(storedProcedureQuery);
             when(storedProcedureQuery.getOutputParameterValue("P_EMAI_IDS"))
-                    .thenReturn("test@test.com,test2@test.com");
+                    .thenReturn("test@test.com; test2@test.com");
 
             SendEdiEmailsResponseDto response = repository.getEdiEmails(1L);
 

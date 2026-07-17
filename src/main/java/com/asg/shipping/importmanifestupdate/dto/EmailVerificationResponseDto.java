@@ -11,4 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class EmailVerificationResponseDto {
     private String status;
+    private boolean success;
+    private boolean warning;
 }
