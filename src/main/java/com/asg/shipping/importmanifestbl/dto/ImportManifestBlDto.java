@@ -1,6 +1,8 @@
 package com.asg.shipping.importmanifestbl.dto;
 
 import com.asg.shipping.common.dto.LovItem;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -65,11 +67,14 @@ public class ImportManifestBlDto {
     private LovItem loadPortDet;
     private Long receiptPortPoid;
     private LovItem receiptPortDet;
+    @NotNull(message = "Delivery port is required")
     private Long deliveryPortPoid;
     private LovItem deliveryPortDet;
+    @NotNull(message = "Discharge port is required")
     private Long dischargePortPoid;
     private LovItem dischargePortDet;
 
+    @NotNull(message = "Commodity is required")
     private Long commodityPoid;
     private LovItem commodityDet;
 
@@ -79,6 +84,7 @@ public class ImportManifestBlDto {
     private String packTypes;
     private BigDecimal numberOfPacks;
 
+    @NotBlank(message = "Notify name is required")
     private String notifyName;
     private Long notify1Poid;
     private LovItem notify1Det;

@@ -380,11 +380,55 @@ public class DayCloseServiceImpl implements DayCloseService {
 
     @Override
     public byte[] print(Long transactionPoid) throws Exception {
+        Map<String, Object> params = buildMainDayCloseParams(transactionPoid);
+        JasperReport mainReport = printService.load("Shipping/SH/SH_DAY_CLOSE.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] printDetails(Long transactionPoid) throws Exception {
+        Map<String, Object> params = buildDayCloseDateRangeParams(transactionPoid);
+        params.put("DAY_CLOSED_REPORT_SUBREPORT_1", printService.load("Shipping/SH/Day_Closed_Report_subreport1.jrxml"));
+        params.put("DAY_CLOSED_REPORT_SUBREPORT_2", printService.load("Shipping/SH/Day_Closed_Report_subreport2.jrxml"));
+        JasperReport mainReport = printService.load("Shipping/SH/Day_Closed_Report.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] printSplitReceipt(Long transactionPoid) throws Exception {
+        Map<String, Object> params = buildDayCloseDateRangeParams(transactionPoid);
+        JasperReport mainReport = printService.load("Shipping/SH/Day_Closed_Report_Split_receipt.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    @Override
+    public byte[] printSummary(Long transactionPoid) throws Exception {
+        Map<String, Object> params = buildDayCloseDateRangeParams(transactionPoid);
+        JasperReport mainReport = printService.load("Shipping/SH/Day_Closed_Report_Summary.jrxml");
+        return printService.fillReportToPdf(mainReport, params, dataSource);
+    }
+
+    private Map<String, Object> buildMainDayCloseParams(Long transactionPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-106");
         params.put("SH_DAY_CLOSE_CASH_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CASH_subreport1.jrxml"));
         params.put("SH_DAY_CLOSE_CHQ_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CHQ_subreport1.jrxml"));
         params.put("SH_DAY_CLOSE_SMRY_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_SMRY_subreport1.jrxml"));
-        JasperReport mainReport = printService.load("Shipping/SH/SH_DAY_CLOSE.jrxml");
-        return printService.fillReportToPdf(mainReport, params, dataSource);
+        return params;
+    }
+
+    private Map<String, Object> buildDayCloseDateRangeParams(Long transactionPoid) throws Exception {
+        ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Day close Shipping", TRANSACTIONPOID, transactionPoid));
+
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-106");
+        String transactionDate = hdr.getTransactionDate() != null ? hdr.getTransactionDate().toString() : null;
+        if (transactionDate != null) {
+            params.put("P_START_DATE", transactionDate);
+            params.put("P_END_DATE", transactionDate);
+        }
+        if (hdr.getCompanyPoid() != null) {
+            params.put("COMPANY_POID", hdr.getCompanyPoid().toString());
+        }
+        return params;
     }
 }

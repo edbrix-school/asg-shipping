@@ -334,4 +334,49 @@ class DayCloseControllerTest {
 
         verify(dayCloseService).print(100L);
     }
+
+    @Test
+    void printDetails_Success() throws Exception {
+        byte[] pdfBytes = "PDF".getBytes();
+
+        when(dayCloseService.printDetails(100L)).thenReturn(pdfBytes);
+
+        mockMvc.perform(get("/v1/day-close-shipping/print/details/100"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        "attachment; filename=day-close-shipping-details-100.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+
+        verify(dayCloseService).printDetails(100L);
+    }
+
+    @Test
+    void printSplitReceipt_Success() throws Exception {
+        byte[] pdfBytes = "PDF".getBytes();
+
+        when(dayCloseService.printSplitReceipt(100L)).thenReturn(pdfBytes);
+
+        mockMvc.perform(get("/v1/day-close-shipping/print/split/100"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        "attachment; filename=day-close-shipping-split-100.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+
+        verify(dayCloseService).printSplitReceipt(100L);
+    }
+
+    @Test
+    void printSummary_Success() throws Exception {
+        byte[] pdfBytes = "PDF".getBytes();
+
+        when(dayCloseService.printSummary(100L)).thenReturn(pdfBytes);
+
+        mockMvc.perform(get("/v1/day-close-shipping/print/summary/100"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        "attachment; filename=day-close-shipping-summary-100.pdf"))
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF));
+
+        verify(dayCloseService).printSummary(100L);
+    }
 }

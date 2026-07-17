@@ -162,4 +162,58 @@ public class DayCloseController {
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print/details/{transactionPoid}")
+    public ResponseEntity<?> printDetails(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable(name = "transactionPoid") Long transactionPoid) {
+        try {
+            byte[] pdf = dayCloseService.printDetails(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=day-close-shipping-details-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate details PDF for Day Close Shipping: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print/split/{transactionPoid}")
+    public ResponseEntity<?> printSplitReceipt(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable(name = "transactionPoid") Long transactionPoid) {
+        try {
+            byte[] pdf = dayCloseService.printSplitReceipt(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=day-close-shipping-split-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate split receipt PDF for Day Close Shipping: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print/summary/{transactionPoid}")
+    public ResponseEntity<?> printSummary(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable(name = "transactionPoid") Long transactionPoid) {
+        try {
+            byte[] pdf = dayCloseService.printSummary(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=day-close-shipping-summary-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate summary PDF for Day Close Shipping: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
 }

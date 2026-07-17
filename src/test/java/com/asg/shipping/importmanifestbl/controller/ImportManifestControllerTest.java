@@ -60,6 +60,10 @@ class ImportManifestControllerTest {
         ImportManifestBlDto request = ImportManifestBlDto.builder()
                 .blNumber("BL123")
                 .vesselVoyagePoid(100L)
+                .deliveryPortPoid(1L)
+                .dischargePortPoid(2L)
+                .commodityPoid(3L)
+                .notifyName("Test Notify")
                 .build();
         ImportManifestBlResponseDto response = new ImportManifestBlResponseDto();
 
@@ -108,7 +112,12 @@ class ImportManifestControllerTest {
 
     @Test
     void testUpdateImportManifestBl() throws Exception {
-        ImportManifestBlDto request = ImportManifestBlDto.builder().build();
+        ImportManifestBlDto request = ImportManifestBlDto.builder()
+                .deliveryPortPoid(1L)
+                .dischargePortPoid(2L)
+                .commodityPoid(3L)
+                .notifyName("Test Notify")
+                .build();
         ImportManifestBlResponseDto response = new ImportManifestBlResponseDto();
 
         when(service.updateImportManifestBl(eq(1L), any())).thenReturn(response);

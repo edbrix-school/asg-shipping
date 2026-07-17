@@ -27,5 +27,11 @@ public interface DayCloseService {
 
     byte[] print(Long transactionPoid) throws Exception;
 
+    byte[] printDetails(Long transactionPoid) throws Exception;
+
+    byte[] printSplitReceipt(Long transactionPoid) throws Exception;
+
+    byte[] printSummary(Long transactionPoid) throws Exception;
+
     void deleteDayClose(Long id, DeleteReasonDto deleteReasonDto);
 }

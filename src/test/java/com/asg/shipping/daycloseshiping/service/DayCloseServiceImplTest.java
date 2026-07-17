@@ -537,6 +537,66 @@ class DayCloseServiceImplTest {
         verify(printService).fillReportToPdf(any(), any(), any());
     }
 
+    @Test
+    void printDetails_success() throws Exception {
+        ArShDayEndCloseHdr hdr = ArShDayEndCloseHdr.builder()
+                .transactionPoid(1L)
+                .transactionDate(LocalDate.of(2026, 7, 17))
+                .companyPoid(9L)
+                .build();
+
+        when(hdrRepo.findById(1L)).thenReturn(Optional.of(hdr));
+        when(printService.buildBaseParams(1L, "300-106")).thenReturn(new HashMap<>());
+        when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
+        when(printService.fillReportToPdf(any(), any(), any())).thenReturn(new byte[0]);
+
+        byte[] result = service.printDetails(1L);
+
+        assertNotNull(result);
+        verify(printService).fillReportToPdf(any(), any(), any());
+        verify(hdrRepo).findById(1L);
+    }
+
+    @Test
+    void printSplitReceipt_success() throws Exception {
+        ArShDayEndCloseHdr hdr = ArShDayEndCloseHdr.builder()
+                .transactionPoid(1L)
+                .transactionDate(LocalDate.of(2026, 7, 17))
+                .companyPoid(9L)
+                .build();
+
+        when(hdrRepo.findById(1L)).thenReturn(Optional.of(hdr));
+        when(printService.buildBaseParams(1L, "300-106")).thenReturn(new HashMap<>());
+        when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
+        when(printService.fillReportToPdf(any(), any(), any())).thenReturn(new byte[0]);
+
+        byte[] result = service.printSplitReceipt(1L);
+
+        assertNotNull(result);
+        verify(printService).fillReportToPdf(any(), any(), any());
+        verify(hdrRepo).findById(1L);
+    }
+
+    @Test
+    void printSummary_success() throws Exception {
+        ArShDayEndCloseHdr hdr = ArShDayEndCloseHdr.builder()
+                .transactionPoid(1L)
+                .transactionDate(LocalDate.of(2026, 7, 17))
+                .companyPoid(9L)
+                .build();
+
+        when(hdrRepo.findById(1L)).thenReturn(Optional.of(hdr));
+        when(printService.buildBaseParams(1L, "300-106")).thenReturn(new HashMap<>());
+        when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
+        when(printService.fillReportToPdf(any(), any(), any())).thenReturn(new byte[0]);
+
+        byte[] result = service.printSummary(1L);
+
+        assertNotNull(result);
+        verify(printService).fillReportToPdf(any(), any(), any());
+        verify(hdrRepo).findById(1L);
+    }
+
     /* ---------------- VALIDATION HELPERS ---------------- */
 
     @Test
