@@ -147,81 +147,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     private void enrichHeaderLovData(ImportManifestBlDto dto, Long groupPoid, Long companyPoid,
                                      Long userPoid) {
         try {
-            if (dto.getVesselVoyagePoid() != null) {
-                dto.setVesselVoyagePoidDet(
-                        lovService.getLovItemByPoid(dto.getVesselVoyagePoid(), "VESSAL_VOYAGE", groupPoid,
-                                companyPoid, userPoid));
-            }
             if (dto.getQuotationPoid() != null) {
                 dto.setQuotationDet(
                         lovService.getLovItemByPoid(dto.getQuotationPoid(), "SHIP_QUOTATION_IMPORT",
                                 groupPoid, companyPoid, userPoid));
-            }
-            if (dto.getSalesmanPoid() != null) {
-                dto.setSalesmanDet(
-                        lovService.getLovItemByPoid(dto.getSalesmanPoid(), "SALESMAN", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getCommodityPoid() != null) {
-                dto.setCommodityDet(
-                        lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getCargo() != null) {
-                dto.setCargoDet(
-                        lovService.getLovItemByCode(dto.getCargo(), "CARGO_TYPE", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getBlType() != null) {
-                dto.setBlTypeDet(
-                        lovService.getLovItemByCode(dto.getBlType(), "BL_TYPE_IMPORT", groupPoid, companyPoid,
-                                userPoid));
-            }
-            String issueType = dto.getBlIssueType() != null ? dto.getBlIssueType() : dto.getIssueType();
-            if (issueType != null) {
-                dto.setBlIssueTypeDet(
-                        lovService.getLovItemByCode(issueType, "BL_ISSUE_TYPE", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getConsigneePoid() != null) {
-                dto.setConsigneeDet(
-                        lovService.getLovItemByPoid(dto.getConsigneePoid(), "ADDRESS_MASTER", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getNotify1Poid() != null) {
-                dto.setNotify1Det(
-                        lovService.getLovItemByPoid(dto.getNotify1Poid(), "ADDRESS_MASTER", groupPoid, companyPoid,
-                                userPoid));
-            }
-            if (dto.getBookingCustomerPoid() != null) {
-                dto.setBookingCustomerDet(
-                        lovService.getLovItemByPoid(dto.getBookingCustomerPoid(), "CUSTOMER_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getReceiptPortPoid() != null) {
-                dto.setReceiptPortDet(
-                        lovService.getLovItemByPoid(dto.getReceiptPortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getDeliveryPortPoid() != null) {
-                dto.setDeliveryPortDet(
-                        lovService.getLovItemByPoid(dto.getDeliveryPortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getLoadPortPoid() != null) {
-                dto.setLoadPortDet(
-                        lovService.getLovItemByPoid(dto.getLoadPortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getDischargePortPoid() != null) {
-                dto.setDischargePortDet(
-                        lovService.getLovItemByPoid(dto.getDischargePortPoid(), "PORT_MASTER", groupPoid,
-                                companyPoid, userPoid));
-            }
-            if (dto.getHoldReason() != null) {
-                dto.setHoldReasonDet(
-                        lovService.getLovItemByCode(dto.getHoldReason(), "SHIP_DO_ANOTICE_HOLD", groupPoid,
-                                companyPoid, userPoid));
             }
         } catch (Exception e) {
             log.warn("Failed to fetch LOV data for header detail with transactionPoid: {}", dto.getTransactionPoid(),
@@ -673,13 +602,26 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     @Override
     public byte[] printProformaInvoice(Long transactionPoid, LocalDate demChargesTill, Long percentage)
             throws Exception {
+        String demDate = (demChargesTill != null ? demChargesTill : LocalDate.now()).format(java.time.format.DateTimeFormatter.ofPattern("dd-MMM-yyyy"));
+        log.info("printProformaInvoice: transactionPoid={}, demDate={}, discount={}", transactionPoid, demDate, percentage);
+        try (java.sql.Connection conn = dataSource.getConnection()) {
+            conn.createStatement().execute("ALTER SESSION SET CURRENT_SCHEMA = QA_DB_USER");
+            String sql = "SELECT COUNT(*) FROM SHIP_BL_MANIFEST_HDR WHERE TRANSACTION_POID = ?";
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setLong(1, transactionPoid);
+                java.sql.ResultSet rs = ps.executeQuery();
+                if (rs.next()) log.info("printProformaInvoice: HDR row count={}", rs.getInt(1));
+            }
+        }
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
-        params.put("P_DEMURRAGE_DATE", (demChargesTill != null ? demChargesTill : LocalDate.now()).format(java.time.format.DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
+        params.put("P_DEMURRAGE_DATE", demDate);
         params.put("P_DISCOUNT", String.valueOf(percentage != null ? percentage : 0));
         params.put("SUBREPORT2", printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT2.jrxml"));
         params.put("SUBREPORT3", printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL_SUBREPORT3.jrxml"));
         JasperReport mainReport = printService.load("Shipping/SH/SH_PROFORMA_INV_IMP_MANFST_BL.jrxml");
-        return printService.fillReportToPdf(mainReport, params, dataSource);
+        byte[] pdf = printService.fillReportToPdf(mainReport, params, dataSource);
+        log.info("printProformaInvoice: pdf size={} bytes", pdf.length);
+        return pdf;
     }
 
     @Override

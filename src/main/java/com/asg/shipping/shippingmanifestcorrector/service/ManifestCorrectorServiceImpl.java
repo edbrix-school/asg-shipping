@@ -380,7 +380,13 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             throw new ValidationException("BL number is required");
         }
 
-        Long blPoid = validateAndGetBlPoid(blNumber);
+        Long blPoid;
+        try {
+            blPoid = Long.parseLong(blNumber);
+        } catch (NumberFormatException e) {
+            throw new ValidationException("BL number is invalid: " + blNumber);
+        }
+
         Long transactionPoid = request != null && request.getTransactionPoid() != null
                 ? request.getTransactionPoid()
                 : 0L;
@@ -392,7 +398,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         final boolean[] dataFound = {false};
 
         try {
-            String sql = "{call PRODUCTION.PROC_LOV_AFTER_BRWS_100_143(?,?,?,?,?,?,?,?)}";
+            String sql = "{call PROC_LOV_AFTER_BRWS_100_143(?,?,?,?,?,?,?,?)}";
             jdbcTemplate.execute(sql, (CallableStatement cs) -> {
                 cs.setLong(1, getGroupPoid());
                 cs.setLong(2, getCompanyPoid());
@@ -511,26 +517,56 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     }
 
     private void enrichLovData(ManifestCorrectorBlAutoPopulateDto dto) {
-        if (dto == null) {
-            return;
+        if (dto == null) return;
+
+        // Batch fetch by LOV name — one DB call per LOV name instead of one per field
+        Map<Long, LovGetListDto> blMap = lovService.getDetailsByPoidsAndLovName(
+                filterNonNull(dto.getBlPoid()), "SHIP_BL_REPRINT");
+        Map<Long, LovGetListDto> addressMap = lovService.getDetailsByPoidsAndLovName(
+                filterNonNull(dto.getConsigneePoid(), dto.getNotifyPoid()), "ADDRESS_MASTER");
+        Map<Long, LovGetListDto> glMap = lovService.getDetailsByPoidsAndLovName(
+                filterNonNull(dto.getPayableGlPoid(), dto.getIncomeGlPoid()), "GL_MASTER_LEDGERS");
+        Map<Long, LovGetListDto> portMap = lovService.getDetailsByPoidsAndLovName(
+                filterNonNull(dto.getPlaceOfDeliveryPoid(), dto.getPlaceOfReceiptPoid(),
+                        dto.getPortOfLoadingPoid(), dto.getPortOfDischargePoid()), "PORT_MASTER");
+        Map<Long, LovGetListDto> voyageMap = lovService.getDetailsByPoidsAndLovName(
+                filterNonNull(dto.getVoyageTransactionPoid()), "VESSAL_VOYAGE");
+        Map<String, LovGetListDto> issueTypeMap = lovService.getDetailsByCodesAndLovName(
+                filterNonNullStr(dto.getIssueType()), "BL_ISSUE_TYPE");
+        Map<String, LovGetListDto> blTypeMap = lovService.getDetailsByCodesAndLovName(
+                filterNonNullStr(dto.getBlType()), "BL_TYPE");
+        Map<String, LovGetListDto> holdReasonMap = lovService.getDetailsByCodesAndLovName(
+                filterNonNullStr(dto.getHoldReason()), "SHIP_DO_ANOTICE_HOLD");
+
+        dto.setBlDet(blMap.get(dto.getBlPoid()));
+        dto.setConsigneeDet(addressMap.get(dto.getConsigneePoid()));
+        dto.setNotifyDet(addressMap.get(dto.getNotifyPoid()));
+        dto.setPayableGlDet(glMap.get(dto.getPayableGlPoid()));
+        dto.setIncomeGlDet(glMap.get(dto.getIncomeGlPoid()));
+        dto.setPlaceOfDeliveryDet(portMap.get(dto.getPlaceOfDeliveryPoid()));
+        dto.setPlaceOfReceiptDet(portMap.get(dto.getPlaceOfReceiptPoid()));
+        dto.setPortOfLoadingDet(portMap.get(dto.getPortOfLoadingPoid()));
+        dto.setPortOfDischargeDet(portMap.get(dto.getPortOfDischargePoid()));
+        dto.setVoyageTransactionDet(voyageMap.get(dto.getVoyageTransactionPoid()));
+        dto.setIssueTypeDet(issueTypeMap.get(dto.getIssueType()));
+        dto.setBlTypeDet(blTypeMap.get(dto.getBlType()));
+        dto.setHoldReasonDet(holdReasonMap.get(dto.getHoldReason()));
+    }
+
+    private List<Long> filterNonNull(Long... poids) {
+        List<Long> result = new ArrayList<>();
+        for (Long p : poids) {
+            if (p != null) result.add(p);
         }
+        return result;
+    }
 
-        Map<String, Map<Long, LovGetListDto>> poidLovCache = new HashMap<>();
-        Map<String, Map<String, LovGetListDto>> codeLovCache = new HashMap<>();
-
-        enrichLovByPoid(dto.getBlPoid(), dto::setBlDet, "SHIP_BL_REPRINT", poidLovCache);
-        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER", poidLovCache);
-        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE", codeLovCache);
-        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER", poidLovCache);
-        enrichLovByCode(dto.getBlType(), dto::setBlTypeDet, "BL_TYPE", codeLovCache);
-        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD", codeLovCache);
-        enrichLovByPoid(dto.getPayableGlPoid(), dto::setPayableGlDet, "GL_MASTER_LEDGERS", poidLovCache);
-        enrichLovByPoid(dto.getIncomeGlPoid(), dto::setIncomeGlDet, "GL_MASTER_LEDGERS", poidLovCache);
-        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE", poidLovCache);
+    private List<String> filterNonNullStr(String... codes) {
+        List<String> result = new ArrayList<>();
+        for (String c : codes) {
+            if (c != null && !c.isBlank()) result.add(c);
+        }
+        return result;
     }
 
     private void enrichLovByPoid(Long poid,
