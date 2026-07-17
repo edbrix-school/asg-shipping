@@ -503,6 +503,26 @@ public class ExportManifestBlController {
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(
+            summary = "Select Bookings (Load Booking to BL)",
+            description = "Loads selected mate bookings into GLOBAL_TEMP_BOOKING_SELECTED and creates export BL(s) via FUNC_LOAD_BOOKING_TO_BL"
+    )
+    @PostMapping("/{voyageTransactionPoid}/load-booking")
+    public ResponseEntity<?> loadBooking(
+            @Parameter(description = "Voyage transaction POID", required = true) @PathVariable Long voyageTransactionPoid,
+            @Valid @RequestBody LoadBookingRequest request) {
+        try {
+            return success("Booking data loaded successfully", service.loadBooking(voyageTransactionPoid, request));
+        } catch (ValidationException e) {
+            log.warn("Load booking validation failed for voyage {}: {}", voyageTransactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (Exception e) {
+            log.error("Failed to load booking for voyage {}", voyageTransactionPoid, e);
+            return error("Error loading booking: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
             summary = "Load Customer Local Charges",
             description = "Loads customer-mapped export charges into the BL charges tab via PROC_SHIP_BL_CUSTOMER_AUTO."
     )

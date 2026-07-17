@@ -25,11 +25,16 @@ import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
+import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
+import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
+import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
 import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsResponseDto;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestCargoDtlId;
 import org.springframework.beans.BeanUtils;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,9 +50,14 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
+import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
+import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
+import static com.asg.common.lib.security.util.UserContext.getUserPoid;
 import static org.springframework.util.StringUtils.hasText;
 
 import net.sf.jasperreports.engine.JasperReport;
@@ -77,6 +87,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final DataSource dataSource;
     private final LoggingService loggingService;
     private final LovService lovService;
+    private final ExportManifestBlLoadBookingRepository loadBookingRepository;
+    private final ShipMateHdrRepository shipMateHdrRepository;
+    private final ShipMateContainerDtlRepository shipMateContainerDtlRepository;
 
     private String normalizeActionType(String actionType) {
         return actionType == null ? "" : actionType.trim().toLowerCase();
@@ -471,6 +484,89 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
 
         return fetchChargeDetailsMap(transactionPoid);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Map<String, Object> loadBooking(Long voyageTransactionPoid, LoadBookingRequest request) {
+        log.info("Load booking to export BL, voyage: {}", voyageTransactionPoid);
+
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        Long userPoid = getUserPoid();
+
+        Long resolvedVoyagePoid = request.getVoyageTransactionPoid() != null
+                ? request.getVoyageTransactionPoid()
+                : voyageTransactionPoid;
+        if (resolvedVoyagePoid == null) {
+            throw new ValidationException("Voyage transaction POID is required");
+        }
+
+        List<BookingSelectionItemDto> selections = resolveBookingSelections(request, groupPoid, companyPoid);
+        long selectedCount = selections.stream()
+                .filter(s -> "Y".equalsIgnoreCase(s.getIsSelected()))
+                .count();
+        if (selectedCount == 0) {
+            throw new ValidationException("At least one booking container must be selected");
+        }
+
+        loadBookingRepository.stageBookingSelections(groupPoid, companyPoid, selections);
+
+        String funcResult = loadBookingRepository.funcLoadBookingToBl(String.valueOf(userPoid), resolvedVoyagePoid);
+        if (funcResult == null || funcResult.toUpperCase(Locale.ROOT).startsWith("ERROR")) {
+            throw new ValidationException(
+                    funcResult != null ? funcResult : "FUNC_LOAD_BOOKING_TO_BL failed with no message");
+        }
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("voyageTransactionPoid", resolvedVoyagePoid);
+        try {
+            response.put("transactionPoid", Long.parseLong(funcResult.trim()));
+        } catch (NumberFormatException ex) {
+            response.put("transactionPoid", funcResult.trim());
+        }
+        response.put("message", "Booking data loaded and export BL created successfully");
+        return response;
+    }
+
+    private List<BookingSelectionItemDto> resolveBookingSelections(
+            LoadBookingRequest request, Long groupPoid, Long companyPoid) {
+        if (request.getSelections() != null && !request.getSelections().isEmpty()) {
+            return request.getSelections();
+        }
+        if (request.getSelectedBookingIds() == null || request.getSelectedBookingIds().isEmpty()) {
+            throw new ValidationException("Either selections or selectedBookingIds is required");
+        }
+
+        List<BookingSelectionItemDto> rows = new ArrayList<>();
+        for (Long mateTransactionPoid : request.getSelectedBookingIds()) {
+            ShipMateHdr hdr = shipMateHdrRepository.findByTransactionPoid(mateTransactionPoid)
+                    .orElseThrow(() -> new ValidationException(
+                            "Booking not found for transaction POID: " + mateTransactionPoid));
+            if (!groupPoid.equals(hdr.getGroupPoid()) || !companyPoid.equals(hdr.getCompanyPoid())) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " does not belong to current company");
+            }
+            if ("Y".equalsIgnoreCase(hdr.getDeleted())) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " is deleted");
+            }
+
+            List<ShipMateContainerDtl> containers =
+                    shipMateContainerDtlRepository.findByTransactionPoidOrderByDetRowId(mateTransactionPoid);
+            if (containers.isEmpty()) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " has no containers");
+            }
+            for (ShipMateContainerDtl container : containers) {
+                BookingSelectionItemDto item = new BookingSelectionItemDto();
+                item.setTransactionPoid(mateTransactionPoid);
+                item.setVoyageNo(hdr.getVoyageNo());
+                item.setContainerNo(container.getContainerNo());
+                item.setBookingIssueNo(hdr.getBookingIssueNo());
+                item.setIsSelected("Y");
+                rows.add(item);
+            }
+        }
+        return rows;
     }
 
     @Override
