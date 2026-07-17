@@ -140,7 +140,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         Long companyPoid = getCompanyPoid();
 
         // Validate
-        validateLineCreateDTO(dto, groupPoid);
+//        validateLineCreateDTO(dto, groupPoid);
 
         // Create main entity
         ShipLineMaster line = new ShipLineMaster();
@@ -182,7 +182,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         }
 
         // Validate
-        validateLineUpdateDTO(dto, groupPoid, id);
+//        validateLineUpdateDTO(dto, groupPoid, id);
 
         // Store old values for logging
         ShipLineMaster oldLine = new ShipLineMaster();
