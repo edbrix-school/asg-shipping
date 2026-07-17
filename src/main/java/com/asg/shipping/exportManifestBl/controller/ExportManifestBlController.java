@@ -148,6 +148,48 @@ public class ExportManifestBlController {
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/voyage/{issueVesselVoyagePoid}/booking-selection")
+    @Operation(
+            summary = "Select Booking popup grid (legacy VwPendingMateToBlView1)",
+            description = """
+                    **Legacy mapping (Eblmanifestpagebn.loadDataBooking):**
+                    - Path `{issueVesselVoyagePoid}` = **Issue Vessel Voyage** LOV (`pVoyageVesselPoid1`) — export job POID; also passed to `FUNC_LOAD_BOOKING_TO_BL`.
+                    - Query `bookingMateVoyageNo` = **Booking Mate Voyage** (`inputVoyageLoad`) — optional extra filter on `VOYAGE_NO` in the popup.
+                    - Query `linePoid` = optional; legacy applies line from issue voyage when UI passes it (omit to not filter by line).
+                    - Data source: `VW_PENDING_MATE_TO_BL` only (legacy view entity).
+                    - Scope: `(COMPANY_POID, VESSEL_POID, VOYAGE_NO)` from issue voyage POID (`PendingMateBookingToBLView` / `Pvoyagepoid`).
+                    - Search: `containerNo`, `bookingNo` (legacy Search Container / Search Booking).
+                    
+                    **Load Selected:** `POST /voyage/{issueVesselVoyagePoid}/load-booking` with `selections` or `selectedBookingIds`; then `GET /{transactionPoid}` for header/containers/general.
+                    """
+    )
+    public ResponseEntity<?> listBookingSelection(
+            @Parameter(description = "Issue Vessel Voyage POID (SHIP_VOYAGE_HDR.TRANSACTION_POID)", required = true)
+            @PathVariable Long issueVesselVoyagePoid,
+            @Parameter(description = "Booking Mate Voyage — voyage number filter for popup (inputVoyageLoad)")
+            @RequestParam(required = false) String bookingMateVoyageNo,
+            @Parameter(description = "Line POID; defaults to line on issue voyage when omitted")
+            @RequestParam(required = false) Long linePoid,
+            @Parameter(description = "Container number search (partial match)")
+            @RequestParam(required = false) String containerNo,
+            @Parameter(description = "Booking issue number search (partial match)")
+            @RequestParam(required = false) String bookingNo) {
+        try {
+            List<BookingSelectionRowDto> rows = service.listBookingSelection(
+                    issueVesselVoyagePoid, bookingMateVoyageNo, linePoid, containerNo, bookingNo);
+            return success("Booking selection list fetched successfully", rows);
+        } catch (ValidationException e) {
+            log.warn("Booking selection validation failed for voyage {}: {}", issueVesselVoyagePoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed to list booking selection for voyage {}", issueVesselVoyagePoid, e);
+            return error("Error fetching booking selection: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
     @GetMapping("/{transactionPoid}")
     @Operation(
             summary = "Get Export Manifest BL record details",
@@ -503,20 +545,24 @@ public class ExportManifestBlController {
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(
-            summary = "Select Bookings (Load Booking to BL)",
-            description = "Loads selected mate bookings into GLOBAL_TEMP_BOOKING_SELECTED and creates export BL(s) via FUNC_LOAD_BOOKING_TO_BL"
+            summary = "Select Bookings — Load Selected (legacy loadSelectedBookingData)",
+            description = """
+                    Stages GLOBAL_TEMP_BOOKING_SELECTED, then FUNC_LOAD_BOOKING_TO_BL(user, issueVesselVoyagePoid).
+                    Issue Vessel Voyage POID = pVoyageVesselPoid1. Returns new BL transactionPoid; GET BL for tabs.
+                    """
     )
-    @PostMapping("/{voyageTransactionPoid}/load-booking")
+    @PostMapping("/{issueVesselVoyagePoid}/load-booking")
     public ResponseEntity<?> loadBooking(
-            @Parameter(description = "Voyage transaction POID", required = true) @PathVariable Long voyageTransactionPoid,
+            @Parameter(description = "Issue Vessel Voyage POID for FUNC_LOAD_BOOKING_TO_BL", required = true)
+            @PathVariable Long issueVesselVoyagePoid,
             @Valid @RequestBody LoadBookingRequest request) {
         try {
-            return success("Booking data loaded successfully", service.loadBooking(voyageTransactionPoid, request));
+            return success("Booking data loaded successfully", service.loadBooking(issueVesselVoyagePoid, request));
         } catch (ValidationException e) {
-            log.warn("Load booking validation failed for voyage {}: {}", voyageTransactionPoid, e.getMessage());
+            log.warn("Load booking validation failed for voyage {}: {}", issueVesselVoyagePoid, e.getMessage());
             return error(e.getMessage(), 400);
         } catch (Exception e) {
-            log.error("Failed to load booking for voyage {}", voyageTransactionPoid, e);
+            log.error("Failed to load booking for voyage {}", issueVesselVoyagePoid, e);
             return error("Error loading booking: " + e.getMessage(), 500);
         }
     }
@@ -542,16 +588,21 @@ public class ExportManifestBlController {
         }
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(
-            summary = "Select for Invoice",
-            description = "Validates BL approval and returns Sales Invoice (Shipping) navigation details for invoicing."
+            summary = "Approved Manifest — Select For Invoice (Charges tab)",
+            description = """
+                    Legacy **selectForInvoiceAction** only (not auto-invoice on approval).
+                    Validates saved export BL + **FINAL_APPROVAL_COMPLETED** for 100-104.
+                    Returns drill-down to **300-102** with `blPoid` — SPA opens new Shipping Invoice tab.
+                    Does **not** create invoice or post GL. User needs **300-102 Create** on invoice screen.
+                    """
     )
     @PostMapping("/{transactionPoid}/select-for-invoice")
     public ResponseEntity<?> selectForInvoice(
-            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+            @Parameter(description = "Export BL transaction POID", required = true) @PathVariable Long transactionPoid) {
         try {
-            return success("BL is approved and ready for invoicing", service.selectForInvoice(transactionPoid));
+            return success("Select for invoice completed", service.selectForInvoice(transactionPoid));
         } catch (ValidationException e) {
             log.warn("Validation failed for select-for-invoice on {}: {}", transactionPoid, e.getMessage());
             return error(e.getMessage(), 400);
