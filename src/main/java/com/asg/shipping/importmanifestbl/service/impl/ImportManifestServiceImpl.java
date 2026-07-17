@@ -555,41 +555,34 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     @Override
     @Transactional
     public String saveEmails(Long transactionPoId, SaveEmailsRequestDto request) {
-
-        // Validation
         if (!Boolean.TRUE.equals(request.getUpdateConsignee()) && !Boolean.TRUE.equals(request.getUpdateNotify())) {
             throw new IllegalArgumentException("Select at least Consignee or Notify");
         }
-
         if (request.getEmailsText() == null || request.getEmailsText().trim().isEmpty()) {
             throw new IllegalArgumentException("Emails cannot be empty");
         }
 
-        String addressType;
+        // P_CN_NF_FLAG: C=Consignee only, N=Notify only, B=Both
+        String cnNfFlag;
         if (Boolean.TRUE.equals(request.getUpdateConsignee()) && Boolean.TRUE.equals(request.getUpdateNotify())) {
-            addressType = "B";
+            cnNfFlag = "B";
         } else if (Boolean.TRUE.equals(request.getUpdateConsignee())) {
-            addressType = "C";
+            cnNfFlag = "C";
         } else {
-            addressType = "N";
+            cnNfFlag = "N";
         }
 
-        String[] emails = request.getEmailsText().split(",");
+        // P_CURRENT_BOTH: whether to also insert into GLOBAL_ADDRESS_DETAILS (B=yes, C/N=manifest only)
+        String currentBoth = request.getScope() != null ? request.getScope() : "C";
 
+        String[] emails = request.getEmailsText().split(",");
         for (int i = 0; i < emails.length; i += 2) {
             String email1 = emails[i].trim();
             String email2 = (i + 1 < emails.length) ? emails[i + 1].trim() : null;
-
-            procRepository.saveEmailsToDb(
-                    transactionPoId,
-                    addressType,
-                    email1,
-                    email2,
-                    request.getScope());
+            procRepository.saveEmailsToDb(transactionPoId, cnNfFlag, email1, email2, currentBoth);
         }
 
         return "Emails saved successfully";
-
     }
 
     @Override

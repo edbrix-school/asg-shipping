@@ -30,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import static com.asg.common.lib.dto.response.ApiResponse.*;
 
@@ -166,13 +167,18 @@ public class ImportManifestController {
             @ApiResponse(responseCode = "404", description = "Import Manifest BL not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/update-email-verification")
+    @PostMapping("/{transactionPoId}/update-email-verification")
     public ResponseEntity<?> updateEmailVerification(
-            @Valid @RequestBody EmailVerificationRequestDto request
+            @Parameter(description = "Transaction POID", required = true)
+            @PathVariable Long transactionPoId,
+            @RequestBody EmailVerificationRequestDto request
     ) {
-            EmailVerificationResponseDto response = importManifestService.updateEmailVerification(request.getTransactionPoId(), request);
-            return com.asg.common.lib.dto.response.ApiResponse.success("Email verification updated successfully", response);
-
+        EmailVerificationResponseDto response = importManifestService.updateEmailVerification(transactionPoId, request);
+        if (response.isWarning()) {
+            return successWithWarnings("Email verification completed with warnings", response,
+                    List.of(response.getStatus()), null);
+        }
+        return com.asg.common.lib.dto.response.ApiResponse.success("Email verification updated successfully", response);
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
