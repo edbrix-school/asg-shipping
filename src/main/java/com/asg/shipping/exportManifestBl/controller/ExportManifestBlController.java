@@ -594,8 +594,9 @@ public class ExportManifestBlController {
             description = """
                     Legacy **selectForInvoiceAction** only (not auto-invoice on approval).
                     Validates saved export BL + **FINAL_APPROVAL_COMPLETED** for 100-104.
-                    Returns drill-down to **300-102** with `blPoid` — SPA opens new Shipping Invoice tab.
-                    Does **not** create invoice or post GL. User needs **300-102 Create** on invoice screen.
+                    Returns drill-down for navigation: `documentId` **300-102**, `documentName` **Sales Invoice (Shipping)**, and `blPoid`.
+                    SPA opens a new tab using those fields. Does **not** create invoice or post GL.
+                    User needs **300-102 Create** on the invoice screen.
                     """
     )
     @PostMapping("/{transactionPoid}/select-for-invoice")

@@ -76,6 +76,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     /** Matches PROC_SHIP_BL_PAGE_SAVE_AFTER — rolls up CBM/weight/packs and port auto-charges. */
     private static final String UPDATE_TYPE_AUTOSUM_WEIGHT_PACK = "AUTOSUMWEIGHTPACKATE";
     private static final String SALES_INVOICE_DOCUMENT_ID = "300-102";
+    /** Matches document master DOC_NAME / ROUTE_NAME for SPA tab navigation. */
+    private static final String SALES_INVOICE_DOCUMENT_NAME = "Sales Invoice (Shipping)";
     private static final String EXPORT_MANIFEST_DOCUMENT_ID = "100-104";
 
     private final ExportManifestBlHdrRepository repository;
@@ -656,13 +658,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         return SelectForInvoiceResponseDto.builder()
                 .blPoid(transactionPoid)
                 .documentId(SALES_INVOICE_DOCUMENT_ID)
-                .documentName("Shipping Invoice")
+                .documentName(SALES_INVOICE_DOCUMENT_NAME)
                 .approvalStatus(approvalStatus)
                 .existingInvoiceTransactionPoid(existingInvoiceTransactionPoid)
                 .invoiceTransactionPoid(existingInvoiceTransactionPoid)
                 .targetApiPath("/v1/sales-invoice-shipping")
                 .message(
-                        "Open Shipping Invoice (300-102) with blPoid. "
+                        "Open " + SALES_INVOICE_DOCUMENT_NAME + " (" + SALES_INVOICE_DOCUMENT_ID + ") with blPoid. "
                                 + "On invoice screen use Load Data Invoice: POST /v1/sales-invoice-shipping/{invoiceId}/load-container-charge-data with blPoid and blTypeInvoice EXPORT.")
                 .build();
     }
