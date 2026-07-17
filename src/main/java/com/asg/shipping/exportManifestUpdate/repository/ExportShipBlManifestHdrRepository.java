@@ -19,22 +19,24 @@ public interface ExportShipBlManifestHdrRepository extends JpaRepository<ExportS
             Long transactionPoid, Long groupPoid, Long companyPoid, String deleted);
 
     /**
-     * Find active Export BL for export-manifest-update (100-352):
-     * - active (DELETED = 'N' or NULL)
-     * - BL_TYPE = 'EXPORT'
-     * - GROUP_POID and COMPANY_POID must match
+     * Find Export BL by ID for get-by-id (includes soft-deleted).
      */
     @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
-           "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid " +
-           "AND (h.deleted IS NULL OR h.deleted = 'N') " +
-           "AND h.blType = 'EXPORT'")
+           "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid AND h.blType = 'EXPORT'")
     Optional<ExportShipBlManifestHdr> findExportBlByTransactionPoid(
             @Param("transactionPoid") Long transactionPoid,
             @Param("groupPoid") Long groupPoid,
             @Param("companyPoid") Long companyPoid);
 
+    @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
+           "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid " +
+           "AND h.blType = 'EXPORT' AND (h.deleted IS NULL OR h.deleted = 'N')")
+    Optional<ExportShipBlManifestHdr> findActiveExportBlByTransactionPoid(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("groupPoid") Long groupPoid,
+            @Param("companyPoid") Long companyPoid);
+
     /**
-     * Find active Export BL by transaction POID — aligned with export-manifest-bl (100-104).
      */
     @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
            "AND h.blType = 'EXPORT' AND (h.deleted IS NULL OR h.deleted = 'N')")

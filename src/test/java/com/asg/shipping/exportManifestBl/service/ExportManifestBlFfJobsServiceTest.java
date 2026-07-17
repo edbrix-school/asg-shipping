@@ -61,7 +61,8 @@ class ExportManifestBlFfJobsServiceTest {
 
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getCompanyPoid).thenReturn(3L);
-            when(repository.findByTransactionPoid(268427L)).thenReturn(Optional.of(hdr));
+            userContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            when(repository.findActiveExportBlByTransactionPoid(268427L, 1L, 3L)).thenReturn(Optional.of(hdr));
             when(shipBlToFfRepository.findAllByManifestPoid(268427L, 3L)).thenReturn(List.of(withPj, withoutPj));
 
             List<ShipBlToFfDto> result = service.getShipBlToFfByManifestPoid(268427L);
@@ -84,7 +85,7 @@ class ExportManifestBlFfJobsServiceTest {
             userContext.when(UserContext::getCompanyPoid).thenReturn(3L);
             userContext.when(UserContext::getGroupPoid).thenReturn(1L);
             userContext.when(UserContext::getUserPoid).thenReturn(3483L);
-            when(repository.findByTransactionPoid(268427L)).thenReturn(Optional.of(hdr));
+            when(repository.findActiveExportBlByTransactionPoid(268427L, 1L, 3L)).thenReturn(Optional.of(hdr));
             when(shipBlToFfRepository.findByRnumidAndManifestPoid(51L, 268427L, 3L)).thenReturn(Optional.of(row));
 
             assertThrows(ValidationException.class, () -> service.deleteFfPurchaseJournal(268427L, 51L));
@@ -101,7 +102,7 @@ class ExportManifestBlFfJobsServiceTest {
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getCompanyPoid).thenReturn(3L);
             userContext.when(UserContext::getGroupPoid).thenReturn(1L);
-            when(repository.findByTransactionPoid(268427L)).thenReturn(Optional.of(hdr));
+            when(repository.findActiveExportBlByTransactionPoid(268427L, 1L, 3L)).thenReturn(Optional.of(hdr));
             when(shipBlToFfRepository.findByRnumidAndManifestPoid(99L, 268427L, 3L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () -> service.deleteFfPurchaseJournal(268427L, 99L));
