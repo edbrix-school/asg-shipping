@@ -99,115 +99,46 @@ public class BookingFormMapper {
      * Map UpdateDTO to Header Entity
      */
     public static void mapUpdateDTOToEntity(BookingFormUpdateDTO dto, ShipMateHdr entity) {
+        // Full-replace semantics to match the legacy ADF screen: every editable header field is
+        // bound directly to the form, so whatever the FE submits — including a blank/null — overwrites
+        // the stored value. Do NOT re-add null-guards here; a null means "clear this field", not "skip it".
         // transactionDate is intentionally excluded from update — it must never change after creation.
-        if (dto.getVessalAgentName() != null) {
-            entity.setVessalAgentName(dto.getVessalAgentName());
-        }
-        if (dto.getShipperPoid() != null) {
-            entity.setShipperPoid(dto.getShipperPoid());
-        }
-        if (dto.getShipperAddressPoid() != null) {
-            entity.setShipperAddressPoid(dto.getShipperAddressPoid());
-        }
-        if (dto.getConsigneePoid() != null) {
-            entity.setConsigneePoid(dto.getConsigneePoid());
-        }
-        if (dto.getConsigneeAddressPoid() != null) {
-            entity.setConsigneeAddressPoid(dto.getConsigneeAddressPoid());
-        }
-        if (dto.getNotifyPoid1() != null) {
-            entity.setNotifyPoid1(dto.getNotifyPoid1());
-        }
-        if (dto.getNotifyAddressPoid1() != null) {
-            entity.setNotifyAddressPoid1(dto.getNotifyAddressPoid1());
-        }
-        if (dto.getNotifyPoid2() != null) {
-            entity.setNotifyPoid2(dto.getNotifyPoid2());
-        }
-        if (dto.getNotifyAddressPoid2() != null) {
-            entity.setNotifyAddressPoid2(dto.getNotifyAddressPoid2());
-        }
-        if (dto.getQuotationTransactionPoid() != null) {
-            entity.setQuotationTransactionPoid(dto.getQuotationTransactionPoid());
-        }
-        if (dto.getVesselPoid() != null) {
-            entity.setVesselPoid(dto.getVesselPoid());
-        }
-        if (dto.getVesselEtaDate() != null) {
-            entity.setVesselEtaDate(dto.getVesselEtaDate());
-        }
-        if (dto.getLinePoid() != null) {
-            entity.setLinePoid(dto.getLinePoid());
-        }
-        if (dto.getSalesmanPoid() != null) {
-            entity.setSalesmanPoid(dto.getSalesmanPoid());
-        }
-        if (dto.getComodityPoid() != null) {
-            entity.setComodityPoid(dto.getComodityPoid());
-        }
-        if (dto.getTotalVolume() != null) {
-            entity.setTotalVolume(dto.getTotalVolume());
-        }
-        if (dto.getTotalWeight() != null) {
-            entity.setTotalWeight(dto.getTotalWeight());
-        }
-        if (dto.getUnitPack() != null) {
-            entity.setUnitPack(dto.getUnitPack());
-        }
-        if (dto.getTotalNoOfPacks() != null) {
-            entity.setTotalNoOfPacks(dto.getTotalNoOfPacks());
-        }
-        if (dto.getPlaceOfRecieptPoid() != null) {
-            entity.setPlaceOfRecieptPoid(dto.getPlaceOfRecieptPoid());
-        }
-        if (dto.getPlaceOfDelieveryPoid() != null) {
-            entity.setPlaceOfDelieveryPoid(dto.getPlaceOfDelieveryPoid());
-        }
-        if (dto.getPortOfLoadingPoid() != null) {
-            entity.setPortOfLoadingPoid(dto.getPortOfLoadingPoid());
-        }
-        if (dto.getPortOfDischargePoid() != null) {
-            entity.setPortOfDischargePoid(dto.getPortOfDischargePoid());
-        }
-        if (dto.getRemarks() != null) {
-            entity.setRemarks(dto.getRemarks());
-        }
-        if (dto.getMateStatus() != null) {
-            entity.setMateStatus(dto.getMateStatus());
-        }
-        if (dto.getVoyageNo() != null) {
-            entity.setVoyageNo(dto.getVoyageNo());
-        }
-        if (dto.getBookingIssueNo() != null) {
-            entity.setBookingIssueNo(dto.getBookingIssueNo());
-        }
-        if (dto.getMateLoadDate() != null) {
-            entity.setMateLoadDate(dto.getMateLoadDate());
-        }
-        if (dto.getMateLoadNo() != null) {
-            entity.setMateLoadNo(dto.getMateLoadNo());
-        }
-        if (dto.getMateLoadVoyagePoid() != null) {
-            entity.setMateLoadVoyagePoid(dto.getMateLoadVoyagePoid());
-        }
-        if (dto.getIssueType() != null) {
-            entity.setIssueType(dto.getIssueType());
-        }
-        if (dto.getConsigneeName() != null) {
-            entity.setConsigneeName(dto.getConsigneeName());
-        }
-        if (dto.getConsigneeAddress() != null) {
-            entity.setConsigneeAddress(dto.getConsigneeAddress());
-        }
-        if (dto.getSplitBookingNo() != null) {
-            entity.setSplitBookingNo(dto.getSplitBookingNo());
-        }
-        if (dto.getFinalDestination() != null) {
-            entity.setFinalDestination(dto.getFinalDestination());
-        }
-        if (dto.getShipperDetailsManually() != null) {
-            entity.setShipperDetailsManually(dto.getShipperDetailsManually());
-        }
+        entity.setVessalAgentName(dto.getVessalAgentName());
+        entity.setShipperPoid(dto.getShipperPoid());
+        entity.setShipperAddressPoid(dto.getShipperAddressPoid());
+        entity.setConsigneePoid(dto.getConsigneePoid());
+        entity.setConsigneeAddressPoid(dto.getConsigneeAddressPoid());
+        entity.setNotifyPoid1(dto.getNotifyPoid1());
+        entity.setNotifyAddressPoid1(dto.getNotifyAddressPoid1());
+        entity.setNotifyPoid2(dto.getNotifyPoid2());
+        entity.setNotifyAddressPoid2(dto.getNotifyAddressPoid2());
+        entity.setQuotationTransactionPoid(dto.getQuotationTransactionPoid());
+        entity.setVesselPoid(dto.getVesselPoid());
+        entity.setVesselEtaDate(dto.getVesselEtaDate());
+        entity.setLinePoid(dto.getLinePoid());
+        entity.setSalesmanPoid(dto.getSalesmanPoid());
+        entity.setComodityPoid(dto.getComodityPoid());
+        entity.setTotalVolume(dto.getTotalVolume());
+        entity.setTotalWeight(dto.getTotalWeight());
+        entity.setUnitPack(dto.getUnitPack());
+        entity.setTotalNoOfPacks(dto.getTotalNoOfPacks());
+        entity.setPlaceOfRecieptPoid(dto.getPlaceOfRecieptPoid());
+        entity.setPlaceOfDelieveryPoid(dto.getPlaceOfDelieveryPoid());
+        entity.setPortOfLoadingPoid(dto.getPortOfLoadingPoid());
+        entity.setPortOfDischargePoid(dto.getPortOfDischargePoid());
+        entity.setRemarks(dto.getRemarks());
+        entity.setMateStatus(dto.getMateStatus());
+        entity.setVoyageNo(dto.getVoyageNo());
+        entity.setBookingIssueNo(dto.getBookingIssueNo());
+        entity.setMateLoadDate(dto.getMateLoadDate());
+        entity.setMateLoadNo(dto.getMateLoadNo());
+        entity.setMateLoadVoyagePoid(dto.getMateLoadVoyagePoid());
+        entity.setIssueType(dto.getIssueType());
+        entity.setConsigneeName(dto.getConsigneeName());
+        entity.setConsigneeAddress(dto.getConsigneeAddress());
+        entity.setSplitBookingNo(dto.getSplitBookingNo());
+        entity.setFinalDestination(dto.getFinalDestination());
+        entity.setShipperDetailsManually(dto.getShipperDetailsManually());
     }
 
     // Detail mapping methods - Cargo DTL

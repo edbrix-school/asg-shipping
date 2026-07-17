@@ -11,12 +11,12 @@ public interface ShipRegionMasterRepository extends JpaRepository<ShipRegionMast
     
     Optional<ShipRegionMasterEntity> findByRegionPoidAndGroupPoid(Long regionPoid, Long groupPoid);
     
-    boolean existsByRegionCodeAndGroupPoidAndDeletedNot(String regionCode, Long groupPoid, String deleted);
-    
-    boolean existsByRegionNameAndGroupPoidAndDeletedNot(String regionName, Long groupPoid, String deleted);
-    
-    boolean existsByRegionCodeAndGroupPoidAndDeletedNotAndRegionPoidNot(String regionCode, Long groupPoid, String deleted, Long excludePoid);
-    
-    boolean existsByRegionNameAndGroupPoidAndDeletedNotAndRegionPoidNot(String regionName, Long groupPoid, String deleted, Long excludePoid);
+    boolean existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNot(String regionCode, Long groupPoid, String deleted);
+
+    boolean existsByRegionNameIgnoreCaseAndGroupPoidAndDeletedNot(String regionName, Long groupPoid, String deleted);
+
+    boolean existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNotAndRegionPoidNot(String regionCode, Long groupPoid, String deleted, Long excludePoid);
+
+    boolean existsByRegionNameIgnoreCaseAndGroupPoidAndDeletedNotAndRegionPoidNot(String regionName, Long groupPoid, String deleted, Long excludePoid);
 }
 

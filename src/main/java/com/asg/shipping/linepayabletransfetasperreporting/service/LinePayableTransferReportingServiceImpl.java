@@ -227,7 +227,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 "SHIP_LINE_REPORT_TRANSFER_HDR",
                 "TRANSACTION_POID",
                 deleteReasonDto,
-                java.time.LocalDate.now()
+                entity.getTransactionDate()
         );
 
         entity.setDeleted("Y");

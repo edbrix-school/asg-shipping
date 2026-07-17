@@ -293,6 +293,7 @@ public class ManifestCorrectorMapper {
                 .detRowId(entity.getDetRowId())
                 .containerNumber(entity.getContainerNumber())
                 .containerType(entity.getEquipmentIsoType())
+                .equipmentIsoType(entity.getEquipmentIsoType())
                 .isSelectedDlv(entity.getIsSelectedDlv())
                 .isSelectedRtn(entity.getIsSelectedRtn())
                 .build();
@@ -310,7 +311,7 @@ public class ManifestCorrectorMapper {
                 .transactionPoid(transactionPoid)
                 .detRowId(detRowId)
                 .containerNumber(dto.getContainerNumber())
-                .equipmentIsoType(dto.getContainerType())
+                .equipmentIsoType(dto.getEquipmentIsoType() != null ? dto.getEquipmentIsoType() : dto.getContainerType())
                 .isSelectedDlv(dto.getIsSelectedDlv())
                 .isSelectedRtn(dto.getIsSelectedRtn())
                 .build();
@@ -322,7 +323,7 @@ public class ManifestCorrectorMapper {
         }
 
         entity.setContainerNumber(dto.getContainerNumber());
-        entity.setEquipmentIsoType(dto.getContainerType());
+        entity.setEquipmentIsoType(dto.getEquipmentIsoType() != null ? dto.getEquipmentIsoType() : dto.getContainerType());
         entity.setIsSelectedDlv(dto.getIsSelectedDlv());
         entity.setIsSelectedRtn(dto.getIsSelectedRtn());
     }

@@ -7,5 +7,9 @@ import java.util.Optional;
 
 public interface ShipLineProfileMasterRepository extends JpaRepository<ShipLineProfileMasterEntity, Long> {
     Optional<ShipLineProfileMasterEntity> findByLineProfilePoidAndGroupPoid(Long lineProfilePoid, Long groupPoid);
+
+    boolean existsByLinePoidAndGroupPoidAndDeleted(Long linePoid, Long groupPoid, String deleted);
+
+    boolean existsByLinePoidAndGroupPoidAndDeletedAndLineProfilePoidNot(Long linePoid, Long groupPoid, String deleted, Long lineProfilePoid);
 }
 
