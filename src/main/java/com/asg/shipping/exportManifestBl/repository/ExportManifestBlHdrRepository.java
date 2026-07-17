@@ -11,10 +11,21 @@ import java.util.Optional;
 @Repository
 public interface ExportManifestBlHdrRepository extends JpaRepository<ExportManifestBlHdr, Long> {
 
-    
+   
     @Query("SELECT h FROM ExportManifestBlHdr h WHERE h.transactionPoid = :transactionPoid " +
+            "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid AND h.blType = 'EXPORT'")
+    Optional<ExportManifestBlHdr> findExportBlByTransactionPoid(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("groupPoid") Long groupPoid,
+            @Param("companyPoid") Long companyPoid);
+
+    @Query("SELECT h FROM ExportManifestBlHdr h WHERE h.transactionPoid = :transactionPoid " +
+            "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid " +
             "AND h.blType = 'EXPORT' AND (h.deleted IS NULL OR h.deleted = 'N')")
-    Optional<ExportManifestBlHdr> findByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
+    Optional<ExportManifestBlHdr> findActiveExportBlByTransactionPoid(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("groupPoid") Long groupPoid,
+            @Param("companyPoid") Long companyPoid);
 
    
     @Query("SELECT COUNT(h) > 0 FROM ExportManifestBlHdr h " +
