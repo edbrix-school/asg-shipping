@@ -292,9 +292,9 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
             throw new ValidationException(LINE_NAME_EXISTS_MSG);
         }
 
-        validateCountry(dto.getCountryPoid());
-        validateCurrency(dto.getCurrencyPoid());
-        validateBillTo(dto.getBillTo());
+//        validateCountry(dto.getCountryPoid());
+//        validateCurrency(dto.getCurrencyPoid());
+//        validateBillTo(dto.getBillTo());
     }
 
     /**
@@ -305,9 +305,9 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
             throw new ValidationException(LINE_NAME_EXISTS_MSG);
         }
 
-        validateCountry(dto.getCountryPoid());
-        validateCurrency(dto.getCurrencyPoid());
-        validateBillTo(dto.getBillTo());
+//        validateCountry(dto.getCountryPoid());
+//        validateCurrency(dto.getCurrencyPoid());
+//        validateBillTo(dto.getBillTo());
     }
 
 

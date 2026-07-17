@@ -12,7 +12,7 @@ public interface ImportManifestBlProcRepository {
     void processBlSaveAfter(Long transactionPoid, Long groupPoid, Long companyPoid, String processType);
     void validateBeforeSave(Long voyageTransactionPoid, Long transactionPoid,Long quotationPoid,String freight,String bookedByPrincipal);
     DefaultValueDto callDefaultGetValue(Long loginGroupPoid, Long loginCompanyPoid, Long loginUserPoid, String docId);
-    void saveEmailsToDb(Long transactionPoId, String addressType,
-                        String email1, String email2, String scope);
+    void saveEmailsToDb(Long transactionPoId, String cnNfFlag,
+                        String email1, String email2, String currentBoth);
     Object[] getTaxRate(Long chargePoid, Long companyPoid, java.time.LocalDate transactionDate);
 }

@@ -16,6 +16,7 @@ import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.Session;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
@@ -52,9 +53,16 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
         query.execute();
 
         String status = (String) query.getOutputParameterValue("P_STATUS");
-        log.info("Email verification update status for BL {} : {}", request.getTransactionPoId(), status);
+        log.info("Email verification update status for BL {} : {}", transactionPoId, status);
 
-        return EmailVerificationResponseDto.builder().status(status).build();
+        boolean isWarning = status != null && status.startsWith("WARNING");
+        boolean isSuccess = status != null && status.startsWith("SUCCESS");
+
+        return EmailVerificationResponseDto.builder()
+                .status(status)
+                .warning(isWarning)
+                .success(isSuccess)
+                .build();
     }
 
     @Override
@@ -101,7 +109,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
                 emailIds = "";
             }
 
-            int emailsSent = emailIds.isEmpty() ? 0 : emailIds.split(",").length;
+            int emailsSent = emailIds.isEmpty() ? 0 : emailIds.split(";\s*").length;
 
             return SendEdiEmailsResponseDto.builder()
                     .emailIds(emailIds)
@@ -118,41 +126,33 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
     }
 
     @Override
-    public void saveEmailsToDb(Long transactionPoId, String addressType,
-                               String email1, String email2, String scope) {
+    public void saveEmailsToDb(Long transactionPoId, String cnNfFlag,
+                               String email1, String email2, String currentBoth) {
         try {
-            StoredProcedureQuery query = entityManager
-                    .createStoredProcedureQuery("SP_Save_Emails_Data_DB");
-
-            query.registerStoredProcedureParameter("P_GROUP_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_COMPANY_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_USER_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_DOC_ID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_ADDRESS_TYPE", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_EMAIL1", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_EMAIL2", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_SCOPE", String.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("P_STATUS", String.class, ParameterMode.OUT);
-
-            query.setParameter("P_GROUP_POID", UserContext.getGroupPoid());
-            query.setParameter("P_COMPANY_POID", UserContext.getCompanyPoid());
-            query.setParameter("P_USER_POID", UserContext.getUserPoid());
-            query.setParameter("P_DOC_ID", UserContext.getDocumentId()); // Document ID for manifest
-            query.setParameter("P_DOC_KEY_POID", transactionPoId);
-            query.setParameter("P_ADDRESS_TYPE", addressType);
-            query.setParameter("P_EMAIL1", email1);
-            query.setParameter("P_EMAIL2", email2);
-            query.setParameter("P_SCOPE", scope);
-
-            query.execute();
-
-            String status = (String) query.getOutputParameterValue("P_STATUS");
-
-            if (status != null && status.contains("ERROR")) {
-                throw new RuntimeException("Failed to save emails: " + status);
-            }
-
+            String sql = "{call SP_Save_Emails_Data_DB(?,?,?,?,?,?,?,?,?,?)}";
+            entityManager.unwrap(Session.class)
+                    .doWork(conn -> {
+                        try (java.sql.CallableStatement cs = conn.prepareCall(sql)) {
+                            cs.setLong(1, UserContext.getGroupPoid());
+                            cs.setLong(2, UserContext.getCompanyPoid());
+                            cs.setLong(3, UserContext.getUserPoid());
+                            cs.setString(4, UserContext.getDocumentId());
+                            cs.setLong(5, transactionPoId);
+                            cs.setString(6, cnNfFlag);
+                            cs.setString(7, email1);
+                            if (email2 != null) cs.setString(8, email2); else cs.setNull(8, java.sql.Types.VARCHAR);
+                            cs.setString(9, currentBoth);
+                            cs.registerOutParameter(10, java.sql.Types.VARCHAR);
+                            cs.execute();
+                            String status = cs.getString(10);
+                            log.info("SP_Save_Emails_Data_DB status for transactionPoId {}: {}", transactionPoId, status);
+                            if (status != null && status.contains("ERROR")) {
+                                throw new RuntimeException("Failed to save emails: " + status);
+                            }
+                        }
+                    });
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Error saving emails for transactionPoId: {}", transactionPoId, e);
             throw new RuntimeException("Failed to save emails: " + e.getMessage(), e);

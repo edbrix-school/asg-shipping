@@ -140,7 +140,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     public ExportManifestBlRequestDto updateExportManifestBl(Long id, ExportManifestBlUpdateDto dto, Long companyPoid, Long groupPoid) {
         log.info("Updating Export Manifest BL with id: {}", id);
 
-        ExportManifestBlHdr entity = repository.findByTransactionPoid(id)
+        ExportManifestBlHdr entity = repository.findActiveExportBlByTransactionPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", id.toString()));
 
@@ -221,7 +221,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     public ExportManifestBlRequestDto getExportManifestBl(Long id) {
         log.info("Getting Export Manifest BL with id: {}", id);
 
-        ExportManifestBlHdr entity = repository.findByTransactionPoid(id)
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+
+        ExportManifestBlHdr entity = repository.findExportBlByTransactionPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", id.toString()));
 
@@ -244,7 +247,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     public void deleteExportManifestBl(Long id) {
         log.info("Deleting Export Manifest BL with id: {}", id);
 
-        ExportManifestBlHdr entity = repository.findByTransactionPoid(id)
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+
+        ExportManifestBlHdr entity = repository.findExportBlByTransactionPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", id.toString()));
 
@@ -333,16 +339,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     }
 
     private void validateActiveExportManifestBl(Long transactionPoid, Long companyPoid) {
-        ExportManifestBlHdr hdr = repository.findByTransactionPoid(transactionPoid)
+        Long groupPoid = UserContext.getGroupPoid();
+        repository.findActiveExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", transactionPoid.toString()));
-
-        if (!companyPoid.equals(hdr.getCompanyPoid())) {
-            throw new ResourceNotFoundException("Export Manifest BL", "transactionPoid", transactionPoid.toString());
-        }
-        if ("Y".equals(hdr.getDeleted())) {
-            throw new ResourceNotFoundException("Export Manifest BL", "transactionPoid", transactionPoid.toString());
-        }
     }
 
     private void callProcGlReverseShtoffPosting(Long groupPoid, Long companyPoid, Long userPoid,
