@@ -8,4 +8,12 @@ public interface ExportManifestBlLoadBookingRepository {
     void stageBookingSelections(Long groupPoid, Long companyPoid, List<BookingSelectionItemDto> selections);
 
     String funcLoadBookingToBl(String userPoid, Long voyageTransactionPoid);
+
+   
+    String stageAndLoadBookingToBl(
+            Long groupPoid,
+            Long companyPoid,
+            List<BookingSelectionItemDto> selections,
+            String loginUser,
+            Long voyageTransactionPoid);
 }

@@ -570,9 +570,14 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
             throw new ValidationException("At least one booking container must be selected");
         }
 
-        loadBookingRepository.stageBookingSelections(groupPoid, companyPoid, selections);
+        String loginUser = UserContext.getUserId() != null ? UserContext.getUserId() : String.valueOf(userPoid);
 
-        String funcResult = loadBookingRepository.funcLoadBookingToBl(String.valueOf(userPoid), resolvedVoyagePoid);
+        String funcResult = loadBookingRepository.stageAndLoadBookingToBl(
+                groupPoid,
+                companyPoid,
+                selections,
+                loginUser,
+                resolvedVoyagePoid);
         if (funcResult == null || funcResult.toUpperCase(Locale.ROOT).startsWith("ERROR")) {
             throw new ValidationException(
                     funcResult != null ? funcResult : "FUNC_LOAD_BOOKING_TO_BL failed with no message");
@@ -583,6 +588,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
             newBlPoid = Long.parseLong(funcResult.trim());
         } catch (NumberFormatException ex) {
             throw new ValidationException("FUNC_LOAD_BOOKING_TO_BL returned invalid transaction POID: " + funcResult);
+        }
+        if (newBlPoid <= 0) {
+            throw new ValidationException(
+                    "FUNC_LOAD_BOOKING_TO_BL did not create a BL (returned "
+                            + funcResult
+                            + "). Verify GLOBAL_TEMP_BOOKING_SELECTED rows and QA_DB_USER.FUNC_LOAD_BOOKING_TO_BL.");
         }
 
         try {
