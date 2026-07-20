@@ -1238,15 +1238,8 @@ public class LineTariffsServiceImpl implements LineTariffsService {
 
     @Override
     @Transactional
-    public CopySlabsToPayableResponseDto copySlabsToPayable(Long id, String type, boolean confirmed) {
-        log.info("Copying slabs to payable for transactionPoid: {}, type: {}, confirmed: {}", id, type, confirmed);
-        if (!confirmed && requiresCopySlabsConfirmation(id, type)) {
-            log.info("Copy slabs confirmation required for transactionPoid: {}, type: {}", id, type);
-            return CopySlabsToPayableResponseDto.builder()
-                    .requiresConfirmation(true)
-                    .copied(false)
-                    .build();
-        }
+    public void copySlabsToPayable(Long id, String type) {
+        log.info("Copying slabs to payable for transactionPoid: {}, type: {}", id, type);
         if ("DMG".equalsIgnoreCase(type)) {
             List<ShipLineTariffImpDtl> collectables = impDtlRepository.findByTransactionPoidOrderByDetRowId(id);
             List<ShipLineTariffImpPayDtl> payables = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
@@ -1325,70 +1318,6 @@ public class LineTariffsServiceImpl implements LineTariffsService {
             throw new ValidationException("Invalid type. Must be DMG or DTN");
         }
         log.info("Successfully copied slabs to payable for transactionPoid: {}, type: {}", id, type);
-        return CopySlabsToPayableResponseDto.builder()
-                .requiresConfirmation(false)
-                .copied(true)
-                .build();
-    }
-
-    private boolean requiresCopySlabsConfirmation(Long id, String type) {
-        if ("DMG".equalsIgnoreCase(type)) {
-            List<ShipLineTariffImpDtl> collectables = impDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-            Map<Long, ShipLineTariffImpPayDtl> payableByContainerType =
-                    impPayDtlRepository.findByTransactionPoidOrderByDetRowId(id).stream()
-                            .filter(p -> p.getContainerTypePoid() != null)
-                            .collect(Collectors.toMap(ShipLineTariffImpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
-            return collectables.stream()
-                    .filter(col -> col.getContainerTypePoid() != null && hasTariffDetailData(
-                            col.getFreeDays(),
-                            col.getSlab1Tilldays(), col.getSlab1Rate(),
-                            col.getSlab2Tilldays(), col.getSlab2Rate(),
-                            col.getSlab3Tilldays(), col.getSlab3Rate(),
-                            col.getSlab4Tilldays(), col.getSlab4Rate(),
-                            col.getSlab5Tilldays(), col.getSlab5Rate(),
-                            col.getSlab6Tilldays(), col.getSlab6Rate(),
-                            col.getSlab7Tilldays(), col.getSlab7Rate()))
-                    .map(col -> payableByContainerType.get(col.getContainerTypePoid()))
-                    .filter(Objects::nonNull)
-                    .anyMatch(pay -> hasTariffDetailData(
-                            pay.getFreeDays(),
-                            pay.getSlab1Tilldays(), pay.getSlab1Rate(),
-                            pay.getSlab2Tilldays(), pay.getSlab2Rate(),
-                            pay.getSlab3Tilldays(), pay.getSlab3Rate(),
-                            pay.getSlab4Tilldays(), pay.getSlab4Rate(),
-                            pay.getSlab5Tilldays(), pay.getSlab5Rate(),
-                            pay.getSlab6Tilldays(), pay.getSlab6Rate(),
-                            pay.getSlab7Tilldays(), pay.getSlab7Rate()));
-        }
-        if ("DTN".equalsIgnoreCase(type)) {
-            List<ShipLineTariffExpDtl> collectables = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-            Map<Long, ShipLineTariffExpPayDtl> payableByContainerType =
-                    expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id).stream()
-                            .filter(p -> p.getContainerTypePoid() != null)
-                            .collect(Collectors.toMap(ShipLineTariffExpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
-            return collectables.stream()
-                    .filter(col -> col.getContainerTypePoid() != null && hasTariffDetailData(
-                            col.getFreeDays(),
-                            col.getSlab1Tilldays(), col.getSlab1Rate(),
-                            col.getSlab2Tilldays(), col.getSlab2Rate(),
-                            col.getSlab3Tilldays(), col.getSlab3Rate(),
-                            col.getSlab4Tilldays(), col.getSlab4Rate(),
-                            col.getSlab5Tilldays(), col.getSlab5Rate(),
-                            col.getSlab6Tilldays(), col.getSlab6Rate(),
-                            col.getSlab7Tilldays(), col.getSlab7Rate()))
-                    .map(col -> payableByContainerType.get(col.getContainerTypePoid()))
-                    .filter(Objects::nonNull)
-                    .anyMatch(pay -> hasTariffDetailData(
-                            pay.getFreeDays(),
-                            pay.getSlab1Tilldays(), pay.getSlab1Rate(),
-                            pay.getSlab2Tilldays(), pay.getSlab2Rate(),
-                            pay.getSlab3Tilldays(), pay.getSlab3Rate(),
-                            pay.getSlab4Tilldays(), pay.getSlab4Rate(),
-                            pay.getSlab5Tilldays(), pay.getSlab5Rate(),
-                            pay.getSlab6Tilldays(), pay.getSlab6Rate(),
-                            pay.getSlab7Tilldays(), pay.getSlab7Rate()));
-        }
-        throw new ValidationException("Invalid type. Must be DMG or DTN");
     }
 
     private boolean hasTariffDetailData(Integer freeDays, Integer slab1Tilldays, BigDecimal slab1Rate,

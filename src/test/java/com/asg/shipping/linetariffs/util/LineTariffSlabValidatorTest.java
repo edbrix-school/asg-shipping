@@ -65,4 +65,32 @@ class LineTariffSlabValidatorTest {
 
         assertDoesNotThrow(() -> LineTariffSlabValidator.validate(detail));
     }
+
+    @Test
+    void validate_ZeroTillDaysTreatedAsEmpty_Succeeds() {
+        TariffDetailUpdateDTO detail = TariffDetailUpdateDTO.builder()
+                .detRowId(1L)
+                .containerTypePoid(50L)
+                .slab1Tilldays(5)
+                .slab2Tilldays(10)
+                .slab3Tilldays(0)
+                .slab4Tilldays(null)
+                .build();
+
+        assertDoesNotThrow(() -> LineTariffSlabValidator.validate(detail));
+    }
+
+    @Test
+    void validate_Slab3FilledSlab4Zero_DoesNotFail() {
+        TariffDetailUpdateDTO detail = TariffDetailUpdateDTO.builder()
+                .detRowId(1L)
+                .containerTypePoid(50L)
+                .slab1Tilldays(2)
+                .slab2Tilldays(3)
+                .slab3Tilldays(4)
+                .slab4Tilldays(0)
+                .build();
+
+        assertDoesNotThrow(() -> LineTariffSlabValidator.validate(detail));
+    }
 }
