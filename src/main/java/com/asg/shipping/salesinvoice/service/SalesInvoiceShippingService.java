@@ -59,5 +59,7 @@ public interface SalesInvoiceShippingService {
      * @return Map containing manifest type and redirect information
      */
     Map<String, Object> getManifestDetails(Long blPoid);
+
+    SalesInvoiceContainerDtlResponseDTO fetchSalesInvoiceContrDetails(SalesInvoiceContainerDtlRequestDTO containerDtlDto);
 }
 
