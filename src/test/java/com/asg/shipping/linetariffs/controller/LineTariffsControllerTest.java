@@ -6,7 +6,6 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.linetariffs.dto.CopySlabsToPayableResponseDto;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
@@ -283,36 +282,20 @@ class LineTariffsControllerTest {
 
     @Test
     void copySlabsToPayable_DMG_Success() {
-        when(lineTariffsService.copySlabsToPayable(1L, "DMG", false))
-                .thenReturn(CopySlabsToPayableResponseDto.builder().copied(true).build());
-
-        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG", false);
+        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG");
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).copySlabsToPayable(1L, "DMG", false);
-    }
-
-    @Test
-    void copySlabsToPayable_DMG_ConfirmationRequired_ReturnsSuccessWithMessage() {
-        when(lineTariffsService.copySlabsToPayable(1L, "DMG", false))
-                .thenReturn(CopySlabsToPayableResponseDto.builder().requiresConfirmation(true).build());
-
-        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG", false);
-
-        assertEquals(200, response.getStatusCode().value());
+        verify(lineTariffsService).copySlabsToPayable(1L, "DMG");
     }
 
     @Test
     void copySlabsToPayable_DTN_Success() {
-        when(lineTariffsService.copySlabsToPayable(1L, "DTN", false))
-                .thenReturn(CopySlabsToPayableResponseDto.builder().copied(true).build());
-
-        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DTN", false);
+        ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DTN");
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
-        verify(lineTariffsService).copySlabsToPayable(1L, "DTN", false);
+        verify(lineTariffsService).copySlabsToPayable(1L, "DTN");
     }
 
     @Test

@@ -6,13 +6,9 @@ import com.asg.shipping.linetariffs.dto.TariffDetailUpdateDTO;
 
 public final class LineTariffSlabValidator {
 
-    private static final String SLAB1 = "Slab 1";
-    private static final String SLAB2 = "Slab 2";
-    private static final String SLAB3 = "Slab 3";
-    private static final String SLAB4 = "Slab 4";
-    private static final String SLAB5 = "Slab 5";
-    private static final String SLAB6 = "Slab 6";
-    private static final String SLAB7 = "Slab 7";
+    private static final String[] SLAB_NAMES = {
+            "Slab 1", "Slab 2", "Slab 3", "Slab 4", "Slab 5", "Slab 6", "Slab 7"
+    };
 
     private LineTariffSlabValidator() {
     }
@@ -46,19 +42,35 @@ public final class LineTariffSlabValidator {
                                  Integer slab5Tilldays,
                                  Integer slab6Tilldays,
                                  Integer slab7Tilldays) {
-        validateSlabSequence(slab1Tilldays, slab2Tilldays, SLAB1, SLAB2);
-        validateSlabSequence(slab2Tilldays, slab3Tilldays, SLAB2, SLAB3);
-        validateSlabSequence(slab3Tilldays, slab4Tilldays, SLAB3, SLAB4);
-        validateSlabSequence(slab4Tilldays, slab5Tilldays, SLAB4, SLAB5);
-        validateSlabSequence(slab5Tilldays, slab6Tilldays, SLAB5, SLAB6);
-        validateSlabSequence(slab6Tilldays, slab7Tilldays, SLAB6, SLAB7);
+        Integer[] tillDays = {
+                slab1Tilldays, slab2Tilldays, slab3Tilldays, slab4Tilldays,
+                slab5Tilldays, slab6Tilldays, slab7Tilldays
+        };
+
+        Integer previousDays = null;
+        String previousName = null;
+        for (int i = 0; i < tillDays.length; i++) {
+            Integer days = effectiveSlabDays(tillDays[i]);
+            if (days == null) {
+                continue;
+            }
+            if (previousDays != null && days <= previousDays) {
+                throw new ValidationException(
+                        String.format("Slab days should be in incremental order. %s days (%d) must be greater than %s days (%d)",
+                                SLAB_NAMES[i], days, previousName, previousDays));
+            }
+            previousDays = days;
+            previousName = SLAB_NAMES[i];
+        }
     }
 
-    private static void validateSlabSequence(Integer currentSlab, Integer nextSlab, String currentName, String nextName) {
-        if (currentSlab != null && nextSlab != null && nextSlab <= currentSlab) {
-            throw new ValidationException(
-                    String.format("Slab days should be in incremental order. %s days (%d) must be greater than %s days (%d)",
-                            nextName, nextSlab, currentName, currentSlab));
+    /**
+     * Unused slab columns are often stored or sent as 0; treat those like null so only entered slabs are validated.
+     */
+    private static Integer effectiveSlabDays(Integer tillDays) {
+        if (tillDays == null || tillDays == 0) {
+            return null;
         }
+        return tillDays;
     }
 }

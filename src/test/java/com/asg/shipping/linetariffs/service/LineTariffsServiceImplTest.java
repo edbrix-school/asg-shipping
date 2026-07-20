@@ -15,7 +15,6 @@ import com.asg.shipping.common.repository.ShipLineMasterTypeRepository;
 import com.asg.shipping.containertypes.entity.ShipContainerTypeMaster;
 import com.asg.shipping.containertypes.repository.ShipContainerTypeMasterRepository;
 import com.asg.shipping.exceptions.ResourceNotFoundException;
-import com.asg.shipping.linetariffs.dto.CopySlabsToPayableResponseDto;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
@@ -659,18 +658,16 @@ class LineTariffsServiceImplTest {
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
         when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
-        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DMG", true);
+        service.copySlabsToPayable(1L, "DMG");
 
         verify(impPayDtlRepository).save(pay);
-        assertTrue(result.isCopied());
-        assertFalse(result.isRequiresConfirmation());
         assertEquals(5, pay.getFreeDays());
         assertEquals(10, pay.getSlab1Tilldays());
         assertEquals(BigDecimal.valueOf(100), pay.getSlab1Rate());
     }
 
     @Test
-    void copySlabsToPayable_DMG_PayableHasData_ThrowsWithoutConfirm() {
+    void copySlabsToPayable_DMG_PayableHasData_CopiesWithoutConfirm() {
         ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
         col.setContainerTypePoid(50L);
         col.setFreeDays(1);
@@ -687,11 +684,11 @@ class LineTariffsServiceImplTest {
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
         when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
-        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DMG", false);
+        service.copySlabsToPayable(1L, "DMG");
 
-        assertTrue(result.isRequiresConfirmation());
-        assertFalse(result.isCopied());
-        verify(impPayDtlRepository, never()).save(any());
+        verify(impPayDtlRepository).save(pay);
+        assertEquals(1, pay.getFreeDays());
+        assertEquals(10, pay.getSlab1Tilldays());
     }
 
     @Test
@@ -711,10 +708,9 @@ class LineTariffsServiceImplTest {
         when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
         when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
-        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DTN", true);
+        service.copySlabsToPayable(1L, "DTN");
 
         verify(expPayDtlRepository).save(pay);
-        assertTrue(result.isCopied());
         assertEquals(7, pay.getFreeDays());
         assertEquals(14, pay.getSlab1Tilldays());
         assertEquals(BigDecimal.valueOf(80), pay.getSlab1Rate());
@@ -734,9 +730,7 @@ class LineTariffsServiceImplTest {
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
         when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
-        CopySlabsToPayableResponseDto result = service.copySlabsToPayable(1L, "DMG", false);
-
-        assertTrue(result.isCopied());
+        service.copySlabsToPayable(1L, "DMG");
 
         // new payable row created for containerTypePoid=1 since no match existed
         verify(impPayDtlRepository).save(argThat(p ->
@@ -745,7 +739,7 @@ class LineTariffsServiceImplTest {
 
     @Test
     void copySlabsToPayable_InvalidType_ThrowsValidationException() {
-        assertThrows(ValidationException.class, () -> service.copySlabsToPayable(1L, "INVALID", false));
+        assertThrows(ValidationException.class, () -> service.copySlabsToPayable(1L, "INVALID"));
     }
 
     @Test
