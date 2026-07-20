@@ -2187,15 +2187,11 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         return jdbcTemplate.execute(sql, (CallableStatement cs) -> {
 
-            cs.setLong(1, request.getGroupPoid());
-            cs.setLong(2, request.getCompanyPoid());
-            cs.setLong(3, request.getUserPoid());
+            cs.setLong(1, UserContext.getGroupPoid());
+            cs.setLong(2, UserContext.getCompanyPoid());
+            cs.setLong(3, UserContext.getUserPoid());
 
-            if (request.getDocId() != null) {
-                cs.setLong(4, request.getDocId());
-            } else {
-                cs.setNull(4, Types.NUMERIC);
-            }
+            cs.setNull(4, Types.NUMERIC);
 
             if (request.getTransactionPoid() != null) {
                 cs.setLong(5, request.getTransactionPoid());

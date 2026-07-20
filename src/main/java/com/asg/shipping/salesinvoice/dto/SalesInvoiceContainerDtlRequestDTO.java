@@ -19,17 +19,6 @@ public class SalesInvoiceContainerDtlRequestDTO {
     @NotNull(message = "BL POID is required")
     private Long blPoid;
 
-    @NotNull(message = "Group POID is required")
-    private Long groupPoid;
-
-    @NotNull(message = "Company POID is required")
-    private Long companyPoid;
-
-    @NotNull(message = "User POID is required")
-    private Long userPoid;
-
-    private Long docId;
-
     @NotNull(message = "Container No is required")
     private String containerNo;
 
