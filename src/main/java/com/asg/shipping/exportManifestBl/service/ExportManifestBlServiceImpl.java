@@ -8,6 +8,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.ApprovalService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
@@ -25,11 +26,18 @@ import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
+import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
+import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
+import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
+import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
+import com.asg.shipping.vesselvoyagecreation.repository.ShipVoyageHdrRepository;
 import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsResponseDto;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestCargoDtlId;
 import org.springframework.beans.BeanUtils;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,9 +53,14 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
+import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
+import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
+import static com.asg.common.lib.security.util.UserContext.getUserPoid;
 import static org.springframework.util.StringUtils.hasText;
 
 import net.sf.jasperreports.engine.JasperReport;
@@ -60,7 +73,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
     private static final String UPDATE_TYPE_EXPORT_LOCAL_CHARGE = "EXPORTLOCALCHARGE";
     private static final String UPDATE_TYPE_AUTO_CUSTOMER_CHARGE = "AUTOCUSTOMERCHARGE";
+    /** Matches PROC_SHIP_BL_PAGE_SAVE_AFTER — rolls up CBM/weight/packs and port auto-charges. */
+    private static final String UPDATE_TYPE_AUTOSUM_WEIGHT_PACK = "AUTOSUMWEIGHTPACKATE";
     private static final String SALES_INVOICE_DOCUMENT_ID = "300-102";
+    /** Matches document master DOC_NAME / ROUTE_NAME for SPA tab navigation. */
+    private static final String SALES_INVOICE_DOCUMENT_NAME = "Sales Invoice (Shipping)";
+    private static final String EXPORT_MANIFEST_DOCUMENT_ID = "100-104";
 
     private final ExportManifestBlHdrRepository repository;
     private final ExportManifestBlGeneralDtlRepository generalDtlRepository;
@@ -77,6 +95,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final DataSource dataSource;
     private final LoggingService loggingService;
     private final LovService lovService;
+    private final ExportManifestBlLoadBookingRepository loadBookingRepository;
+    private final ShipMateHdrRepository shipMateHdrRepository;
+    private final ShipMateContainerDtlRepository shipMateContainerDtlRepository;
+    private final ExportManifestBlBookingSelectionRepository bookingSelectionRepository;
+    private final ShipVoyageHdrRepository shipVoyageHdrRepository;
+    private final ApprovalService approvalService;
 
     private String normalizeActionType(String actionType) {
         return actionType == null ? "" : actionType.trim().toLowerCase();
@@ -475,19 +499,208 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<BookingSelectionRowDto> listBookingSelection(
+            Long issueVesselVoyagePoid,
+            String bookingMateVoyageNo,
+            Long linePoid,
+            String containerNo,
+            String bookingNo) {
+        log.info(
+                "List pending mate for export BL, issue voyage: {}, mate voyage no: {}",
+                issueVesselVoyagePoid,
+                bookingMateVoyageNo);
+
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        if (issueVesselVoyagePoid == null) {
+            throw new ValidationException("Issue vessel voyage transaction POID is required");
+        }
+
+        ShipVoyageHdrEntity voyage = shipVoyageHdrRepository
+                .findByTransactionPoidAndGroupPoid(issueVesselVoyagePoid, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Voyage", "transactionPoid",
+                        issueVesselVoyagePoid.toString()));
+        if (!companyPoid.equals(voyage.getCompanyPoid())) {
+            throw new ValidationException("Voyage does not belong to current company");
+        }
+
+        Long effectiveLinePoid = linePoid;
+        if (effectiveLinePoid != null && effectiveLinePoid == 0L) {
+            effectiveLinePoid = null;
+        }
+
+        List<BookingSelectionRowDto> rows = bookingSelectionRepository.findPendingMateToBl(
+                groupPoid,
+                companyPoid,
+                issueVesselVoyagePoid,
+                bookingMateVoyageNo,
+                effectiveLinePoid,
+                containerNo,
+                bookingNo);
+        log.info(
+                "Booking selection issueVoyage={} returned {} row(s) (mateVoyageNo={}, linePoid={})",
+                issueVesselVoyagePoid,
+                rows.size(),
+                bookingMateVoyageNo,
+                effectiveLinePoid);
+        return rows;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Map<String, Object> loadBooking(Long voyageTransactionPoid, LoadBookingRequest request) {
+        log.info("Load booking to export BL, voyage: {}", voyageTransactionPoid);
+
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        Long userPoid = getUserPoid();
+
+        Long resolvedVoyagePoid = request.getVoyageTransactionPoid() != null
+                ? request.getVoyageTransactionPoid()
+                : voyageTransactionPoid;
+        if (resolvedVoyagePoid == null) {
+            throw new ValidationException("Voyage transaction POID is required");
+        }
+
+        List<BookingSelectionItemDto> selections = resolveBookingSelections(request, groupPoid, companyPoid);
+        long selectedCount = selections.stream()
+                .filter(s -> "Y".equalsIgnoreCase(s.getIsSelected()))
+                .count();
+        if (selectedCount == 0) {
+            throw new ValidationException("At least one booking container must be selected");
+        }
+
+        String loginUser = UserContext.getUserId() != null ? UserContext.getUserId() : String.valueOf(userPoid);
+
+        String funcResult = loadBookingRepository.stageAndLoadBookingToBl(
+                groupPoid,
+                companyPoid,
+                selections,
+                loginUser,
+                resolvedVoyagePoid);
+        if (funcResult == null || funcResult.toUpperCase(Locale.ROOT).startsWith("ERROR")) {
+            throw new ValidationException(
+                    funcResult != null ? funcResult : "FUNC_LOAD_BOOKING_TO_BL failed with no message");
+        }
+
+        long newBlPoid;
+        try {
+            newBlPoid = Long.parseLong(funcResult.trim());
+        } catch (NumberFormatException ex) {
+            throw new ValidationException("FUNC_LOAD_BOOKING_TO_BL returned invalid transaction POID: " + funcResult);
+        }
+        if (newBlPoid <= 0) {
+            throw new ValidationException(
+                    "FUNC_LOAD_BOOKING_TO_BL did not create a BL (returned "
+                            + funcResult
+                            + "). Verify GLOBAL_TEMP_BOOKING_SELECTED rows and QA_DB_USER.FUNC_LOAD_BOOKING_TO_BL.");
+        }
+
+        try {
+            procRepository.processAfterSave(
+                    groupPoid,
+                    companyPoid,
+                    newBlPoid,
+                    0L,
+                    UPDATE_TYPE_AUTOSUM_WEIGHT_PACK,
+                    userPoid);
+        } catch (Exception e) {
+            log.error("PROC_SHIP_BL_PAGE_SAVE_AFTER failed after load booking for BL {}", newBlPoid, e);
+            throw new ValidationException(
+                    "BL created (POID " + newBlPoid + ") but autosum/auto-charges failed: " + e.getMessage());
+        }
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("voyageTransactionPoid", resolvedVoyagePoid);
+        response.put("transactionPoid", newBlPoid);
+        response.put("message", "Booking data loaded, export BL created, and totals/auto-charges processed");
+        return response;
+    }
+
+    private List<BookingSelectionItemDto> resolveBookingSelections(
+            LoadBookingRequest request, Long groupPoid, Long companyPoid) {
+        if (request.getSelections() != null && !request.getSelections().isEmpty()) {
+            return request.getSelections();
+        }
+        if (request.getSelectedBookingIds() == null || request.getSelectedBookingIds().isEmpty()) {
+            throw new ValidationException("Either selections or selectedBookingIds is required");
+        }
+
+        List<BookingSelectionItemDto> rows = new ArrayList<>();
+        for (Long mateTransactionPoid : request.getSelectedBookingIds()) {
+            ShipMateHdr hdr = shipMateHdrRepository.findByTransactionPoid(mateTransactionPoid)
+                    .orElseThrow(() -> new ValidationException(
+                            "Booking not found for transaction POID: " + mateTransactionPoid));
+            if (!groupPoid.equals(hdr.getGroupPoid()) || !companyPoid.equals(hdr.getCompanyPoid())) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " does not belong to current company");
+            }
+            if ("Y".equalsIgnoreCase(hdr.getDeleted())) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " is deleted");
+            }
+
+            List<ShipMateContainerDtl> containers =
+                    shipMateContainerDtlRepository.findByTransactionPoidOrderByDetRowId(mateTransactionPoid);
+            if (containers.isEmpty()) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " has no containers");
+            }
+            for (ShipMateContainerDtl container : containers) {
+                BookingSelectionItemDto item = new BookingSelectionItemDto();
+                item.setTransactionPoid(mateTransactionPoid);
+                item.setVoyageNo(hdr.getVoyageNo());
+                item.setContainerNo(container.getContainerNo());
+                item.setBookingIssueNo(hdr.getBookingIssueNo());
+                item.setIsSelected("Y");
+                rows.add(item);
+            }
+        }
+        return rows;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public SelectForInvoiceResponseDto selectForInvoice(Long transactionPoid) {
-        log.info("Select for invoice requested for Export Manifest BL: {}", transactionPoid);
+        log.info("Select for invoice (navigation) — export BL: {}", transactionPoid);
         validateActiveExportManifestBl(transactionPoid, UserContext.getCompanyPoid());
-        validateBlApproved(transactionPoid);
+        String approvalStatus = resolveExportBlFinalApprovalStatus(transactionPoid);
 
         Long existingInvoiceTransactionPoid = findExistingInvoiceTransactionPoid(transactionPoid);
 
         return SelectForInvoiceResponseDto.builder()
                 .blPoid(transactionPoid)
                 .documentId(SALES_INVOICE_DOCUMENT_ID)
-                .documentName("Sales Invoice (Shipping)")
+                .documentName(SALES_INVOICE_DOCUMENT_NAME)
+                .approvalStatus(approvalStatus)
                 .existingInvoiceTransactionPoid(existingInvoiceTransactionPoid)
+                .invoiceTransactionPoid(existingInvoiceTransactionPoid)
+                .targetApiPath("/v1/sales-invoice-shipping")
+                .message(
+                        "Open " + SALES_INVOICE_DOCUMENT_NAME + " (" + SALES_INVOICE_DOCUMENT_ID + ") with blPoid. "
+                                + "On invoice screen use Load Data Invoice: POST /v1/sales-invoice-shipping/{invoiceId}/load-container-charge-data with blPoid and blTypeInvoice EXPORT.")
                 .build();
+    }
+
+    /**
+     * Legacy {@code getApprovalStatus("100-104", …)} must be {@code FINAL_APPROVAL_COMPLETED}; falls back to
+     * {@code VOYAGEWISEBILLS_APPROVED} when approval service returns empty.
+     */
+    private String resolveExportBlFinalApprovalStatus(Long blPoid) {
+        try {
+            String status = approvalService.getApprovalStatus(EXPORT_MANIFEST_DOCUMENT_ID, blPoid);
+            if (hasText(status)) {
+                String normalized = status.trim();
+                if ("FINAL_APPROVAL_COMPLETED".equalsIgnoreCase(normalized)) {
+                    return normalized;
+                }
+                throw new ValidationException("Approval pending to Proceed...");
+            }
+        } catch (ValidationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.warn("Approval status lookup failed for export BL {}: {}", blPoid, ex.getMessage());
+        }
+        validateBlApproved(blPoid);
+        return "FINAL_APPROVAL_COMPLETED";
     }
 
     private void validateBlApproved(Long blPoid) {

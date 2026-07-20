@@ -4,6 +4,8 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.exportManifestBl.dto.ExportManifestBlCreateDto;
 import com.asg.shipping.exportManifestBl.dto.ExportManifestBlRequestDto;
 import com.asg.shipping.exportManifestBl.dto.ExportManifestBlUpdateDto;
+import com.asg.shipping.exportManifestBl.dto.BookingSelectionRowDto;
+import com.asg.shipping.exportManifestBl.dto.LoadBookingRequest;
 import com.asg.shipping.exportManifestBl.dto.SelectForInvoiceResponseDto;
 import com.asg.shipping.exportManifestBl.dto.ShipBlToFfDto;
 import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsRequestDto;
@@ -58,6 +60,15 @@ public interface ExportManifestBlService {
     Map<String, Object> loadCustomerLocalCharges(Long transactionPoid);
 
     SelectForInvoiceResponseDto selectForInvoice(Long transactionPoid);
+
+    List<BookingSelectionRowDto> listBookingSelection(
+            Long issueVesselVoyagePoid,
+            String bookingMateVoyageNo,
+            Long linePoid,
+            String containerNo,
+            String bookingNo);
+
+    Map<String, Object> loadBooking(Long voyageTransactionPoid, LoadBookingRequest request);
 }
 
 

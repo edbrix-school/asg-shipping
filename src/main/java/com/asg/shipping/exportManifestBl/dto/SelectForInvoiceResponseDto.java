@@ -13,5 +13,9 @@ public class SelectForInvoiceResponseDto {
     private Long blPoid;
     private String documentId;
     private String documentName;
+    private String approvalStatus;
     private Long existingInvoiceTransactionPoid;
+    private Long invoiceTransactionPoid;
+    private String targetApiPath;
+    private String message;
 }
