@@ -5,18 +5,28 @@ import jakarta.persistence.ParameterMode;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.StoredProcedureQuery;
 import java.math.BigDecimal;
+import java.sql.CallableStatement;
 import java.sql.Date;
+import java.sql.Types;
 import java.time.LocalDate;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @Slf4j
+@RequiredArgsConstructor
 public class ExportManifestBlProcRepositoryImpl implements ExportManifestBlProcRepository {
+
+    private static final String UPDATE_TYPE_AUTOSUM_WEIGHT_PACK = "AUTOSUMWEIGHTPACKATE";
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public Object[] getTaxRate(Long chargePoid, Long companyPoid, LocalDate transactionDate) {
@@ -66,6 +76,25 @@ public class ExportManifestBlProcRepositoryImpl implements ExportManifestBlProcR
         query.setParameter("P_LOGIN_USER", userPoid);
 
         query.execute();
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void processExportLocalCharge(Long groupPoid, Long companyPoid, Long transactionPoid) {
+        String sql = "{call PROC_SHIP_BL_PAGE_SAVE_AFTER(?, ?, ?, ?, ?)}";
+        jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+            cs.setLong(1, groupPoid);
+            cs.setLong(2, companyPoid);
+            cs.setLong(3, transactionPoid);
+            cs.setNull(4, Types.NUMERIC);
+            cs.setString(5, UPDATE_TYPE_AUTOSUM_WEIGHT_PACK);
+            cs.execute();
+            return null;
+        });
+        log.debug(
+                "Legacy exportLocalCharge proc executed for transactionPoid {} with {}",
+                transactionPoid,
+                UPDATE_TYPE_AUTOSUM_WEIGHT_PACK);
     }
 
     @Override

@@ -808,5 +808,29 @@ public class SalesInvoiceShippingController {
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
+
+    @Operation(
+            summary = "Calculate Days and Amount after filling to date",
+            description = "Calculate Days and Amount after filling to date in a container details.",
+            responses = {
+        @ApiResponse(responseCode = "200", description = "Days and amount calculated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or validation failed"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    }
+    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            description = "Provide required details for Sales Invoice container to calculate days and amount.",
+            content = @Content(
+                    schema = @Schema(implementation = SalesInvoiceContainerDtlRequestDTO.class)
+            )
+    )
+    @PostMapping("/fetch-sales-invoice-contr-details")
+    public ResponseEntity<?> fetchSalesInvoiceContrDetails(
+            @Valid @RequestBody SalesInvoiceContainerDtlRequestDTO containerDtlDto
+    ) {
+        SalesInvoiceContainerDtlResponseDTO response = service.fetchSalesInvoiceContrDetails(containerDtlDto);
+        return success("Container details fetched successfully", response);
+    }
 }
 

@@ -71,7 +71,6 @@ import javax.sql.DataSource;
 @Slf4j
 public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
-    private static final String UPDATE_TYPE_EXPORT_LOCAL_CHARGE = "EXPORTLOCALCHARGE";
     private static final String UPDATE_TYPE_AUTO_CUSTOMER_CHARGE = "AUTOCUSTOMERCHARGE";
     /** Matches PROC_SHIP_BL_PAGE_SAVE_AFTER — rolls up CBM/weight/packs and port auto-charges. */
     private static final String UPDATE_TYPE_AUTOSUM_WEIGHT_PACK = "AUTOSUMWEIGHTPACKATE";
@@ -456,18 +455,16 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public Map<String, Object> loadLocalCharges(Long transactionPoid) {
         log.info("Loading port local charges for Export Manifest BL: {}", transactionPoid);
         validateActiveExportManifestBl(transactionPoid, UserContext.getCompanyPoid());
 
         try {
-            procRepository.processAfterSave(
+            procRepository.processExportLocalCharge(
                     UserContext.getGroupPoid(),
                     UserContext.getCompanyPoid(),
-                    transactionPoid,
-                    0L,
-                    UPDATE_TYPE_EXPORT_LOCAL_CHARGE,
-                    UserContext.getUserPoid());
+                    transactionPoid);
         } catch (Exception e) {
             log.error("Error loading local charges for Export Manifest BL: {}", transactionPoid, e);
             throw new ValidationException("Failed to load local charges: " + e.getMessage());
@@ -674,9 +671,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .existingInvoiceTransactionPoid(existingInvoiceTransactionPoid)
                 .invoiceTransactionPoid(existingInvoiceTransactionPoid)
                 .targetApiPath("/v1/sales-invoice-shipping")
-                .message(
-                        "Open " + SALES_INVOICE_DOCUMENT_NAME + " (" + SALES_INVOICE_DOCUMENT_ID + ") with blPoid. "
-                                + "On invoice screen use Load Data Invoice: POST /v1/sales-invoice-shipping/{invoiceId}/load-container-charge-data with blPoid and blTypeInvoice EXPORT.")
+                .message(SALES_INVOICE_DOCUMENT_NAME + " is open successfully with the respective BL.")
                 .build();
     }
 
