@@ -808,5 +808,13 @@ public class SalesInvoiceShippingController {
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
+
+    @PostMapping("/fetch-sales-invoice-contr-details")
+    public ResponseEntity<?> fetchSalesInvoiceContrDetails(
+            @Valid @RequestBody SalesInvoiceContainerDtlRequestDTO containerDtlDto
+    ) {
+        SalesInvoiceContainerDtlResponseDTO response = service.fetchSalesInvoiceContrDetails(containerDtlDto);
+        return success("Container details fetched successfully", response);
+    }
 }
 

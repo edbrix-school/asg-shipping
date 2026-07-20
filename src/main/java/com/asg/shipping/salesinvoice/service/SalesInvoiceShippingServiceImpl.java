@@ -14,7 +14,6 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
-import com.asg.shipping.customerautochargeexportbl.entity.ShipCustomerChargesDtlEntity;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.entity.*;
 import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceChargDtlRepository;
@@ -35,12 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
-import java.sql.CallableStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -2178,6 +2173,79 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             log.error("Error getting manifest details for BL POID: {}", blPoid, e);
             throw new RuntimeException("Failed to get manifest details: " + e.getMessage());
         }
+    }
+
+    @Override
+    public SalesInvoiceContainerDtlResponseDTO fetchSalesInvoiceContrDetails(SalesInvoiceContainerDtlRequestDTO containerDtlDto) {
+        return callProcShDemDttnContainer(containerDtlDto);
+    }
+
+    private SalesInvoiceContainerDtlResponseDTO callProcShDemDttnContainer(
+            SalesInvoiceContainerDtlRequestDTO request) {
+
+        String sql = "{call PROC_SH_DEM_DTTN_CONTAINER(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}";
+
+        return jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+
+            cs.setLong(1, request.getGroupPoid());
+            cs.setLong(2, request.getCompanyPoid());
+            cs.setLong(3, request.getUserPoid());
+
+            if (request.getDocId() != null) {
+                cs.setLong(4, request.getDocId());
+            } else {
+                cs.setNull(4, Types.NUMERIC);
+            }
+
+            if (request.getTransactionPoid() != null) {
+                cs.setLong(5, request.getTransactionPoid());
+            } else {
+                cs.setNull(5, Types.NUMERIC);
+            }
+
+            cs.setLong(6, request.getBlPoid());
+            cs.setString(7, request.getContainerNo());
+            cs.setDate(8, Date.valueOf(request.getDmToDate()));
+
+            cs.registerOutParameter(9, OracleTypes.CURSOR);
+            cs.setString(10, "N");
+
+            cs.execute();
+
+            try (ResultSet rs = (ResultSet) cs.getObject(9)) {
+
+                if (!rs.next()) {
+                    return null;
+                }
+
+                SalesInvoiceContainerDtlResponseDTO dto = mapContainerResponse(rs);
+
+                // Optional: verify only one row was returned
+                if (rs.next()) {
+                    log.warn("PROC_SH_DEM_DTTN_CONTAINER returned more than one row for BL {}, Container {}",
+                            request.getBlPoid(), request.getContainerNo());
+                }
+
+                return dto;
+            }
+        });
+    }
+
+    private SalesInvoiceContainerDtlResponseDTO mapContainerResponse(ResultSet rs) throws SQLException {
+
+        return SalesInvoiceContainerDtlResponseDTO.builder()
+                .blPoid(rs.getLong("BL_POID"))
+                .containerSocYn(rs.getString("EQUIPMENT_SHIPPER_OWN"))
+                .containerNo(rs.getString("CONTAINER_NO"))
+                .dmFrmDate(rs.getDate("FMDATE") != null
+                        ? rs.getDate("FMDATE").toLocalDate()
+                        : null)
+                .dmToDate(rs.getDate("TODATE") != null
+                        ? rs.getDate("TODATE").toLocalDate()
+                        : null)
+                .dmDays(rs.getBigDecimal("DAYS"))
+                .dmChargeAmt(rs.getBigDecimal("DM_AMT"))
+                .build();
     }
 
     private String resolveAction(String rawAction) {
