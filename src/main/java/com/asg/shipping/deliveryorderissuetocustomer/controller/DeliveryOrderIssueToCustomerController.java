@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -92,12 +94,28 @@ public class DeliveryOrderIssueToCustomerController {
 
     }
 
-    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @AllowedAction(UserRolesRightsEnum.EDIT)
     @PostMapping("/validate-document/{id}")
     public ResponseEntity<?> validateDocument(@PathVariable Long id, @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto) {
         ValidateDocumentDto dto = deliveryOrderIssueToCustomerService.validateDocument(id, requestDto);
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
-        return success("Delivery order retrieved successfully", dto);
+        return success("Delivery order validated successfully", dto);
+    }
+
+
+    /**
+     * Search delivery orders with pagination and filtering
+     * POST /v1/delivery-order-issue-to-customer/list
+     */
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @PostMapping("/list")
+    public ResponseEntity<?> searchDeliveryOrders(
+            @RequestBody(required = false) com.asg.common.lib.dto.FilterRequestDto filters,
+            @ParameterObject Pageable pageable) {
+        log.info("Searching delivery orders with filters: {}", filters);
+        Map<String, Object> result = deliveryOrderIssueToCustomerService.searchDeliveryOrders(
+                UserContext.getDocumentId(), filters, pageable);
+        return success("Delivery orders retrieved successfully", result);
     }
 
 }

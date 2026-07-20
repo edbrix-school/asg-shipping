@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselvoyagecreation.service;
 
+import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.vesselvoyagecreation.dto.CurrencyUpdateRequest;
 import com.asg.shipping.vesselvoyagecreation.dto.TranshipmentTransferRequest;
@@ -72,7 +73,7 @@ public interface VesselVoyageService {
 
     Resource downloadManifestReport(Long voyagePoid, String freightCargo, String importExport);
 
-    void deleteVoyage(Long voyagePoid);
+    void deleteVoyage(Long voyagePoid, DeleteReasonDto deleteReasonDto);
 
     /**
      * Legacy: triggerMscDataLoad (DocumentAfterSave) — fires PROC_SHIP_BL_PAGE_SAVE_AFTER

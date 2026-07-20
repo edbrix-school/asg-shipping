@@ -4,6 +4,7 @@ import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestupdate.entity.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public class ImportManifestMapper {
@@ -96,6 +97,8 @@ public class ImportManifestMapper {
                 .transactionPoid(entity.getTransactionPoid())
                 .docId(entity.getDocRef())
                 .transactionDate(entity.getTransactionDate())
+                .createdDate(entity.getCreatedDate())
+                .createdBy(entity.getCreatedBy())
                 .vesselVoyagePoid(entity.getVoyageTransactionPoid())
                 .blNumber(entity.getBlNumber())
                 .blType(entity.getBlType())
@@ -134,6 +137,8 @@ public class ImportManifestMapper {
                 .manualCanSend(entity.getManuallyCanSend())
                 .holdReason(entity.getHoldReason())
                 .holdRemarks(entity.getHoldRemarks())
+                .createdBy(entity.getCreatedBy())
+                .createdDate(entity.getCreatedDate())
                 .otherNotifies(OtherNotifyDto.builder()
                         .notify2EdiName(entity.getNotify2EdiName())
                         .notify2EdiAddress(entity.getNotify2EdiAddress())
@@ -160,13 +165,20 @@ public class ImportManifestMapper {
                         .chargeType(charge.getChargeType())
                         .chargeTypeDet(charge.getChargeTypeDet())
                         .basisPoid(charge.getChargeBasisOn())
+                        .basisDet(charge.getBasisDet())
                         .currencyCode(charge.getCurrencyCode())
                         .currencyCodeDet(charge.getCurrencyCodeDet())
+                        .rate(charge.getCurrencyExchange())
                         .quantity(charge.getQuantity())
                         .buy(charge.getBuyPercharge())
-                        .buyAmount(charge.getPerQuantityAmount())
+                        .buyAmount(charge.getBuyAmount())
+                        .sell(charge.getPerQuantityAmount())
+                        .sellAmount(charge.getSaleAmount())
+                        .gain(zeroIfNull(charge.getSaleAmount()).subtract(zeroIfNull(charge.getBuyAmount())))
                         .taxPercentage(charge.getTaxPercentage())
                         .taxAmount(charge.getTaxAmount())
+                        .freightType(charge.getFreightType())
+                        .freightTypeDet(charge.getFreightTypeDet())
                         .paidAtPortPoid(charge.getPaidAtPortPoid())
                         .paidAtPortDet(charge.getPaidAtPortDet())
                         .receiptInvoicePoid(charge.getReceiptInvoicePoid())
@@ -174,10 +186,13 @@ public class ImportManifestMapper {
                         .chargeDescription(charge.getChargeDescription())
                         .taxPoid(charge.getTaxPoid())
                         .taxDet(charge.getTaxDet())
-                        .basisDet(charge.getBasisDet())
                         .actionType(charge.getActionType())
                         .build())
                 .toList();
+    }
+
+    private static BigDecimal zeroIfNull(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     public static List<ChargeOtherDto> mapToChargesOther(List<ChargeRequestDto> chargeDetails) {
@@ -200,6 +215,7 @@ public class ImportManifestMapper {
                         .currencyCodeDet(charge.getCurrencyCodeDet())
                         .exchangeRate(charge.getCurrencyExchange())
                         .buy(charge.getBuyPercharge())
+                        .sell(charge.getPerQuantityAmount())
                         .paidAtPortPoid(charge.getPaidAtPortPoid())
                         .freightType(charge.getFreightType())
                         .freightTypeDet(charge.getFreightTypeDet())
@@ -561,6 +577,30 @@ public class ImportManifestMapper {
         return entity;
     }
 
+    public static ShipBlManifestChargesDtl mapChargesDtlFromDto(ChargeOtherDto dto, Long transactionPoid, ShipBlManifestChargesDtl entity) {
+        if (dto == null)
+            return null;
+
+        if (dto.getDetRowId() != null) {
+            ShipBlManifestDtlId id = new ShipBlManifestDtlId();
+            id.setTransactionPoid(transactionPoid);
+            id.setDetRowId(dto.getDetRowId());
+            entity.setId(id);
+        }
+
+        entity.setChargePoid(dto.getChargePoid());
+        entity.setCurrencyCode(dto.getCurrencyCode());
+        entity.setCurrencyExchange(dto.getExchangeRate());
+        entity.setQuantity(dto.getQuantity());
+        entity.setBuyPercharge(dto.getBuy());
+        entity.setPerQuantityAmount(dto.getSell());
+        entity.setPaidAtPortPoid(dto.getPaidAtPortPoid());
+        entity.setFreightType(dto.getFreightType());
+        entity.setChargeType(dto.getChargeType());
+        entity.setChargeBasisOn(dto.getBasis());
+        return entity;
+    }
+
     public static ShipBlManifestChargesDtl mapChargesDtlFromDto(ChargeDto dto, Long transactionPoid, ShipBlManifestChargesDtl entity) {
         if (dto == null)
             return null;
@@ -576,9 +616,10 @@ public class ImportManifestMapper {
         entity.setChargePoid(dto.getChargePoid());
         entity.setPrintGroup(dto.getPrintGroup());
         entity.setCurrencyCode(dto.getCurrencyCode());
+        entity.setCurrencyExchange(dto.getRate());
         entity.setQuantity(dto.getQuantity());
         entity.setBuyPercharge(dto.getBuy());
-        entity.setPerQuantityAmount(dto.getBuyAmount());
+        entity.setPerQuantityAmount(dto.getSell());
         entity.setTaxPercentage(dto.getTaxPercentage());
         entity.setTaxAmount(dto.getTaxAmount());
         entity.setPaidAtPortPoid(dto.getPaidAtPortPoid());

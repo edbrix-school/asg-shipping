@@ -155,7 +155,7 @@ public class BookingFormServiceImpl implements BookingFormService {
 
         String dataQuery = "SELECT * FROM (SELECT a.*, ROWNUM rn FROM (" +
                 "SELECT * FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where +
-                ") a WHERE ROWNUM <= ?) WHERE rn > ?";
+                " ORDER BY EMPTY_IN ASC) a WHERE ROWNUM <= ?) WHERE rn > ?";
         String countQuery = "SELECT COUNT(*) FROM VW_CONTAINER_INVENTORY_EMPTYIN" + where;
 
         List<Object> dataParams = new ArrayList<>(params);
@@ -271,9 +271,11 @@ public class BookingFormServiceImpl implements BookingFormService {
             entity.setBookingIssueNo(updateDTO.getBookingIssueNo());
         }
 
-        // Validate containers before saving details
+        // Validate containers before saving details.
+        // Fall back to the pre-update linePoid (existingData) — entity has already been overwritten
+        // by mapUpdateDTOToEntity, which uses full-replace semantics and may have set it to null.
         if (updateDTO.getContainerDetails() != null) {
-            Long linePoid = updateDTO.getLinePoid() != null ? updateDTO.getLinePoid() : entity.getLinePoid();
+            Long linePoid = updateDTO.getLinePoid() != null ? updateDTO.getLinePoid() : existingData.getLinePoid();
             for (BookingFormContainerDetailDto containerDto : updateDTO.getContainerDetails()) {
                 if (containerDto.getContainerNo() != null && containerDto.getContainerNo().length() >= 3) {
                     validateContainerLoad(containerDto.getContainerNo(), linePoid, id, groupPoid, companyPoid);
@@ -388,7 +390,7 @@ public class BookingFormServiceImpl implements BookingFormService {
                 if (status == null || status.toUpperCase().contains("ERROR") || !status.toUpperCase().contains("SUCCESS")) {
                     return status;
                 }
-                return "Successfully uploaded Empty containers";
+                return "Containers Uploaded and Saved Successfully";
             });
         } catch (Exception e) {
             log.error("Error processing empty container load for transaction: {}", transactionPoid, e);
@@ -949,7 +951,10 @@ public class BookingFormServiceImpl implements BookingFormService {
 
                 case ISDELETED -> {
                     toDelete.add(rowId);
-                    loggingService.logDelete(dto, docId, docKey);
+                    fetchExisting.apply(transactionPoid, rowId).ifPresentOrElse(
+                            entity -> loggingService.logDelete(entity, docId, docKey),
+                            () -> loggingService.logDelete(dto, docId, docKey)
+                    );
                 }
 
                 case NOCHANGES -> {
@@ -1200,6 +1205,10 @@ public class BookingFormServiceImpl implements BookingFormService {
         entity.setRefferTemp(dto.getRefferTemp());
         entity.setRefferVent(dto.getRefferVent());
 
+        entity.setLoadToVessel(dto.getLoadToVessel());
+        entity.setColor(dto.getColor());
+        entity.setOrderNumber(dto.getOrderNumber());
+
         return entity;
     }
 
@@ -1247,6 +1256,7 @@ public class BookingFormServiceImpl implements BookingFormService {
         enrichCargoDetails(dto);
         enrichChargeDetails(dto);
         enrichContainerDetails(dto);
+        enrichStuffingDetails(dto);
     }
 
     private <T> void setLov(
@@ -1268,6 +1278,15 @@ public class BookingFormServiceImpl implements BookingFormService {
         dto.getChargesDetails().forEach(charge -> {
             setLov(charge.getChargePoid(), lovService::getChargeMasterLov, charge::setChargePoidDet);
             setLov(charge.getPaidAtPortPoid(), lovService::getPortMasterLov, charge::setPaidAtPortPoidDet);
+        });
+    }
+
+    private void enrichStuffingDetails(BookingFormDto dto) {
+        if (dto.getStuffingDetails() == null) return;
+
+        dto.getStuffingDetails().forEach(stuffing -> {
+            if (stuffing.getEquipmentIsoType() != null && !stuffing.getEquipmentIsoType().isBlank())
+                lovService.getEquipmentIsoTypeLov(stuffing.getEquipmentIsoType()).stream().findFirst().ifPresent(stuffing::setEquipmentIsoTypeDet);
         });
     }
 

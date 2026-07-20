@@ -126,7 +126,7 @@ class ImportManifestControllerTest {
         FilterRequestDto filters = new FilterRequestDto("AND", "N", List.of());
         Map<String, Object> response = new HashMap<>();
 
-        when(service.list(any(), any())).thenReturn(response);
+        when(service.list(any(), any(), any(), any())).thenReturn(response);
 
         mockMvc.perform(post("/v1/import-manifest-bl/list")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -171,12 +171,11 @@ class ImportManifestControllerTest {
     @Test
     void testUpdateEmailVerification() throws Exception {
         EmailVerificationRequestDto request = new EmailVerificationRequestDto();
-        request.setTransactionPoId(1L);
         EmailVerificationResponseDto response = new EmailVerificationResponseDto();
 
         when(service.updateEmailVerification(eq(1L), any())).thenReturn(response);
 
-        mockMvc.perform(post("/v1/import-manifest-bl/update-email-verification")
+        mockMvc.perform(post("/v1/import-manifest-bl/1/update-email-verification")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

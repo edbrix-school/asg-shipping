@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -18,10 +20,10 @@ public class ContainerRateDto {
     private Long containerTypePoid;
     private LovGetListDto containerTypeDet;
 
-    private Long importBoxRate;
-    private Long exportBoxRate;
-    private Long transhipBoxRate;
-    private Long shortLegAmount;
+    private BigDecimal importBoxRate;
+    private BigDecimal exportBoxRate;
+    private BigDecimal transhipBoxRate;
+    private BigDecimal shortLegAmount;
     private String remarks;
     private String createdBy;
     private LocalDateTime createdDate;

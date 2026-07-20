@@ -182,7 +182,8 @@ public class LineCommissionController {
         log.info("LoadContainerTypesByLinePath request | linePoid={}, groupPoid={}, userId={}, actionRequested={}",
                 linePoid, groupPoid, userId, actionRequested);
         List<ContainerTypeDto> resp = service.loadContainerTypes(linePoid, groupPoid, userId);
-        return success("Records loaded", resp);
+        String message = resp.isEmpty() ? "No container types found for the selected line" : "Records loaded";
+        return success(message, resp);
     }
 }
 

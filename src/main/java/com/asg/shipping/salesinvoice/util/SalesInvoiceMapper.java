@@ -51,90 +51,34 @@ public class SalesInvoiceMapper {
      * Map Update DTO to Entity
      */
     public static void mapUpdateDTOToEntity(SalesInvoiceShippingUpdateDTO dto, ArShSalesInvoiceHdr entity) {
-        if (dto.getTransactionDate() != null) {
-            entity.setTransactionDate(dto.getTransactionDate());
-        }
-        if (dto.getInvDate() != null) {
-            entity.setInvDate(dto.getInvDate());
-        }
-        if (dto.getCompanyPoid() != null) {
-            entity.setCompanyPoid(dto.getCompanyPoid());
-        }
-        if (dto.getBlTypeInvoice() != null) {
-            entity.setBlTypeInvoice(dto.getBlTypeInvoice());
-        }
-        if (dto.getDueDate() != null) {
-            entity.setDueDate(dto.getDueDate());
-        }
-        if (dto.getInvAmount() != null) {
-            entity.setInvAmount(dto.getInvAmount());
-        }
-        if (dto.getFfJobNo() != null) {
-            entity.setFfJobNo(dto.getFfJobNo());
-        }
-        if (dto.getFfPjNo() != null) {
-            entity.setFfPjNo(dto.getFfPjNo());
-        }
-        if (dto.getJobnoPoid() != null) {
-            entity.setJobnoPoid(dto.getJobnoPoid());
-        }
-        if (dto.getCustomerPoid() != null) {
-            entity.setCustomerPoid(dto.getCustomerPoid());
-        }
-        if (dto.getCustomerAddrPoid() != null) {
-            entity.setCustomerAddrPoid(dto.getCustomerAddrPoid());
-        }
-        if (dto.getCurrencyCode() != null) {
-            entity.setCurrencyCode(dto.getCurrencyCode());
-        }
-        if (dto.getCurrencyRate() != null) {
-            entity.setCurrencyRate(dto.getCurrencyRate());
-        }
-        if (dto.getCreditDays() != null) {
-            entity.setCreditDays(dto.getCreditDays());
-        }
-        if (dto.getInvoiceAgainst() != null) {
-            entity.setInvoiceAgainst(dto.getInvoiceAgainst());
-        }
-        if (dto.getLpoSrnNo() != null) {
-            entity.setLpoSrnNo(dto.getLpoSrnNo());
-        }
-        if (dto.getLpoSrnDate() != null) {
-            entity.setLpoSrnDate(dto.getLpoSrnDate());
-        }
-        if (dto.getAuthorizedId() != null) {
-            entity.setAuthorizedId(dto.getAuthorizedId());
-        }
-        if (dto.getZeroValueInvoice() != null) {
-            entity.setZeroValueInvoice(dto.getZeroValueInvoice());
-        }
-        if (dto.getInvoiceType() != null) {
-            entity.setInvoiceType(dto.getInvoiceType());
-        }
-        if (dto.getPrintCustomerPoid() != null) {
-            entity.setPrintCustomerPoid(dto.getPrintCustomerPoid());
-        }
-        if (dto.getBlReleaseTypeOffice() != null) {
-            entity.setBlReleaseTypeOffice(dto.getBlReleaseTypeOffice());
-        }
-        if (dto.getCcRef() != null) {
-            entity.setCcRef(dto.getCcRef());
-        }
-        if (dto.getPrintInvoiceBankPoid() != null) {
-            entity.setPrintInvoiceBankPoid(dto.getPrintInvoiceBankPoid());
-        }
-        if (dto.getBookingPartyPoid() != null) {
-            entity.setBookingPartyPoid(dto.getBookingPartyPoid());
-        }
-        if (dto.getOwnInvoiceNo() != null) {
-            entity.setOwnInvoiceNo(dto.getOwnInvoiceNo());
-        }
-        if (dto.getInvoiceTo() != null) {
-            entity.setInvoiceTo(dto.getInvoiceTo());
-        }
-        if (dto.getInvoiceDeliveryDate() != null) {
-            entity.setInvoiceDeliveryDate(dto.getInvoiceDeliveryDate());
-        }
+        entity.setTransactionDate(dto.getTransactionDate());
+        entity.setInvDate(dto.getInvDate());
+        entity.setCompanyPoid(dto.getCompanyPoid());
+        entity.setBlTypeInvoice(dto.getBlTypeInvoice());
+        entity.setDueDate(dto.getDueDate());
+        entity.setInvAmount(dto.getInvAmount());
+        entity.setFfJobNo(dto.getFfJobNo());
+        entity.setFfPjNo(dto.getFfPjNo());
+        entity.setJobnoPoid(dto.getJobnoPoid());
+        entity.setCustomerPoid(dto.getCustomerPoid());
+        entity.setCustomerAddrPoid(dto.getCustomerAddrPoid());
+        entity.setCurrencyCode(dto.getCurrencyCode());
+        entity.setCurrencyRate(dto.getCurrencyRate());
+        entity.setCreditDays(dto.getCreditDays());
+        entity.setInvoiceAgainst(dto.getInvoiceAgainst());
+        entity.setLpoSrnNo(dto.getLpoSrnNo());
+        entity.setLpoSrnDate(dto.getLpoSrnDate());
+        entity.setAuthorizedId(dto.getAuthorizedId());
+        entity.setZeroValueInvoice(dto.getZeroValueInvoice());
+        entity.setInvoiceType(dto.getInvoiceType());
+        entity.setPrintCustomerPoid(dto.getPrintCustomerPoid());
+        entity.setBlReleaseTypeOffice(dto.getBlReleaseTypeOffice());
+        entity.setCcRef(dto.getCcRef());
+        entity.setPrintInvoiceBankPoid(dto.getPrintInvoiceBankPoid());
+        entity.setBookingPartyPoid(dto.getBookingPartyPoid());
+        entity.setOwnInvoiceNo(dto.getOwnInvoiceNo());
+        entity.setInvoiceTo(dto.getInvoiceTo());
+        entity.setInvoiceDeliveryDate(dto.getInvoiceDeliveryDate());
     }
 
     /**
@@ -306,6 +250,60 @@ public class SalesInvoiceMapper {
                 .printCurrencyCode(dto.getPrintCurrencyCode())
                 .printCurrencyExchange(dto.getPrintCurrencyExchange())
                 .printRateAmt(dto.getPrintRateAmt())
+                .build();
+    }
+
+    public static ArShSalesInvoiceChargDtl mapChargesDtlFromDto(SalesInvoiceChargesDtlDto dto, Long transactionPoid, Long detRowId) {
+        return ArShSalesInvoiceChargDtl.builder()
+                .transactionPoid(transactionPoid)
+                .detRowId(detRowId)
+                .blPoid(dto.getBlPoid())
+                .chargesDetRowId(dto.getChargesDetRowId())
+                .chargePoid(dto.getChargePoid())
+                .amount(dto.getAmount())
+                .amountSelect(dto.getAmountSelect())
+                .buyAmount(dto.getBuyAmount())
+                .currencyCode(dto.getCurrencyCode())
+                .currencyExchange(dto.getCurrencyExchange())
+                .quantity(dto.getQuantity())
+                .lpoSrnDate(dto.getLpoSrnDate())
+                .lpoSrnNo(dto.getLpoSrnNo())
+                .perQtyBuyAmt(dto.getPerQtyBuyAmt())
+                .perQtySellAmt(dto.getPerQtySellAmt())
+                .printGroupTemp(dto.getPrintGroupTemp())
+                .chargeType(dto.getChargeType())
+                .chargeNewRecord(dto.getChargeNewRecord() != null ? dto.getChargeNewRecord() : "N")
+                .taxPoid(dto.getTaxPoid())
+                .taxPercentage(dto.getTaxPercentage())
+                .taxAmount(dto.getTaxAmount())
+                .cnRefDocId(dto.getCnRefDocId())
+                .cnRefDocPoid(dto.getCnRefDocPoid())
+                .cnRefDetRowId(dto.getCnRefDetRowId())
+                .printCurrencyCode(dto.getPrintCurrencyCode())
+                .printCurrencyExchange(dto.getPrintCurrencyExchange())
+                .printRateAmt(dto.getPrintRateAmt())
+                .build();
+    }
+
+    public static ArShSalesInvoiceContnrDtl mapContainerDtlFromDto(SalesInvoiceContainerDtlDto dto, Long transactionPoid, Long detRowId) {
+        return ArShSalesInvoiceContnrDtl.builder()
+                .transactionPoid(transactionPoid)
+                .detRowId(detRowId)
+                .blPoid(dto.getBlPoid())
+                .containerSocYn(dto.getContainerSocYn())
+                .containerNo(dto.getContainerNo())
+                .dmFrmDate(dto.getDmFrmDate())
+                .dmToDate(dto.getDmToDate())
+                .dmDays(dto.getDmDays())
+                .dmChargeAmt(dto.getDmChargeAmt())
+                .freeDays(dto.getFreeDays())
+                .equipmentIsoType(dto.getEquipmentIsoType())
+                .dlvFormPrinted(dto.getDlvFormPrinted() != null ? dto.getDlvFormPrinted() : "N")
+                .rtnFormPrinted(dto.getRtnFormPrinted() != null ? dto.getRtnFormPrinted() : "N")
+                .emptyIn(dto.getEmptyIn())
+                .cntTaxPoid(dto.getCntTaxPoid())
+                .cntTaxPercentage(dto.getCntTaxPercentage())
+                .cntTaxAmount(dto.getCntTaxAmount())
                 .build();
     }
 }

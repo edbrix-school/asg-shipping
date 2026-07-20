@@ -3,11 +3,15 @@ package com.asg.shipping.linetariffs.controller;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.exceptions.ResourceNotFoundException;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
+import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
+import com.asg.shipping.linetariffs.dto.TariffDetailDto;
 import com.asg.shipping.linetariffs.service.LineTariffsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,11 +63,11 @@ class LineTariffsControllerTest {
     @Test
     void searchLineTariffs_Success() {
         Map<String, Object> result = new HashMap<>();
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), any(), any()))
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null), 0, 20, "description,asc");
+                new FilterRequestDto(null, null, null), 0, 20, "description,asc", null, null);
 
         assertNotNull(response);
         assertEquals(200, response.getStatusCode().value());
@@ -71,11 +75,31 @@ class LineTariffsControllerTest {
     }
 
     @Test
+    void searchLineTariffs_WhenOnlyOneDate_ReturnsBadRequest() {
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                new FilterRequestDto(null, null, null), 0, 20, null,
+                LocalDate.of(2026, 3, 20), null);
+
+        assertEquals(400, response.getStatusCode().value());
+        verify(lineTariffsService, never()).searchLineTariffs(anyString(), any(), any(), any(), any());
+    }
+
+    @Test
+    void searchLineTariffs_WhenStartAfterEnd_ReturnsBadRequest() {
+        ResponseEntity<?> response = controller.searchLineTariffs(
+                new FilterRequestDto(null, null, null), 0, 20, null,
+                LocalDate.of(2026, 6, 19), LocalDate.of(2026, 3, 20));
+
+        assertEquals(400, response.getStatusCode().value());
+        verify(lineTariffsService, never()).searchLineTariffs(anyString(), any(), any(), any(), any());
+    }
+
+    @Test
     void searchLineTariffs_WhenServiceThrows_ReturnsInternalServerError() {
-        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(anyString(), any(), any(), any(), any()))
                 .thenThrow(new RuntimeException("boom"));
 
-        ResponseEntity<?> response = controller.searchLineTariffs(null, 0, 20, null);
+        ResponseEntity<?> response = controller.searchLineTariffs(null, 0, 20, null, null, null);
 
         assertNotNull(response);
         assertEquals(500, response.getStatusCode().value());
@@ -87,11 +111,11 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), any(), any()))
                 .thenReturn(result);
 
         ResponseEntity<?> response = controller.searchLineTariffs(
-                new FilterRequestDto(null, null, null), 0, 20, " description , desc ");
+                new FilterRequestDto(null, null, null), 0, 20, " description , desc ", null, null);
 
         assertEquals(200, response.getStatusCode().value());
         Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("description");
@@ -105,10 +129,10 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), any(), any()))
                 .thenReturn(result);
 
-        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description");
+        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description", null, null);
 
         Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("description");
         assertNotNull(order);
@@ -121,10 +145,10 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), any(), any()))
                 .thenReturn(result);
 
-        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "");
+        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "", null, null);
 
         assertTrue(pageableCaptor.getValue().getSort().isUnsorted());
     }
@@ -135,10 +159,10 @@ class LineTariffsControllerTest {
         ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
                 ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
 
-        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), isNull(), isNull()))
+        when(lineTariffsService.searchLineTariffs(eq(DOC_ID), any(), pageableCaptor.capture(), any(), any()))
                 .thenReturn(result);
 
-        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description,desc,extra");
+        controller.searchLineTariffs(new FilterRequestDto(null, null, null), 0, 20, "description,desc,extra", null, null);
 
         assertTrue(pageableCaptor.getValue().getSort().isUnsorted());
     }
@@ -258,8 +282,6 @@ class LineTariffsControllerTest {
 
     @Test
     void copySlabsToPayable_DMG_Success() {
-        doNothing().when(lineTariffsService).copySlabsToPayable(1L, "DMG");
-
         ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DMG");
 
         assertNotNull(response);
@@ -269,8 +291,6 @@ class LineTariffsControllerTest {
 
     @Test
     void copySlabsToPayable_DTN_Success() {
-        doNothing().when(lineTariffsService).copySlabsToPayable(1L, "DTN");
-
         ResponseEntity<?> response = controller.copySlabsToPayable(1L, "DTN");
 
         assertNotNull(response);
@@ -280,33 +300,71 @@ class LineTariffsControllerTest {
 
     @Test
     void loadContainerTypes_IMP_Success() {
-        doNothing().when(lineTariffsService).loadContainerTypes(1L, "IMP");
+        LoadContainerTypesResponseDto response = LoadContainerTypesResponseDto.builder()
+                .transactionPoid(1L)
+                .type("IMP")
+                .containerTypes(List.of(TariffDetailDto.builder().detRowId(1L).build()))
+                .build();
+        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(response);
 
-        ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
+        ResponseEntity<?> apiResponse = controller.loadContainerTypes(1L, "IMP");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(apiResponse);
+        assertEquals(200, apiResponse.getStatusCode().value());
         verify(lineTariffsService).loadContainerTypes(1L, "IMP");
     }
 
     @Test
     void loadContainerTypes_EXP_Success() {
-        doNothing().when(lineTariffsService).loadContainerTypes(1L, "EXP");
+        when(lineTariffsService.loadContainerTypes(1L, "EXP")).thenReturn(
+                LoadContainerTypesResponseDto.builder().transactionPoid(1L).type("EXP").containerTypes(List.of()).build());
 
-        ResponseEntity<?> response = controller.loadContainerTypes(1L, "EXP");
+        ResponseEntity<?> apiResponse = controller.loadContainerTypes(1L, "EXP");
 
-        assertNotNull(response);
-        assertEquals(200, response.getStatusCode().value());
+        assertNotNull(apiResponse);
+        assertEquals(200, apiResponse.getStatusCode().value());
         verify(lineTariffsService).loadContainerTypes(1L, "EXP");
     }
 
     @Test
     void loadContainerTypes_ReturnsEmptyList_WhenAllUsed() {
-        doNothing().when(lineTariffsService).loadContainerTypes(1L, "IMP");
+        when(lineTariffsService.loadContainerTypes(1L, "IMP")).thenReturn(
+                LoadContainerTypesResponseDto.builder().transactionPoid(1L).type("IMP").containerTypes(List.of()).build());
 
-        ResponseEntity<?> response = controller.loadContainerTypes(1L, "IMP");
+        ResponseEntity<?> apiResponse = controller.loadContainerTypes(1L, "IMP");
 
-        assertNotNull(response);
+        assertNotNull(apiResponse);
+        assertEquals(200, apiResponse.getStatusCode().value());
+    }
+
+    @Test
+    void print_Success() throws Exception {
+        byte[] pdf = new byte[]{1, 2, 3};
+        when(lineTariffsService.print(1L)).thenReturn(pdf);
+
+        ResponseEntity<?> response = controller.print(1L);
+
         assertEquals(200, response.getStatusCode().value());
+        assertArrayEquals(pdf, (byte[]) response.getBody());
+        verify(lineTariffsService).print(1L);
+    }
+
+    @Test
+    void print_NotFound() throws Exception {
+        when(lineTariffsService.print(1L))
+                .thenThrow(new ResourceNotFoundException("Line Tariff", "transactionPoid", "1"));
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(404, response.getStatusCode().value());
+    }
+
+    @Test
+    void print_Error() throws Exception {
+        when(lineTariffsService.print(1L)).thenThrow(new RuntimeException("jasper failed"));
+
+        ResponseEntity<?> response = controller.print(1L);
+
+        assertEquals(500, response.getStatusCode().value());
     }
 }

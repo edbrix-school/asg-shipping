@@ -1,5 +1,6 @@
 package com.asg.shipping.bookingFormSH.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,7 @@ public class BookingFormStuffingLoadDetailDto {
     private String containerNo;
     private String equipmentSealNo;
     private String equipmentIsoType;
+    private LovItem equipmentIsoTypeDet;
     private String marks;
     private String colourCode;
     private BigDecimal weightTonnes;

@@ -36,5 +36,7 @@ public class SalesInvoiceContainerDtlDto {
     private LovGetListDto cntTaxDet;
     private BigDecimal cntTaxPercentage;
     private BigDecimal cntTaxAmount;
+
+    private String actionType;  // "isCreated", "isUpdated", "isDeleted", "noChanges"
 }
 

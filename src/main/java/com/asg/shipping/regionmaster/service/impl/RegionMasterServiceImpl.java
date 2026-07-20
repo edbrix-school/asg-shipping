@@ -110,7 +110,7 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         String name = request.getRegionName().trim();
 
         // Check uniqueness of region code
-        if (repository.existsByRegionCodeAndGroupPoidAndDeletedNot(code, groupPoid, "Y")) {
+        if (repository.existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNot(code, groupPoid, "Y")) {
             log.error("Region code already exists: {} for groupPoid: {}", code, groupPoid);
             throw new ValidationException(
                     "Region code already exists: " + code
@@ -118,7 +118,7 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         }
 
         // Check uniqueness of region name
-        if (repository.existsByRegionNameAndGroupPoidAndDeletedNot(name, groupPoid, "Y")) {
+        if (repository.existsByRegionNameIgnoreCaseAndGroupPoidAndDeletedNot(name, groupPoid, "Y")) {
             log.error("Region name already exists: {} for groupPoid: {}", name, groupPoid);
             throw new ValidationException(
                     "Region name already exists: " + name
@@ -162,8 +162,8 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         String newName = request.getRegionName() != null ? request.getRegionName().trim() : null;
 
         // Check uniqueness of region code if changed
-        if (newCode != null && !newCode.equals(entity.getRegionCode())
-                && repository.existsByRegionCodeAndGroupPoidAndDeletedNotAndRegionPoidNot(
+        if (newCode != null && !newCode.equalsIgnoreCase(entity.getRegionCode())
+                && repository.existsByRegionCodeIgnoreCaseAndGroupPoidAndDeletedNotAndRegionPoidNot(
                         newCode, groupPoid, "Y", regionPoid)) {
             log.error("Region code already exists: {} for groupPoid: {}", newCode, groupPoid);
             throw new ValidationException(
@@ -172,8 +172,8 @@ public class RegionMasterServiceImpl implements RegionMasterService {
         }
 
         // Check uniqueness of region name if changed
-        if (newName != null && !newName.equals(entity.getRegionName())
-                && repository.existsByRegionNameAndGroupPoidAndDeletedNotAndRegionPoidNot(
+        if (newName != null && !newName.equalsIgnoreCase(entity.getRegionName())
+                && repository.existsByRegionNameIgnoreCaseAndGroupPoidAndDeletedNotAndRegionPoidNot(
                         newName, groupPoid, "Y", regionPoid)) {
             log.error("Region name already exists: {} for groupPoid: {}", newName, groupPoid);
             throw new ValidationException(

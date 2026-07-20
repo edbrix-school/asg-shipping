@@ -112,6 +112,9 @@ public class LineProfileServiceImpl implements LineProfileService {
         if (groupPoid == null) throw new ValidationException("groupPoid is required");
         if (userId == null) throw new ValidationException("userId is required");
 
+        if (request.getLinePoid() != null && masterRepository.existsByLinePoidAndGroupPoidAndDeleted(request.getLinePoid(), groupPoid, "N"))
+            throw new ValidationException("Duplicate Line Profile already exists");
+
         ShipLineProfileMasterEntity master = mapper.toCreateEntity(request, groupPoid, userId);
         ShipLineProfileMasterEntity saved = masterRepository.saveAndFlush(master);
         entityManager.refresh(saved);
@@ -140,6 +143,9 @@ public class LineProfileServiceImpl implements LineProfileService {
 
         ShipLineProfileMasterEntity oldEntity = new ShipLineProfileMasterEntity();
         BeanUtils.copyProperties(master, oldEntity);
+
+        if (request.getLinePoid() != null && masterRepository.existsByLinePoidAndGroupPoidAndDeletedAndLineProfilePoidNot(request.getLinePoid(), groupPoid, "N", lineProfilePoid))
+            throw new ValidationException("Duplicate Line Profile already exists");
 
         mapper.applyUpdate(master, request, userId);
         ShipLineProfileMasterEntity saved = masterRepository.save(master);

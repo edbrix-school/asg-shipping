@@ -19,6 +19,8 @@ public interface ShipBlReprintHdrRepository extends JpaRepository<ShipBlReprintH
            "AND (h.deleted IS NULL OR h.deleted = 'N')")
     Optional<ShipBlReprintHdr> findActiveByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
+    Optional<ShipBlReprintHdr> findByTransactionPoid(Long transactionPoid);
+
     @Query("SELECT h FROM ShipBlReprintHdr h WHERE h.blNumber = :blNumber " +
            "AND (h.deleted IS NULL OR h.deleted = 'N')")
     List<ShipBlReprintHdr> findByBlNumber(@Param("blNumber") String blNumber);

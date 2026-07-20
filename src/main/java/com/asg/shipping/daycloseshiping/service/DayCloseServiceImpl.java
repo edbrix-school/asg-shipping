@@ -81,8 +81,8 @@ public class DayCloseServiceImpl implements DayCloseService {
     @Override
     public DayCloseDto getDayClose(Long transactionPoid, Long groupPoid, Long companyPoid) {
 
-        ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid).filter(h -> !"Y".equals(h.getDeleted())).orElseThrow(
-                () -> new ResourceNotFoundException("Day Close", TRANSACTIONPOID, transactionPoid.toString()));
+        ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Day Close", TRANSACTIONPOID, transactionPoid.toString()));
 
         List<ArShDayEndCloseDtl> details = dtlRepo.findByTransactionPoid(transactionPoid);
 
@@ -142,19 +142,20 @@ public class DayCloseServiceImpl implements DayCloseService {
         validateAmounts(request);
 
         ArShDayEndCloseHdr existingData = hdrRepo.findById(transactionPoid).orElseThrow(() -> new ResourceNotFoundException("Day close Shipping", TRANSACTIONPOID, transactionPoid));
-        ArShDayEndCloseHdr hdr = new ArShDayEndCloseHdr();
-        hdr.setTransactionPoid(transactionPoid);
 
         if("Y".equals(existingData.getVerifiedRcvd())){
             throw new ValidationException("Already Handover Completed.");
         }
 
-        DayCloseMapper.mapCreateDTOToEntity(request.getHeader(), hdr, groupPoid, companyPoid);
-        hdrRepo.save(hdr);
+        ArShDayEndCloseHdr oldData = new ArShDayEndCloseHdr();
+        BeanUtils.copyProperties(existingData, oldData);
+
+        DayCloseMapper.mapCreateDTOToEntity(request.getHeader(), existingData, groupPoid, companyPoid);
+        hdrRepo.save(existingData);
 
         saveDenominations(transactionPoid, request.getDenominations());
         String docId = UserContext.getDocumentId();
-        loggingService.logChanges(existingData, hdr, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID);
+        loggingService.logChanges(oldData, existingData, ArShDayEndCloseHdr.class, docId, transactionPoid.toString(), LogDetailsEnum.MODIFIED, TRANSACTION_POID);
 
         return getDayClose(transactionPoid, groupPoid, companyPoid);
     }
@@ -245,12 +246,9 @@ public class DayCloseServiceImpl implements DayCloseService {
                     ArShDayEndCloseDtl oldEntity = new ArShDayEndCloseDtl();
                     BeanUtils.copyProperties(existingData, oldEntity);
 
-                    ArShDayEndCloseDtl existing = new ArShDayEndCloseDtl();
-                    BeanUtils.copyProperties(existingData, existing);
-
-                    mapDayCloseDtlFromDto(dto, existing, transactionPoid);
-                    toUpdate.add(existing);
-                    logRequests.add(new LogRequestDto<>(oldEntity, existing, ArShDayEndCloseDtl.class, docId,
+                    mapDayCloseDtlFromDto(dto, existingData, transactionPoid);
+                    toUpdate.add(existingData);
+                    logRequests.add(new LogRequestDto<>(oldEntity, existingData, ArShDayEndCloseDtl.class, docId,
                             docKeyPoid, "DAYENDCLOSE DET_ROW_ID: " + dto.getDetRowId()));
                     break;
 

@@ -48,7 +48,7 @@
 	</parameter>
 	<parameter name="LOGIN_USER_POID" class="java.lang.String" isForPrompting="false"/>
 	<parameter name="DOC_ID" class="java.lang.String" isForPrompting="false"/>
-	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="DOC_KEY_POID" class="java.lang.Long"/>
 	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
 		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
 	</parameter>
@@ -177,7 +177,7 @@ FROM (
 LEFT JOIN GLOBAL_ADDRESS_DETAILS GA1 ON SM.ADDRESS_ID = GA1.ADDRESS_MASTER_POID AND GA1.ADDRESS_TYPE='MAIN'
 LEFT JOIN GLOBAL_ADDRESS_MASTER GA ON GA1.ADDRESS_MASTER_POID = GA.ADDRESS_MASTER_POID
 LEFT JOIN GLOBAL_COMPANY_MASTER COMMAST  ON COMMAST.COMPANY_POID=HDR.COMPANY_POID
-INNER JOIN GL_BANK_MASTER GBM ON GBM.BANK_POID=RTN_GLOBAL_PARAMETER(COMMAST.group_poid, 'CAN_GL_BANK_SHIPPING','CAN_BANK_TRANSFER', COMMAST.company_poid, 'xx')
+LEFT JOIN GL_BANK_MASTER GBM ON GBM.BANK_POID=RTN_GLOBAL_PARAMETER(COMMAST.group_poid, 'CAN_GL_BANK_SHIPPING','CAN_BANK_TRANSFER', COMMAST.company_poid, 'xx')
 WHERE HDR.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 	</queryString>
 	<field name="DIVISION_POID" class="java.lang.String"/>

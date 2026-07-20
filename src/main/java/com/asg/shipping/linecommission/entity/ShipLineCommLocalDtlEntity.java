@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "SHIP_LINE_COMM_LOCAL_DTL")
 @IdClass(ShipLineCommLocalDtlId.class)
@@ -27,10 +29,10 @@ public class ShipLineCommLocalDtlEntity extends BaseEntity {
     private Long currencyPoid;
 
     @Column(name = "PERCENT")
-    private Long percent;
+    private BigDecimal percent;
 
     @Column(name = "SHARE_AMOUNT")
-    private Long shareAmount;
+    private BigDecimal shareAmount;
 
     @Column(name = "REMARKS")
     private String remarks;

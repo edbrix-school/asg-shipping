@@ -66,7 +66,7 @@ public class ChargeGroupMasterServiceTest {
     void setUp() {
         requestDto = ChargeGroupMasterRequestDto.builder()
                 .chargeGroupCode("TEST001")
-                .chargeGroupName("Test Charge Group")
+                .chargeGroupName("TEST CHARGE GROUP")
                 .chargeGroupName2("Test Charge Group 2")
                 .chargeGlPayable(1001L)
                 .chargeGlSale(1002L)
@@ -80,7 +80,7 @@ public class ChargeGroupMasterServiceTest {
                 .chargeGroupPoid(1L)
                 .groupPoid(100L)
                 .chargeGroupCode("TEST001")
-                .chargeGroupName("Test Charge Group")
+                .chargeGroupName("TEST CHARGE GROUP")
                 .chargeGroupName2("Test Charge Group 2")
                 .chargeGlPayable(1001L)
                 .chargeGlSale(1002L)
@@ -104,7 +104,7 @@ public class ChargeGroupMasterServiceTest {
             mocked.when(UserContext::getDocumentId).thenReturn("DOC001");
 
             when(repository.findByChargeGroupCodeIgnoreCase("TEST001")).thenReturn(Optional.empty());
-            when(repository.findByChargeGroupNameIgnoreCase("Test Charge Group")).thenReturn(Optional.empty());
+            when(repository.findByChargeGroupNameIgnoreCase("TEST CHARGE GROUP")).thenReturn(Optional.empty());
             when(repository.save(any(ShipChargeGroupMaster.class))).thenReturn(entity);
             when(lovService.getDetailsByPoidAndLovName(anyLong(), anyString())).thenReturn(lovDto);
 
@@ -129,7 +129,7 @@ public class ChargeGroupMasterServiceTest {
     @Test
     void create_DuplicateName() {
         when(repository.findByChargeGroupCodeIgnoreCase("TEST001")).thenReturn(Optional.empty());
-        when(repository.findByChargeGroupNameIgnoreCase("Test Charge Group")).thenReturn(Optional.of(entity));
+        when(repository.findByChargeGroupNameIgnoreCase("TEST CHARGE GROUP")).thenReturn(Optional.of(entity));
 
         assertThrows(IllegalArgumentException.class, () -> service.create(requestDto));
         verify(repository, never()).save(any());
@@ -144,8 +144,8 @@ public class ChargeGroupMasterServiceTest {
             mocked.when(UserContext::getDocumentId).thenReturn("DOC001");
 
             when(repository.findById(1L)).thenReturn(Optional.of(entity));
-            when(repository.existsByChargeGroupNameAndChargeGroupPoidNot("Test Charge Group", 1L)).thenReturn(false);
-            when(repository.existsByChargeGroupCodeAndChargeGroupPoidNot("TEST001", 1L)).thenReturn(false);
+            when(repository.existsByChargeGroupNameIgnoreCaseAndChargeGroupPoidNot("TEST CHARGE GROUP", 1L)).thenReturn(false);
+            when(repository.existsByChargeGroupCodeIgnoreCaseAndChargeGroupPoidNot("TEST001", 1L)).thenReturn(false);
             when(repository.save(any(ShipChargeGroupMaster.class))).thenReturn(entity);
             when(lovService.getDetailsByPoidAndLovName(anyLong(), anyString())).thenReturn(lovDto);
 
@@ -170,7 +170,7 @@ public class ChargeGroupMasterServiceTest {
     @Test
     void update_DuplicateName() {
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
-        when(repository.existsByChargeGroupNameAndChargeGroupPoidNot("Test Charge Group", 1L)).thenReturn(true);
+        when(repository.existsByChargeGroupNameIgnoreCaseAndChargeGroupPoidNot("TEST CHARGE GROUP", 1L)).thenReturn(true);
 
         assertThrows(ValidationException.class, () -> service.update(1L, requestDto));
         verify(repository, never()).save(any());
@@ -179,8 +179,8 @@ public class ChargeGroupMasterServiceTest {
     @Test
     void update_DuplicateCode() {
         when(repository.findById(1L)).thenReturn(Optional.of(entity));
-        when(repository.existsByChargeGroupNameAndChargeGroupPoidNot("Test Charge Group", 1L)).thenReturn(false);
-        when(repository.existsByChargeGroupCodeAndChargeGroupPoidNot("TEST001", 1L)).thenReturn(true);
+        when(repository.existsByChargeGroupNameIgnoreCaseAndChargeGroupPoidNot("TEST CHARGE GROUP", 1L)).thenReturn(false);
+        when(repository.existsByChargeGroupCodeIgnoreCaseAndChargeGroupPoidNot("TEST001", 1L)).thenReturn(true);
 
         assertThrows(ValidationException.class, () -> service.update(1L, requestDto));
         verify(repository, never()).save(any());

@@ -404,7 +404,13 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         if (!toUpdate.isEmpty()) {
             updatedItems = cntnrRepository.saveAll(toUpdate);
             if (!logRequests.isEmpty()) {
-                loggingService.createLogBatch(logRequests);
+                List<LogRequestDto<ShipLineCommCntnrDtlEntity>> savedLogRequests = new ArrayList<>();
+                for (int i = 0; i < logRequests.size(); i++) {
+                    LogRequestDto<ShipLineCommCntnrDtlEntity> req = logRequests.get(i);
+                    ShipLineCommCntnrDtlEntity savedNew = updatedItems.get(i);
+                    savedLogRequests.add(new LogRequestDto<>(req.getOldObj(), savedNew, ShipLineCommCntnrDtlEntity.class, docId, docKeyPoid, req.getLogDetail()));
+                }
+                loggingService.createLogBatch(savedLogRequests);
             }
         }
 
@@ -496,7 +502,13 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         if (!toUpdate.isEmpty()) {
             updatedItems = dtlRepository.saveAll(toUpdate);
             if (!logRequests.isEmpty()) {
-                loggingService.createLogBatch(logRequests);
+                List<LogRequestDto<ShipLineCommDtlEntity>> savedLogRequests = new ArrayList<>();
+                for (int i = 0; i < logRequests.size(); i++) {
+                    LogRequestDto<ShipLineCommDtlEntity> req = logRequests.get(i);
+                    ShipLineCommDtlEntity savedNew = updatedItems.get(i);
+                    savedLogRequests.add(new LogRequestDto<>(req.getOldObj(), savedNew, ShipLineCommDtlEntity.class, docId, docKeyPoid, req.getLogDetail()));
+                }
+                loggingService.createLogBatch(savedLogRequests);
             }
         }
 
@@ -588,7 +600,13 @@ public class LineCommissionServiceImpl implements LineCommissionService {
         if (!toUpdate.isEmpty()) {
             updatedItems = localRepository.saveAll(toUpdate);
             if (!logRequests.isEmpty()) {
-                loggingService.createLogBatch(logRequests);
+                List<LogRequestDto<ShipLineCommLocalDtlEntity>> savedLogRequests = new ArrayList<>();
+                for (int i = 0; i < logRequests.size(); i++) {
+                    LogRequestDto<ShipLineCommLocalDtlEntity> req = logRequests.get(i);
+                    ShipLineCommLocalDtlEntity savedNew = updatedItems.get(i);
+                    savedLogRequests.add(new LogRequestDto<>(req.getOldObj(), savedNew, ShipLineCommLocalDtlEntity.class, docId, docKeyPoid, req.getLogDetail()));
+                }
+                loggingService.createLogBatch(savedLogRequests);
             }
         }
 

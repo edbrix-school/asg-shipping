@@ -1,6 +1,5 @@
 package com.asg.shipping.vesselvoyagecreation.dto;
 
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +16,6 @@ public class TranshipmentTransferRequest {
     @NotNull
     private Long targetVoyagePoid;
 
-    @NotEmpty
     private List<Long> detRowIds;
 }
 

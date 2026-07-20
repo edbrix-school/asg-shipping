@@ -4,10 +4,12 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.ExcelExportService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.service.SalesInvoiceShippingService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +51,7 @@ public class SalesInvoiceShippingController {
 
     private final SalesInvoiceShippingService service;
     private final ExcelExportService excelExportService;
+    private final LoggingService loggingService;
 
     /**
      * Search Sales Invoice records
@@ -117,6 +120,7 @@ public class SalesInvoiceShippingController {
         try {
             log.info("Get request for Sales Invoice with id: {}", id);
             SalesInvoiceShippingDto dto = service.getSalesInvoice(id);
+            loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
             return success("Sales Invoice retrieved successfully", dto);
         } catch (Exception e) {
             return internalServerError("Error fetching Sales Invoice: " + e.getMessage());
@@ -600,7 +604,13 @@ public class SalesInvoiceShippingController {
         try {
             log.info("Load BL data request for invoice id: {}", blPoid);
             var result = service.loadBlData(blPoid, request);
-            return success("BL data loaded successfully", result);
+            String message;
+            if (result.getLPO_SRN_NO() != null) {
+                 message = result.getLPO_SRN_NO();
+            } else {
+                message = "BL data loaded successfully";
+            }
+            return success(message, result);
         } catch (Exception e) {
             return internalServerError("Error loading BL data: " + e.getMessage());
         }
@@ -730,6 +740,8 @@ public class SalesInvoiceShippingController {
             case "CREATED_DATE" -> "CREATED_DATE";
             case "LASTMODIFIED_BY" -> "LASTMODIFIED_BY";
             case "LASTMODIFIED_DATE" -> "LASTMODIFIED_DATE";
+            case "CUSTOMER_NAME" -> "CUSTOMER_NAME";
+            case "BL_NUMBER" -> "BL_NUMBER";
             default -> "INV_DATE";
         };
     }
@@ -795,6 +807,30 @@ public class SalesInvoiceShippingController {
             log.error("error",e);
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
+    }
+
+    @Operation(
+            summary = "Calculate Days and Amount after filling to date",
+            description = "Calculate Days and Amount after filling to date in a container details.",
+            responses = {
+        @ApiResponse(responseCode = "200", description = "Days and amount calculated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request data or validation failed"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    }
+    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            description = "Provide required details for Sales Invoice container to calculate days and amount.",
+            content = @Content(
+                    schema = @Schema(implementation = SalesInvoiceContainerDtlRequestDTO.class)
+            )
+    )
+    @PostMapping("/fetch-sales-invoice-contr-details")
+    public ResponseEntity<?> fetchSalesInvoiceContrDetails(
+            @Valid @RequestBody SalesInvoiceContainerDtlRequestDTO containerDtlDto
+    ) {
+        SalesInvoiceContainerDtlResponseDTO response = service.fetchSalesInvoiceContrDetails(containerDtlDto);
+        return success("Container details fetched successfully", response);
     }
 }
 

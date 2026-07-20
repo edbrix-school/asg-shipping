@@ -8,25 +8,36 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.ApprovalService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.exportManifestBl.dto.*;
-import com.asg.shipping.exportManifestBl.dto.ShipBlToFfDto;
 import com.asg.shipping.exportManifestBl.entity.*;
 import com.asg.shipping.exportManifestBl.repository.*;
 import com.asg.shipping.exportManifestBl.repository.ShipBlToFfRepository;
 import com.asg.shipping.exportManifestBl.util.ExportManifestBlMapper;
+import com.asg.shipping.common.service.LovService;
+import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
+import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
+import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
+import com.asg.shipping.bookingFormSH.repository.ShipMateHdrRepository;
+import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
+import com.asg.shipping.vesselvoyagecreation.repository.ShipVoyageHdrRepository;
+import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsRequestDto;
+import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsResponseDto;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestCargoDtlId;
 import org.springframework.beans.BeanUtils;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,9 +47,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.sql.CallableStatement;
+import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+
+import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
+import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
+import static com.asg.common.lib.security.util.UserContext.getUserPoid;
+import static org.springframework.util.StringUtils.hasText;
 
 import net.sf.jasperreports.engine.JasperReport;
 import javax.sql.DataSource;
@@ -48,12 +71,21 @@ import javax.sql.DataSource;
 @Slf4j
 public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
+    private static final String UPDATE_TYPE_AUTO_CUSTOMER_CHARGE = "AUTOCUSTOMERCHARGE";
+    /** Matches PROC_SHIP_BL_PAGE_SAVE_AFTER — rolls up CBM/weight/packs and port auto-charges. */
+    private static final String UPDATE_TYPE_AUTOSUM_WEIGHT_PACK = "AUTOSUMWEIGHTPACKATE";
+    private static final String SALES_INVOICE_DOCUMENT_ID = "300-102";
+    /** Matches document master DOC_NAME / ROUTE_NAME for SPA tab navigation. */
+    private static final String SALES_INVOICE_DOCUMENT_NAME = "Sales Invoice (Shipping)";
+    private static final String EXPORT_MANIFEST_DOCUMENT_ID = "100-104";
+
     private final ExportManifestBlHdrRepository repository;
     private final ExportManifestBlGeneralDtlRepository generalDtlRepository;
     private final ExportManifestBlCargoDtlRepository cargoDtlRepository;
     private final ExportManifestBlContainerDtlRepository containerDtlRepository;
     private final ExportManifestBlChargesDtlRepository chargesDtlRepository;
     private final com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService manifestUpdateService;
+    private final ExportManifestBlProcRepository procRepository;
     private final DocumentSearchService documentService;
     private final ExportManifestBlMapper mapper;
     private final JdbcTemplate jdbcTemplate;
@@ -61,6 +93,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final PrintService printService;
     private final DataSource dataSource;
     private final LoggingService loggingService;
+    private final LovService lovService;
+    private final ExportManifestBlLoadBookingRepository loadBookingRepository;
+    private final ShipMateHdrRepository shipMateHdrRepository;
+    private final ShipMateContainerDtlRepository shipMateContainerDtlRepository;
+    private final ExportManifestBlBookingSelectionRepository bookingSelectionRepository;
+    private final ShipVoyageHdrRepository shipVoyageHdrRepository;
+    private final ApprovalService approvalService;
 
     private String normalizeActionType(String actionType) {
         return actionType == null ? "" : actionType.trim().toLowerCase();
@@ -124,7 +163,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     public ExportManifestBlRequestDto updateExportManifestBl(Long id, ExportManifestBlUpdateDto dto, Long companyPoid, Long groupPoid) {
         log.info("Updating Export Manifest BL with id: {}", id);
 
-        ExportManifestBlHdr entity = repository.findByTransactionPoid(id)
+        ExportManifestBlHdr entity = repository.findActiveExportBlByTransactionPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", id.toString()));
 
@@ -174,12 +213,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> searchExportManifestBl(String docId, FilterRequestDto request, Pageable pageable) {
+    public Map<String, Object> searchExportManifestBl(String docId, FilterRequestDto request, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         log.info("Searching Export Manifest BL with docId: {}", docId);
 
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+        List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", fromDate, toDate);
 
         // Add BL_TYPE = 'EXPORT' filter
         if (filters == null) {
@@ -205,7 +244,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     public ExportManifestBlRequestDto getExportManifestBl(Long id) {
         log.info("Getting Export Manifest BL with id: {}", id);
 
-        ExportManifestBlHdr entity = repository.findByTransactionPoid(id)
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+
+        ExportManifestBlHdr entity = repository.findExportBlByTransactionPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", id.toString()));
 
@@ -228,7 +270,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     public void deleteExportManifestBl(Long id) {
         log.info("Deleting Export Manifest BL with id: {}", id);
 
-        ExportManifestBlHdr entity = repository.findByTransactionPoid(id)
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+
+        ExportManifestBlHdr entity = repository.findExportBlByTransactionPoid(id, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Export Manifest BL", "transactionPoid", id.toString()));
 
@@ -253,12 +298,104 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
 
         Long companyPoid = UserContext.getCompanyPoid();
-        ShipBlToFfDto result = shipBlToFfRepository.findByBlNumber(blNumber.trim(), companyPoid)
+        ShipBlToFfDto result = enrichFfJobRow(shipBlToFfRepository.findByBlNumber(blNumber.trim(), companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "FF Job Details", "BL number", blNumber));
+                        "FF Job Details", "BL number", blNumber)));
 
         log.info("Successfully retrieved FF job details for BL number: {}", blNumber);
         return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ShipBlToFfDto> getShipBlToFfByManifestPoid(Long transactionPoid) {
+        log.info("Getting FF job details for manifest transactionPoid: {}", transactionPoid);
+
+        Long companyPoid = UserContext.getCompanyPoid();
+        validateActiveExportManifestBl(transactionPoid, companyPoid);
+
+        return shipBlToFfRepository.findAllByManifestPoid(transactionPoid, companyPoid).stream()
+                .map(this::enrichFfJobRow)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteFfPurchaseJournal(Long transactionPoid, Long rnumid) {
+        log.info("Deleting FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+
+        if (rnumid == null) {
+            throw new ValidationException("FF job row id is required");
+        }
+
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long groupPoid = UserContext.getGroupPoid();
+        validateActiveExportManifestBl(transactionPoid, companyPoid);
+
+        ShipBlToFfDto ffRow = shipBlToFfRepository.findByRnumidAndManifestPoid(rnumid, transactionPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("FF Job", "rnumid", rnumid.toString()));
+
+        if (!hasText(ffRow.getFfPj())) {
+            throw new ValidationException("No FF Purchase Journal exists to delete for the selected row");
+        }
+        if (!hasText(ffRow.getMasterBlNo())) {
+            throw new ValidationException("Master BL number is missing for the selected FF job row");
+        }
+
+        callProcGlReverseShtoffPosting(
+                groupPoid,
+                companyPoid,
+                UserContext.getUserPoid(),
+                ffRow.getMasterBlNo().trim(),
+                String.valueOf(rnumid));
+
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(),
+                String.format("FF Jobs row %s reversed via PROC_GL_REVERSE_SHTOFF_POSTING for BL %s, PJ %s",
+                        rnumid, ffRow.getMasterBlNo(), ffRow.getFfPj()));
+
+        log.info("Successfully reversed FF purchase journal {} for manifest transactionPoid: {}", ffRow.getFfPj(), transactionPoid);
+    }
+
+    private ShipBlToFfDto enrichFfJobRow(ShipBlToFfDto row) {
+        row.setDeleteAllowed(hasText(row.getFfPj()));
+        return row;
+    }
+
+    private void validateActiveExportManifestBl(Long transactionPoid, Long companyPoid) {
+        Long groupPoid = UserContext.getGroupPoid();
+        repository.findActiveExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Export Manifest BL", "transactionPoid", transactionPoid.toString()));
+    }
+
+    private void callProcGlReverseShtoffPosting(Long groupPoid, Long companyPoid, Long userPoid,
+                                                 String masterBlNo, String rnumid) {
+        try {
+            String sql = "{call PROC_GL_REVERSE_SHTOFF_POSTING(?, ?, ?, ?, ?, ?)}";
+            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
+                cs.setLong(1, groupPoid);
+                cs.setLong(2, companyPoid);
+                cs.setLong(3, userPoid);
+                cs.setString(4, masterBlNo);
+                cs.setString(5, rnumid);
+                cs.registerOutParameter(6, Types.VARCHAR);
+                cs.execute();
+                String status = cs.getString(6);
+                if (status == null || status.isBlank()) {
+                    throw new ValidationException("No status returned from PROC_GL_REVERSE_SHTOFF_POSTING");
+                }
+                if (status.toUpperCase().contains("ERROR")) {
+                    throw new ValidationException(status.trim());
+                }
+                return null;
+            });
+        } catch (ValidationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Error calling PROC_GL_REVERSE_SHTOFF_POSTING for masterBlNo: {}, rnumid: {}",
+                    masterBlNo, rnumid, ex);
+            throw new ValidationException("Error reversing FF purchase journal: " + ex.getMessage());
+        }
     }
     
     @Override
@@ -287,6 +424,357 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 		params.put("DOC_KEY_POID_CNT", transactionPoid.toString());
 	    return printService.fillReportToPdf(mainReport, params, dataSource);
 	}
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request) {
+        if (request.getChargePoid() == null) {
+            throw new ValidationException("Charge POID is required");
+        }
+
+        Long companyPoid = UserContext.getCompanyPoid();
+        Object[] taxData = procRepository.getTaxRate(
+                request.getChargePoid(), companyPoid, request.getTransactionDate());
+        Long taxPoid = (Long) taxData[0];
+        BigDecimal taxPercentage = (BigDecimal) taxData[1];
+
+        ChargeDefaultsResponseDto.ChargeDefaultsResponseDtoBuilder builder = ChargeDefaultsResponseDto.builder()
+                .taxPoid(taxPoid)
+                .taxPercentage(taxPercentage != null ? taxPercentage : BigDecimal.ZERO);
+
+        if (taxPoid != null) {
+            try {
+                builder.taxDet(lovService.getLovItemByPoid(taxPoid, "TAX_MASTER",
+                        UserContext.getGroupPoid(), companyPoid, UserContext.getUserPoid()));
+            } catch (Exception e) {
+                log.warn("Failed to fetch TAX_MASTER LOV for taxPoid: {}", taxPoid, e);
+            }
+        }
+
+        return builder.build();
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Map<String, Object> loadLocalCharges(Long transactionPoid) {
+        log.info("Loading port local charges for Export Manifest BL: {}", transactionPoid);
+        validateActiveExportManifestBl(transactionPoid, UserContext.getCompanyPoid());
+
+        try {
+            procRepository.processExportLocalCharge(
+                    UserContext.getGroupPoid(),
+                    UserContext.getCompanyPoid(),
+                    transactionPoid);
+        } catch (Exception e) {
+            log.error("Error loading local charges for Export Manifest BL: {}", transactionPoid, e);
+            throw new ValidationException("Failed to load local charges: " + e.getMessage());
+        }
+
+        return fetchChargeDetailsMap(transactionPoid);
+    }
+
+    @Override
+    public Map<String, Object> loadCustomerLocalCharges(Long transactionPoid) {
+        log.info("Loading customer local charges for Export Manifest BL: {}", transactionPoid);
+        validateActiveExportManifestBl(transactionPoid, UserContext.getCompanyPoid());
+
+        try {
+            procRepository.loadCustomerAutoCharges(
+                    UserContext.getGroupPoid(),
+                    UserContext.getCompanyPoid(),
+                    transactionPoid,
+                    0L,
+                    UPDATE_TYPE_AUTO_CUSTOMER_CHARGE,
+                    UserContext.getUserPoid());
+        } catch (Exception e) {
+            log.error("Error calling PROC_SHIP_BL_CUSTOMER_AUTO for transactionPoid: {}", transactionPoid, e);
+            throw new ValidationException("Failed to load customer local charges: " + e.getMessage());
+        }
+
+        return fetchChargeDetailsMap(transactionPoid);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingSelectionRowDto> listBookingSelection(
+            Long issueVesselVoyagePoid,
+            String bookingMateVoyageNo,
+            Long linePoid,
+            String containerNo,
+            String bookingNo) {
+        log.info(
+                "List pending mate for export BL, issue voyage: {}, mate voyage no: {}",
+                issueVesselVoyagePoid,
+                bookingMateVoyageNo);
+
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        if (issueVesselVoyagePoid == null) {
+            throw new ValidationException("Issue vessel voyage transaction POID is required");
+        }
+
+        ShipVoyageHdrEntity voyage = shipVoyageHdrRepository
+                .findByTransactionPoidAndGroupPoid(issueVesselVoyagePoid, groupPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Voyage", "transactionPoid",
+                        issueVesselVoyagePoid.toString()));
+        if (!companyPoid.equals(voyage.getCompanyPoid())) {
+            throw new ValidationException("Voyage does not belong to current company");
+        }
+
+        Long effectiveLinePoid = linePoid;
+        if (effectiveLinePoid != null && effectiveLinePoid == 0L) {
+            effectiveLinePoid = null;
+        }
+
+        List<BookingSelectionRowDto> rows = bookingSelectionRepository.findPendingMateToBl(
+                groupPoid,
+                companyPoid,
+                issueVesselVoyagePoid,
+                bookingMateVoyageNo,
+                effectiveLinePoid,
+                containerNo,
+                bookingNo);
+        log.info(
+                "Booking selection issueVoyage={} returned {} row(s) (mateVoyageNo={}, linePoid={})",
+                issueVesselVoyagePoid,
+                rows.size(),
+                bookingMateVoyageNo,
+                effectiveLinePoid);
+        return rows;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Map<String, Object> loadBooking(Long voyageTransactionPoid, LoadBookingRequest request) {
+        log.info("Load booking to export BL, voyage: {}", voyageTransactionPoid);
+
+        Long groupPoid = getGroupPoid();
+        Long companyPoid = getCompanyPoid();
+        Long userPoid = getUserPoid();
+
+        Long resolvedVoyagePoid = request.getVoyageTransactionPoid() != null
+                ? request.getVoyageTransactionPoid()
+                : voyageTransactionPoid;
+        if (resolvedVoyagePoid == null) {
+            throw new ValidationException("Voyage transaction POID is required");
+        }
+
+        List<BookingSelectionItemDto> selections = resolveBookingSelections(request, groupPoid, companyPoid);
+        long selectedCount = selections.stream()
+                .filter(s -> "Y".equalsIgnoreCase(s.getIsSelected()))
+                .count();
+        if (selectedCount == 0) {
+            throw new ValidationException("At least one booking container must be selected");
+        }
+
+        String loginUser = UserContext.getUserId() != null ? UserContext.getUserId() : String.valueOf(userPoid);
+
+        String funcResult = loadBookingRepository.stageAndLoadBookingToBl(
+                groupPoid,
+                companyPoid,
+                selections,
+                loginUser,
+                resolvedVoyagePoid);
+        if (funcResult == null || funcResult.toUpperCase(Locale.ROOT).startsWith("ERROR")) {
+            throw new ValidationException(
+                    funcResult != null ? funcResult : "FUNC_LOAD_BOOKING_TO_BL failed with no message");
+        }
+
+        long newBlPoid;
+        try {
+            newBlPoid = Long.parseLong(funcResult.trim());
+        } catch (NumberFormatException ex) {
+            throw new ValidationException("FUNC_LOAD_BOOKING_TO_BL returned invalid transaction POID: " + funcResult);
+        }
+        if (newBlPoid <= 0) {
+            throw new ValidationException(
+                    "FUNC_LOAD_BOOKING_TO_BL did not create a BL (returned "
+                            + funcResult
+                            + "). Verify GLOBAL_TEMP_BOOKING_SELECTED rows and QA_DB_USER.FUNC_LOAD_BOOKING_TO_BL.");
+        }
+
+        try {
+            procRepository.processAfterSave(
+                    groupPoid,
+                    companyPoid,
+                    newBlPoid,
+                    0L,
+                    UPDATE_TYPE_AUTOSUM_WEIGHT_PACK,
+                    userPoid);
+        } catch (Exception e) {
+            log.error("PROC_SHIP_BL_PAGE_SAVE_AFTER failed after load booking for BL {}", newBlPoid, e);
+            throw new ValidationException(
+                    "BL created (POID " + newBlPoid + ") but autosum/auto-charges failed: " + e.getMessage());
+        }
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("status", "SUCCESS");
+        response.put("voyageTransactionPoid", resolvedVoyagePoid);
+        response.put("transactionPoid", newBlPoid);
+        response.put("message", "Booking data loaded, export BL created, and totals/auto-charges processed");
+        return response;
+    }
+
+    private List<BookingSelectionItemDto> resolveBookingSelections(
+            LoadBookingRequest request, Long groupPoid, Long companyPoid) {
+        if (request.getSelections() != null && !request.getSelections().isEmpty()) {
+            return request.getSelections();
+        }
+        if (request.getSelectedBookingIds() == null || request.getSelectedBookingIds().isEmpty()) {
+            throw new ValidationException("Either selections or selectedBookingIds is required");
+        }
+
+        List<BookingSelectionItemDto> rows = new ArrayList<>();
+        for (Long mateTransactionPoid : request.getSelectedBookingIds()) {
+            ShipMateHdr hdr = shipMateHdrRepository.findByTransactionPoid(mateTransactionPoid)
+                    .orElseThrow(() -> new ValidationException(
+                            "Booking not found for transaction POID: " + mateTransactionPoid));
+            if (!groupPoid.equals(hdr.getGroupPoid()) || !companyPoid.equals(hdr.getCompanyPoid())) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " does not belong to current company");
+            }
+            if ("Y".equalsIgnoreCase(hdr.getDeleted())) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " is deleted");
+            }
+
+            List<ShipMateContainerDtl> containers =
+                    shipMateContainerDtlRepository.findByTransactionPoidOrderByDetRowId(mateTransactionPoid);
+            if (containers.isEmpty()) {
+                throw new ValidationException("Booking " + mateTransactionPoid + " has no containers");
+            }
+            for (ShipMateContainerDtl container : containers) {
+                BookingSelectionItemDto item = new BookingSelectionItemDto();
+                item.setTransactionPoid(mateTransactionPoid);
+                item.setVoyageNo(hdr.getVoyageNo());
+                item.setContainerNo(container.getContainerNo());
+                item.setBookingIssueNo(hdr.getBookingIssueNo());
+                item.setIsSelected("Y");
+                rows.add(item);
+            }
+        }
+        return rows;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SelectForInvoiceResponseDto selectForInvoice(Long transactionPoid) {
+        log.info("Select for invoice (navigation) — export BL: {}", transactionPoid);
+        validateActiveExportManifestBl(transactionPoid, UserContext.getCompanyPoid());
+        String approvalStatus = resolveExportBlFinalApprovalStatus(transactionPoid);
+
+        Long existingInvoiceTransactionPoid = findExistingInvoiceTransactionPoid(transactionPoid);
+
+        return SelectForInvoiceResponseDto.builder()
+                .blPoid(transactionPoid)
+                .documentId(SALES_INVOICE_DOCUMENT_ID)
+                .documentName(SALES_INVOICE_DOCUMENT_NAME)
+                .approvalStatus(approvalStatus)
+                .existingInvoiceTransactionPoid(existingInvoiceTransactionPoid)
+                .invoiceTransactionPoid(existingInvoiceTransactionPoid)
+                .targetApiPath("/v1/sales-invoice-shipping")
+                .message(SALES_INVOICE_DOCUMENT_NAME + " is open successfully with the respective BL.")
+                .build();
+    }
+
+    /**
+     * Legacy {@code getApprovalStatus("100-104", …)} must be {@code FINAL_APPROVAL_COMPLETED}; falls back to
+     * {@code VOYAGEWISEBILLS_APPROVED} when approval service returns empty.
+     */
+    private String resolveExportBlFinalApprovalStatus(Long blPoid) {
+        try {
+            String status = approvalService.getApprovalStatus(EXPORT_MANIFEST_DOCUMENT_ID, blPoid);
+            if (hasText(status)) {
+                String normalized = status.trim();
+                if ("FINAL_APPROVAL_COMPLETED".equalsIgnoreCase(normalized)) {
+                    return normalized;
+                }
+                throw new ValidationException("Approval pending to Proceed...");
+            }
+        } catch (ValidationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.warn("Approval status lookup failed for export BL {}: {}", blPoid, ex.getMessage());
+        }
+        validateBlApproved(blPoid);
+        return "FINAL_APPROVAL_COMPLETED";
+    }
+
+    private void validateBlApproved(Long blPoid) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM VOYAGEWISEBILLS_APPROVED WHERE BL_POID = ?",
+                Integer.class,
+                blPoid);
+        if (count == null || count == 0) {
+            throw new ValidationException("BL not Approved");
+        }
+    }
+
+    private Long findExistingInvoiceTransactionPoid(Long blPoid) {
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT TRANSACTION_POID FROM AR_SH_SALES_INVOICE_HDR "
+                            + "WHERE BL_POID = ? AND (DELETED IS NULL OR DELETED = 'N') "
+                            + "ORDER BY TRANSACTION_POID DESC FETCH FIRST 1 ROW ONLY",
+                    Long.class,
+                    blPoid);
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            return null;
+        }
+    }
+
+    private Map<String, Object> fetchChargeDetailsMap(Long transactionPoid) {
+        List<ChargeRequestDto> chargeDetails = chargesDtlRepository.findById_TransactionPoid(transactionPoid)
+                .stream()
+                .map(entity -> ChargeRequestDto.builder()
+                        .detRowId(entity.getId().getDetRowId())
+                        .chargePoid(entity.getChargePoid())
+                        .currencyExchange(entity.getCurrencyExchange())
+                        .quantity(entity.getQuantity())
+                        .buyPercharge(entity.getBuyPercharge())
+                        .perQuantityAmount(entity.getPerQuantityAmount())
+                        .paidAtPortPoid(entity.getPaidAtPortPoid())
+                        .chargeType(entity.getChargeType())
+                        .currencyCode(entity.getCurrencyCode())
+                        .freightType(entity.getFreightType())
+                        .ediChargeCode(entity.getEdiChargeCode())
+                        .arShReceiptTransactionPoid(entity.getArShReceiptTransactionPoid())
+                        .chargeBasisOn(entity.getChargeBasisOn())
+                        .printGroup(entity.getPrintGroup())
+                        .receiptInvoicePoid(entity.getReceiptInvoicePoid())
+                        .docRefLinkNo(entity.getDocRefLinkNo())
+                        .reprintDetRowId(entity.getReprintDetRowId())
+                        .reprintTransactionPoid(entity.getReprintTransactionPoid())
+                        .invoiceType(entity.getInvoiceType())
+                        .autoCanInvoiceNo(entity.getAutoCanInvoiceNo())
+                        .chargeDescription(entity.getChargeDescription())
+                        .taxPoid(entity.getTaxPoid())
+                        .taxPercentage(entity.getTaxPercentage())
+                        .taxAmount(entity.getTaxAmount())
+                        .cnRefDocId(entity.getCnRefDocId())
+                        .cnRefDocPoid(entity.getCnRefDocPoid())
+                        .cnRefDetRowId(entity.getCnRefDetRowId())
+                        .cnIssueInvoice(entity.getCnIssueInvoice())
+                        .selectRow(entity.getSelectRow())
+                        .build())
+                .toList();
+        enrichChargeLovData(chargeDetails);
+
+        BigDecimal totalBuyAmount = BigDecimal.ZERO;
+        BigDecimal totalSaleAmount = BigDecimal.ZERO;
+        for (ChargeRequestDto charge : chargeDetails) {
+            if (charge.getQuantity() != null && charge.getBuyPercharge() != null) {
+                totalBuyAmount = totalBuyAmount.add(charge.getQuantity().multiply(charge.getBuyPercharge()));
+            }
+            if (charge.getQuantity() != null && charge.getPerQuantityAmount() != null) {
+                totalSaleAmount = totalSaleAmount.add(charge.getQuantity().multiply(charge.getPerQuantityAmount()));
+            }
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("chargeDetails", chargeDetails);
+        response.put("totalBuyAmount", totalBuyAmount);
+        response.put("totalSaleAmount", totalSaleAmount);
+        return response;
+    }
 
     // ==================== Helper Methods ====================
 
@@ -1006,6 +1494,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .build())
                 .toList();
         dto.setGeneralCargoDetails(generalDetails);
+        enrichGeneralCargoLovData(generalDetails);
 
         // Load Cargo Details
         List<CargoDescriptionRequestDto> cargoDetails = cargoDtlRepository.findById_TransactionPoid(transactionPoid)
@@ -1079,6 +1568,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .build())
                 .toList();
         dto.setContainers(containerDetails);
+        enrichContainerLovData(containerDetails);
 
         // Load Charges Details
         List<ChargeRequestDto> chargeDetails = chargesDtlRepository.findById_TransactionPoid(transactionPoid)
@@ -1116,6 +1606,165 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .build())
                 .toList();
         dto.setChargeDetails(chargeDetails);
+        enrichChargeLovData(chargeDetails);
+    }
+
+    private void enrichGeneralCargoLovData(List<GeneralCargoRequestDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        for (GeneralCargoRequestDto dto : dtos) {
+            try {
+                if (dto.getComodityPoid() != null && dto.getComodityPoid() > 0) {
+                    dto.setComodityDet(
+                            lovService.getLovItemByPoid(dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getDestinationPortPoid() != null && dto.getDestinationPortPoid() > 0) {
+                    dto.setDestinationPortDet(
+                            lovService.getLovItemByPoid(dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid,
+                                    companyPoid, userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private void enrichContainerLovData(List<ContainerRequestDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        for (ContainerRequestDto dto : dtos) {
+            try {
+                if (dto.getComodityPoid() != null && dto.getComodityPoid() > 0) {
+                    dto.setComodityDet(
+                            lovService.getLovItemByPoid(dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getDestinationPortPoid() != null && dto.getDestinationPortPoid() > 0) {
+                    dto.setDestinationPortDet(
+                            lovService.getLovItemByPoid(dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid,
+                                    companyPoid, userPoid));
+                }
+                if (dto.getEquipmentIsoType() != null) {
+                    dto.setEquipmentIsoTypeDet(
+                            lovService.getLovItemByCode(dto.getEquipmentIsoType(), "CONTAINER_TYPE_MASTER",
+                                    groupPoid, companyPoid, userPoid));
+                }
+                if (dto.getImcoClassType() != null) {
+                    dto.setImcoClassTypeDet(
+                            lovService.getLovItemByCode(dto.getImcoClassType(), "IMCO_CLASS", groupPoid, companyPoid,
+                                    userPoid));
+                }
+                if (dto.getOogType() != null) {
+                    dto.setOogTypeDet(
+                            lovService.getLovItemByCode(dto.getOogType(), "OOG_TYPE", groupPoid, companyPoid,
+                                    userPoid));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
+            }
+        }
+    }
+
+    private void enrichChargeLovData(List<ChargeRequestDto> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+        Map<String, Map<Long, LovItem>> poidCache = new HashMap<>();
+        Map<String, Map<String, LovItem>> codeCache = new HashMap<>();
+
+        for (ChargeRequestDto dto : dtos) {
+            if (dto.getChargePoid() != null) {
+                dto.setChargeDet(getLovItemWithCache(poidCache, dto.getChargePoid(), "CHARGE_MASTER", groupPoid,
+                        companyPoid, userPoid));
+            }
+            if (dto.getPaidAtPortPoid() != null) {
+                dto.setPaidAtPortDet(getLovItemWithCache(poidCache, dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
+                        companyPoid, userPoid));
+            }
+            if (dto.getReceiptInvoicePoid() != null) {
+                dto.setReceiptInvoiceDet(getLovItemWithCache(poidCache, dto.getReceiptInvoicePoid(),
+                        "MANIFEST_RECEIPT_INVOICE", groupPoid, companyPoid, userPoid));
+            }
+            if (dto.getTaxPoid() != null) {
+                dto.setTaxDet(getLovItemWithCache(poidCache, dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid,
+                        userPoid));
+            }
+            if (dto.getChargeType() != null) {
+                dto.setChargeTypeDet(getLovItemByCodeWithCache(codeCache, dto.getChargeType(), "CHARGE_TYPE", groupPoid,
+                        companyPoid, userPoid));
+            }
+            if (dto.getCurrencyCode() != null) {
+                dto.setCurrencyCodeDet(getLovItemByCodeWithCache(codeCache, dto.getCurrencyCode(), "CURRENCY",
+                        groupPoid, companyPoid, userPoid));
+            }
+            if (dto.getFreightType() != null) {
+                dto.setFreightTypeDet(getLovItemByCodeWithCache(codeCache, dto.getFreightType(), "SHIP_FREIGHT_TYPE",
+                        groupPoid, companyPoid, userPoid));
+            }
+            if (dto.getChargeBasisOn() != null) {
+                dto.setBasisDet(resolveChargeBasisDet(dto.getChargeBasisOn(), poidCache, codeCache, groupPoid,
+                        companyPoid, userPoid));
+            }
+        }
+    }
+
+    private LovItem resolveChargeBasisDet(String chargeBasisOn,
+            Map<String, Map<Long, LovItem>> poidCache,
+            Map<String, Map<String, LovItem>> codeCache,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        if (chargeBasisOn.chars().allMatch(Character::isDigit)) {
+            return getLovItemWithCache(poidCache, Long.parseLong(chargeBasisOn), "CONTAINER_TYPE_MASTER", groupPoid,
+                    companyPoid, userPoid);
+        }
+        return getLovItemByCodeWithCache(codeCache, chargeBasisOn, "CONTAINER_TYPE_MASTER", groupPoid, companyPoid,
+                userPoid);
+    }
+
+    private LovItem getLovItemWithCache(
+            Map<String, Map<Long, LovItem>> cache, Long poid, String lovName,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        Map<Long, LovItem> innerCache = cache.computeIfAbsent(lovName, k -> new HashMap<>());
+        if (!innerCache.containsKey(poid)) {
+            try {
+                innerCache.put(poid, lovService.getLovItemByPoid(poid, lovName, groupPoid, companyPoid, userPoid));
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV for lovName: {} and poid: {}", lovName, poid, e);
+                innerCache.put(poid, null);
+            }
+        }
+        return innerCache.get(poid);
+    }
+
+    private LovItem getLovItemByCodeWithCache(
+            Map<String, Map<String, LovItem>> cache, String code, String lovName,
+            Long groupPoid, Long companyPoid, Long userPoid) {
+        Map<String, LovItem> innerCache = cache.computeIfAbsent(lovName, k -> new HashMap<>());
+        if (!innerCache.containsKey(code)) {
+            try {
+                innerCache.put(code, lovService.getLovItemByCode(code, lovName, groupPoid, companyPoid, userPoid));
+            } catch (Exception e) {
+                log.warn("Failed to fetch LOV for lovName: {} and code: {}", lovName, code, e);
+                innerCache.put(code, null);
+            }
+        }
+        return innerCache.get(code);
     }
 }
 

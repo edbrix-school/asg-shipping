@@ -1,8 +1,11 @@
 package com.asg.shipping.lineprincipalmaster.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.lineprincipalmaster.dto.*;
+import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -18,7 +21,7 @@ public interface LinePrincipalMasterService {
      * @param pageable Pagination and sorting information
      * @return Map containing paginated results and display fields
      */
-    Map<String, Object> searchLines(com.asg.common.lib.dto.FilterRequestDto request, org.springframework.data.domain.Pageable pageable);
+    Map<String, Object> searchLines(String docId, FilterRequestDto request, LocalDate startDate, LocalDate endDate, Pageable pageable);
 
     /**
      * Get line by ID including charges
@@ -60,13 +63,13 @@ public interface LinePrincipalMasterService {
     void deleteLine(Long id, DeleteReasonDto deleteReasonDto);
 
     /**
-     * Copy charges from another line
+     * Copy charges from another line using COPY_LINE_Type_Charges procedure
      *
-     * @param id Target Line POID
-     * @param request Copy charges request with source line POID
-     * @return Number of charges copied
+     * @param id Target Line POID (line to copy charges INTO)
+     * @param request Copy charges request with source line POID (line to copy FROM)
+     * @return Updated LinePrincipalMasterDto with refreshed charges
      */
-    Integer copyCharges(Long id, CopyChargesRequestDto request);
+    CopyChargesRequestDto copyCharges(Long id, CopyChargesRequestDto request);
 
     /**
      * Create GL master and sub accounts for a line

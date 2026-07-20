@@ -227,6 +227,7 @@ public class LineTariffMapper {
         entity.setGroupPoid(groupPoid);
         entity.setLinePoid(dto.getLinePoid());
         entity.setDescription(dto.getDescription());
+        setIfNotNull(dto.getTransactionDate(), entity::setTransactionDate);
         entity.setPeriodFrom(dto.getPeriodFrom());
         entity.setPeriodTo(dto.getPeriodTo());
         entity.setDmgFromSameday(dto.getDmgFromSameday());
@@ -256,6 +257,7 @@ public class LineTariffMapper {
     public void mapUpdateDTOToEntity(LineTariffUpdateDTO dto, ShipLineTariffHdr entity) {
         setIfNotNull(dto.getLinePoid(), entity::setLinePoid);
         setIfNotNull(dto.getDescription(), entity::setDescription);
+        setIfNotNull(dto.getTransactionDate(), entity::setTransactionDate);
         setIfNotNull(dto.getPeriodFrom(), entity::setPeriodFrom);
         setIfNotNull(dto.getPeriodTo(), entity::setPeriodTo);
         setIfNotNull(dto.getDmgFromSameday(), entity::setDmgFromSameday);
@@ -270,7 +272,9 @@ public class LineTariffMapper {
         setIfNotNull(dto.getDtnBaseslabAfterFree(), entity::setDtnBaseslabAfterFree);
         setIfNotNull(dto.getPayableCurrency(), entity::setPayableCurrency);
         setIfNotNull(dto.getReceivableCurrency(), entity::setReceivableCurrency);
-        setIfNotNull(dto.getDocRef(), entity::setDocRef);
+        if (dto.getDocRef() != null && !dto.getDocRef().trim().isEmpty()) {
+            entity.setDocRef(dto.getDocRef().trim());
+        }
         setIfNotNull(dto.getCompanyPoid(), entity::setCompanyPoid);
         setIfNotNull(dto.getSeqno(), entity::setSeqno);
         setIfNotNull(dto.getExtraTariff(), entity::setExtraTariff);

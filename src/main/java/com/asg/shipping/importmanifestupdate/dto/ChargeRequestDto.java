@@ -4,6 +4,8 @@ import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 
 @Getter
 @Setter
@@ -15,10 +17,10 @@ public class ChargeRequestDto implements BlManifestValidationService.ChargeValid
     private Long chargePoid;
     private LovItem chargeDet;
 
-    private Long currencyExchange;
-    private Long quantity;
-    private Long buyPercharge;
-    private Long perQuantityAmount;
+    private BigDecimal currencyExchange;
+    private BigDecimal quantity;
+    private BigDecimal buyPercharge;
+    private BigDecimal perQuantityAmount;
     private Long paidAtPortPoid;
     private LovItem paidAtPortDet;
 
@@ -44,8 +46,13 @@ public class ChargeRequestDto implements BlManifestValidationService.ChargeValid
     private Long taxPoid;
     private LovItem taxDet;
 
-    private Long taxPercentage;
-    private Long taxAmount;
+    private BigDecimal taxPercentage;
+    private BigDecimal taxAmount;
+
+    // Computed display fields (buyPercharge * quantity, perQuantityAmount * quantity)
+    private BigDecimal buyAmount;
+    private BigDecimal saleAmount;
+
     private String cnRefDocId;
     private String cnRefDocPoid;
     private String cnRefDetRowId;
@@ -56,7 +63,7 @@ public class ChargeRequestDto implements BlManifestValidationService.ChargeValid
     // ---- ChargeValidatable interface ----
     @Override public Long getChargePoidValue() { return chargePoid; }
     @Override public String getFreightTypeValue() { return freightType; }
-    @Override public Long getQuantityValue() { return quantity; }
-    @Override public Long getSellValue() { return perQuantityAmount; }
-    @Override public Long getBuyValue() { return buyPercharge; }
+    @Override public BigDecimal getQuantityValue() { return quantity; }
+    @Override public BigDecimal getSellValue() { return perQuantityAmount; }
+    @Override public BigDecimal getBuyValue() { return buyPercharge; }
 }

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.sql.Timestamp;
 
 @Entity
@@ -19,7 +20,7 @@ public class GlobalAddressDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "ADDRESS_POID", nullable = false)
-    private Long addressPoid;
+    private BigDecimal addressPoid;
 
     @Column(name = "ADDRESS_MASTER_POID", nullable = false)
     private Long addressMasterPoid;

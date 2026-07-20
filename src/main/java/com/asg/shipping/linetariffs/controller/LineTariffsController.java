@@ -4,11 +4,13 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.linetariffs.dto.CopyTariffRequestDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffCreateDTO;
 import com.asg.shipping.linetariffs.dto.LineTariffDto;
 import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
+import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.LoggingService;
@@ -28,9 +30,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +61,11 @@ public class LineTariffsController {
     @PostMapping("/search")
     @Operation(
             summary = "Search line tariffs",
-            description = "Retrieve paginated list of line tariffs with optional filtering and sorting using DocumentSearchService",
+            description = "Retrieve paginated line tariffs with optional filtering and sorting. "
+                    + "LOR: tariffs whose PERIOD_TO falls within the period window "
+                    + "(from body PERIOD_FROM/PERIOD_TO filters or startDate/endDate query params). "
+                    + "Generic search (GLOBALSEARCH/DESCRIPTION) skips period filter. "
+                    + "Use isDeleted=Y to view deleted records.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -82,14 +91,27 @@ public class LineTariffsController {
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size,
-            @Parameter(description = "Sort field and direction (e.g., 'description,asc')", example = "description,asc")
-            @RequestParam(required = false) String sort) {
+            @Parameter(description = "Sort field and direction (e.g., 'LINE_POID,asc')", example = "LINE_POID,asc")
+            @RequestParam(required = false) String sort,
+            @Parameter(description = "Period range start (LOR window)")
+            @RequestParam(required = false) LocalDate startDate,
+            @Parameter(description = "Period range end (LOR window)")
+            @RequestParam(required = false) LocalDate endDate) {
 
-        log.info("Searching line tariffs with page: {}, size: {}, sort: {}", page, size, sort);
+        log.info("Searching line tariffs with page: {}, size: {}, sort: {}, startDate: {}, endDate: {}",
+                page, size, sort, startDate, endDate);
+
+        if ((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+            return ApiResponse.badRequest("Both startDate and endDate should be specified or both dates should be empty.");
+        }
+        if (startDate != null && startDate.isAfter(endDate)) {
+            return ApiResponse.badRequest("startDate must be less than or equal to endDate.");
+        }
 
         try {
             Pageable pageable = createPageable(page, size, sort);
-            Map<String, Object> result = lineTariffsService.searchLineTariffs(DOC_ID, request, pageable, null, null);
+            Map<String, Object> result = lineTariffsService.searchLineTariffs(
+                    DOC_ID, request, pageable, startDate, endDate);
 
             log.info("Successfully retrieved line tariffs");
             return ApiResponse.success("Line tariffs retrieved successfully", result);
@@ -263,7 +285,8 @@ public class LineTariffsController {
     @PostMapping("/{id}/copy")
     @Operation(
             summary = "Copy line tariff to new period",
-            description = "Copy existing tariff to new period. Updates source tariff PERIOD_TO to new PERIOD_FROM - 1 day and creates new tariff with copied data.",
+            description = "Copy existing tariff. Uses COPY_LINE_TARIFF when available; otherwise copies in Java "
+                    + "(header + all four detail tables). Optional period/description overrides are applied after copy.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -301,25 +324,40 @@ public class LineTariffsController {
         Long groupPoid = getGroupPoid();
         Long userPoid = getUserPoid();
 
-        LineTariffDto copied = lineTariffsService.copyLineTariff(id, request, groupPoid, userPoid);
-
-        log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, copied.getTransactionPoid());
-        return ApiResponse.success("Line tariff copied successfully", copied);
+        try {
+            LineTariffDto copied = lineTariffsService.copyLineTariff(id, request, groupPoid, userPoid);
+            log.info("Successfully copied line tariff with id: {} to new tariff with id: {}", id, copied.getTransactionPoid());
+            return ApiResponse.success("Line tariff copied successfully", copied);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.notFound(e.getMessage());
+        } catch (ValidationException e) {
+            return ApiResponse.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error copying line tariff with id {}: {}", id, e.getMessage(), e);
+            return ApiResponse.internalServerError("Failed to copy line tariff: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @PostMapping("/{id}/copy-slabs")
     @Operation(
             summary = "Copy collectable slabs to payable",
-            description = "Copy slab data from collectable to payable matched by container type. type=DMG copies import demurrage, type=DTN copies export detention.",
+            description = "Copy slab data from collectable to payable matched by container type.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     public ResponseEntity<?> copySlabsToPayable(
             @PathVariable Long id,
             @RequestParam String type) {
         log.info("Copying slabs to payable for id: {}, type: {}", id, type);
-        lineTariffsService.copySlabsToPayable(id, type);
-        return ApiResponse.success("Slabs copied to payable successfully", null);
+        try {
+            lineTariffsService.copySlabsToPayable(id, type);
+            return ApiResponse.success("Slabs copied to payable successfully", null);
+        } catch (ValidationException e) {
+            return ApiResponse.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error copying slabs to payable for id {}: {}", id, e.getMessage(), e);
+            return ApiResponse.internalServerError("Failed to copy slabs to payable: " + e.getMessage());
+        }
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
@@ -347,8 +385,61 @@ public class LineTariffsController {
             @Parameter(description = "IMP for Import Demurrage, EXP for Export Detention", required = true)
             @RequestParam String type) {
         log.info("Loading container types for id: {}, type: {}", id, type);
-        lineTariffsService.loadContainerTypes(id, type);
-        return ApiResponse.success("Container types loaded successfully");
+        try {
+            LoadContainerTypesResponseDto result = lineTariffsService.loadContainerTypes(id, type);
+            return ApiResponse.success("Container types loaded successfully", result);
+        } catch (ResourceNotFoundException e) {
+            return ApiResponse.notFound(e.getMessage());
+        } catch (Exception e) {
+            log.error("Error loading container types for id {}: {}", id, e.getMessage(), e);
+            return ApiResponse.internalServerError("Failed to load container types: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/{id}/print")
+    @Operation(
+            summary = "Generate Notice to Trade PDF",
+            description = "Generates the Notice to Trade PDF for line demurrage tariff revision with slab details grouped by container category and size.",
+            security = @SecurityRequirement(name = "bearerAuth"),
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "PDF generated successfully",
+                            content = @Content(mediaType = "application/pdf")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "Line tariff not found",
+                            content = @Content(mediaType = "application/json")
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "500",
+                            description = "Failed to generate PDF",
+                            content = @Content(mediaType = "application/json")
+                    )
+            }
+    )
+    public ResponseEntity<?> print(
+            @Parameter(description = "Transaction POID", required = true, example = "12345")
+            @PathVariable Long id) {
+        try {
+            byte[] pdf = lineTariffsService.print(id);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=line-tariff-notice-to-trade-" + id + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (com.asg.shipping.exceptions.ResourceNotFoundException e) {
+            log.warn("Line tariff not found for print id {}: {}", id, e.getMessage());
+            return ApiResponse.notFound(e.getMessage());
+        } catch (ValidationException e) {
+            log.warn("Line tariff print validation failed for id {}: {}", id, e.getMessage());
+            return ApiResponse.badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to generate PDF for line tariff: {}", id, e);
+            return ApiResponse.internalServerError("Failed to generate PDF: " + e.getMessage());
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.asg.shipping.vesselmaster.dto;
 
 import com.asg.shipping.common.dto.LovItem;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -54,6 +55,7 @@ public class VesselMasterDto {
     @Schema(description = "Registration Number")
     private String registrationNo;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     @Schema(description = "Registration Date")
     private LocalDate registrationDate;
 
@@ -91,10 +93,10 @@ public class VesselMasterDto {
     private BigDecimal draft;
 
     @Schema(description = "Number of Hatches")
-    private Integer hatches;
+    private BigDecimal hatches;
 
     @Schema(description = "Bay Hatch Count")
-    private Integer bayhatch;
+    private BigDecimal bayhatch;
 
     @Schema(description = "IMO Number")
     private String imoNumber;

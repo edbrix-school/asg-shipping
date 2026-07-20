@@ -1,7 +1,7 @@
 package com.asg.shipping.shippingffchargemaster.dto;
 
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -55,6 +55,6 @@ public class ChargeCreateDTO {
     @Pattern(regexp = "^[YN]$", message = "Active must be Y or N")
     private String active;
 
-    @Positive(message = "Sequence number must be positive")
+    @PositiveOrZero(message = "Sequence number must be positive or zero")
     private Integer seqno;
 }

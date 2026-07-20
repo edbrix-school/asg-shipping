@@ -19,19 +19,30 @@ public interface ExportShipBlManifestHdrRepository extends JpaRepository<ExportS
             Long transactionPoid, Long groupPoid, Long companyPoid, String deleted);
 
     /**
-     * Find Export BL by transaction POID with proper filters:
-     * - DELETED != 'N' (DELETED can be 'Y', empty string '', or NULL - all treated as deleted, exclude where DELETED = 'N')
-     * - BL_TYPE = 'EXPORT'
-     * - GROUP_POID and COMPANY_POID must match
+     * Find Export BL by ID for get-by-id (includes soft-deleted).
      */
     @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
            "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid " +
-           "AND (h.deleted IS NULL OR h.deleted = '' OR h.deleted != 'N') " +
            "AND h.blType = 'EXPORT'")
     Optional<ExportShipBlManifestHdr> findExportBlByTransactionPoid(
             @Param("transactionPoid") Long transactionPoid,
             @Param("groupPoid") Long groupPoid,
             @Param("companyPoid") Long companyPoid);
+
+    @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
+           "AND h.groupPoid = :groupPoid AND h.companyPoid = :companyPoid " +
+           "AND h.blType = 'EXPORT' AND (h.deleted IS NULL OR h.deleted = 'N')")
+    Optional<ExportShipBlManifestHdr> findActiveExportBlByTransactionPoid(
+            @Param("transactionPoid") Long transactionPoid,
+            @Param("groupPoid") Long groupPoid,
+            @Param("companyPoid") Long companyPoid);
+
+    /**
+     */
+    @Query("SELECT h FROM ExportShipBlManifestHdr h WHERE h.transactionPoid = :transactionPoid " +
+           "AND h.blType = 'EXPORT'")
+    Optional<ExportShipBlManifestHdr> findActiveExportBlByTransactionPoid(
+            @Param("transactionPoid") Long transactionPoid);
 
     List<ExportShipBlManifestHdr> findByGroupPoidAndCompanyPoidAndDeletedAndBlType(
             Long groupPoid, Long companyPoid, String deleted, String blType);

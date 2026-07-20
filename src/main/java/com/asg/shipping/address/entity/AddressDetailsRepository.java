@@ -8,4 +8,6 @@ import java.util.List;
 @Repository
 public interface AddressDetailsRepository extends JpaRepository<AddressDetails, String> {
     List<AddressDetails> findByAddressMasterPoidAndAddressType(Long addressMasterPoid, String addressType);
+
+    List<AddressDetails> findByAddressMasterPoid(Long addressMasterPoid);
 }

@@ -49,7 +49,7 @@
       CONSIGNEE_POID,
       nvl(CONSIGNEE_EDI_NAME,GET_ADDRESS_NAME(CONSIGNEE_POID)) ||chr(10)||chr(13) ||
       nvl(CONSIGNEE_EDI_ADDRESS,GET_ADDRESS_DETAILS_WITH_TYPE(CONSIGNEE_ADDRESS_POID,NULL)) CONSIGNEE_ADDRESS ,
-      NOTIFY_POID_1
+      NOTIFY_POID_1,
       NOTIFY_POID_2,
       GET_ADDRESS_NAME(NOTIFY_POID_2) NOTIFY2,
       nvl(NOTIFY1_EDI_NAME,GET_ADDRESS_NAME(NOTIFY_POID_1))  ||
@@ -82,10 +82,10 @@ INNER JOIN SHIP_LINE_MASTER LNMAST  ON LNMAST.LINE_POID  =VOYAGE.LINE_POID
 LEFT JOIN SHIP_BL_MANIFEST_CHARGES_DTL MCHARGE ON MCHARGE.TRANSACTION_POID = MFHDR.TRANSACTION_POID
 LEFT JOIN SHIP_COMODITY_MASTER CMAST ON CMAST.COMODITY_POID = MFHDR.COMODITY_POID
 INNER JOIN GLOBAL_COMPANY_MASTER COMP ON MFHDR.COMPANY_POID= COMP.COMPANY_POID
-WHERE NVL(MFHDR.deleted,'N')='N' and  ((MFHDR.TRANSACTION_POID= $P{DOC_KEY_POID}
+WHERE NVL(MFHDR.deleted,'N')='N' and  ((MFHDR.TRANSACTION_POID= TO_NUMBER($P{DOC_KEY_POID})
 AND   'X'=NVL($P{P_IMPORT_EXPORT},'X')
 )
- or (VOYAGE.TRANSACTION_POID =$P{DOC_KEY_POID} AND    DECODE(bl_type,'EXPORT','EXPORT','IMPORT') = $P{P_IMPORT_EXPORT} ))
+ or (VOYAGE.TRANSACTION_POID = TO_NUMBER($P{DOC_KEY_POID}) AND    DECODE(bl_type,'EXPORT','EXPORT','IMPORT') = $P{P_IMPORT_EXPORT} ))
 order by bl_type,bl_number]]>
 	</queryString>
 	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
@@ -97,6 +97,7 @@ order by bl_type,bl_number]]>
 	<field name="SHIPPER_ADDRESS" class="java.lang.String"/>
 	<field name="CONSIGNEE_POID" class="java.math.BigDecimal"/>
 	<field name="CONSIGNEE_ADDRESS" class="java.lang.String"/>
+	<field name="NOTIFY_POID_1" class="java.math.BigDecimal"/>
 	<field name="NOTIFY_POID_2" class="java.math.BigDecimal"/>
 	<field name="NOTIFY2" class="java.lang.String"/>
 	<field name="NOTIFY_ADDRESS1" class="java.lang.String"/>
@@ -546,7 +547,7 @@ code]]></text>
 					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
 				</subreportParameter>
 				<subreportParameter name="DOC_KEY_POID">
-					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+					<subreportParameterExpression><![CDATA[String.valueOf($F{TRANSACTION_POID}.longValue())]]></subreportParameterExpression>
 				</subreportParameter>
 				<subreportParameter name="DOC_ID"/>
 				<subreportParameter name="LOGIN_USER_POID"/>
@@ -561,7 +562,7 @@ code]]></text>
 					<subreportParameterExpression><![CDATA[$P{SUBREPORT_DIR}]]></subreportParameterExpression>
 				</subreportParameter>
 				<subreportParameter name="DOC_KEY_POID">
-					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+					<subreportParameterExpression><![CDATA[String.valueOf($F{TRANSACTION_POID}.longValue())]]></subreportParameterExpression>
 				</subreportParameter>
 				<subreportParameter name="DOC_ID"/>
 				<subreportParameter name="LOGIN_USER_POID"/>
@@ -574,7 +575,7 @@ code]]></text>
 				<reportElement isPrintRepeatedValues="false" x="468" y="37" width="116" height="291" uuid="c24a2f0b-5367-472a-8fe9-cc1324ef77e5"/>
 				<subreportParameter name="SUBREPORT_DIR"/>
 				<subreportParameter name="DOC_KEY_POID">
-					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+					<subreportParameterExpression><![CDATA[String.valueOf($F{TRANSACTION_POID}.longValue())]]></subreportParameterExpression>
 				</subreportParameter>
 				<subreportParameter name="DOC_ID"/>
 				<subreportParameter name="LOGIN_USER_POID"/>
@@ -587,7 +588,7 @@ code]]></text>
 				<reportElement mode="Opaque" x="585" y="37" width="241" height="93" uuid="33c6e599-7723-4eeb-ba18-67e325805912"/>
 				<subreportParameter name="SUBREPORT_DIR"/>
 				<subreportParameter name="DOC_KEY_POID">
-					<subreportParameterExpression><![CDATA[$F{TRANSACTION_POID}]]></subreportParameterExpression>
+					<subreportParameterExpression><![CDATA[String.valueOf($F{TRANSACTION_POID}.longValue())]]></subreportParameterExpression>
 				</subreportParameter>
 				<subreportParameter name="DOC_ID"/>
 				<subreportParameter name="LOGIN_USER_POID"/>

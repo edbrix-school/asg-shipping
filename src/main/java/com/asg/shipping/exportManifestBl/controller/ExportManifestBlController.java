@@ -11,6 +11,8 @@ import com.asg.shipping.exportManifestBl.dto.*;
 import com.asg.shipping.exportManifestBl.service.ExportManifestBlService;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
+import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsRequestDto;
+import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -31,6 +33,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
@@ -128,14 +132,60 @@ public class ExportManifestBlController {
             @Parameter(description = "Document ID for search configuration", required = true, example = "TBD")
             @RequestParam(required = false) String docId,
             @ParameterObject Pageable pageable,
-            @RequestBody(required = false) FilterRequestDto filters) {
+            @RequestBody(required = false) FilterRequestDto filters,
+            @Parameter(description = "Start date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate fromDate,
+            @Parameter(description = "End date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+            @RequestParam(required = false) LocalDate toDate) {
         try {
             String documentId = docId != null ? docId : UserContext.getDocumentId();
-            Map<String, Object> result = service.searchExportManifestBl(documentId, filters, pageable);
+            Map<String, Object> result = service.searchExportManifestBl(documentId, filters, fromDate, toDate, pageable);
             return success("Export Manifest BL list fetched successfully", result);
         } catch (Exception e) {
             log.error("Error fetching Export Manifest BL List", e);
             return internalServerError("Error fetching Export Manifest BL List: " + e.getMessage());
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/voyage/{issueVesselVoyagePoid}/booking-selection")
+    @Operation(
+            summary = "Select Booking popup grid (legacy VwPendingMateToBlView1)",
+            description = """
+                    **Legacy mapping (Eblmanifestpagebn.loadDataBooking):**
+                    - Path `{issueVesselVoyagePoid}` = **Issue Vessel Voyage** LOV (`pVoyageVesselPoid1`) — export job POID; also passed to `FUNC_LOAD_BOOKING_TO_BL`.
+                    - Query `bookingMateVoyageNo` = **Booking Mate Voyage** (`inputVoyageLoad`) — optional extra filter on `VOYAGE_NO` in the popup.
+                    - Query `linePoid` = optional; legacy applies line from issue voyage when UI passes it (omit to not filter by line).
+                    - Data source: `VW_PENDING_MATE_TO_BL` only (legacy view entity).
+                    - Scope: `(COMPANY_POID, VESSEL_POID, VOYAGE_NO)` from issue voyage POID (`PendingMateBookingToBLView` / `Pvoyagepoid`).
+                    - Search: `containerNo`, `bookingNo` (legacy Search Container / Search Booking).
+                    
+                    **Load Selected:** `POST /voyage/{issueVesselVoyagePoid}/load-booking` with `selections` or `selectedBookingIds`; then `GET /{transactionPoid}` for header/containers/general.
+                    """
+    )
+    public ResponseEntity<?> listBookingSelection(
+            @Parameter(description = "Issue Vessel Voyage POID (SHIP_VOYAGE_HDR.TRANSACTION_POID)", required = true)
+            @PathVariable Long issueVesselVoyagePoid,
+            @Parameter(description = "Booking Mate Voyage — voyage number filter for popup (inputVoyageLoad)")
+            @RequestParam(required = false) String bookingMateVoyageNo,
+            @Parameter(description = "Line POID; defaults to line on issue voyage when omitted")
+            @RequestParam(required = false) Long linePoid,
+            @Parameter(description = "Container number search (partial match)")
+            @RequestParam(required = false) String containerNo,
+            @Parameter(description = "Booking issue number search (partial match)")
+            @RequestParam(required = false) String bookingNo) {
+        try {
+            List<BookingSelectionRowDto> rows = service.listBookingSelection(
+                    issueVesselVoyagePoid, bookingMateVoyageNo, linePoid, containerNo, bookingNo);
+            return success("Booking selection list fetched successfully", rows);
+        } catch (ValidationException e) {
+            log.warn("Booking selection validation failed for voyage {}: {}", issueVesselVoyagePoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed to list booking selection for voyage {}", issueVesselVoyagePoid, e);
+            return error("Error fetching booking selection: " + e.getMessage(), 500);
         }
     }
 
@@ -284,6 +334,42 @@ public class ExportManifestBlController {
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
+    @GetMapping("/{transactionPoid}/ff-jobs")
+    @Operation(
+            summary = "List FF jobs for Export Manifest BL",
+            description = "Retrieve FF job rows from VW_SHIP_BL_TO_FF for the FF Jobs tab (read-only grid).",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> getShipBlToFfByManifestPoid(
+            @Parameter(description = "Export Manifest BL transaction POID", required = true, example = "249416")
+            @PathVariable Long transactionPoid) {
+
+        log.info("Getting FF job list for manifest transactionPoid: {}", transactionPoid);
+        List<ShipBlToFfDto> result = service.getShipBlToFfByManifestPoid(transactionPoid);
+        log.info("Successfully retrieved {} FF job row(s) for manifest transactionPoid: {}", result.size(), transactionPoid);
+        return ApiResponse.success("FF job details retrieved successfully", result);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.DELETE)
+    @DeleteMapping("/{transactionPoid}/ff-jobs/{rnumid}")
+    @Operation(
+            summary = "Delete FF purchase journal for a specific FF Jobs row",
+            description = "Reverses FF PJ for the selected row via PROC_GL_REVERSE_SHTOFF_POSTING. FF invoice is retained (VAT rule).",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> deleteFfPurchaseJournal(
+            @Parameter(description = "Export Manifest BL transaction POID", required = true, example = "268427")
+            @PathVariable Long transactionPoid,
+            @Parameter(description = "FF Jobs row id (RNUMID)", required = true, example = "43")
+            @PathVariable Long rnumid) {
+
+        log.info("Deleting FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+        service.deleteFfPurchaseJournal(transactionPoid, rnumid);
+        log.info("Successfully deleted FF purchase journal for manifest transactionPoid: {}, rnumid: {}", transactionPoid, rnumid);
+        return ApiResponse.success("FF purchase journal deleted successfully");
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
     @GetMapping("/ff-job/{blNumber}")
     @Operation(
             summary = "Get FF job details by BL number",
@@ -352,8 +438,7 @@ public class ExportManifestBlController {
 		try {
 			String docId = UserContext.getDocumentId();
 			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-			String fileName = request.getFreightCargo().toString().equalsIgnoreCase("FALSE") ? "cargo-manifest-"
-					: "freight-manifest-";
+			String fileName = request.isCargoManifest() ? "cargo-manifest-" : "freight-manifest-";
 			return ResponseEntity.ok()
 					.header(HttpHeaders.CONTENT_DISPOSITION,
 							"attachment; filename=" + fileName + transactionPoid + ".pdf")
@@ -400,6 +485,135 @@ public class ExportManifestBlController {
 			return ApiResponse.error("Failed to generate PDF: " + e.getMessage(), 500);
 		}
 	}
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Get Charge Tax Defaults",
+            description = "Fetch tax POID and tax percentage for a selected charge. Called when the user selects a charge from the LOV."
+    )
+    @GetMapping("/get-tax-rate")
+    public ResponseEntity<?> getChargeDefaults(
+            @Parameter(description = "Charge POID", required = true) @RequestParam Long chargePoid,
+            @Parameter(description = "Transaction Date") @RequestParam(required = false) LocalDate transactionDate) {
+        try {
+            ChargeDefaultsRequestDto request = ChargeDefaultsRequestDto.builder()
+                    .chargePoid(chargePoid)
+                    .transactionDate(transactionDate)
+                    .build();
+            ChargeDefaultsResponseDto response = service.getChargeDefaults(request);
+            return ApiResponse.success("Charge defaults retrieved successfully", response);
+        } catch (ValidationException e) {
+            log.warn("Validation failed for charge tax defaults: {}", e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (Exception e) {
+            log.error("Failed to fetch charge tax defaults for chargePoid: {}", chargePoid, e);
+            return error("Failed to fetch charge tax defaults: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Update Local Charges",
+            description = "Press for Local Charges — fetches and loads port local charges from Port Charges Master into the charges tab."
+    )
+    @PostMapping("/{transactionPoid}/update-local-charges")
+    public ResponseEntity<?> updateLocalCharges(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        try {
+            return success("Local charges loaded successfully", service.loadLocalCharges(transactionPoid));
+        } catch (ValidationException e) {
+            log.warn("Validation failed while loading local charges for {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed to load local charges for Export Manifest BL: {}", transactionPoid, e);
+            return error("Failed to load local charges: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Load Port Local Charges",
+            description = "Alias for update-local-charges. Loads local charges from Port Charges Master via PROC_SHIP_BL_PAGE_SAVE_AFTER."
+    )
+    @PostMapping("/{transactionPoid}/load-local-charges")
+    public ResponseEntity<?> loadLocalCharges(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        return updateLocalCharges(transactionPoid);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Select Bookings — Load Selected (legacy loadSelectedBookingData)",
+            description = """
+                    Stages GLOBAL_TEMP_BOOKING_SELECTED, then FUNC_LOAD_BOOKING_TO_BL(user, issueVesselVoyagePoid).
+                    Issue Vessel Voyage POID = pVoyageVesselPoid1. Returns new BL transactionPoid; GET BL for tabs.
+                    """
+    )
+    @PostMapping("/{issueVesselVoyagePoid}/load-booking")
+    public ResponseEntity<?> loadBooking(
+            @Parameter(description = "Issue Vessel Voyage POID for FUNC_LOAD_BOOKING_TO_BL", required = true)
+            @PathVariable Long issueVesselVoyagePoid,
+            @Valid @RequestBody LoadBookingRequest request) {
+        try {
+            return success("Booking data loaded successfully", service.loadBooking(issueVesselVoyagePoid, request));
+        } catch (ValidationException e) {
+            log.warn("Load booking validation failed for voyage {}: {}", issueVesselVoyagePoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (Exception e) {
+            log.error("Failed to load booking for voyage {}", issueVesselVoyagePoid, e);
+            return error("Error loading booking: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Load Customer Local Charges",
+            description = "Loads customer-mapped export charges into the BL charges tab via PROC_SHIP_BL_CUSTOMER_AUTO."
+    )
+    @PostMapping("/{transactionPoid}/load-customer-local-charges")
+    public ResponseEntity<?> loadCustomerLocalCharges(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        try {
+            return success("Customer local charges loaded successfully", service.loadCustomerLocalCharges(transactionPoid));
+        } catch (ValidationException e) {
+            log.warn("Validation failed while loading customer local charges for {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed to load customer local charges for Export Manifest BL: {}", transactionPoid, e);
+            return error("Failed to load customer local charges: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.CREATE)
+    @Operation(
+            summary = "Approved Manifest — Select For Invoice (Charges tab)",
+            description = """
+                    Legacy **selectForInvoiceAction** only (not auto-invoice on approval).
+                    Validates saved export BL + **FINAL_APPROVAL_COMPLETED** for 100-104.
+                    Returns drill-down for navigation: `documentId` **300-102**, `documentName` **Sales Invoice (Shipping)**, and `blPoid`.
+                    SPA opens a new tab using those fields. Does **not** create invoice or post GL.
+                    User needs **300-102 Create** on the invoice screen.
+                    """
+    )
+    @PostMapping("/{transactionPoid}/select-for-invoice")
+    public ResponseEntity<?> selectForInvoice(
+            @Parameter(description = "Export BL transaction POID", required = true) @PathVariable Long transactionPoid) {
+        try {
+            return success("Select for invoice completed", service.selectForInvoice(transactionPoid));
+        } catch (ValidationException e) {
+            log.warn("Validation failed for select-for-invoice on {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed select-for-invoice for Export Manifest BL: {}", transactionPoid, e);
+            return error("Failed to select BL for invoice: " + e.getMessage(), 500);
+        }
+    }
 }
 
 

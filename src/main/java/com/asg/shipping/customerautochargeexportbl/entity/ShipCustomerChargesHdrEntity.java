@@ -34,12 +34,12 @@ public class ShipCustomerChargesHdrEntity extends BaseEntity {
     private String description;
 
     @Column(name = "PERIOD_FROM", nullable = false)
-    @Temporal(TemporalType.DATE)
-    private Date periodFrom;
+
+    private LocalDate periodFrom;
 
     @Column(name = "PERIOD_TO", nullable = false)
-    @Temporal(TemporalType.DATE)
-    private Date periodTo;
+
+    private LocalDate periodTo;
 
     @Column(name = "DELETED", length = 1)
     private String deleted;

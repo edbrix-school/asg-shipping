@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="NOTICE2TRADE" language="groovy" pageWidth="595" pageHeight="842" columnWidth="535" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" whenNoDataType="AllSectionsNoDetail" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
+	<parameter name="NOTICE2TRADE_SUBREPORT2" class="net.sf.jasperreports.engine.JasperReport"/>
+	<queryString>
+		<![CDATA[SELECT THDR.TRANSACTION_POID,GET_LINE_NAME(THDR.LINE_POID) LINE_NAME,TO_CHAR(THDR.PERIOD_FROM,'DD-MON-YYYY') PERIOD_FROM,THDR.PERIOD_TO
+FROM SHIP_LINE_TARIFF_HDR THDR
+WHERE THDR.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="TRANSACTION_POID" class="java.math.BigDecimal"/>
+	<field name="LINE_NAME" class="java.lang.String"/>
+	<field name="PERIOD_FROM" class="java.lang.String"/>
+	<field name="PERIOD_TO" class="java.sql.Timestamp"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="69" splitType="Stretch">
+			<subreport>
+				<reportElement x="0" y="0" width="555" height="66" uuid="11dd97b8-4c92-45fe-85bb-3b9358474446"/>
+				<subreportParameter name="LOGIN_COMP_POID">
+					<subreportParameterExpression><![CDATA[$P{LOGIN_COMP_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{SUB_HEADER}]]></subreportExpression>
+			</subreport>
+		</band>
+	</title>
+	<pageHeader>
+		<band height="113" splitType="Stretch">
+			<staticText>
+				<reportElement x="175" y="0" width="197" height="20" uuid="46a922d9-bf54-4b96-8755-4726f35ad1eb"/>
+				<textElement textAlignment="Center">
+					<font size="14" isBold="true" isUnderline="true"/>
+				</textElement>
+				<text><![CDATA[NOTICE TO TRADE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="13" y="57" width="303" height="20" uuid="397b2cb0-7ae5-4946-8350-1abee2a01e45"/>
+				<textElement>
+					<font size="12" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Subject : Revision in Line Demurrage charges]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="13" y="77" width="512" height="36" uuid="7d4f478e-08cc-47d3-a16a-4da7542f45cb"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Please be informed that with effect from "+$F{PERIOD_FROM}+",line demurrage tariff for "+$F{LINE_NAME} +" will be revised as given below:"]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="13" y="21" width="303" height="20" uuid="6100f992-47ba-4e59-a338-eca368fe4f82"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="false"/>
+				</textElement>
+				<text><![CDATA[Dear Valued Customers,]]></text>
+			</staticText>
+		</band>
+	</pageHeader>
+	<columnHeader>
+		<band splitType="Stretch"/>
+	</columnHeader>
+	<detail>
+		<band height="200" splitType="Stretch">
+			<subreport>
+				<reportElement stretchType="RelativeToTallestObject" isPrintWhenDetailOverflows="true" x="13" y="0" width="532" height="45" uuid="18854314-84e4-4ca3-876f-3c1c59b5a6b3"/>
+				<subreportParameter name="P_DOC_POID2">
+					<subreportParameterExpression><![CDATA[$P{DOC_KEY_POID}]]></subreportParameterExpression>
+				</subreportParameter>
+				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
+				<subreportExpression><![CDATA[$P{NOTICE2TRADE_SUBREPORT2}]]></subreportExpression>
+			</subreport>
+		</band>
+	</detail>
+	<columnFooter>
+		<band splitType="Stretch"/>
+	</columnFooter>
+	<pageFooter>
+		<band height="195" splitType="Stretch">
+			<textField>
+				<reportElement x="426" y="173" width="80" height="20" uuid="8de9b0ee-8be4-4b23-9e26-995cb917ad9a"/>
+				<textElement textAlignment="Right" verticalAlignment="Bottom">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA["Page "+$V{PAGE_NUMBER}+" of"]]></textFieldExpression>
+			</textField>
+			<textField evaluationTime="Report">
+				<reportElement x="506" y="173" width="40" height="20" uuid="7c33b4e1-5357-495a-a08c-092349f1ff07"/>
+				<textElement verticalAlignment="Bottom">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[" " + $V{PAGE_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="13" y="10" width="226" height="20" uuid="e995bd5c-c6a4-47cc-a110-3fa25dc0e0f9"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<text><![CDATA[Thank you for your support,]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="13" y="52" width="226" height="47" uuid="0509eee3-df28-46e7-8409-c0994dfe6201"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<text><![CDATA[Best Regards,
+Customer Service Desk,
+Alsharif Group W.L.L]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="13" y="99" width="226" height="22" uuid="525fcb85-0aca-420c-941d-718a413c9fc1"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<textFieldExpression><![CDATA["As Agents for "+ $F{LINE_NAME}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd-MMM-yyyy">
+				<reportElement x="58" y="162" width="100" height="20" uuid="a8826a18-1ecd-4672-88ae-9153f1844b75"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<textFieldExpression><![CDATA[new java.util.Date()]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="16" y="162" width="42" height="20" uuid="79c927cc-7e7c-4d8c-82b7-5b5c7facf55d"/>
+				<textElement>
+					<font size="12"/>
+				</textElement>
+				<text><![CDATA[Date   :]]></text>
+			</staticText>
+		</band>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

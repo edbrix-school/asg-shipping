@@ -123,7 +123,7 @@ class ManifestCorrectorServiceImplTest {
 
     @Test
     void getManifestCorrectorById_Success() {
-        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(hdrRepository.findByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
         when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(mapper.mapToDto(any())).thenReturn(responseDTO);
@@ -141,7 +141,7 @@ class ManifestCorrectorServiceImplTest {
 
     @Test
     void getManifestCorrectorById_NotFound() {
-        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.empty());
+        when(hdrRepository.findByTransactionPoid(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getManifestCorrectorById(1L));
     }
@@ -175,9 +175,9 @@ class ManifestCorrectorServiceImplTest {
 
         assertDoesNotThrow(() -> service.deleteManifestCorrector(1L, null));
 
-        verify(hdrRepository).saveAndFlush(argThat(e -> "Y".equals(e.getDeleted())));
-        verify(chargeDtlRepository).deleteByTransactionPoid(1L);
-        verify(containerDtlRepository).deleteByTransactionPoid(1L);
+        verify(hdrRepository).saveAndFlush(any());
+        verifyNoInteractions(chargeDtlRepository);
+        verifyNoInteractions(containerDtlRepository);
     }
 
     @Test
@@ -266,7 +266,7 @@ class ManifestCorrectorServiceImplTest {
         var chargeDtl = new com.asg.shipping.shippingmanifestcorrector.entity.ShipBlReprintChargeDtl();
         var containerDtl = new com.asg.shipping.shippingmanifestcorrector.entity.ShipBlReprintContainerDtl();
 
-        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(hdrRepository.findByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
         when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of(chargeDtl));
         when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of(containerDtl));
         when(mapper.mapToDto(any())).thenReturn(responseDTO);
@@ -282,33 +282,36 @@ class ManifestCorrectorServiceImplTest {
 
     @Test
     void autoPopulateFromBlBrowse_Success() throws Exception {
-        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), any())).thenReturn(1);
-        when(lovService.getDetailsByPoidAndLovName(12345L, "SHIP_BL_REPRINT"))
-                .thenReturn(new LovGetListDto(12345L, "12345", "12345", 12345L, "12345", null, null));
-        when(lovService.getDetailsByPoidAndLovName(101L, "ADDRESS_MASTER"))
-                .thenReturn(new LovGetListDto(101L, "C101", "Consignee", 101L, "Consignee", null, null));
-        when(lovService.getDetailsByCodeAndLovName("ORIGINAL", "BL_ISSUE_TYPE"))
-                .thenReturn(new LovGetListDto(1L, "ORIGINAL", "Original", 1L, "Original", null, null));
-        when(lovService.getDetailsByPoidAndLovName(202L, "ADDRESS_MASTER"))
-                .thenReturn(new LovGetListDto(202L, "N202", "Notify", 202L, "Notify", null, null));
-        when(lovService.getDetailsByCodeAndLovName("IMPORT", "BL_TYPE"))
-                .thenReturn(new LovGetListDto(1L, "IMPORT", "Import", 1L, "Import", null, null));
-        when(lovService.getDetailsByCodeAndLovName("NONE", "SHIP_DO_ANOTICE_HOLD"))
-                .thenReturn(new LovGetListDto(1L, "NONE", "None", 1L, "None", null, null));
-        when(lovService.getDetailsByPoidAndLovName(303L, "GL_MASTER_LEDGERS"))
-                .thenReturn(new LovGetListDto(303L, "GL303", "Payable GL", 303L, "Payable GL", null, null));
-        when(lovService.getDetailsByPoidAndLovName(404L, "GL_MASTER_LEDGERS"))
-                .thenReturn(new LovGetListDto(404L, "GL404", "Income GL", 404L, "Income GL", null, null));
-        when(lovService.getDetailsByPoidAndLovName(505L, "PORT_MASTER"))
-                .thenReturn(new LovGetListDto(505L, "P505", "Delivery Port", 505L, "Delivery Port", null, null));
-        when(lovService.getDetailsByPoidAndLovName(606L, "PORT_MASTER"))
-                .thenReturn(new LovGetListDto(606L, "P606", "Receipt Port", 606L, "Receipt Port", null, null));
-        when(lovService.getDetailsByPoidAndLovName(707L, "PORT_MASTER"))
-                .thenReturn(new LovGetListDto(707L, "P707", "Loading Port", 707L, "Loading Port", null, null));
-        when(lovService.getDetailsByPoidAndLovName(808L, "PORT_MASTER"))
-                .thenReturn(new LovGetListDto(808L, "P808", "Discharge Port", 808L, "Discharge Port", null, null));
-        when(lovService.getDetailsByPoidAndLovName(909L, "VESSAL_VOYAGE"))
-                .thenReturn(new LovGetListDto(909L, "V909", "Voyage", 909L, "Voyage", null, null));
+        LovGetListDto blDet = new LovGetListDto(12345L, "12345", "12345", 12345L, "12345", null, null);
+        LovGetListDto consigneeDet = new LovGetListDto(101L, "C101", "Consignee", 101L, "Consignee", null, null);
+        LovGetListDto notifyDet = new LovGetListDto(202L, "N202", "Notify", 202L, "Notify", null, null);
+        LovGetListDto payableGlDet = new LovGetListDto(303L, "GL303", "Payable GL", 303L, "Payable GL", null, null);
+        LovGetListDto incomeGlDet = new LovGetListDto(404L, "GL404", "Income GL", 404L, "Income GL", null, null);
+        LovGetListDto deliveryDet = new LovGetListDto(505L, "P505", "Delivery Port", 505L, "Delivery Port", null, null);
+        LovGetListDto receiptDet = new LovGetListDto(606L, "P606", "Receipt Port", 606L, "Receipt Port", null, null);
+        LovGetListDto loadingDet = new LovGetListDto(707L, "P707", "Loading Port", 707L, "Loading Port", null, null);
+        LovGetListDto dischargeDet = new LovGetListDto(808L, "P808", "Discharge Port", 808L, "Discharge Port", null, null);
+        LovGetListDto voyageDet = new LovGetListDto(909L, "V909", "Voyage", 909L, "Voyage", null, null);
+        LovGetListDto issueTypeDet = new LovGetListDto(1L, "ORIGINAL", "Original", 1L, "Original", null, null);
+        LovGetListDto blTypeDet = new LovGetListDto(1L, "IMPORT", "Import", 1L, "Import", null, null);
+        LovGetListDto holdReasonDet = new LovGetListDto(1L, "NONE", "None", 1L, "None", null, null);
+
+        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("SHIP_BL_REPRINT")))
+                .thenReturn(Map.of(12345L, blDet));
+        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("ADDRESS_MASTER")))
+                .thenReturn(Map.of(101L, consigneeDet, 202L, notifyDet));
+        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("GL_MASTER_LEDGERS")))
+                .thenReturn(Map.of(303L, payableGlDet, 404L, incomeGlDet));
+        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("PORT_MASTER")))
+                .thenReturn(Map.of(505L, deliveryDet, 606L, receiptDet, 707L, loadingDet, 808L, dischargeDet));
+        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("VESSAL_VOYAGE")))
+                .thenReturn(Map.of(909L, voyageDet));
+        when(lovService.getDetailsByCodesAndLovName(anyList(), eq("BL_ISSUE_TYPE")))
+                .thenReturn(Map.of("ORIGINAL", issueTypeDet));
+        when(lovService.getDetailsByCodesAndLovName(anyList(), eq("BL_TYPE")))
+                .thenReturn(Map.of("IMPORT", blTypeDet));
+        when(lovService.getDetailsByCodesAndLovName(anyList(), eq("SHIP_DO_ANOTICE_HOLD")))
+                .thenReturn(Map.of("NONE", holdReasonDet));
 
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getGroupPoid).thenReturn(10L);

@@ -110,11 +110,19 @@ class BookingFormMapperTest {
     }
 
     @Test
-    void mapUpdateDTOToEntity_nullFields_doesNotUpdate() {
+    void mapUpdateDTOToEntity_nullFields_overwritesToNull() {
+        // Full-replace semantics (matches the legacy ADF form): a null in the update DTO clears the
+        // stored value rather than preserving it, so the FE can blank out editable header fields.
         ShipMateHdr entity = new ShipMateHdr();
         entity.setVessalAgentName("KeepMe");
+        entity.setTotalVolume(5.0);
+        entity.setTotalWeight(20.0);
+        entity.setTotalNoOfPacks(20.0);
         BookingFormMapper.mapUpdateDTOToEntity(new BookingFormUpdateDTO(), entity);
-        assertEquals("KeepMe", entity.getVessalAgentName());
+        assertNull(entity.getVessalAgentName());
+        assertNull(entity.getTotalVolume());
+        assertNull(entity.getTotalWeight());
+        assertNull(entity.getTotalNoOfPacks());
     }
 
     // --- Cargo Detail tests ---

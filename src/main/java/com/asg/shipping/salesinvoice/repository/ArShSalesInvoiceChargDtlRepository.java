@@ -2,6 +2,7 @@ package com.asg.shipping.salesinvoice.repository;
 
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceChargDtl;
 import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceChargDtlId;
+import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceContnrDtl;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for AR_SH_SALES_INVOICE_CHARG_DTL
@@ -51,5 +53,9 @@ public interface ArShSalesInvoiceChargDtlRepository extends JpaRepository<ArShSa
     Long findMaxDetRowIdByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
     List<ArShSalesInvoiceChargDtl> findByTransactionPoidOrderByDetRowId(Long transactionPoid);
+
+    void deleteByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
+
+    Optional<ArShSalesInvoiceChargDtl> findByTransactionPoidAndDetRowId(Long transactionPoid, Long detRowId);
 }
 

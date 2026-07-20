@@ -29,7 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
+import com.asg.common.lib.security.model.CustomAuthDetails;
 
 import net.sf.jasperreports.engine.JasperReport;
 
@@ -81,20 +84,21 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
         // Enrich with LOV data
         enrichHeaderWithLovData(response, entity);
-        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(transactionPoid));
 
-        // Retrieve and set general cargo details
-        response.setGeneralCargoDetails(getGeneralCargoDetails(transactionPoid));
-
-        // Simple single-string view: all DESC / MARK rows joined via native query on string column
-        response.setSimpleCargoDescription(joinDescriptionStrings(
-                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "DESC")));
-        response.setSimpleCargoMarks(joinDescriptionStrings(
-                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
-
+        // Fetch status once — used for both statusDetails and displayTopInfoExportBLS
         Long userPoid = UserContext.getUserPoid();
         String status = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
         response.setStatusDetails(parseBlStatus(status));
+        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoFromStatus(status));
+
+        // Retrieve general cargo details (header already validated above)
+        response.setGeneralCargoDetails(fetchGeneralCargoDetails(transactionPoid));
+
+        // Simple single-string view: all DESC / MARK rows joined via native query on string column
+        response.setSimpleCargoDescription(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "CARGO")));
+        response.setSimpleCargoMarks(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
 
         return response;
     }
@@ -190,15 +194,9 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Save entity
         ExportShipBlManifestHdr saved = hdrRepository.save(entity);
-        
-        log.info("Successfully created Export BL with ID: {}", saved.getTransactionPoid());
-        ExportManifestBlResponse response = mapper.mapToResponse(saved);
-        
-        // Enrich with LOV data
-        enrichHeaderWithLovData(response, saved);
-        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(saved.getTransactionPoid()));
 
-        return response;
+        log.info("Successfully created Export BL with ID: {}", saved.getTransactionPoid());
+        return mapper.mapToResponse(saved);
     }
 
     @Override
@@ -246,15 +244,18 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Save entity
         ExportShipBlManifestHdr saved = hdrRepository.save(entity);
-        
-        log.info("Successfully updated Export BL with ID: {}", saved.getTransactionPoid());
-        ExportManifestBlResponse response = mapper.mapToResponse(saved);
-        
-        // Enrich with LOV data
-        enrichHeaderWithLovData(response, saved);
-        response.setDisplayTopInfoExportBLS(resolveDisplayTopInfoExportBLS(saved.getTransactionPoid()));
 
-        return response;
+        log.info("Successfully updated Export BL with ID: {}", saved.getTransactionPoid());
+        return mapper.mapToResponse(saved);
+    }
+
+    private ExportManifestBlResponse loadMinimalHeader(Long transactionPoid) {
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        ExportShipBlManifestHdr entity = hdrRepository
+                .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
+                .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
+        return mapper.mapToResponse(entity);
     }
 
     private void validateHeaderExists(Long transactionPoid) {
@@ -274,6 +275,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public ExportManifestUpdateResponse updateExportBlCombined(Long transactionPoid, ExportManifestUpdateRequest request) {
         log.info("Updating Export BL combined for ID: {}", transactionPoid);
 
+        // Validate once — all sub-operations share this check
+        validateHeaderExists(transactionPoid);
+        String userId = getCurrentUser();
+
         // --- Simple string saves run FIRST so subsequent list fetches reflect the new data ---
         String simpleCargoDescResponse = null;
         if (request.getSimpleCargoDescription() != null) {
@@ -288,64 +293,70 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         // --- Header ---
         // With @JsonUnwrapped, header is always non-null but fields may all be null if FE sent nothing.
         // Use voyageTransactionPoid as a meaningful presence check.
-        ExportManifestBlResponse headerResponse = null;
         ExportManifestBlRequest headerReq = request.getHeader();
-        if (headerReq != null && headerReq.getVoyageTransactionPoid() != null) {
-            headerResponse = updateExportBl(transactionPoid, headerReq);
-        } else {
-            headerResponse = getExportBlById(transactionPoid);
+        ExportManifestBlResponse headerResponse = (headerReq != null && headerReq.getVoyageTransactionPoid() != null)
+                ? updateExportBl(transactionPoid, headerReq)
+                : loadMinimalHeader(transactionPoid);
+
+        // Capture UserContext (ThreadLocal) so child threads can inherit it
+        CustomAuthDetails authDetails = UserContext.getCurrentUser();
+
+        // Fire all 5 detail writes in parallel — no fetch, no return value
+        CompletableFuture<Void> generalFuture = request.getGeneralCargoDetails() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateGeneralCargoDetails(transactionPoid, request.getGeneralCargoDetails(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> containerFuture = request.getContainerDetails() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateContainerDetails(transactionPoid, request.getContainerDetails(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> cargoDescFuture = request.getCargoDescription() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateCargoDescription(transactionPoid, request.getCargoDescription(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> cargoMarksFuture = request.getCargoMarks() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateCargoMarks(transactionPoid, request.getCargoMarks(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        CompletableFuture<Void> chargeFuture = request.getChargeDetails() != null
+                ? CompletableFuture.runAsync(() -> {
+                    UserContext.setCurrentUser(authDetails);
+                    try { doUpdateChargeDetails(transactionPoid, request.getChargeDetails(), userId); }
+                    finally { UserContext.clear(); }
+                }) : CompletableFuture.completedFuture(null);
+
+        // Wait for all writes; rethrow the first failure
+        try {
+            CompletableFuture.allOf(generalFuture, containerFuture, cargoDescFuture, cargoMarksFuture, chargeFuture).join();
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            throw (cause instanceof RuntimeException) ? (RuntimeException) cause : new RuntimeException(cause);
         }
 
-        // --- General cargo ---
-        List<GeneralCargoDetailDto> generalCargoResponse = null;
-        if (request.getGeneralCargoDetails() != null) {
-            generalCargoResponse = updateGeneralCargoDetails(transactionPoid, request.getGeneralCargoDetails());
-        } else {
-            generalCargoResponse = getGeneralCargoDetails(transactionPoid);
-        }
-
-        // --- Container details ---
-        List<ContainerDetailDto> containerResponse = null;
-        if (request.getContainerDetails() != null) {
-            containerResponse = updateContainerDetails(transactionPoid, request.getContainerDetails());
-        } else {
-            containerResponse = getContainerDetails(transactionPoid);
-        }
-
-        // --- Cargo description list (fetch reflects simple save above if list not provided) ---
-        List<CargoDescriptionDto> cargoDescResponse = null;
-        if (request.getCargoDescription() != null) {
-            cargoDescResponse = updateCargoDescription(transactionPoid, request.getCargoDescription());
-        } else {
-            cargoDescResponse = getCargoDescription(transactionPoid);
-        }
-
-        // --- Cargo marks list (fetch reflects simple save above if list not provided) ---
-        List<CargoMarksDto> cargoMarksResponse = null;
-        if (request.getCargoMarks() != null) {
-            cargoMarksResponse = updateCargoMarks(transactionPoid, request.getCargoMarks());
-        } else {
-            cargoMarksResponse = getCargoMarks(transactionPoid);
-        }
-
-        // --- Charge details ---
-        Map<String, Object> chargeResponse = null;
-        if (request.getChargeDetails() != null) {
-            chargeResponse = updateChargeDetails(transactionPoid, request.getChargeDetails());
-        } else {
-            chargeResponse = getChargeDetails(transactionPoid);
+        // Recalculate header totals once after all parallel writes complete
+        boolean anyUpdate = request.getGeneralCargoDetails() != null
+                || request.getContainerDetails() != null
+                || request.getChargeDetails() != null;
+        if (anyUpdate) {
+            recalculateHeaderTotals(transactionPoid);
         }
 
         ExportManifestUpdateResponse response = new ExportManifestUpdateResponse();
         response.setHeader(headerResponse);
-        response.setGeneralCargoDetails(generalCargoResponse);
-        response.setContainerDetails(containerResponse);
-        response.setCargoDescription(cargoDescResponse);
-        response.setCargoMarks(cargoMarksResponse);
         response.setSimpleCargoDescription(simpleCargoDescResponse);
         response.setSimpleCargoMarks(simpleCargoMarksResponse);
-        response.setDisplayTopInfoExportBLS(headerResponse != null ? headerResponse.getDisplayTopInfoExportBLS() : resolveDisplayTopInfoExportBLS(transactionPoid));
-        response.setChargeDetails(chargeResponse);
 
         return response;
     }
@@ -360,7 +371,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 .collect(Collectors.joining(" "));
     }
 
-    /** Joins DTO list — used when the list is already fetched (e.g. getCargoContainerDetails). */
     private String joinCargoDescriptions(List<CargoDescriptionDto> list) {
         if (list == null || list.isEmpty()) return null;
         return list.stream()
@@ -381,12 +391,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
     private String saveSimpleCargoDescription(Long transactionPoid, String text) {
         log.info("Saving simple cargo description for Export BL: {}", transactionPoid);
-        cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "DESC");
+        cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, "CARGO");
         if (text != null && !text.trim().isEmpty()) {
             ExportShipBlManifestCargoDtl entity = new ExportShipBlManifestCargoDtl();
             entity.setTransactionPoid(transactionPoid);
             entity.setDetRowId(1L);
-            entity.setDescriptionType("DESC");
+            entity.setDescriptionType("CARGO");
             entity.setCargoDescription(text);
             cargoDtlRepository.save(entity);
         }
@@ -431,6 +441,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<GeneralCargoDetailDto> getGeneralCargoDetails(Long transactionPoid) {
         log.info("Getting general cargo details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
+        return fetchGeneralCargoDetails(transactionPoid);
+    }
+
+    private List<GeneralCargoDetailDto> fetchGeneralCargoDetails(Long transactionPoid) {
         List<ExportShipBlManifestGeneralDtl> entities = generalDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
         List<GeneralCargoDetailDto> dtos = mapper.mapGeneralCargoListToDto(entities);
         enrichGeneralCargoDetailsWithLovData(dtos);
@@ -441,8 +455,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<GeneralCargoDetailDto> updateGeneralCargoDetails(Long transactionPoid, List<GeneralCargoDetailDto> request) {
         log.info("Updating general cargo details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        String userId = getCurrentUser();
-        
+        doUpdateGeneralCargoDetails(transactionPoid, request, getCurrentUser());
+        recalculateHeaderTotals(transactionPoid);
+        return fetchGeneralCargoDetails(transactionPoid);
+    }
+
+    private void doUpdateGeneralCargoDetails(Long transactionPoid, List<GeneralCargoDetailDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (GeneralCargoDetailDto dto : request) {
@@ -483,8 +501,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 generalDtlRepository.deleteByTransactionPoidAndDetRowIds(transactionPoid, deleteIds);
             }
         }
-        recalculateHeaderTotals(transactionPoid);
-        return getGeneralCargoDetails(transactionPoid);
     }
 
     // ========== Container Details Operations ==========
@@ -494,6 +510,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<ContainerDetailDto> getContainerDetails(Long transactionPoid) {
         log.info("Getting container details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
+        return fetchContainerDetails(transactionPoid);
+    }
+
+    private List<ContainerDetailDto> fetchContainerDetails(Long transactionPoid) {
         List<ExportShipBlManifestContainerDtl> entities = containerDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
         List<ContainerDetailDto> dtos = mapper.mapContainerListToDto(entities);
         enrichContainerDetailsWithLovData(dtos);
@@ -504,8 +524,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<ContainerDetailDto> updateContainerDetails(Long transactionPoid, List<ContainerDetailDto> request) {
         log.info("Updating container details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        String userId = getCurrentUser();
-        
+        doUpdateContainerDetails(transactionPoid, request, getCurrentUser());
+        recalculateHeaderTotals(transactionPoid);
+        return fetchContainerDetails(transactionPoid);
+    }
+
+    private void doUpdateContainerDetails(Long transactionPoid, List<ContainerDetailDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (ContainerDetailDto dto : request) {
@@ -539,7 +563,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                             if (dto.getPackUnit() != null) entity.setPackUnit(dto.getPackUnit());
                             if (dto.getDestinationPortPoid() != null) entity.setDestinationPortPoid(dto.getDestinationPortPoid());
                             if (dto.getMateTransactionPoid() != null) entity.setMateTransactionPoid(dto.getMateTransactionPoid());
-                            if (dto.getMateTransactionPoid() != null) entity.setMateTransactionPoid(dto.getMateTransactionPoid());
                             if (dto.getExtraFreeDays() != null) entity.setExtraFreeDays(dto.getExtraFreeDays());
                             if (dto.getExtraFreeDaysPrnpls() != null) entity.setExtraFreeDaysPrnpls(dto.getExtraFreeDaysPrnpls());
                             containerDtlRepository.save(entity);
@@ -551,8 +574,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 containerDtlRepository.deleteByTransactionPoidAndDetRowIds(transactionPoid, deleteIds);
             }
         }
-        recalculateHeaderTotals(transactionPoid);
-        return getContainerDetails(transactionPoid);
     }
 
     // ========== Cargo Description and Marks Operations ==========
@@ -562,7 +583,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoDescriptionDto> getCargoDescription(Long transactionPoid) {
         log.info("Getting cargo description for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findCargoRowsByType(transactionPoid, "DESC");
+        return fetchCargoDescription(transactionPoid);
+    }
+
+    private List<CargoDescriptionDto> fetchCargoDescription(Long transactionPoid) {
+        List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findCargoRowsByType(transactionPoid, "CARGO");
         return mapper.mapCargoDescriptionListToDto(entities);
     }
 
@@ -570,8 +595,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoDescriptionDto> updateCargoDescription(Long transactionPoid, List<CargoDescriptionDto> request) {
         log.info("Updating cargo description for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        String userId = getCurrentUser();
-        
+        doUpdateCargoDescription(transactionPoid, request, getCurrentUser());
+        return fetchCargoDescription(transactionPoid);
+    }
+
+    private void doUpdateCargoDescription(Long transactionPoid, List<CargoDescriptionDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (CargoDescriptionDto dto : request) {
@@ -583,14 +611,14 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         if (detRowId != null) deleteIds.add(detRowId);
                         break;
                     case ISCREATED:
-                        detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "DESC");
+                        detRowId = cargoDtlRepository.getNextDetRowId(transactionPoid, "CARGO");
                         ExportShipBlManifestCargoDtl newEntity = mapper.mapCargoDescriptionToEntity(dto, transactionPoid, detRowId, userId);
-                        newEntity.setDescriptionType("DESC");
+                        newEntity.setDescriptionType("CARGO");
                         cargoDtlRepository.save(newEntity);
                         break;
                     case ISUPDATED:
                         if (detRowId != null) {
-                            ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "DESC"))
+                            ExportShipBlManifestCargoDtl entity = cargoDtlRepository.findById(new ExportShipBlManifestCargoDtlId(transactionPoid, detRowId, "CARGO"))
                                 .orElseThrow(() -> new RuntimeException("Cargo description detail not found"));
                             if (dto.getCargoDescription() != null) entity.setCargoDescription(dto.getCargoDescription());
                             cargoDtlRepository.save(entity);
@@ -599,10 +627,9 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 }
             }
             if (!deleteIds.isEmpty()) {
-                cargoDtlRepository.deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(transactionPoid, "DESC", deleteIds);
+                cargoDtlRepository.deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(transactionPoid, "CARGO", deleteIds);
             }
         }
-        return getCargoDescription(transactionPoid);
     }
 
     @Override
@@ -610,17 +637,14 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public ExportManifestCargoContainerResponse getCargoContainerDetails(Long transactionPoid) {
         log.info("Getting cargo and container details for Export BL: {}", transactionPoid);
 
-        List<CargoDescriptionDto> descList = getCargoDescription(transactionPoid);
-        List<CargoMarksDto> marksList = getCargoMarks(transactionPoid);
+        validateHeaderExists(transactionPoid);
 
         ExportManifestCargoContainerResponse response = new ExportManifestCargoContainerResponse();
-        response.setCargoDescription(descList);
-        response.setCargoMarks(marksList);
-        response.setContainerDetails(getContainerDetails(transactionPoid));
-
-        // Simple single-string view: native query on string column — most reliable
+        response.setCargoDescription(fetchCargoDescription(transactionPoid));
+        response.setCargoMarks(fetchCargoMarks(transactionPoid));
+        response.setContainerDetails(fetchContainerDetails(transactionPoid));
         response.setSimpleCargoDescription(joinDescriptionStrings(
-                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "DESC")));
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "CARGO")));
         response.setSimpleCargoMarks(joinDescriptionStrings(
                 cargoDtlRepository.findDescriptionStringsByType(transactionPoid, "MARK")));
 
@@ -632,6 +656,10 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoMarksDto> getCargoMarks(Long transactionPoid) {
         log.info("Getting cargo marks for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
+        return fetchCargoMarks(transactionPoid);
+    }
+
+    private List<CargoMarksDto> fetchCargoMarks(Long transactionPoid) {
         List<ExportShipBlManifestCargoDtl> entities = cargoDtlRepository.findCargoRowsByType(transactionPoid, "MARK");
         return mapper.mapCargoMarksListToDto(entities);
     }
@@ -640,8 +668,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public List<CargoMarksDto> updateCargoMarks(Long transactionPoid, List<CargoMarksDto> request) {
         log.info("Updating cargo marks for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        String userId = getCurrentUser();
-        
+        doUpdateCargoMarks(transactionPoid, request, getCurrentUser());
+        return fetchCargoMarks(transactionPoid);
+    }
+
+    private void doUpdateCargoMarks(Long transactionPoid, List<CargoMarksDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (CargoMarksDto dto : request) {
@@ -672,7 +703,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 cargoDtlRepository.deleteByTransactionPoidAndDescriptionTypeAndDetRowIds(transactionPoid, "MARK", deleteIds);
             }
         }
-        return getCargoMarks(transactionPoid);
     }
 
     // ========== Charge Details Operations ==========
@@ -682,24 +712,25 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public Map<String, Object> getChargeDetails(Long transactionPoid) {
         log.info("Getting charge details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
+        return fetchChargeDetails(transactionPoid);
+    }
+
+    private Map<String, Object> fetchChargeDetails(Long transactionPoid) {
         List<ExportShipBlManifestChargesDtl> entities = chargesDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
         List<ChargeDetailDto> dtos = mapper.mapChargeListToDto(entities);
         enrichChargeDetailsWithLovData(dtos);
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("chargeDetails", dtos);
-        
+
         BigDecimal totalBuyAmount = BigDecimal.ZERO;
         BigDecimal totalSaleAmount = BigDecimal.ZERO;
-        
         for (ChargeDetailDto dto : dtos) {
             if (dto.getBuyAmount() != null) totalBuyAmount = totalBuyAmount.add(dto.getBuyAmount());
             if (dto.getSaleAmount() != null) totalSaleAmount = totalSaleAmount.add(dto.getSaleAmount());
         }
-        
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("chargeDetails", dtos);
         response.put("totalBuyAmount", totalBuyAmount);
         response.put("totalSaleAmount", totalSaleAmount);
-        
         return response;
     }
 
@@ -707,8 +738,12 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     public Map<String, Object> updateChargeDetails(Long transactionPoid, List<ChargeDetailDto> request) {
         log.info("Updating charge details for Export BL: {}", transactionPoid);
         validateHeaderExists(transactionPoid);
-        String userId = getCurrentUser();
-        
+        doUpdateChargeDetails(transactionPoid, request, getCurrentUser());
+        recalculateHeaderTotals(transactionPoid);
+        return fetchChargeDetails(transactionPoid);
+    }
+
+    private void doUpdateChargeDetails(Long transactionPoid, List<ChargeDetailDto> request, String userId) {
         if (request != null) {
             List<Long> deleteIds = new ArrayList<>();
             for (ChargeDetailDto dto : request) {
@@ -729,7 +764,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         if (detRowId != null) {
                             ExportShipBlManifestChargesDtl entity = chargesDtlRepository.findById(new ExportShipBlManifestChargesDtlId(transactionPoid, detRowId))
                                 .orElseThrow(() -> new RuntimeException("Charge detail not found"));
-                            
                             if (dto.getChargePoid() != null) entity.setChargePoid(dto.getChargePoid());
                             if (dto.getChargeType() != null) entity.setChargeType(dto.getChargeType());
                             if (dto.getFreightType() != null) entity.setFreightType(dto.getFreightType());
@@ -744,7 +778,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                             if (dto.getTaxPoid() != null) entity.setTaxPoid(dto.getTaxPoid());
                             if (dto.getTaxPercentage() != null) entity.setTaxPercentage(dto.getTaxPercentage());
                             if (dto.getTaxAmount() != null) entity.setTaxAmount(dto.getTaxAmount());
-                            
                             chargesDtlRepository.save(entity);
                         }
                         break;
@@ -754,8 +787,6 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                 chargesDtlRepository.deleteByTransactionPoidAndDetRowIds(transactionPoid, deleteIds);
             }
         }
-        recalculateHeaderTotals(transactionPoid);
-        return getChargeDetails(transactionPoid);
     }
 
     private void recalculateHeaderTotals(Long transactionPoid) {
@@ -794,19 +825,26 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     	
     	log.info("Bl print : {}", transactionPoid);
     	
-    	Long groupPoid=UserContext.getGroupPoid();
-    	Long companyPoid=UserContext.getCompanyPoid();
+    	Long groupPoid = UserContext.getGroupPoid();
+    	Long companyPoid = UserContext.getCompanyPoid();
     	ExportShipBlManifestHdr entity = hdrRepository
-                .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
+                .findActiveExportBlByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ValidationException("Export BL not found with ID: " + transactionPoid));
     	if(entity.getBlOrginalPrint()!=null && entity.getBlOrginalPrint().equalsIgnoreCase("Y")) {
     		throw new ValidationException("BL already printed");
     	}
     	
-    	String jrxmlFile= customBLRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
+    	String jrxmlFile = customBLRepository.getBlPrintReport(groupPoid, companyPoid, docId, transactionPoid, "BL_PRINT");
+    	if (jrxmlFile == null || jrxmlFile.isBlank()) {
+    		throw new ValidationException("BL print report template not configured for this BL");
+    	}
+    	if (!jrxmlFile.toLowerCase().contains(".jrxml")) {
+    		throw new ValidationException(jrxmlFile.trim());
+    	}
     	Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-140");
-		JasperReport mainReport = printService.load("Shipping/"+jrxmlFile);
-		params.put("DRAFT_ORIGINAL", request.getDraftOriginal());
+		params.put("DOC_KEY_POID", String.valueOf(transactionPoid));
+		JasperReport mainReport = printService.load("Shipping/" + jrxmlFile);
+		params.put("DRAFT_ORIGINAL", request.getDraftOriginalParam());
 		return printService.fillReportToPdf(mainReport, params, dataSource);
     	
     }
@@ -814,7 +852,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     @Override
     public byte[] generateManifest(Long transactionPoid, GenerateManifestRequest request, String docId) throws Exception {
     	Map<String, Object> params = printService.buildBaseParams(transactionPoid, docId);
-		params.put("P_FREIGHTCARGO", request.getFreightCargo().toString().toUpperCase());
+		params.put("P_FREIGHTCARGO", request.getFreightCargoParam());
         params.put("SUBREPORT_MARK_INFO", printService.load("Shipping/SH/Cargo/Mark_Info_Subreport1.jrxml"));
 	    params.put("SUBREPORT_CONTAINER_INFO", printService.load("Shipping/SH/Cargo/Container_Info_Subreport1.jrxml"));
 	    params.put("SUBREPORT_DESCRIPTION_INFO", printService.load("Shipping/SH/Cargo/Description_Info_Subreport1.jrxml"));
@@ -928,15 +966,17 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         Long userPoid = UserContext.getUserPoid();
 
         try {
-            String result = customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid);
-            if (result == null || result.isBlank() || "FALSE".equalsIgnoreCase(result)) {
-                return "NEW";
-            }
-            return result;
+            return resolveDisplayTopInfoFromStatus(
+                    customBLRepository.getBlStatus(groupPoid, companyPoid, userPoid, transactionPoid));
         } catch (Exception e) {
             log.warn("Failed to fetch display top info for Export BL: {}", transactionPoid, e);
             return "NEW";
         }
+    }
+
+    private String resolveDisplayTopInfoFromStatus(String status) {
+        if (status == null || status.isBlank() || "FALSE".equalsIgnoreCase(status)) return "NEW";
+        return status;
     }
 
     private BlStatusResponse.StatusDetails parseBlStatus(String rawStatus) {
@@ -1276,9 +1316,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         if (addressList == null || addressList.isEmpty()) {
             log.info("Address of type MAIN not found. Fetching any address for master poid.");
-            addressList = addressDetailsRepository.findAll().stream()
-                    .filter(addr -> addressMasterPoid.equals(addr.getAddressMasterPoid()))
-                    .collect(Collectors.toList());
+            addressList = addressDetailsRepository.findByAddressMasterPoid(addressMasterPoid);
         }
         
         if (addressList == null || addressList.isEmpty()) {

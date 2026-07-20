@@ -1,5 +1,6 @@
 package com.asg.shipping.importManifestUpdateTest.repository;
 
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestupdate.respository.ImportManifestBlProcRepositoryImpl;
@@ -40,7 +41,6 @@ class ImportManifestBlProcRepositoryImplTest {
             when(storedProcedureQuery.getOutputParameterValue("P_STATUS")).thenReturn("SUCCESS");
 
             EmailVerificationRequestDto request = EmailVerificationRequestDto.builder()
-                    .transactionPoId(1L)
                     .verified(true)
                     .verifiedWithSpecialC(false)
                     .build();
@@ -74,7 +74,7 @@ class ImportManifestBlProcRepositoryImplTest {
             when(entityManager.createStoredProcedureQuery("PROC_SHIP_BL_EDI_EMAILS"))
                     .thenReturn(storedProcedureQuery);
             when(storedProcedureQuery.getOutputParameterValue("P_EMAI_IDS"))
-                    .thenReturn("test@test.com,test2@test.com");
+                    .thenReturn("test@test.com; test2@test.com");
 
             SendEdiEmailsResponseDto response = repository.getEdiEmails(1L);
 
@@ -113,6 +113,77 @@ class ImportManifestBlProcRepositoryImplTest {
                     .thenReturn(storedProcedureQuery);
 
             repository.processBlSaveAfter(1L, 100L, 200L, "AUTOSUMWEIGHTPACKATE");
+
+            verify(storedProcedureQuery).execute();
+        }
+    }
+
+    private void stubValidateBeforeSaveProc(MockedStatic<UserContext> mockedUserContext, String procResult) {
+        mockedUserContext.when(UserContext::getGroupPoid).thenReturn(100L);
+        mockedUserContext.when(UserContext::getUserPoid).thenReturn(1L);
+        mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(200L);
+
+        when(entityManager.createStoredProcedureQuery("PROC_SHIP_VALD_BEFORE_SAVE"))
+                .thenReturn(storedProcedureQuery);
+        when(storedProcedureQuery.getOutputParameterValue("P_RESULT")).thenReturn(procResult);
+    }
+
+    /**
+     * Legacy GetBlValidate() returns true when the proc answers "TRUE", and the bean
+     * then raises "Map Quotation in manifest" for an unmapped collect BL that is not
+     * booked by principal.
+     */
+    @Test
+    void validateBeforeSave_ProcTrueAndQuotationUnmapped_Fail() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            stubValidateBeforeSaveProc(mockedUserContext, "TRUE");
+
+            ValidationException ex = assertThrows(ValidationException.class,
+                    () -> repository.validateBeforeSave(100L, 1L, null, "2", "N"));
+            assertTrue(ex.getMessage().contains("quotation must be mapped"));
+        }
+    }
+
+    @Test
+    void validateBeforeSave_ProcTrueButQuotationMapped_Success() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            stubValidateBeforeSaveProc(mockedUserContext, "TRUE");
+
+            repository.validateBeforeSave(100L, 1L, 55L, "2", "N");
+
+            verify(storedProcedureQuery).execute();
+        }
+    }
+
+    @Test
+    void validateBeforeSave_ProcTrueButBookedByPrincipal_Success() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            stubValidateBeforeSaveProc(mockedUserContext, "TRUE");
+
+            repository.validateBeforeSave(100L, 1L, null, "2", "Y");
+
+            verify(storedProcedureQuery).execute();
+        }
+    }
+
+    @Test
+    void validateBeforeSave_ProcTrueButFreightNotCollect_Success() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            stubValidateBeforeSaveProc(mockedUserContext, "TRUE");
+
+            repository.validateBeforeSave(100L, 1L, null, "1", "N");
+
+            verify(storedProcedureQuery).execute();
+        }
+    }
+
+    /** Proc says no quotation is expected: the BL saves even with nothing mapped. */
+    @Test
+    void validateBeforeSave_ProcFalse_Success() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            stubValidateBeforeSaveProc(mockedUserContext, "FALSE");
+
+            repository.validateBeforeSave(100L, 1L, null, "2", "N");
 
             verify(storedProcedureQuery).execute();
         }

@@ -14,16 +14,13 @@ import java.util.Optional;
 @Repository
 public interface ShipLineReportTransferHdrRepository extends JpaRepository<ShipLineReportTransferHdr, Long> {
 
-    @Query("SELECT h FROM ShipLineReportTransferHdr h WHERE h.transactionPoid = :transactionPoid " +
-            "AND (h.deleted IS NULL OR h.deleted = 'N')")
+    @Query("SELECT h FROM ShipLineReportTransferHdr h WHERE h.transactionPoid = :transactionPoid")
     Optional<ShipLineReportTransferHdr> findActiveByTransactionPoid(@Param("transactionPoid") Long transactionPoid);
 
-    @Query("SELECT h FROM ShipLineReportTransferHdr h WHERE h.docRef = :docRef " +
-            "AND (h.deleted IS NULL OR h.deleted = 'N')")
+    @Query("SELECT h FROM ShipLineReportTransferHdr h WHERE h.docRef = :docRef")
     Optional<ShipLineReportTransferHdr> findByDocRef(@Param("docRef") String docRef);
 
     @Query("SELECT COUNT(h) > 0 FROM ShipLineReportTransferHdr h WHERE h.docRef = :docRef " +
-            "AND (h.deleted IS NULL OR h.deleted = 'N') " +
             "AND (:excludeTransactionPoid IS NULL OR h.transactionPoid <> :excludeTransactionPoid)")
     boolean existsByDocRef(@Param("docRef") String docRef,
                            @Param("excludeTransactionPoid") Long excludeTransactionPoid);

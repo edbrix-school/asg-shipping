@@ -5,6 +5,8 @@ import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestupdate.entity.*;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +17,14 @@ public class ImportManifestBlMapper {
 
     private static final String CONTAINER_OWN_CUSTOMER = "C";
     private static final String CONTAINER_OWN_SHIPPER = "S";
+
+    /** Matches the NUMBER(25,3) precision of the charge amount columns. */
+    private static final int AMOUNT_SCALE = 3;
+    private static final BigDecimal ZERO_AMOUNT = BigDecimal.ZERO.setScale(AMOUNT_SCALE);
+
+    private static BigDecimal scaledAmount(BigDecimal value) {
+        return value.setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+    }
 
     public ImportManifestUpdateOpsDto mapToScreenDto(ImportManifestBlRequestDto requestDto) {
         if (requestDto == null) {
@@ -41,7 +51,8 @@ public class ImportManifestBlMapper {
                 .agentReference(requestDto.getAgentReference())
                 .exportReference(requestDto.getExportReference())
                 .remarks(requestDto.getRemarks())
-                
+                .salesmanPoid(requestDto.getSalesmanPoid())
+                .salesmanDet(requestDto.getSalesmanDet())
                 .shipperEdiName(requestDto.getShipperEdiName())
                 .shipperEdiAddress(requestDto.getShipperEdiAddress())
                 .consigneeEdiName(requestDto.getConsigneeEdiName())
@@ -50,7 +61,8 @@ public class ImportManifestBlMapper {
                 .consigneeDet(requestDto.getConsigneeDet())
                 .bookingPartyPoid(requestDto.getBookingPartyPoid())
                 .bookingPartyDet(requestDto.getBookingPartyDet())
-                
+                .transactionDate(requestDto.getTransactionDate())
+                .ffJobNoHold(requestDto.getFfJobNoHold())
                 .preCarriedBy(requestDto.getPreCarriedBy())
                 .placeOfReceiptPoid(requestDto.getPlaceOfRecieptPoid())
                 .placeOfReceiptDet(requestDto.getPlaceOfRecieptDet())
@@ -60,7 +72,8 @@ public class ImportManifestBlMapper {
                 .portOfLoadingDet(requestDto.getPortOfLoadingDet())
                 .portOfDischargePoid(requestDto.getPortOfDischargePoid())
                 .portOfDischargeDet(requestDto.getPortOfDischargeDet())
-                
+                .documentCompanyPoid(requestDto.getDocumentCompanyPoid())
+                .documentCompanyDivisionPoid(requestDto.getDocumentCompanyDivisionPoid())
                 .comodityPoid(requestDto.getComodityPoid())
                 .comodityDet(requestDto.getComodityDet())
                 .totalNetVolume(requestDto.getTotalNetVolume())
@@ -69,7 +82,8 @@ public class ImportManifestBlMapper {
                 .weightUnit(requestDto.getWeightUnit())
                 .unitPack(requestDto.getUnitPack())
                 .totalNoOfPacks(requestDto.getTotalNoOfPacks())
-                
+                .quotationTransactionPoid(requestDto.getQuotationTransactionPoid())
+                .quotationTransactionDet(requestDto.getQuotationTransactionDet())
                 .notify1EdiName(requestDto.getNotify1EdiName())
                 .notify1EdiAddress(requestDto.getNotify1EdiAddress())
                 .notifyPoid1(requestDto.getNotifyPoid1())
@@ -121,6 +135,7 @@ public class ImportManifestBlMapper {
                 .noOfOrgnlBls(screenDto.getNoOfOrgnlBls())
                 .exportReference(screenDto.getExportReference())
                 .typeOfMove(screenDto.getTypeOfMove())
+                .demFreeDays(screenDto.getDemFreeDays())
                 .preCarriedBy(screenDto.getPreCarriedBy())
                 .totalNetVolume(screenDto.getTotalNetVolume())
                 .totalWeight(screenDto.getTotalWeight())
@@ -154,7 +169,8 @@ public class ImportManifestBlMapper {
                 .freightStatus(screenDto.getFreightStatus())
                 .cargoType(screenDto.getCargoType())
                 .blType(screenDto.getBlType())
-                
+                . documentCompanyPoid(screenDto.getDocumentCompanyPoid())
+                .documentCompanyDivisionPoid(screenDto.getDocumentCompanyDivisionPoid())
                 .notifyParties(screenDto.getAddressDetails())
                 .generalCargoDetails(screenDto.getGeneralCargoDetails())
                 .simpleCargoDescription(screenDto.getSimpleCargoDescription())
@@ -500,6 +516,7 @@ public class ImportManifestBlMapper {
         entity.setDoCntToRegsMails(dto.getDoCntToRegsMails());
         entity.setDeliverySentTo(dto.getDeliverySentTo());
         entity.setFfBillToPoid(dto.getFfBillToPoid());
+        entity.setDemFreeDays(dto.getDemFreeDays());
         entity.setDemActualNextDay(dto.getDemActualNextDay());
         entity.setPrincipalDoNumber(dto.getPrincipalDoNumber());
         entity.setStopUcanAlert(dto.getStopUcanAlert());
@@ -507,6 +524,9 @@ public class ImportManifestBlMapper {
         entity.setForwarderPin(dto.getForwarderPin());
         entity.setManifestEmailVerified(dto.getManifestEmailVerified());
         entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
+        if (entity.getDeleted() == null) {
+            entity.setDeleted("N");
+        }
         return entity;
     }
 
@@ -737,6 +757,14 @@ public class ImportManifestBlMapper {
     public ChargeRequestDto mapChargesDtlToDto(ShipBlManifestChargesDtl entity) {
         if (entity == null)
             return null;
+        BigDecimal qty = entity.getQuantity() != null ? entity.getQuantity() : BigDecimal.ONE;
+        BigDecimal exch = entity.getCurrencyExchange() != null ? entity.getCurrencyExchange() : BigDecimal.ONE;
+        BigDecimal buyAmt = entity.getBuyPercharge() != null
+                ? scaledAmount(entity.getBuyPercharge().multiply(qty).multiply(exch))
+                : ZERO_AMOUNT;
+        BigDecimal saleAmt = entity.getPerQuantityAmount() != null
+                ? scaledAmount(entity.getPerQuantityAmount().multiply(qty).multiply(exch))
+                : ZERO_AMOUNT;
         return ChargeRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
                 .chargePoid(entity.getChargePoid())
@@ -744,6 +772,8 @@ public class ImportManifestBlMapper {
                 .quantity(entity.getQuantity())
                 .buyPercharge(entity.getBuyPercharge())
                 .perQuantityAmount(entity.getPerQuantityAmount())
+                .buyAmount(buyAmt)
+                .saleAmount(saleAmt)
                 .paidAtPortPoid(entity.getPaidAtPortPoid())
                 .chargeType(entity.getChargeType())
                 .currencyCode(entity.getCurrencyCode())

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -15,6 +16,8 @@ import java.time.LocalDateTime;
 public class VoyageResponse {
     private Long transactionPoid;
     private String docRef;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate transactionDate;
     private String jobNo;
     private String voyageNo;
 
@@ -65,6 +68,13 @@ public class VoyageResponse {
 
     // True when the selected line is MSC — drives MSC-specific UI fields
     private boolean mscLine;
+
+    private String createdBy;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime createdDate;
+    private String lastModifiedBy;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime lastModifiedDate;
 }
 
 

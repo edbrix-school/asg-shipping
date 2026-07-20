@@ -185,6 +185,8 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                         return;
                 }
 
+                validatePicDetails(dtos);
+
                 long nextDetRowId = picDtlRepository.findMaxDetRowId(transactionPoid) + 1;
 
                 for (AdminContractsAgreementPicDtlDto dto : dtos) {
@@ -211,6 +213,8 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 if (dtos == null || dtos.isEmpty()) {
                         return;
                 }
+
+                validatePicDetails(dtos);
 
                 List<AdminContractsAgreementPicDtl> toUpdate = new ArrayList<>();
                 List<LogRequestDto<AdminContractsAgreementPicDtl>> logs = new ArrayList<>();
@@ -329,5 +333,22 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                         case ACTION_ISDELETED, "DELETED" -> ACTION_ISDELETED;
                         default -> ACTION_NOCHANGES;
                 };
+        }
+
+        private void validatePicDetails(List<AdminContractsAgreementPicDtlDto> dtos) {
+                for (AdminContractsAgreementPicDtlDto dto : dtos) {
+                        if (shouldSkipPicValidation(dto)) {
+                                continue;
+                        }
+                        validationService.validatePicPeriodDates(dto.getPeriodFrom(), dto.getPeriodTo());
+                }
+        }
+
+        private boolean shouldSkipPicValidation(AdminContractsAgreementPicDtlDto dto) {
+                if (dto.getActionType() == null || dto.getActionType().isBlank()) {
+                        return false;
+                }
+                String action = resolveAction(dto.getActionType());
+                return ACTION_ISDELETED.equals(action) || ACTION_NOCHANGES.equals(action);
         }
 }

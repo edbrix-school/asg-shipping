@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselmaster.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -47,6 +48,7 @@ public class VesselMasterUpdateDTO {
     @Schema(description = "Registration Number", example = "REG123456")
     private String registrationNo;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     @Schema(description = "Registration Date", example = "2020-01-01")
     private LocalDate registrationDate;
 
@@ -90,12 +92,12 @@ public class VesselMasterUpdateDTO {
     private BigDecimal draft;
 
     @Positive(message = "Hatches must be positive")
-    @Schema(description = "Number of Hatches", example = "5")
-    private Integer hatches;
+    @Schema(description = "Number of Hatches", example = "5.20")
+    private BigDecimal hatches;
 
     @Positive(message = "Bay hatch must be positive")
-    @Schema(description = "Bay Hatch Count", example = "10")
-    private Integer bayhatch;
+    @Schema(description = "Bay Hatch Count", example = "10.00")
+    private BigDecimal bayhatch;
 
     @Size(max = 20, message = "IMO number cannot exceed 20 characters")
     @Schema(description = "IMO Number", example = "IMO1234567")

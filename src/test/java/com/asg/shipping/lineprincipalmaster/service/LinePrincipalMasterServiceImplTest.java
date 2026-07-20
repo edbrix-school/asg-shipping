@@ -331,8 +331,8 @@ class LinePrincipalMasterServiceImplTest {
         when(picDtlRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
         GlobalAddressMaster addressMaster = new GlobalAddressMaster();
         addressMaster.setAddressMasterPoid(99L);
-        when(addressMasterRepository.existsByAddressNameIgnoreCaseAndGroupPoid(anyString(), anyLong())).thenReturn(false);
-        when(addressMasterRepository.save(any(GlobalAddressMaster.class))).thenReturn(addressMaster);
+        //when(addressMasterRepository.existsByAddressNameIgnoreCaseAndGroupPoid(anyString(), anyLong())).thenReturn(false);
+       // when(addressMasterRepository.save(any(GlobalAddressMaster.class))).thenReturn(addressMaster);
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class);
              MockedStatic<com.asg.common.lib.utility.ASGHelperUtils> mockedHelper = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
@@ -381,8 +381,8 @@ class LinePrincipalMasterServiceImplTest {
         when(picDtlRepository.findByLinePoidOrderByDetRowId(1L)).thenReturn(List.of());
         GlobalAddressMaster addressMaster = new GlobalAddressMaster();
         addressMaster.setAddressMasterPoid(99L);
-        when(addressMasterRepository.existsByAddressNameIgnoreCaseAndGroupPoid(anyString(), anyLong())).thenReturn(false);
-        when(addressMasterRepository.save(any(GlobalAddressMaster.class))).thenReturn(addressMaster);
+        //when(addressMasterRepository.existsByAddressNameIgnoreCaseAndGroupPoid(anyString(), anyLong())).thenReturn(false);
+       // when(addressMasterRepository.save(any(GlobalAddressMaster.class))).thenReturn(addressMaster);
 
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class);
              MockedStatic<com.asg.common.lib.utility.ASGHelperUtils> mockedHelper = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {

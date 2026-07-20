@@ -153,7 +153,7 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
         ShipLineMaster saved = lineRepository.save(line);
 
         // Log creation
-        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getLinePoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED, saved.getLineName()));
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getLinePoid().toString(), "Created");
 
         // Fetch and return with LOV data
         LineMasterThirdPartyDto result = mapper.mapToDto(saved);
@@ -292,9 +292,9 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
             throw new ValidationException(LINE_NAME_EXISTS_MSG);
         }
 
-        validateCountry(dto.getCountryPoid());
-        validateCurrency(dto.getCurrencyPoid());
-        validateBillTo(dto.getBillTo());
+//        validateCountry(dto.getCountryPoid());
+//        validateCurrency(dto.getCurrencyPoid());
+//        validateBillTo(dto.getBillTo());
     }
 
     /**
@@ -305,9 +305,9 @@ public class LineMasterThirdPartyServiceImpl implements LineMasterThirdPartyServ
             throw new ValidationException(LINE_NAME_EXISTS_MSG);
         }
 
-        validateCountry(dto.getCountryPoid());
-        validateCurrency(dto.getCurrencyPoid());
-        validateBillTo(dto.getBillTo());
+//        validateCountry(dto.getCountryPoid());
+//        validateCurrency(dto.getCurrencyPoid());
+//        validateBillTo(dto.getBillTo());
     }
 
 

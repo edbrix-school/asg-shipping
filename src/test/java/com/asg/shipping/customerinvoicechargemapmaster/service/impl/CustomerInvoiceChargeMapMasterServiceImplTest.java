@@ -137,7 +137,7 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         when(masterRepo.findById(1L)).thenReturn(Optional.empty(), Optional.of(created));
         when(masterRepo.save(any(CustomerInvoicePrtMasterEntity.class))).thenReturn(created);
 
-        when(detailRepo.findMaxDetRowId(1L)).thenReturn(null); // => detRowId should become 1
+        when(detailRepo.findMaxDetRowId(1L)).thenReturn(0L); // => detRowId should become 1
 
         when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.empty());
         when(detailRepo.save(any(CustomerInvoicePrtDtlEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -163,6 +163,10 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
                 && entity.getId().getCustomerPoid().equals(1L)
                 && entity.getId().getDetRowId().equals(1L)
                 && entity.getChargePoid().equals(100L)));
+        verify(loggingService).createLogSummaryEntry(
+                eq("DOC123"),
+                eq("1"),
+                contains("Row Created on Charge Detail with detRowId:"));
     }
 
     @Test
@@ -296,6 +300,91 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
 
         verify(detailRepo).delete(existingDetail);
         verify(detailRepo, never()).save(any()); // noChange row skipped, nothing saved
+    }
+
+    @Test
+    void saveOrUpdate_customerChanged_deletesOldAndCreatesNew() {
+        Long oldCustomerPoid = 5933L;
+        Long newCustomerPoid = 5928L;
+
+        CustomerInvoiceChargeMapMasterRequest request = new CustomerInvoiceChargeMapMasterRequest();
+        request.setOldCustomerPoid(oldCustomerPoid);
+        request.setCustomerPoid(newCustomerPoid);
+
+        CustomerInvoiceChargeMapDetailDto detailDto = new CustomerInvoiceChargeMapDetailDto();
+        detailDto.setDetRowId(null);
+        detailDto.setChargePoid(4771L);
+        detailDto.setLineChargeDescription("Test");
+        detailDto.setActionType("CREATE");
+        request.setDetails(List.of(detailDto));
+
+        // old master details to delete
+        CustomerInvoicePrtDtlEntity oldDetail = buildDetail(oldCustomerPoid, 1L, 701L, "old");
+        when(detailRepo.findByIdCustomerPoid(oldCustomerPoid)).thenReturn(List.of(oldDetail));
+
+        CustomerInvoicePrtMasterEntity oldMaster = new CustomerInvoicePrtMasterEntity();
+        oldMaster.setCustomerPoid(oldCustomerPoid);
+        when(masterRepo.findById(oldCustomerPoid)).thenReturn(Optional.of(oldMaster));
+
+        // new master
+        when(masterRepo.existsById(newCustomerPoid)).thenReturn(false);
+        CustomerInvoicePrtMasterEntity newMaster = new CustomerInvoicePrtMasterEntity();
+        newMaster.setCustomerPoid(newCustomerPoid);
+        newMaster.setDeleted("N");
+        when(masterRepo.findById(newCustomerPoid)).thenReturn(Optional.empty(), Optional.of(newMaster));
+        when(masterRepo.save(any())).thenReturn(newMaster);
+
+        when(detailRepo.findMaxDetRowId(newCustomerPoid)).thenReturn(0L);
+        when(detailRepo.findById(any(CustomerInvoicePrtDtlId.class))).thenReturn(Optional.empty());
+        when(detailRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CustomerInvoicePrtDtlEntity savedDetail = buildDetail(newCustomerPoid, 1L, 4771L, "Test");
+        when(detailRepo.findByIdCustomerPoid(newCustomerPoid)).thenReturn(List.of(savedDetail));
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            CustomerInvoiceChargeMapMasterResponse response = service.saveOrUpdate(request, 1L);
+
+            assertEquals(newCustomerPoid, response.getCustomerPoid());
+            assertEquals(1, response.getDetails().size());
+            assertEquals(4771L, response.getDetails().get(0).getChargePoid());
+        }
+
+        verify(detailRepo).deleteAll(List.of(oldDetail));
+        verify(masterRepo).delete(oldMaster);
+        verify(masterRepo).save(argThat(m -> m.getCustomerPoid().equals(newCustomerPoid)));
+    }
+
+    @Test
+    void saveOrUpdate_customerNotChanged_noOldRecordDeleted() {
+        CustomerInvoiceChargeMapMasterRequest request = new CustomerInvoiceChargeMapMasterRequest();
+        request.setOldCustomerPoid(1L);
+        request.setCustomerPoid(1L); // same — no change
+
+        CustomerInvoiceChargeMapDetailDto detailDto = new CustomerInvoiceChargeMapDetailDto();
+        detailDto.setDetRowId(5L);
+        detailDto.setChargePoid(100L);
+        detailDto.setLineChargeDescription("Charge");
+        detailDto.setActionType("UPDATE");
+        request.setDetails(List.of(detailDto));
+
+        CustomerInvoicePrtMasterEntity master = new CustomerInvoicePrtMasterEntity();
+        master.setCustomerPoid(1L);
+        master.setDeleted("N");
+
+        when(masterRepo.existsById(1L)).thenReturn(true);
+        when(masterRepo.findById(1L)).thenReturn(Optional.of(master));
+        when(detailRepo.findById(any())).thenReturn(Optional.of(buildDetail(1L, 5L, 100L, "Charge")));
+        when(detailRepo.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(detailRepo.findByIdCustomerPoid(1L)).thenReturn(List.of(buildDetail(1L, 5L, 100L, "Charge")));
+
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("DOC123");
+            service.saveOrUpdate(request, 2L);
+        }
+
+        verify(detailRepo, never()).deleteAll(anyList());
+        verify(masterRepo, never()).delete(any(CustomerInvoicePrtMasterEntity.class));
     }
 
     @Test

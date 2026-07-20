@@ -11,16 +11,16 @@ import lombok.*;
 @AllArgsConstructor
 public class IssueDeliveryOrderRequestDto {
 
-    @NotBlank(message = "DO Released Id Person is required")
+    @NotBlank(message = "DO released ID person is required")
     @Size(max = 50, message = "DO released ID person must not exceed 50 characters")
     private String doReleasedIdPerson;
 
+    @NotBlank(message = "DO released to person is required")
     @Size(max = 50, message = "DO released to person must not exceed 50 characters")
-    @NotBlank(message = "DO Released Id Person is required")
     private String doReleasedToPerson;
 
+    @NotBlank(message = "DO released address person is required")
     @Size(max = 100, message = "DO released address person must not exceed 100 characters")
-    @NotBlank(message = "DO Released Id Person is required")
     private String doReleasedAddressPerson;
 
     private String originalBlReleaseCr;
