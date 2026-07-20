@@ -203,6 +203,10 @@ public class ReceiptsMapper {
 				.charges(mapChargesDtlListToDto(charges))
 				.paymentDetail(mapPaymentDtlListToDto(payments))
 				.amount(entity.getRcptAmount() != null ? entity.getRcptAmount().longValue() : null)
+				.createdBy(entity.getCreatedBy())
+				.createdDate(entity.getCreatedDate())
+				.lastModifiedBy(entity.getLastModifiedBy())
+				.lastModifiedDate(entity.getLastModifiedDate())
 				.build();
 	}
 
