@@ -9,6 +9,9 @@ public interface ExportManifestBlProcRepository {
     void processAfterSave(Long groupPoid, Long companyPoid, Long transactionPoid, Long detRowId,
                           String updateType, Long userPoid);
 
+   
+    void processExportLocalCharge(Long groupPoid, Long companyPoid, Long transactionPoid);
+
     void loadCustomerAutoCharges(Long groupPoid, Long companyPoid, Long transactionPoid, Long detRowId,
                                  String updateType, Long userPoid);
 }
