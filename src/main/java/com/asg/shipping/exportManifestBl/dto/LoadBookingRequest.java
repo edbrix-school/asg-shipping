@@ -9,6 +9,7 @@ public class LoadBookingRequest {
 
     private Long voyageTransactionPoid;
     private Long linePoid;
+    private String bookingMateVoyageNo;
     private List<Long> selectedBookingIds;
     private List<BookingSelectionItemDto> selections;
 }
