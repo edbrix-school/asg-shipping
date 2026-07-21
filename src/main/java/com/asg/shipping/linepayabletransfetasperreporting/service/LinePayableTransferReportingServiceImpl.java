@@ -26,6 +26,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -68,6 +69,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     private static final String DOC_ID = "100-432";
 
     private static final String LOG_ROWS_CREATED = "%s Row(s) Created on Line Payable Transfer Detail";
+    private static final String COL_TRANSACTION_POID = "TRANSACTION_POID";
 
     private static final String LOV_LINE_MASTER = "LINE_MASTER";
     private static final String LOV_ALL_BL_NUMBER = "ALLBLNUMBER";
@@ -191,6 +193,10 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         // Check if data loading parameters changed
         boolean shouldReloadData = checkShouldReloadData(entity, updateDTO);
 
+        // Snapshot the header before it is mutated, so the changed fields can be logged
+        ShipLineReportTransferHdr oldEntity = new ShipLineReportTransferHdr();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         // Update entity
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
 
@@ -217,6 +223,10 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
         loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
                 String.format("%s %s", LogDetailsEnum.MODIFIED.getDescription(), saved.getDocRef()));
+
+        // Log the changed header fields as detail entries
+        loggingService.logDetails(oldEntity, saved, ShipLineReportTransferHdr.class,
+                com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), COL_TRANSACTION_POID);
 
         log.info("Successfully updated Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return result;

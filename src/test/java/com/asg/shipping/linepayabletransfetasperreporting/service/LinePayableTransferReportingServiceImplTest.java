@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -267,6 +268,38 @@ class LinePayableTransferReportingServiceImplTest {
         verify(dtlRepository, times(3)).save(any());
         verify(loggingService, times(1)).createLogSummaryEntry(eq("100-432"), eq("1"),
                 eq("3 Row(s) Created on Line Payable Transfer Detail"));
+    }
+
+    @Test
+    void updateLinePayableTransfer_LogsChangedHeaderFields() {
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("EXPORT")
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        // Mimic the real mapper so the entity actually changes between snapshot and save
+        doAnswer(invocation -> {
+            LinePayableTransferReportingUpdateDTO source = invocation.getArgument(0);
+            ShipLineReportTransferHdr target = invocation.getArgument(1);
+            target.setBlType(source.getBlType());
+            return null;
+        }).when(mapper).mapUpdateDTOToEntity(any(), any());
+
+        service.updateLinePayableTransfer(1L, dto);
+
+        ArgumentCaptor<ShipLineReportTransferHdr> oldCaptor = ArgumentCaptor.forClass(ShipLineReportTransferHdr.class);
+        verify(loggingService).logDetails(oldCaptor.capture(), eq(testEntity), eq(ShipLineReportTransferHdr.class),
+                ArgumentMatchers.<String>isNull(), eq("1"), eq("TRANSACTION_POID"));
+
+        // The snapshot must hold the pre-update value, otherwise the diff would always be empty
+        assertEquals("IMPORT", oldCaptor.getValue().getBlType());
+        assertEquals("EXPORT", testEntity.getBlType());
     }
 
     @Test
