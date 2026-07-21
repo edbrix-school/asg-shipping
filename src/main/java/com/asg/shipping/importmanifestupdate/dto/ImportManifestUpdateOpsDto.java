@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -46,6 +47,11 @@ public class ImportManifestUpdateOpsDto {
     private LovItem quotationTransactionDet;
     private Long salesmanPoid;
     private LovItem salesmanDet;
+
+    private String createdBy;
+    private LocalDateTime createdDate;
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
 
     // Shipper / Consignee
     private String shipperEdiName;

@@ -94,7 +94,10 @@ public class ImportManifestBlMapper {
                 .notify3EdiAddress(requestDto.getNotify3EdiAddress())
                 .notifyPoid2(requestDto.getNotifyPoid2())
                 .notifyPoid3(requestDto.getNotifyPoid3())
-                
+                .createdBy(requestDto.getCreatedBy())
+                .createdDate(requestDto.getCreatedDate())
+                .lastModifiedBy(requestDto.getLastModifiedBy())
+                .lastModifiedDate(requestDto.getLastModifiedDate())
                 .holdReason(requestDto.getHoldReason())
                 .holdReasonDet(requestDto.getHoldReasonDet())
                 .holdCanDo(requestDto.getHoldCanDo())
