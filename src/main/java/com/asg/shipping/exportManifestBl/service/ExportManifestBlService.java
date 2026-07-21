@@ -59,6 +59,8 @@ public interface ExportManifestBlService {
 
     Map<String, Object> loadCustomerLocalCharges(Long transactionPoid);
 
+    Map<String, Object> loadDamageClause(Long transactionPoid);
+
     SelectForInvoiceResponseDto selectForInvoice(Long transactionPoid);
 
     List<BookingSelectionRowDto> listBookingSelection(

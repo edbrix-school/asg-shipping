@@ -1,6 +1,7 @@
 package com.asg.shipping.exportManifestBl.repository;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface ExportManifestBlProcRepository {
 
@@ -14,4 +15,6 @@ public interface ExportManifestBlProcRepository {
 
     void loadCustomerAutoCharges(Long groupPoid, Long companyPoid, Long transactionPoid, Long detRowId,
                                  String updateType, Long userPoid);
+
+    List<String> loadDamageClauseLines();
 }

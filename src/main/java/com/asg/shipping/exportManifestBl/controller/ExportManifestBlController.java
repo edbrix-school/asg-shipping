@@ -588,6 +588,30 @@ public class ExportManifestBlController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.EDIT)
+    @Operation(
+            summary = "Load Damage Clause",
+            description = """
+                    Legacy **Damage Clause** button: calls `PROC_SHIP_BL_DAMAGE_LOAD` (OUT cursor only),
+                    then inserts `SHIP_BL_MANIFEST_CARGO_DTL` rows for the BL like ADF `damageClauseButton()`.
+                    """
+    )
+    @RequestMapping(value = "/{transactionPoid}/damage-clause", method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<?> loadDamageClause(
+            @Parameter(description = "Transaction POID", required = true) @PathVariable Long transactionPoid) {
+        try {
+            return success("Damage clause loaded successfully", service.loadDamageClause(transactionPoid));
+        } catch (ValidationException e) {
+            log.warn("Validation failed while loading damage clause for {}: {}", transactionPoid, e.getMessage());
+            return error(e.getMessage(), 400);
+        } catch (ResourceNotFoundException e) {
+            return error(e.getMessage(), 404);
+        } catch (Exception e) {
+            log.error("Failed to load damage clause for Export Manifest BL: {}", transactionPoid, e);
+            return error("Failed to load damage clause: " + e.getMessage(), 500);
+        }
+    }
+
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(
             summary = "Approved Manifest — Select For Invoice (Charges tab)",

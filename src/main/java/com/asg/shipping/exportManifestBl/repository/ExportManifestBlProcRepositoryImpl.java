@@ -6,11 +6,16 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.StoredProcedureQuery;
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
+import java.sql.Connection;
 import java.sql.Date;
+import java.sql.ResultSet;
 import java.sql.Types;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import oracle.jdbc.OracleTypes;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class ExportManifestBlProcRepositoryImpl implements ExportManifestBlProcRepository {
 
     private static final String UPDATE_TYPE_AUTOSUM_WEIGHT_PACK = "AUTOSUMWEIGHTPACKATE";
+    /** Legacy ADF: BEGIN PROC_SHIP_BL_DAMAGE_LOAD(?); END; (no schema prefix, no IN args). */
+    private static final String DAMAGE_LOAD_SQL = "BEGIN PROC_SHIP_BL_DAMAGE_LOAD(?); END;";
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -118,5 +125,31 @@ public class ExportManifestBlProcRepositoryImpl implements ExportManifestBlProcR
         query.setParameter("P_LOGIN_USER", userPoid != null ? String.valueOf(userPoid) : null);
 
         query.execute();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> loadDamageClauseLines() {
+        log.debug("Calling legacy damage load: {}", DAMAGE_LOAD_SQL);
+
+        return jdbcTemplate.execute((Connection con) -> {
+            try (CallableStatement cs = con.prepareCall(DAMAGE_LOAD_SQL)) {
+                cs.registerOutParameter(1, OracleTypes.CURSOR);
+                cs.execute();
+
+                List<String> lines = new ArrayList<>();
+                try (ResultSet rs = (ResultSet) cs.getObject(1)) {
+                    if (rs != null) {
+                        while (rs.next()) {
+                            String clause = rs.getString("DAMAGE_CLAUSE");
+                            if (clause != null && !clause.isBlank()) {
+                                lines.add(clause.trim());
+                            }
+                        }
+                    }
+                }
+                return lines;
+            }
+        });
     }
 }
