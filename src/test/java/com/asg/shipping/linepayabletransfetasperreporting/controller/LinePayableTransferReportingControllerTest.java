@@ -1,12 +1,14 @@
 package com.asg.shipping.linepayabletransfetasperreporting.controller;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.*;
 import com.asg.shipping.linepayabletransfetasperreporting.service.LinePayableTransferReportingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -20,6 +22,7 @@ import java.util.*;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -95,6 +98,17 @@ class LinePayableTransferReportingControllerTest {
         mockMvc.perform(get("/v1/line-payable-transfer-reporting/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    void getLinePayableTransfer_LogsViewedWithDocRef() throws Exception {
+        when(service.getLinePayableTransferById(1L)).thenReturn(testDto);
+
+        mockMvc.perform(get("/v1/line-payable-transfer-reporting/1"))
+                .andExpect(status().isOk());
+
+        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>any(), eq("1"),
+                eq(LogDetailsEnum.VIEWED.getDescription() + " LPT-2024-001"));
     }
 
     @Test
