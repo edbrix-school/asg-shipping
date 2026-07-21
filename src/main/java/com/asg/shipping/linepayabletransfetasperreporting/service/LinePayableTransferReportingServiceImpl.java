@@ -9,6 +9,7 @@ import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
@@ -25,6 +26,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -65,6 +67,9 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     private EntityManager entityManager;
 
     private static final String DOC_ID = "100-432";
+
+    private static final String LOG_ROWS_CREATED = "%s Row(s) Created on Line Payable Transfer Detail";
+    private static final String COL_TRANSACTION_POID = "TRANSACTION_POID";
 
     private static final String LOV_LINE_MASTER = "LINE_MASTER";
     private static final String LOV_ALL_BL_NUMBER = "ALLBLNUMBER";
@@ -116,7 +121,10 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         // Enrich with LOV data
         enrichLovData(dto);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+        if (!Boolean.FALSE.equals(com.asg.common.lib.security.util.UserContext.isLogEnabled())) {
+            loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
+                    String.format("%s %s", LogDetailsEnum.VIEWED.getDescription(), entity.getDocRef()));
+        }
 
         log.info("Successfully retrieved Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return dto;
@@ -144,16 +152,16 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         entityManager.refresh(saved);
 
         // If line, BL type, and dates are provided, load data via stored procedure
-        if (saved.getLinePoid() != null && saved.getBlType() != null
-                && saved.getReportStartDate() != null && saved.getReportEndDate() != null) {
-            loadDataByDateRange(saved.getTransactionPoid(),
-                    LoadDataByDateRangeRequest.builder()
-                            .linePoid(saved.getLinePoid())
-                            .blType(saved.getBlType())
-                            .reportStartDate(saved.getReportStartDate())
-                            .reportEndDate(saved.getReportEndDate())
-                            .build());
-        }
+//        if (saved.getLinePoid() != null && saved.getBlType() != null
+//                && saved.getReportStartDate() != null && saved.getReportEndDate() != null) {
+//            loadDataByDateRange(saved.getTransactionPoid(),
+//                    LoadDataByDateRangeRequest.builder()
+//                            .linePoid(saved.getLinePoid())
+//                            .blType(saved.getBlType())
+//                            .reportStartDate(saved.getReportStartDate())
+//                            .reportEndDate(saved.getReportEndDate())
+//                            .build());
+//        }
 
         // Save detail tables from DTO (if provided)
         saveDetailTables(createDTO, saved.getTransactionPoid());
@@ -162,7 +170,8 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getTransactionPoid().toString(),
+                String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), saved.getDocRef()));
 
         log.info("Successfully created Line Payable Transfer As Per Reporting with id: {}", saved.getTransactionPoid());
         return result;
@@ -184,22 +193,26 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         // Check if data loading parameters changed
         boolean shouldReloadData = checkShouldReloadData(entity, updateDTO);
 
+        // Snapshot the header before it is mutated, so the changed fields can be logged
+        ShipLineReportTransferHdr oldEntity = new ShipLineReportTransferHdr();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         // Update entity
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
 
         ShipLineReportTransferHdr saved = hdrRepository.save(entity);
 
         // If parameters changed, reload data
-        if (shouldReloadData && saved.getLinePoid() != null && saved.getBlType() != null
-                && saved.getReportStartDate() != null && saved.getReportEndDate() != null) {
-            loadDataByDateRange(saved.getTransactionPoid(),
-                    LoadDataByDateRangeRequest.builder()
-                            .linePoid(saved.getLinePoid())
-                            .blType(saved.getBlType())
-                            .reportStartDate(saved.getReportStartDate())
-                            .reportEndDate(saved.getReportEndDate())
-                            .build());
-        }
+//        if (shouldReloadData && saved.getLinePoid() != null && saved.getBlType() != null
+//                && saved.getReportStartDate() != null && saved.getReportEndDate() != null) {
+//            loadDataByDateRange(saved.getTransactionPoid(),
+//                    LoadDataByDateRangeRequest.builder()
+//                            .linePoid(saved.getLinePoid())
+//                            .blType(saved.getBlType())
+//                            .reportStartDate(saved.getReportStartDate())
+//                            .reportEndDate(saved.getReportEndDate())
+//                            .build());
+//        }
 
         // Update detail tables
         updateDetailTables(updateDTO, saved.getTransactionPoid());
@@ -208,7 +221,12 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+        loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
+                String.format("%s %s", LogDetailsEnum.MODIFIED.getDescription(), saved.getDocRef()));
+
+        // Log the changed header fields as detail entries
+        loggingService.logDetails(oldEntity, saved, ShipLineReportTransferHdr.class,
+                com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), COL_TRANSACTION_POID);
 
         log.info("Successfully updated Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return result;
@@ -618,12 +636,12 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             for (LinePayableTransferReportingDtlDto dtlDto : dto.getDetails()) {
                 detRowId++;
                 ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
-                ShipLineReportTransferDtl saved = dtlRepository.save(dtl);
-                
-                // Log child table create
-                String logDetail = String.format("Row Created on Line Payable Transfer Detail with detRowId: %s", saved.getDetRowId());
-                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
+                dtlRepository.save(dtl);
             }
+
+            // Log child table create as a single summary entry
+            String logDetail = String.format(LOG_ROWS_CREATED, dto.getDetails().size());
+            loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
         }
     }
 
@@ -646,12 +664,12 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
             for (LinePayableTransferReportingDtlDto dtlDto : dto.getDetails()) {
                 detRowId++;
                 ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
-                ShipLineReportTransferDtl saved = dtlRepository.save(dtl);
-                
-                // Log child table create
-                String logDetail = String.format("Row Created on Line Payable Transfer Detail with detRowId: %s", saved.getDetRowId());
-                loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
+                dtlRepository.save(dtl);
             }
+
+            // Log child table create as a single summary entry
+            String logDetail = String.format(LOG_ROWS_CREATED, dto.getDetails().size());
+            loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
         }
     }
 
