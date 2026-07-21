@@ -20,5 +20,8 @@ public class UpdateBookingPartyRequestDTO {
 
     @NotNull(message = "Customer POID is required")
     private Long customerPoid;
+
+    @NotNull(message = "Booking Party POID is required")
+    private Long bookingPartyPoid;
 }
 

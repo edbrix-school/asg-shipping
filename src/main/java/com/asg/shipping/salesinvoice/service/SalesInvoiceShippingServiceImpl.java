@@ -473,7 +473,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         Long userPoid = getUserPoid();
         String userPoidStr = userPoid != null ? userPoid.toString() : getCurrentUser();
 
-        var result = callProcShipUpdateBooking(request.getBlPoid(), request.getCustomerPoid(), userPoidStr);
+        var result = callProcShipUpdateBooking(request.getBlPoid(), request.getBookingPartyPoid(), userPoidStr);
 
         log.info("Successfully updated booking party");
         return result.substring("INFO:".length()).trim();
@@ -1158,13 +1158,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     /**
      * Call PROC_SHIP_UPDATE_BOOKING
      */
-    private String callProcShipUpdateBooking(Long blPoid, Long customerPoid, String userPoid) {
+    private String callProcShipUpdateBooking(Long blPoid, Long bookingPartyPoid, String userPoid) {
         try {
             final String[] statusHolder = new String[1];
             String sql = "{call PROC_SHIP_UPDATE_BOOKING(?, ?, ?, ?)}";
             jdbcTemplate.execute(sql, (CallableStatement cs) -> {
                 cs.setLong(1, blPoid);
-                cs.setLong(2, customerPoid);
+                cs.setLong(2, bookingPartyPoid);
                 cs.registerOutParameter(3, Types.VARCHAR);
                 cs.setString(4, userPoid);
                 cs.execute();
