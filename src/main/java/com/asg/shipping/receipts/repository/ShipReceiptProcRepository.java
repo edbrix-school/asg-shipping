@@ -50,4 +50,6 @@ public interface ShipReceiptProcRepository {
     Long getBankCompany(Long bankPoid);
 
     String getGlobalParameter(String paramName, String paramKeyIdType, Long companyPoid, String defaultValue);
+
+	String validateDuplicatePaymentRef(Long blPoid, String paymentReference);
 }
