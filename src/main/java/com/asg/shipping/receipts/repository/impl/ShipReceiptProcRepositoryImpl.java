@@ -605,4 +605,24 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 		return value == null ? null : value.toString();
 	}
 
+	@Override
+	public String validateDuplicatePaymentRef(Long blPoid, String paymentReference) {
+		try {
+			Number count = (Number) entityManager.createNativeQuery("""
+                SELECT COUNT(*)
+                FROM AR_SH_RECEIPT_HDR
+                WHERE BL_POID <> :blPoid
+                  AND UPPER(PAYMENT_REF) = UPPER(:paymentReference)
+                """)
+					.setParameter("blPoid", blPoid)
+					.setParameter("paymentReference", paymentReference)
+					.getSingleResult();
+
+			return count.intValue() > 0 ? "TRUE" : "FALSE";
+
+		} catch (Exception e) {
+			log.error("Error in validateDuplicatePaymentRef", e);
+			return "FALSE";
+		}
+	}
 }
