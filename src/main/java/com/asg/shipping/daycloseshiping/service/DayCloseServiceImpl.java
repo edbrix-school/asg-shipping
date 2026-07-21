@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
+import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
 import java.sql.Connection;
@@ -379,12 +380,41 @@ public class DayCloseServiceImpl implements DayCloseService {
     }
 
     @Override
-    public byte[] print(Long transactionPoid) throws Exception {
+    public byte[] printDayClose(Long transactionPoid) throws Exception {
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-106");
         params.put("SH_DAY_CLOSE_CASH_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CASH_subreport1.jrxml"));
         params.put("SH_DAY_CLOSE_CHQ_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_CHQ_subreport1.jrxml"));
         params.put("SH_DAY_CLOSE_SMRY_SUBREPORT_1", printService.load("Shipping/SH/SH_DAY_CLOSE_SMRY_subreport1.jrxml"));
-        JasperReport mainReport = printService.load("Shipping/SH/SH_DAY_CLOSE.jrxml");
-        return printService.fillReportToPdf(mainReport, params, dataSource);
+        return printService.fillReportToPdf(printService.load("Shipping/SH/SH_DAY_CLOSE.jrxml"), params, dataSource);
+    }
+
+    @Override
+    public byte[] printDetails(Long transactionPoid) throws Exception {
+        Map<String, Object> params = buildDateParams(transactionPoid);
+        params.put("DAY_CLOSED_REPORT_SUBREPORT_1", printService.load("Shipping/SH/Day_Closed_Report_subreport1.jrxml"));
+        params.put("DAY_CLOSED_REPORT_SUBREPORT_2", printService.load("Shipping/SH/Day_Closed_Report_subreport2.jrxml"));
+        return printService.fillReportToPdf(printService.load("Shipping/SH/Day_Closed_Report.jrxml"), params, dataSource);
+    }
+
+    @Override
+    public byte[] printSplitReceipt(Long transactionPoid) throws Exception {
+        Map<String, Object> params = buildDateParams(transactionPoid);
+        return printService.fillReportToPdf(printService.load("Shipping/SH/Day_Closed_Report_Split_receipt.jrxml"), params, dataSource);
+    }
+
+    @Override
+    public byte[] printSummary(Long transactionPoid) throws Exception {
+        Map<String, Object> params = buildDateParams(transactionPoid);
+        return printService.fillReportToPdf(printService.load("Shipping/SH/Day_Closed_Report_Summary.jrxml"), params, dataSource);
+    }
+
+    private Map<String, Object> buildDateParams(Long transactionPoid) throws Exception {
+        ArShDayEndCloseHdr hdr = hdrRepo.findById(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("Day Close", TRANSACTIONPOID, transactionPoid.toString()));
+        String txDate = hdr.getTransactionDate().format(java.time.format.DateTimeFormatter.ofPattern("dd-MMM-yyyy"));
+        Map<String, Object> params = printService.buildBaseParams(transactionPoid, "300-106");
+        params.put("P_START_DATE", txDate);
+        params.put("P_END_DATE", txDate);
+        return params;
     }
 }

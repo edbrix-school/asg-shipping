@@ -2,6 +2,8 @@ package com.asg.shipping.importmanifestbl.dto;
 
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -15,26 +17,39 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
 
     private Long detRowId;
     private String socType;
+    @NotBlank
     private String containerNumber;
+    @NotBlank
     private String sealNumber;
 
+    @NotBlank
     private String equipmentIsoType;
     private LovItem equipmentIsoTypeDet;
     private String shortDescription;
+    @NotNull
     private Long commodityPoid;
     private LovItem commodityDet;
+    @NotBlank
     private String imcoType;
     private LovItem imcoTypeDet;
 
+    @NotNull
     private Long cbm;
+    @NotNull
     private Long grossWeight;
+    @NotNull
     private Long netWeight;
+    @NotNull
     private Long tareWeight;
 
+    @NotNull
     private Long packs;
+    @NotBlank
     private String packsType;
 
+    @NotBlank
     private String hsCode;
+    @NotBlank
     private String hsDescription;
 
     private Long customerDays;
@@ -56,22 +71,36 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private Long collectionAmount;
     private Long collectionDays;
 
+    @NotBlank
     private String imcoNumber;
+    @NotBlank
     private String imcoClassDescription;
 
+    @NotBlank
     private String rfType;
+    @NotBlank
     private String rfHumidity;
+    @NotBlank
     private String rfVent;
+    @NotBlank
     private String rfTemperature;
 
+    @NotBlank
     private String oogType;
     private LovItem oogTypeDet;
+    @NotBlank
     private String oogBack;
+    @NotBlank
     private String oogLeftWidth;
+    @NotBlank
     private String oogRightWidth;
+    @NotBlank
     private String oogHeight;
+    @NotBlank
     private String oogLength;
+    @NotBlank
     private String oogAdditional;
+    @NotBlank
     private String oogFront;
     private String actionType;
 
