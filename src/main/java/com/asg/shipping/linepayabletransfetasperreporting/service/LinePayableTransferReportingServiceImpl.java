@@ -68,7 +68,9 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
     private static final String DOC_ID = "100-432";
 
-    private static final String LOG_ROWS_CREATED = "%s Row(s) Created on Line Payable Transfer Detail";
+    private static final String LOG_ROW_CREATED = "Row Created on Line Payable Transfer Detail with detRowId: %s";
+    private static final String LOG_ROW_KEY = "KeyId = %s:%s";
+    private static final String COL_DET_ROW_ID = "DET_ROW_ID";
     private static final String COL_TRANSACTION_POID = "TRANSACTION_POID";
 
     private static final String LOV_LINE_MASTER = "LINE_MASTER";
@@ -121,11 +123,6 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         // Enrich with LOV data
         enrichLovData(dto);
 
-        if (!Boolean.FALSE.equals(com.asg.common.lib.security.util.UserContext.isLogEnabled())) {
-            loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
-                    String.format("%s %s", LogDetailsEnum.VIEWED.getDescription(), entity.getDocRef()));
-        }
-
         log.info("Successfully retrieved Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return dto;
     }
@@ -163,15 +160,16 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 //                            .build());
 //        }
 
+        // Log the header before the details, so the header entry precedes its rows
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getTransactionPoid().toString(),
+                String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), saved.getDocRef()));
+
         // Save detail tables from DTO (if provided)
         saveDetailTables(createDTO, saved.getTransactionPoid());
 
         LinePayableTransferReportingDto result = mapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
-
-        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getTransactionPoid().toString(),
-                String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), saved.getDocRef()));
 
         log.info("Successfully created Line Payable Transfer As Per Reporting with id: {}", saved.getTransactionPoid());
         return result;
@@ -190,8 +188,8 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         // Validate
         validateUpdateDTO(updateDTO, companyPoid);
 
-        // Check if data loading parameters changed
-        boolean shouldReloadData = checkShouldReloadData(entity, updateDTO);
+        // Check if data loading parameters changed. Must be evaluated before the entity is mutated
+        boolean filterChanged = checkShouldReloadData(entity, updateDTO);
 
         // Snapshot the header before it is mutated, so the changed fields can be logged
         ShipLineReportTransferHdr oldEntity = new ShipLineReportTransferHdr();
@@ -203,7 +201,7 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         ShipLineReportTransferHdr saved = hdrRepository.save(entity);
 
         // If parameters changed, reload data
-//        if (shouldReloadData && saved.getLinePoid() != null && saved.getBlType() != null
+//        if (filterChanged && saved.getLinePoid() != null && saved.getBlType() != null
 //                && saved.getReportStartDate() != null && saved.getReportEndDate() != null) {
 //            loadDataByDateRange(saved.getTransactionPoid(),
 //                    LoadDataByDateRangeRequest.builder()
@@ -214,19 +212,20 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 //                            .build());
 //        }
 
-        // Update detail tables
-        updateDetailTables(updateDTO, saved.getTransactionPoid());
-
-        LinePayableTransferReportingDto result = mapper.mapToDto(saved);
-        loadDetailTables(result, saved.getTransactionPoid());
-        enrichLovData(result);
-
+        // Log the header before the details, so the header entries precede their rows
         loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
                 String.format("%s %s", LogDetailsEnum.MODIFIED.getDescription(), saved.getDocRef()));
 
         // Log the changed header fields as detail entries
         loggingService.logDetails(oldEntity, saved, ShipLineReportTransferHdr.class,
                 com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(), COL_TRANSACTION_POID);
+
+        // Update detail tables
+        updateDetailTables(updateDTO, saved.getTransactionPoid(), filterChanged);
+
+        LinePayableTransferReportingDto result = mapper.mapToDto(saved);
+        loadDetailTables(result, saved.getTransactionPoid());
+        enrichLovData(result);
 
         log.info("Successfully updated Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return result;
@@ -619,10 +618,15 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
      * Check if data should be reloaded
      */
     private boolean checkShouldReloadData(ShipLineReportTransferHdr entity, LinePayableTransferReportingUpdateDTO dto) {
-        return !Objects.equals(entity.getLinePoid(), dto.getLinePoid()) ||
-                !Objects.equals(entity.getBlType(), dto.getBlType()) ||
-                !Objects.equals(entity.getReportStartDate(), dto.getReportStartDate()) ||
-                !Objects.equals(entity.getReportEndDate(), dto.getReportEndDate());
+        // A field the payload omits is left untouched by the mapper, so it is not a change
+        return isFilterFieldChanged(entity.getLinePoid(), dto.getLinePoid()) ||
+                isFilterFieldChanged(entity.getBlType(), dto.getBlType()) ||
+                isFilterFieldChanged(entity.getReportStartDate(), dto.getReportStartDate()) ||
+                isFilterFieldChanged(entity.getReportEndDate(), dto.getReportEndDate());
+    }
+
+    private boolean isFilterFieldChanged(Object storedValue, Object incomingValue) {
+        return incomingValue != null && !Objects.equals(storedValue, incomingValue);
     }
 
     /**
@@ -637,18 +641,39 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 detRowId++;
                 ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
                 dtlRepository.save(dtl);
+                logDetailRowCreated(dtl, transactionPoid);
             }
-
-            // Log child table create as a single summary entry
-            String logDetail = String.format(LOG_ROWS_CREATED, dto.getDetails().size());
-            loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
         }
     }
 
     /**
-     * Update detail tables from DTO
+     * Log a single created detail row
      */
-    private void updateDetailTables(LinePayableTransferReportingUpdateDTO dto, Long transactionPoid) {
+    private void logDetailRowCreated(ShipLineReportTransferDtl dtl, Long transactionPoid) {
+        String logDetail = String.format(LOG_ROW_CREATED, dtl.getDetRowId());
+        loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
+    }
+
+    /**
+     * Update detail tables from DTO.
+     *
+     * <p>When the filter (line / BL type / report dates) changed, the stored rows were loaded for a
+     * different filter and no longer apply, so they are replaced wholesale by the payload rows.
+     * When the filter is unchanged the payload is an edit of the same rows, so each row is matched
+     * against the stored one by DET_ROW_ID and only the actual field changes are logged.
+     */
+    private void updateDetailTables(LinePayableTransferReportingUpdateDTO dto, Long transactionPoid, boolean filterChanged) {
+        if (filterChanged) {
+            replaceDetailTables(dto, transactionPoid);
+        } else {
+            syncDetailTables(dto, transactionPoid);
+        }
+    }
+
+    /**
+     * Delete every stored detail row and insert the rows coming in the payload
+     */
+    private void replaceDetailTables(LinePayableTransferReportingUpdateDTO dto, Long transactionPoid) {
         // Get existing details for logging deletions
         List<ShipLineReportTransferDtl> existingDetails = dtlRepository.findByTransactionPoid(transactionPoid);
         
@@ -658,6 +683,11 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         // Delete existing details
         dtlRepository.deleteByTransactionPoid(transactionPoid);
 
+        // The bulk delete bypasses the persistence context, so the rows just loaded are still
+        // held there as managed entities. Detach them, otherwise saving a new detail that reuses
+        // a DET_ROW_ID is merged onto the stale instance and flushed as an UPDATE of a deleted row.
+        existingDetails.forEach(entityManager::detach);
+
         // Save new details
         if (dto.getDetails() != null && !dto.getDetails().isEmpty()) {
             Long detRowId = 0L;
@@ -665,12 +695,70 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 detRowId++;
                 ShipLineReportTransferDtl dtl = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
                 dtlRepository.save(dtl);
+                logDetailRowCreated(dtl, transactionPoid);
+            }
+        }
+    }
+
+    /**
+     * Keep the stored detail rows and apply the payload onto them, logging the changed fields of
+     * each row. Rows the payload no longer carries are deleted, extra rows are created.
+     */
+    private void syncDetailTables(LinePayableTransferReportingUpdateDTO dto, Long transactionPoid) {
+        Map<Long, ShipLineReportTransferDtl> storedRows = dtlRepository.findByTransactionPoid(transactionPoid).stream()
+                .collect(Collectors.toMap(ShipLineReportTransferDtl::getDetRowId, dtl -> dtl,
+                        (first, second) -> first, LinkedHashMap::new));
+
+        List<LinePayableTransferReportingDtlDto> incomingRows =
+                dto.getDetails() != null ? dto.getDetails() : Collections.emptyList();
+
+        // The payload carries no DET_ROW_ID, so rows are matched by their position, which is how
+        // they were numbered when they were stored
+        Long detRowId = 0L;
+        for (LinePayableTransferReportingDtlDto dtlDto : incomingRows) {
+            detRowId++;
+            ShipLineReportTransferDtl incoming = mapper.mapDtlFromDto(dtlDto, transactionPoid, detRowId);
+            ShipLineReportTransferDtl stored = storedRows.remove(detRowId);
+
+            if (stored == null) {
+                dtlRepository.save(incoming);
+                logDetailRowCreated(incoming, transactionPoid);
+                continue;
             }
 
-            // Log child table create as a single summary entry
-            String logDetail = String.format(LOG_ROWS_CREATED, dto.getDetails().size());
-            loggingService.createLogSummaryEntry(DOC_ID, transactionPoid.toString(), logDetail);
+            // Snapshot before the row is mutated, so the changed fields can be logged
+            ShipLineReportTransferDtl oldRow = new ShipLineReportTransferDtl();
+            BeanUtils.copyProperties(stored, oldRow);
+
+            applyDetailChanges(stored, incoming);
+            ShipLineReportTransferDtl saved = dtlRepository.save(stored);
+
+            // Only the changed fields are captured, as detail log entries keyed on the row
+            loggingService.createLog(oldRow, saved, ShipLineReportTransferDtl.class, DOC_ID,
+                    transactionPoid.toString(), String.format(LOG_ROW_KEY, COL_DET_ROW_ID, detRowId));
         }
+
+        // Whatever the payload no longer carries has been removed
+        storedRows.values().forEach(removed -> {
+            loggingService.logDelete(removed, DOC_ID, transactionPoid.toString());
+            dtlRepository.delete(removed);
+        });
+    }
+
+    /**
+     * Copy the payload driven columns of a detail row onto the stored row
+     */
+    private void applyDetailChanges(ShipLineReportTransferDtl stored, ShipLineReportTransferDtl incoming) {
+        stored.setMainfestTransactionPoid(incoming.getMainfestTransactionPoid());
+        stored.setBlNumber(incoming.getBlNumber());
+        stored.setAcutalAmount(incoming.getAcutalAmount());
+        stored.setTotalAmountTransfer(incoming.getTotalAmountTransfer());
+        stored.setIsSelect(incoming.getIsSelect());
+        stored.setChargePoid(incoming.getChargePoid());
+        stored.setFreightType(incoming.getFreightType());
+        stored.setCurrencyCode(incoming.getCurrencyCode());
+        stored.setCurrencyExchange(incoming.getCurrencyExchange());
+        stored.setCurrencyAmount(incoming.getCurrencyAmount());
     }
 
     /**
