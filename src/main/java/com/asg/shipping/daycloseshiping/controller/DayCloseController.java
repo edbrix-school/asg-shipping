@@ -136,29 +136,73 @@ public class DayCloseController {
     }
 
     @AllowedAction(UserRolesRightsEnum.PRINT)
-    @Operation(
-            summary = "Generate PDF for Day Close Shipping",
-            description = "Generate PDF report for a specific Day Close Shipping",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "PDF generated successfully",
-                            content = @Content(mediaType = "application/pdf")),
-                    @ApiResponse(responseCode = "404", description = "Day Close Shipping not found"),
-                    @ApiResponse(responseCode = "500", description = "Failed to generate PDF")
-            }
-    )
     @GetMapping("/print/{transactionPoid}")
-    public ResponseEntity<?> print(
+    @Operation(summary = "Print Day Close main report", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> printDayClose(
             @Parameter(description = "Transaction POID", example = "69789")
-            @PathVariable(name = "transactionPoid") Long transactionPoid) {
+            @PathVariable Long transactionPoid) {
         try {
-            byte[] pdf = dayCloseService.print(transactionPoid);
+            byte[] pdf = dayCloseService.printDayClose(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=day-close-shipping-" + transactionPoid + ".pdf")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=day-close-" + transactionPoid + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
-            log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
+            log.error("Failed to generate day close PDF: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print/{transactionPoid}/details")
+    @Operation(summary = "Print Day Close details report", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> printDetails(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = dayCloseService.printDetails(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=day-close-details-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate details PDF: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print/{transactionPoid}/split-receipt")
+    @Operation(summary = "Print Day Close split receipt report", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> printSplitReceipt(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = dayCloseService.printSplitReceipt(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=day-close-split-receipt-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate split receipt PDF: {}", transactionPoid, e);
+            return error("Failed to generate PDF: " + e.getMessage(), 500);
+        }
+    }
+
+    @AllowedAction(UserRolesRightsEnum.PRINT)
+    @GetMapping("/print/{transactionPoid}/summary")
+    @Operation(summary = "Print Day Close summary report", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> printSummary(
+            @Parameter(description = "Transaction POID", example = "69789")
+            @PathVariable Long transactionPoid) {
+        try {
+            byte[] pdf = dayCloseService.printSummary(transactionPoid);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=day-close-summary-" + transactionPoid + ".pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+        } catch (Exception e) {
+            log.error("Failed to generate summary PDF: {}", transactionPoid, e);
             return error("Failed to generate PDF: " + e.getMessage(), 500);
         }
     }
