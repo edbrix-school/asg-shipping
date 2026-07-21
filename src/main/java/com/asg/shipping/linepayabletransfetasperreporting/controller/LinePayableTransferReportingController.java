@@ -178,7 +178,10 @@ public class LinePayableTransferReportingController {
             @PathVariable Long transactionPoid) {
         log.info("Getting line payable transfer with id: {}", transactionPoid);
         LinePayableTransferReportingDto dto = service.getLinePayableTransferById(transactionPoid);
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), transactionPoid.toString());
+        if (!Boolean.FALSE.equals(UserContext.isLogEnabled())) {
+            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoid.toString(),
+                    String.format("%s %s", LogDetailsEnum.VIEWED.getDescription(), dto.getDocRef()));
+        }
         log.info("Successfully retrieved line payable transfer with id: {}", transactionPoid);
         return ApiResponse.success("Line payable transfer retrieved successfully", dto);
     }
