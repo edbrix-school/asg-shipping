@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -159,6 +161,8 @@ class LinePayableTransferReportingServiceImplTest {
         assertNotNull(result);
         assertEquals(1L, result.getTransactionPoid());
         verify(hdrRepository).findActiveByTransactionPoid(1L);
+        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+                eq(LogDetailsEnum.VIEWED.getDescription() + " LPT-2024-001"));
     }
 
     @Test
@@ -186,6 +190,8 @@ class LinePayableTransferReportingServiceImplTest {
         verify(hdrRepository).save(any());
         verify(hdrRepository).flush();
         verify(entityManager).refresh(any());
+        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+                eq(LogDetailsEnum.CREATED.getDescription() + " LPT-2024-001"));
     }
 
     @Test
@@ -235,6 +241,8 @@ class LinePayableTransferReportingServiceImplTest {
 
         assertNotNull(result);
         verify(hdrRepository).save(any());
+        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+                eq(LogDetailsEnum.MODIFIED.getDescription() + " LPT-2024-001"));
     }
 
     @Test

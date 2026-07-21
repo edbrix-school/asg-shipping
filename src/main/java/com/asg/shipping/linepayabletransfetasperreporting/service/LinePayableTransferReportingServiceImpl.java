@@ -9,6 +9,7 @@ import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
@@ -116,7 +117,10 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         // Enrich with LOV data
         enrichLovData(dto);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+        if (!Boolean.FALSE.equals(com.asg.common.lib.security.util.UserContext.isLogEnabled())) {
+            loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
+                    String.format("%s %s", LogDetailsEnum.VIEWED.getDescription(), entity.getDocRef()));
+        }
 
         log.info("Successfully retrieved Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return dto;
@@ -162,7 +166,8 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, com.asg.common.lib.security.util.UserContext.getDocumentId(), saved.getTransactionPoid().toString());
+        loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getTransactionPoid().toString(),
+                String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), saved.getDocRef()));
 
         log.info("Successfully created Line Payable Transfer As Per Reporting with id: {}", saved.getTransactionPoid());
         return result;
@@ -208,7 +213,8 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+        loggingService.createLogSummaryEntry(com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
+                String.format("%s %s", LogDetailsEnum.MODIFIED.getDescription(), saved.getDocRef()));
 
         log.info("Successfully updated Line Payable Transfer As Per Reporting with id: {}", transactionPoid);
         return result;
