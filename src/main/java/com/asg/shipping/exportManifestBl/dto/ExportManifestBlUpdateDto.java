@@ -289,5 +289,7 @@ public class ExportManifestBlUpdateDto {
     /** Booking Data tab — mate voyage filter (UI only); used for detail-tab audit when sent on save. */
     private String bookingMateVoyageNo;
     private String previousBookingMateVoyageNo;
+
+    private String shipperAddressType;
 }
 
