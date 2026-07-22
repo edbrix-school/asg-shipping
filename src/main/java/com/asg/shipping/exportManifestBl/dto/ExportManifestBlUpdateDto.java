@@ -40,6 +40,9 @@ public class ExportManifestBlUpdateDto {
     private Long notifyAddressPoid2;
     private Long notifyPoid3;
     private Long notifyAddressPoid3;
+
+    private String shipperAddressType;
+
     private Long quotationTransactionPoid;
     private Long salesmanPoid;
     private Long comodityPoid;

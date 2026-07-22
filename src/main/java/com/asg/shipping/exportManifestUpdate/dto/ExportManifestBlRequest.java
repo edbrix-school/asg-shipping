@@ -96,6 +96,8 @@ public class ExportManifestBlRequest {
 
     private Long notifyAddressPoid2;
 
+    private String shipperAddressType;
+
     private Long bookingPartyPoid;
 
     private String shipperEdiName;
