@@ -105,7 +105,7 @@ class CimuServiceImplTest {
         when(rightsRepository.hasDocRight(any(), any()))
                 .thenThrow(new RuntimeException("rights down"));
         when(queryRepository.fetchContainerInfo(any(), any()))
-                .thenReturn(List.of());
+                .thenReturn(List.of(new ContainerInfoDto()));
         when(queryRepository.fetchHistoryByContainerNo(any()))
                 .thenReturn(List.of());
 
