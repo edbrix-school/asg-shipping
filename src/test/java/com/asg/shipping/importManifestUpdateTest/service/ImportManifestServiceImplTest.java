@@ -1,6 +1,7 @@
 package com.asg.shipping.importManifestUpdateTest.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
@@ -25,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.LocalDate;
 import java.util.*;
@@ -231,18 +233,25 @@ class ImportManifestServiceImplTest {
     void listOfImportManifest_Success() {
         when(documentService.resolveOperator(any())).thenReturn("OR");
         when(documentService.resolveIsDeleted(any())).thenReturn("N");
-        when(documentService.resolveFilters(any())).thenReturn(List.of());
-        when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
-                .thenReturn(new com.asg.common.lib.dto.RawSearchResult(List.of(), Map.of(), 0L));
+        when(documentService.resolveDateFilters(any(), eq("TRANSACTION_DATE"), isNull(), isNull())).thenReturn(List.of());
+        when(documentService.search(nullable(String.class), anyList(),
+                eq("OR"),
+                any(Pageable.class),
+                eq("N"),
+                eq("BL_NUMBER"),
+                eq("TRANSACTION_POID")))
+                .thenReturn(new RawSearchResult(List.of(), Map.of(), 0L));
 
-        var filterRequest = new com.asg.common.lib.dto.FilterRequestDto("OR", "N", List.of());
-        var result = service.listOfImportManifest("DOC123", filterRequest, org.springframework.data.domain.PageRequest.of(0, 10));
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn(null);
 
-        assertNotNull(result);
-        verify(documentService).search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString());
+            var filterRequest = new com.asg.common.lib.dto.FilterRequestDto("OR", "N", List.of());
+            var result = service.list(filterRequest, null, null, org.springframework.data.domain.PageRequest.of(0, 10));
+
+            assertNotNull(result);
+            verify(documentService).search(nullable(String.class), anyList(), anyString(), any(), anyString(), anyString(), anyString());
+        }
     }
-
-
 
     @Test
     void resendCan_Success() {
@@ -256,8 +265,6 @@ class ImportManifestServiceImplTest {
         assertNotNull(response);
         assertEquals("SUCCESS", response.getStatus());
     }
-
-
 
     @Test
     void loadEmailFax_Success() {

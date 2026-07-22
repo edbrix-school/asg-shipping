@@ -5,6 +5,7 @@ import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.common.lib.dto.FilterRequestDto;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 public interface ImportManifestBlService {
@@ -13,7 +14,7 @@ public interface ImportManifestBlService {
 
     ImportManifestUpdateOpsDto updateImportManifestUpdateOps(Long id, ImportManifestUpdateOpsDto dto, Long companyPoid, Long groupPoid);
 
-    Map<String, Object> listOfImportManifest(String docId, FilterRequestDto request, Pageable pageable);
+    Map<String, Object> list(FilterRequestDto filters, LocalDate fromDate, LocalDate toDate, Pageable pageable);
 
     ImportManifestBlRequestDto getImportManifestBl(Long id);
 
