@@ -319,6 +319,9 @@ class ManifestCorrectorServiceImplTest {
             userContext.when(UserContext::getUserPoid).thenReturn(30L);
             userContext.when(UserContext::getDocumentId).thenReturn("100-143");
 
+            when(jdbcTemplate.queryForList(anyString(), eq(Long.class)))
+                    .thenReturn(List.of(12345L));
+
             when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
                     .thenAnswer(invocation -> {
                         org.springframework.jdbc.core.CallableStatementCallback<?> callback = invocation.getArgument(1);
@@ -351,7 +354,10 @@ class ManifestCorrectorServiceImplTest {
 
             ManifestCorrectorBlAutoPopulateDto result = service.autoPopulateFromBlBrowse(
                     "12345",
-                    ManifestCorrectorBlAutoPopulateRequest.builder().transactionPoid(1L).build());
+                    ManifestCorrectorBlAutoPopulateRequest.builder()
+                            .transactionPoid(1L)
+                            .blPoids(List.of(12345L))
+                            .build());
 
             assertNotNull(result);
             assertEquals(12345L, result.getBlPoid());
