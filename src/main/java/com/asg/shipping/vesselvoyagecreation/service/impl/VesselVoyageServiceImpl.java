@@ -596,7 +596,13 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             createEmptyManifest(voyagePoid);
         }
         log.info("Create TDR | voyagePoid={} userPoid={}", voyagePoid, userPoid);
-        return storedProcedureRepository.procLoadTdrOwnLine(voyagePoid, userPoid);
+        String result = storedProcedureRepository.procLoadTdrOwnLine(voyagePoid, userPoid);
+        // Legacy tdrUpdatePda(): on success shows "Records imported..." + P_STATUS (e.g. TDR#...);
+        // a blank/null/ERROR P_STATUS means no TDR was created -> legacy's generic error message.
+        if (result == null || result.isBlank() || result.contains("ERROR") || result.contains("ORA-")) {
+            return "Some error occured while loading data, please check the log...";
+        }
+        return "Records imported..." + result;
     }
 
     @Override
