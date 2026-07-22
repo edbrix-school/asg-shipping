@@ -592,26 +592,17 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     @Override
     public String createTdr(Long voyagePoid, boolean createEmptyManifestFirst) {
         Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
-        // Legacy tdrUpdatePda() runs createEmptyManifest() first and shows its message as a separate
-        // popup; keep that message so the TDR toaster carries the same info as legacy.
-        String emptyManifestMsg = null;
         if (createEmptyManifestFirst) {
-            String em = createEmptyManifest(voyagePoid);
-            emptyManifestMsg = "Empty manifest records imported..." + (em != null ? em : "");
+            createEmptyManifest(voyagePoid);
         }
         log.info("Create TDR | voyagePoid={} userPoid={}", voyagePoid, userPoid);
         String result = storedProcedureRepository.procLoadTdrOwnLine(voyagePoid, userPoid);
-        // Legacy: PROC_LOAD_TDR_OWN_LINE returns a blank/null P_STATUS when there is nothing to bill
-        // (no manifest/transhipment containers), and an ERROR string on failure. Surface that instead
-        // of a blank success, combining it with the empty-manifest message like legacy's two popups.
-        if (result == null || result.isBlank()) {
-            String tdrMsg = "No TDR created: no manifest/transhipment containers found for this voyage.";
-            return emptyManifestMsg != null ? emptyManifestMsg + " | " + tdrMsg : tdrMsg;
+        // Legacy tdrUpdatePda(): on success shows "Records imported..." + P_STATUS (e.g. TDR#...);
+        // a blank/null/ERROR P_STATUS means no TDR was created -> legacy's generic error message.
+        if (result == null || result.isBlank() || result.contains("ERROR") || result.contains("ORA-")) {
+            return "Some error occured while loading data, please check the log...";
         }
-        if (result.contains("ERROR") || result.contains("ORA-")) {
-            throw new IllegalStateException("TDR creation failed: " + result);
-        }
-        return result;
+        return "Records imported..." + result;
     }
 
     @Override
