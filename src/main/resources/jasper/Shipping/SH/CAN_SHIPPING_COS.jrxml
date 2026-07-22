@@ -3,9 +3,9 @@
 	<property name="ireport.zoom" value="1.0"/>
 	<property name="ireport.x" value="0"/>
 	<property name="ireport.y" value="0"/>
-	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Helvetica-Bold"/>
 	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
-	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" pdfFontName="Times-Bold" isBold="true"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" pdfFontName="Helvetica-Bold" isBold="true"/>
 	<style name="Detail" fontName="Arial" fontSize="12"/>
 	<style name="Row" mode="Transparent">
 		<conditionalStyle>
@@ -345,7 +345,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="0" y="57" width="511" height="19" uuid="6e907084-7e16-42c1-9e50-1ba547c96fd4"/>
 				<textElement textAlignment="Center">
-					<font fontName="SansSerif" size="13" isBold="true" pdfFontName="Times-Bold" isUnderline="false"/>
+					<font fontName="SansSerif" size="13" isBold="true" pdfFontName="Helvetica-Bold" isUnderline="false"/>
 				</textElement>
 				<text><![CDATA[SEA CARGO ARRIVAL NOTICE]]></text>
 			</staticText>
@@ -360,26 +360,26 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 					<bottomPen lineWidth="0.5"/>
 					<rightPen lineWidth="0.5"/>
 				</box>
-				<textElement>
-					<font fontName="SansSerif"/>
+				<textElement><font fontName="SansSerif" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{NOTIFY1_EDI_ADDRESS}]]></textFieldExpression>
 			</textField>
 			<textField isBlankWhenNull="true">
 				<reportElement x="37" y="91" width="302" height="15" uuid="d770930b-b136-43d0-95d0-3187543e1539"/>
 				<textElement verticalAlignment="Middle">
-					<font fontName="SansSerif" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="SansSerif" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{NOTIFY1_EDI_NAME}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="2" y="91" width="35" height="15" uuid="f3ae9004-af42-47e3-abb8-18212deaf031"/>
+				<textElement><font pdfFontName="Helvetica-Bold"/></textElement>
 				<text><![CDATA[Notify:]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="338" y="91" width="173" height="15" backcolor="#CCCCCC" uuid="7d7e20e1-c1bf-49c1-9196-40b94932ed6a"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[REF NO:]]></text>
 			</staticText>
@@ -392,21 +392,21 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement mode="Opaque" x="1" y="158" width="260" height="15" backcolor="#CCCCCC" uuid="e0328334-d1d5-475d-afca-ea1ae5a1723d"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[VESSEL NAME]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="262" y="158" width="101" height="15" backcolor="#CCCCCC" uuid="17501655-1ff2-4026-ad4e-9f774b2cb227"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[VOYAGE NO]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="364" y="158" width="147" height="15" backcolor="#CCCCCC" uuid="b8573083-16de-4358-80db-c5054ba6be73"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[EXPECTED ARRIVAL DATE]]></text>
 			</staticText>
@@ -419,7 +419,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement mode="Opaque" x="263" y="194" width="101" height="15" backcolor="#CCCCCC" uuid="6628760e-cfeb-4a72-a2df-7e3ad56a8a43"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[SHIPMENT TERMS]]></text>
 			</staticText>
@@ -432,35 +432,35 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement mode="Opaque" x="365" y="194" width="145" height="15" backcolor="#CCCCCC" uuid="bf1f877b-c103-4c45-9e96-dacdd005e513"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[PORT OF LOADING]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="143" y="194" width="118" height="15" backcolor="#CCCCCC" uuid="6ed06597-f3a1-4d23-90a6-177ce8647b1e"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[BILL OF LADING NO.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="1" y="230" width="260" height="15" backcolor="#CCCCCC" uuid="c8a37f67-c6e9-4fc1-838b-4d1f07ee818f"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[EQUIPMENT TYPE]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="365" y="230" width="145" height="15" backcolor="#CCCCCC" uuid="385ec161-5755-4341-9f05-b50ac871841d"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[FREE TIME:RUNNING DAYS]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="264" y="230" width="99" height="15" backcolor="#CCCCCC" uuid="e511fbc1-56a6-4f26-af36-7f5f95655856"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[RELEASE TYPE]]></text>
 			</staticText>
@@ -485,7 +485,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="4" y="267" width="257" height="15" uuid="ee09ef57-9b16-4d75-b5dc-b9d3d77f206b"/>
 				<textElement>
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[CARGO DESCRIPTION/NO.OF PACKAGES :]]></text>
 			</staticText>
@@ -498,14 +498,14 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="265" y="267" width="98" height="15" uuid="f22479cf-e3d9-4bfa-898d-bfa5f6d94f75"/>
 				<textElement>
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[SHIPPER :]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="265" y="314" width="98" height="15" uuid="1d266dbd-7a4e-45e7-aac9-744d35626f5b"/>
 				<textElement>
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[CONSIGNEE :]]></text>
 			</staticText>
@@ -518,7 +518,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement mode="Opaque" x="3" y="358" width="338" height="15" backcolor="#CCCCCC" uuid="63bb67d6-dbe6-4133-aa01-13826aafa104"/>
 				<textElement>
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[FREIGHT AND CHARGES ]]></text>
 			</staticText>
@@ -537,14 +537,14 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="3" y="633" width="507" height="25" uuid="11545218-f663-4c54-87c2-1c01956848f5"/>
 				<textElement textAlignment="Justified">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[• Kindly arrange to collect your delivery order from our D/o office ( TEL # 17515065 ) by presenting the original Bill of lading, copy of this Cargo Arrival Notice and payment of all charges due including line demurrage (if any).]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="659" width="508" height="26" uuid="3d595086-b6c0-4167-9605-a2403f6c1f8c"/>
 				<textElement textAlignment="Justified">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[• If you wish to clear cargo against bank guarantee, please inform us 3 working days in advance, to enable us to obtain approval from Principals and port of loading.]]></text>
 			</staticText>
@@ -557,15 +557,13 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</staticText>
 			<staticText>
 				<reportElement x="2" y="718" width="508" height="25" uuid="336f03db-2b32-44c1-b61b-8ad3933e1a3b"/>
-				<textElement textAlignment="Justified">
-					<font fontName="SansSerif" size="9" isBold="false"/>
+				<textElement textAlignment="Justified"><font fontName="SansSerif" size="9" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[• In the event of Damage/Short Landing, Notify your Insurers with copy to us prior to taking delivery of goods from the port. Failing to do so, we, on behalf of our principals shall repudiate liability of any alleged claim.  ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="3" y="742" width="507" height="23" uuid="4b9c3193-9858-4eff-8d67-264b1ca4a5af"/>
-				<textElement textAlignment="Justified">
-					<font size="9" isBold="false" isUnderline="false"/>
+				<textElement textAlignment="Justified"><font size="9" isBold="false" isUnderline="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[• The arrival notice is sent as courtesy. The Carrier/Agent cannot be held liable for any costs incurred as a result of any delay in clearance if the arrival notice is not received by you.]]></text>
 			</staticText>
@@ -629,17 +627,17 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</textField>
 			<textField isBlankWhenNull="true">
 				<reportElement x="2" y="173" width="259" height="15" uuid="5c016e6f-3d0c-4b0c-89e2-91c00c86edd2"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 				<textFieldExpression><![CDATA[$F{VESSEL_NAME}]]></textFieldExpression>
 			</textField>
 			<textField isBlankWhenNull="true">
 				<reportElement x="261" y="172" width="96" height="15" uuid="c4f61ca5-527e-4c1a-95d8-978d63b551a1"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 				<textFieldExpression><![CDATA[$F{VOYAGE_NO}]]></textFieldExpression>
 			</textField>
 			<textField isBlankWhenNull="true">
 				<reportElement x="387" y="172" width="98" height="15" uuid="fc5ded4f-b3fe-439c-be6a-d33a28114394"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 				<textFieldExpression><![CDATA[$F{EXPECTED_ARRIVAL_DATE}]]></textFieldExpression>
 			</textField>
 			<textField isBlankWhenNull="true">
@@ -653,7 +651,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<textField isBlankWhenNull="true">
 				<reportElement x="127" y="208" width="134" height="15" uuid="606c9c49-2b72-46ba-a165-eaa49e2e5bef"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
 			</textField>
@@ -670,7 +668,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 						<jr:detailCell height="20" rowSpan="1">
 							<textField isBlankWhenNull="true">
 								<reportElement x="0" y="0" width="272" height="20" uuid="b9b08707-40e2-4f32-bbc5-572b62006270"/>
-								<textElement textAlignment="Center"/>
+								<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<textFieldExpression><![CDATA[$F{DESCRIPTION}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
@@ -693,8 +691,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 						<jr:detailCell height="20" rowSpan="1">
 							<textField isBlankWhenNull="true">
 								<reportElement x="0" y="0" width="162" height="20" uuid="68987fbc-0ba2-45b7-ab02-1a2ee1eb85ca"/>
-								<textElement>
-									<font size="8"/>
+								<textElement><font size="8" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$F{DESCRIPTION}]]></textFieldExpression>
 							</textField>
@@ -704,18 +701,18 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</componentElement>
 			<textField isBlankWhenNull="true">
 				<reportElement x="266" y="245" width="98" height="15" uuid="12c62a00-5941-4004-9590-5ce506adc42c"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 				<textFieldExpression><![CDATA[$F{BL_ISSUE_TYPE}]]></textFieldExpression>
 			</textField>
 			<textField isBlankWhenNull="true">
 				<reportElement x="363" y="208" width="129" height="15" uuid="98ed7909-5435-4761-bb5d-fa93d442cb08"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 				<textFieldExpression><![CDATA[$F{PORT_OF_LOADING}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="127" y="865" width="279" height="12" uuid="d89fc261-e8fc-4784-9d44-dfe473d5bfed"/>
 				<textElement textAlignment="Center">
-					<font size="8"/>
+					<font size="8" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[CUSTOMER SERVICES: TEL: 17515050; D/O OFFICE: TEL: 17515065]]></text>
 			</staticText>
@@ -741,12 +738,12 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 						<jr:columnFooter height="29" rowSpan="1">
 							<staticText>
 								<reportElement x="0" y="0" width="190" height="26" uuid="619e5a44-1d49-4fa4-a501-0f21842839d9"/>
-								<textElement textAlignment="Right" verticalAlignment="Middle"/>
+								<textElement textAlignment="Right" verticalAlignment="Middle"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<text><![CDATA[Totals]]></text>
 							</staticText>
 							<textField isBlankWhenNull="true">
 								<reportElement x="6" y="4" width="131" height="20" forecolor="#FF3333" backcolor="#999999" uuid="ec4a1caf-57ee-4879-b9b1-54363e9a7345"/>
-								<textElement verticalAlignment="Middle"/>
+								<textElement verticalAlignment="Middle"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<textFieldExpression><![CDATA[$P{Duedateprintcharge}]]></textFieldExpression>
 							</textField>
 						</jr:columnFooter>
@@ -763,7 +760,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 								<reportElement x="0" y="5" width="64" height="13" uuid="1c783bc6-c96e-41ea-a199-095922dfe9cc">
 									<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 								</reportElement>
-								<textElement textAlignment="Right"/>
+								<textElement textAlignment="Right"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<textFieldExpression><![CDATA[$V{TOTAL_BASEAMOUNT}]]></textFieldExpression>
 							</textField>
 							<line>
@@ -787,7 +784,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 								<reportElement x="2" y="1" width="57" height="14" uuid="7677c686-eba6-4c6a-a8e2-1bf2c64932a8">
 									<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 								</reportElement>
-								<textElement textAlignment="Right"/>
+								<textElement textAlignment="Right"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<textFieldExpression><![CDATA[$F{BASE_AMOUNT}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
@@ -799,7 +796,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 								<reportElement x="6" y="0" width="41" height="15" uuid="9a832981-f251-4ba5-908a-249554bbca61">
 									<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 								</reportElement>
-								<textElement textAlignment="Center"/>
+								<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<textFieldExpression><![CDATA[$F{VAT%}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
@@ -810,7 +807,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 								<reportElement x="0" y="5" width="50" height="13" uuid="60f32fa6-79c4-43ce-9e35-cfbfe1c4fa12">
 									<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 								</reportElement>
-								<textElement textAlignment="Right"/>
+								<textElement textAlignment="Right"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<textFieldExpression><![CDATA[$V{TOTAL_VAT}]]></textFieldExpression>
 							</textField>
 							<line>
@@ -834,7 +831,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 								<reportElement x="2" y="1" width="45" height="14" uuid="06545cee-8bbf-47f7-8a40-ca8a85247d84">
 									<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 								</reportElement>
-								<textElement textAlignment="Right"/>
+								<textElement textAlignment="Right"><font pdfFontName="Helvetica-Bold"/></textElement>
 								<textFieldExpression><![CDATA[$F{TAX_AMOUNT}]]></textFieldExpression>
 							</textField>
 						</jr:detailCell>
@@ -917,6 +914,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</textField>
 			<staticText>
 				<reportElement x="374" y="75" width="32" height="15" uuid="34c8ac5a-a8a1-4224-9c5e-8547ce0f6757"/>
+				<textElement><font pdfFontName="Helvetica-Bold"/></textElement>
 				<text><![CDATA[Date :]]></text>
 			</staticText>
 			<textField isBlankWhenNull="true">
@@ -928,22 +926,21 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</textField>
 			<textField isBlankWhenNull="true">
 				<reportElement positionType="Float" x="108" y="284" width="47" height="15" uuid="6afcf1fd-629c-4fd2-983d-5be6d0cf107e"/>
-				<textElement>
-					<font fontName="SansSerif"/>
+				<textElement><font fontName="SansSerif" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{TOTAL_NO_OF_PACKS}]]></textFieldExpression>
 			</textField>
 			<textField isBlankWhenNull="true">
 				<reportElement positionType="Float" x="157" y="284" width="49" height="15" uuid="488ce30e-617c-4392-9979-d9a9e925c1dc"/>
 				<textElement>
-					<font fontName="SansSerif"/>
+					<font fontName="SansSerif" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{UNIT_PACK}]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement positionType="Float" x="4" y="283" width="95" height="15" uuid="c5e36a86-b9ed-48e2-a36b-a062c2b274ad"/>
 				<textElement>
-					<font fontName="SansSerif"/>
+					<font fontName="SansSerif" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Number of Package:]]></text>
 			</staticText>
@@ -961,12 +958,14 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</componentElement>
 			<staticText>
 				<reportElement mode="Opaque" x="2" y="194" width="141" height="15" backcolor="#CCCCCC" uuid="a28d815c-95d8-466d-9bc1-19d94314ac30"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center">
+					<font pdfFontName="Helvetica"/>
+				</textElement>
 				<text><![CDATA[LINE]]></text>
 			</staticText>
 			<textField>
 				<reportElement x="2" y="210" width="141" height="13" uuid="25f7218d-6629-4e99-a1ba-b4067ddeb37a"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 				<textFieldExpression><![CDATA[$F{LINE_SHORT_NAME}]]></textFieldExpression>
 			</textField>
 			<textField isBlankWhenNull="true">
@@ -980,7 +979,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</textField>
 			<textField>
 				<reportElement x="266" y="209" width="91" height="14" uuid="182f859e-1808-47b4-b9e2-80deddaa257e"/>
-				<textElement textAlignment="Center"/>
+				<textElement textAlignment="Center"><font pdfFontName="Helvetica-Bold"/></textElement>
 				<textFieldExpression><![CDATA[$F{FREIGHT_STATUS1}]]></textFieldExpression>
 			</textField>
 			<staticText>
@@ -1003,15 +1002,14 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 						<jr:detailCell height="16" rowSpan="1">
 							<textField>
 								<reportElement x="0" y="0" width="148" height="13" forecolor="#000000" uuid="ad5e536e-6d23-4b88-a922-9089439dc16c"/>
-								<textElement>
-									<font size="10"/>
+								<textElement><font size="10" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$F{CHARGE}]]></textFieldExpression>
 							</textField>
 							<textField>
 								<reportElement x="148" y="0" width="121" height="13" forecolor="#FF3333" uuid="09d206df-acd6-4509-b905-c4990212ee83"/>
 								<textElement>
-									<font size="10"/>
+									<font size="10" pdfFontName="Helvetica-Bold"/>
 								</textElement>
 								<textFieldExpression><![CDATA[$F{CHARGE_TEXT}]]></textFieldExpression>
 							</textField>
@@ -1044,7 +1042,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="2" y="877" width="508" height="16" forecolor="#999999" uuid="ae55e222-2cbc-4477-92ff-01cecfd5413d"/>
 				<textElement>
-					<font size="9" isBold="false" isUnderline="false"/>
+					<font size="9" isBold="false" isUnderline="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[ISO : 100-203                                     This is a computer-generated document and it does not require a signature.]]></text>
 			</staticText>
@@ -1053,7 +1051,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 					<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 				</reportElement>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[     AMOUNT ]]></text>
 			</staticText>
@@ -1062,14 +1060,14 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 					<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 				</reportElement>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[VAT%]]></text>
 			</staticText>
 			<staticText>
 				<reportElement mode="Opaque" x="341" y="358" width="170" height="15" backcolor="#CCCCCC" uuid="0594040e-98ec-43cf-9b78-7bc2707111f6"/>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[ AMOUNT(BHD) ]]></text>
 			</staticText>
@@ -1078,7 +1076,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 					<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TAX")]]></printWhenExpression>
 				</reportElement>
 				<textElement textAlignment="Center">
-					<font size="9"/>
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[VAT AMOUNT]]></text>
 			</staticText>
@@ -1086,8 +1084,7 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 				<reportElement x="364" y="58" width="146" height="15" uuid="f51c1aa5-f53e-4bc6-8e24-90d1469d9ef9">
 					<printWhenExpression><![CDATA[$F{COMPANY_TAX}.contains("TADDDDX")]]></printWhenExpression>
 				</reportElement>
-				<textElement textAlignment="Right">
-					<font fontName="SansSerif"/>
+				<textElement textAlignment="Right"><font fontName="SansSerif" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[$F{COMPANY_TIN_NUMBER}]]></textFieldExpression>
 			</textField>
@@ -1107,15 +1104,13 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			</textField>
 			<staticText>
 				<reportElement x="4" y="572" width="355" height="12" uuid="e4048a55-56d7-4646-8fdf-3a05397d898f"/>
-				<textElement>
-					<font size="8" isBold="false" isUnderline="false"/>
+				<textElement><font size="8" isBold="false" isUnderline="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[        2. Container form re-validation - BHD 4.000 / container (each re-validation) (Exclude VAT).]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="4" y="559" width="375" height="12" uuid="dfce80d6-5095-477e-b053-5b9f007d3b18"/>
-				<textElement>
-					<font size="8" isBold="false" isUnderline="false"/>
+				<textElement><font size="8" isBold="false" isUnderline="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[        1. Late DO collection after 21 days - BHD 30.000 / Delivery Order (Excluding VAT).]]></text>
 			</staticText>
@@ -1125,163 +1120,140 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 		<band height="772">
 			<staticText>
 				<reportElement x="164" y="10" width="179" height="34" uuid="96480326-0213-475e-a523-7dce47f89bb5"/>
-				<textElement textAlignment="Center">
-					<font fontName="Verdana" size="12"/>
+				<textElement textAlignment="Center"><font fontName="Verdana" size="12" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[LETTER TO CONSIGNEE]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="44" width="179" height="17" uuid="8c2dcf3e-bfa3-47fc-9508-7e05c6ff9c07"/>
-				<textElement>
-					<font fontName="Verdana" size="12"/>
+				<textElement><font fontName="Verdana" size="12" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Dear Valued Customer,]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="95" width="499" height="25" uuid="f87b4e3c-6a0c-437f-95ca-d0cc3d26e7c7"/>
-				<textElement verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 					<paragraph lineSpacing="Single"/>
 				</textElement>
 				<text><![CDATA[As we noticed that there were sundries left inside the container]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="663" width="492" height="27" uuid="a07d888a-8d0e-4b85-a550-7b079b4b805f"/>
-				<textElement>
-					<font fontName="Verdana" size="12"/>
+				<textElement><font fontName="Verdana" size="12" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Thank you for your understanding and cooperation.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="737" width="492" height="23" uuid="830dd83e-6435-4b02-a72d-48c7665a1c7a"/>
-				<textElement>
-					<font fontName="Verdana" size="12"/>
+				<textElement><font fontName="Verdana" size="12" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[COSCO SHIPPING LINES CO., LTD.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="120" width="501" height="25" uuid="28453af5-1c64-4d52-832f-a07a0fa3e746"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[occasionally after returning as empty by the consignee, and it cost the]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="145" width="499" height="25" uuid="a4a6dcf2-d3c0-4e08-8437-54bea54235e8"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[carrier additional workload and expenses. For the purpose of avoiding ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="170" width="509" height="25" uuid="39a3cfec-44b9-4328-9c81-0031ec744d1e"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[wasting of limited resources and enhancing efficiency of operation, we, ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="196" width="499" height="25" uuid="3a83267f-a43a-4324-a01c-f9b23ce9059d"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[COSCO SHIPPING LINES hereby draw your attention that keeping the ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="221" width="515" height="25" uuid="6a5e10c7-ab38-44e3-a869-a8088ac7f684"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[container clean inside at the time of empty returning is the obligation of ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="246" width="509" height="25" uuid="187cb862-5e2a-4537-9864-fb4b813128c4"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[the consignee, who should clean the container inside entirely and]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="271" width="510" height="25" uuid="d0e02a13-b02d-4f94-b661-700fd82297b2"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[completely, and ensure that no goods, package, plate and any other ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="296" width="499" height="25" uuid="a9d15f22-b7ae-4a6e-b919-efc6704e887b"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[sundries left before empty returning.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="352" width="506" height="25" uuid="284f3168-897c-46c3-bcbd-cba9f4a59b02"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Any goods, package, plate and other sundries left inside container are ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="377" width="506" height="25" uuid="2aeb9f2c-c02b-43ac-ac6a-0fe96b0afa5a"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[harmful to the environment; in addition, it will violate regulations of ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="402" width="527" height="25" uuid="7bc1a455-f51d-42a7-80da-d4254ae3f162"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Customs, Quarantine & Inspection, etc., and cause additional losses, risks ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="427" width="499" height="25" uuid="c62e517c-71ea-4865-af0f-9afc76a7965f"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[and responsibilities to the carrier as well.  ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="477" width="499" height="25" uuid="f91e5733-fa32-4fbc-9dd5-38edd007023a"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Therefore, please kindly be advised that we will seek full recovery ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="502" width="499" height="25" uuid="e7ef524e-cd93-49e1-9589-6cbf670e6fd7"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[against the liable party, especially the consignee, for any additional loss ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="527" width="499" height="25" uuid="5f5e693f-5368-4ffa-8fba-58771aa956cd"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[arising from any goods, package, plate and other sundries left inside ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="551" width="512" height="25" uuid="aa827b88-e230-4384-83e8-13e48200a998"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[container after empty returning, including but not limited disposal costs, ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="576" width="499" height="25" uuid="f449b241-613a-4d67-9628-50037c4c2955"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[fumigation costs, loss of use and any fine or penalty imposed by the ]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="1" y="601" width="499" height="25" uuid="aa37b840-9fad-42c3-84b5-a81e58710151"/>
-				<textElement textAlignment="Justified" verticalAlignment="Top">
-					<font fontName="Verdana" size="14"/>
+				<textElement textAlignment="Justified" verticalAlignment="Top"><font fontName="Verdana" size="14" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[authority. ]]></text>
 			</staticText>
@@ -1292,84 +1264,84 @@ where shdr.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
 			<staticText>
 				<reportElement x="107" y="10" width="225" height="21" uuid="f7a9bbbf-7e12-46b3-bf7e-0d8fc0ad53cd"/>
 				<textElement textAlignment="Center">
-					<font fontName="Verdana" size="16" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="16" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[COSCO SHIPPING LINES]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="72" y="38" width="309" height="23" uuid="ad19ea82-0c2f-4721-b931-761892fd8ed3"/>
 				<textElement textAlignment="Center">
-					<font fontName="Verdana" size="16" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="16" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[Customer Service Standards]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="71" width="93" height="14" uuid="33515a0d-6ffe-478d-b444-30b4b2901ac8"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[1.    Bookings]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="177" width="189" height="14" uuid="f158fd15-26fb-4f9e-b741-d326ab3679d7"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[2.    Equipment Release]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="238" width="189" height="14" uuid="992c3cca-6b19-46cc-b7bd-a8f326e21353"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[3.    Bill of Lading Release]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="309" width="189" height="14" uuid="f6de10f0-30de-4418-8498-eefe455cd15b"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[4.    Invoicing]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="381" width="189" height="14" uuid="a791b4ae-6ae6-4735-ae3a-5f88e8d66e95"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[5.    Schedule Reliability]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="439" width="189" height="14" uuid="0b768994-b6e0-4fbd-b0e1-3f29ab1ae374"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[6.    Trans-Shipment]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="554" width="189" height="14" uuid="e33c78db-f91e-43b2-a1f9-b665dd5acb67"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[7.    Arrival Notice]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="604" width="189" height="14" uuid="ad8744b4-7d90-482a-ade9-b2bdc446e934"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[8.    Counter Service]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="10" y="668" width="189" height="14" uuid="d7dc570a-e659-472b-8ac7-46a163e3898e"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[9.    Issues Resolution]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="30" y="89" width="504" height="78" uuid="b4bef064-0c69-4167-a6cc-5cd67753710d"/>
 				<textElement>
-					<font fontName="Verdana" size="10" pdfFontName="Times-Bold" isBold="false"/>
+					<font fontName="Verdana" size="10" pdfFontName="Helvetica-Bold" isBold="false"/>
 				</textElement>
 				<text><![CDATA[a)           Bookings will be responded within two hours upon receipt during a
               working/business day.
@@ -1381,16 +1353,14 @@ b)           Given that vessel allocation is available and booking
 			</staticText>
 			<staticText>
 				<reportElement x="37" y="196" width="480" height="34" uuid="6442054d-7a6c-4345-9b0f-d9086e2806c3"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Equipment will be reserved for pickup within 48 hours after customer’s request
 for equipment pickup has been confirmed.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="39" y="259" width="480" height="42" uuid="c17f7b40-c16f-4975-9f1c-0b55d738c086"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Original Bill of Lading will be ready within one working day after the vessel
 departure, under the condition that shipping instructions have been submitted
@@ -1398,8 +1368,7 @@ in a timely and proper manner.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="38" y="330" width="480" height="42" uuid="c6f06254-3247-486b-a66d-aaf1b9f8f4fc"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Original Bill of Lading will be ready within one working day after the vessel
 departure, under the condition that shipping instructions have been submitted
@@ -1407,16 +1376,14 @@ in a timely and proper manner.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="39" y="402" width="480" height="29" uuid="d7da8526-f7a8-4252-9634-f858ba8ef994"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Schedule integrity of COSCO SHIPPING operated vessels will exceed 95% reliability
 (except in condition of force majeure).]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="32" y="462" width="494" height="84" uuid="6d8e9731-43b5-45d0-b866-8e74208cc447"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[a)        Connection voyage will be available online at our website (www.coscon.com) three
            days prior to cargo arriving at the trans-shipment port. Trans-shipment
@@ -1428,22 +1395,19 @@ b)        Our goal is cargo that moves through a trans-shipment port with target
 			</staticText>
 			<staticText>
 				<reportElement x="33" y="577" width="494" height="19" uuid="ef4757d1-5524-417b-8431-3e774161d682"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Arrival notice will be delivered one day prior to cargo arrival.]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="34" y="626" width="494" height="33" uuid="bfe4300a-2cae-483a-b4f6-0e005a154470"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Service procedure will be completed within fifteen minutes upon arrival at service counter (only applicable for regions with counter service).]]></text>
 			</staticText>
 			<staticText>
 				<reportElement x="33" y="697" width="494" height="63" uuid="7ca905e0-ae96-461a-9453-bd9ee532d905"/>
-				<textElement>
-					<font fontName="Verdana" size="10" isBold="false"/>
+				<textElement><font fontName="Verdana" size="10" isBold="false" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[a)	Invoice disputes will be resolved within five working days.
 b)	Commercial disputes of clear facts will be handled within seven working days.
@@ -1454,7 +1418,7 @@ c)	Complaint resolution (following receipt of complaint) will be provided within
 			<staticText>
 				<reportElement x="9" y="795" width="518" height="19" uuid="f4f1d0fe-271c-4b63-a7b5-05062d352a34"/>
 				<textElement>
-					<font fontName="Verdana" size="7" pdfFontName="Times-Bold" isBold="true"/>
+					<font fontName="Verdana" size="7" pdfFontName="Helvetica-Bold" isBold="true"/>
 				</textElement>
 				<text><![CDATA[The above-mentioned is just for reference and should not be considered as the warranty/guarantee in any conditions.]]></text>
 			</staticText>
