@@ -592,11 +592,26 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     @Override
     public String createTdr(Long voyagePoid, boolean createEmptyManifestFirst) {
         Long userPoid = Optional.ofNullable(UserContext.getUserPoid()).orElse(0L);
+        // Legacy tdrUpdatePda() runs createEmptyManifest() first and shows its message as a separate
+        // popup; keep that message so the TDR toaster carries the same info as legacy.
+        String emptyManifestMsg = null;
         if (createEmptyManifestFirst) {
-            createEmptyManifest(voyagePoid);
+            String em = createEmptyManifest(voyagePoid);
+            emptyManifestMsg = "Empty manifest records imported..." + (em != null ? em : "");
         }
         log.info("Create TDR | voyagePoid={} userPoid={}", voyagePoid, userPoid);
-        return storedProcedureRepository.procLoadTdrOwnLine(voyagePoid, userPoid);
+        String result = storedProcedureRepository.procLoadTdrOwnLine(voyagePoid, userPoid);
+        // Legacy: PROC_LOAD_TDR_OWN_LINE returns a blank/null P_STATUS when there is nothing to bill
+        // (no manifest/transhipment containers), and an ERROR string on failure. Surface that instead
+        // of a blank success, combining it with the empty-manifest message like legacy's two popups.
+        if (result == null || result.isBlank()) {
+            String tdrMsg = "No TDR created: no manifest/transhipment containers found for this voyage.";
+            return emptyManifestMsg != null ? emptyManifestMsg + " | " + tdrMsg : tdrMsg;
+        }
+        if (result.contains("ERROR") || result.contains("ORA-")) {
+            throw new IllegalStateException("TDR creation failed: " + result);
+        }
+        return result;
     }
 
     @Override
