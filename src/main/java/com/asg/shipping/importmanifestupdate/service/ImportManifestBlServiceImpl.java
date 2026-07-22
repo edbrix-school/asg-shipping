@@ -204,18 +204,27 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     }
 
     @Override
-    public Map<String, Object> listOfImportManifest(String docId, FilterRequestDto request, Pageable pageable) {
-        String operator = documentService.resolveOperator(request);
-        String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = documentService.resolveFilters(request);
+    public Map<String, Object> list(FilterRequestDto request, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
+        try {
+            String operator = documentService.resolveOperator(request);
+            String isDeleted = documentService.resolveIsDeleted(request);
+            List<FilterDto> filters = documentService.resolveDateFilters(request, "TRANSACTION_DATE", fromDate, toDate);
 
-        RawSearchResult raw = documentService.search(docId, filters, operator, pageable, isDeleted,
-                "BL_NUMBER", // label
-                "TRANSACTION_POID"); // value
+            RawSearchResult raw = documentService.search(
+                    UserContext.getDocumentId(),
+                    filters,
+                    operator,
+                    pageable,
+                    isDeleted,
+                    "BL_NUMBER",
+                    "TRANSACTION_POID");
 
-        Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
-
-        return PaginationUtil.wrapPage(page, raw.displayFields());
+            Page<Map<String, Object>> page = new PageImpl<>(raw.records(), pageable, raw.totalRecords());
+            return PaginationUtil.wrapPage(page, raw.displayFields());
+        } catch (Exception e) {
+            log.error("Error listing Import Manifest BLs", e);
+            throw e;
+        }
     }
 
 

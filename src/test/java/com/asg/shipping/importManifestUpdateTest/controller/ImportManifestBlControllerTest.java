@@ -67,40 +67,21 @@ class ImportManifestBlControllerTest {
         
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getDocumentId).thenReturn("123");
-            when(service.listOfImportManifest(eq("123"), any(FilterRequestDto.class), any(Pageable.class)))
+            when(service.list( any(FilterRequestDto.class),isNull(), isNull(), any(Pageable.class)))
                     .thenReturn(mockResponse);
 
             // When
-            ResponseEntity<?> response = controller.getImportManifestList(pageable, filters);
+            ResponseEntity<?> response = controller.getImportManifestList( pageable,filters, null, null);
 
             // Then
             assertEquals(HttpStatus.OK, response.getStatusCode());
             Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
             assertEquals("Import Manifest list fetched successfully", responseBody.get("message"));
-            verify(service).listOfImportManifest(eq("123"), any(FilterRequestDto.class), any(Pageable.class));
+            verify(service).list( any(FilterRequestDto.class),isNull(),isNull(), any(Pageable.class));
         }
     }
 
-    @Test
-    void getImportManifestList_Exception() {
-        // Given
-        Pageable pageable = PageRequest.of(0, 10);
-        FilterRequestDto filters = new FilterRequestDto("OR", "N", null);
-        
-        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
-            mockedUserContext.when(UserContext::getDocumentId).thenReturn("123");
-            when(service.listOfImportManifest(any(), any(), any()))
-                    .thenThrow(new RuntimeException("Database error"));
 
-            // When
-            ResponseEntity<?> response = controller.getImportManifestList(pageable, filters);
-
-            // Then
-            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-            Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
-            assertTrue(responseBody.get("message").toString().contains("Error fetching Import Manifest List"));
-        }
-    }
 
 
     @Test

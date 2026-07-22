@@ -32,6 +32,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static com.asg.common.lib.dto.response.ApiResponse.*;
@@ -110,10 +111,14 @@ public class ImportManifestBlController {
             )
     )
     @PostMapping("/list")
-    public ResponseEntity<?> getImportManifestList(@ParameterObject Pageable pageable,
-                                                      @RequestBody(required = false) FilterRequestDto filters) {
+    public ResponseEntity<?> getImportManifestList( @ParameterObject Pageable pageable,
+                                                    @RequestBody(required = false) FilterRequestDto filters,
+                                                    @Parameter(description = "Start date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+                                                        @RequestParam(required = false) LocalDate fromDate,
+                                                    @Parameter(description = "End date (inclusive) for transaction date filter, format: yyyy-MM-dd")
+                                                        @RequestParam(required = false) LocalDate toDate) {
         try {
-            Map<String, Object> countries = service.listOfImportManifest(UserContext.getDocumentId(), filters, pageable);
+            Map<String, Object> countries = service.list(filters, fromDate, toDate, pageable);
             return success("Import Manifest list fetched successfully", countries);
         } catch (Exception e) {
             return internalServerError("Error fetching Import Manifest List: " + e.getMessage());
