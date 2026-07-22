@@ -380,17 +380,37 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             throw new ValidationException("BL number is required");
         }
 
-        Long blPoid;
-        try {
-            blPoid = Long.parseLong(blNumber);
-        } catch (NumberFormatException e) {
-            throw new ValidationException("BL number is invalid: " + blNumber);
-        }
-
         Long transactionPoid = request != null && request.getTransactionPoid() != null
                 ? request.getTransactionPoid()
                 : 0L;
 
+        List<Long> poids = request != null ? request.resolvedBlPoids() : List.of();
+
+        if (poids.isEmpty()) {
+            throw new ValidationException("At least one BL poid is required");
+        }
+
+        String inClause = poids.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        String findPoidSql = "SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_HDR " +
+                "WHERE TRANSACTION_POID IN (" + inClause + ") AND (DELETED = 'N' OR DELETED IS NULL) " +
+                "AND ROWNUM = 1";
+        List<Long> found = jdbcTemplate.queryForList(findPoidSql, Long.class);
+        if (found.isEmpty()) {
+            log.info("No valid BL poid found for BL: {}", blNumber);
+            return null;
+        }
+
+        Long blPoid = found.get(0);
+        ManifestCorrectorBlAutoPopulateDto result = callAutoPopulateProc(blNumber, blPoid, transactionPoid);
+        if (result == null) {
+            log.info("No BL auto-population data returned for BL: {}", blNumber);
+            return null;
+        }
+        enrichLovData(result);
+        return result;
+    }
+
+    private ManifestCorrectorBlAutoPopulateDto callAutoPopulateProc(String blNumber, Long blPoid, Long transactionPoid) {
         ManifestCorrectorBlAutoPopulateDto response = ManifestCorrectorBlAutoPopulateDto.builder()
                 .blPoid(blPoid)
                 .transactionPoid(transactionPoid)
@@ -437,24 +457,16 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
                 }
                 return null;
             });
-        } catch (ValidationException e) {
-            throw e;
         } catch (Exception e) {
             if (isNoDataFoundException(e)) {
-                log.info("No BL auto-population data returned for BL: {}", blNumber);
+                log.info("No data for blPoid: {}, trying next", blPoid);
                 return null;
             }
-            log.error("Error calling PROC_LOV_AFTER_BRWS_100_143 for BL: {}", blNumber, e);
+            log.error("Error calling PROC_LOV_AFTER_BRWS_100_143 for BL: {}, poid: {}", blNumber, blPoid, e);
             throw new ValidationException("Error auto-populating BL details: " + e.getMessage());
         }
 
-        if (!dataFound[0]) {
-            log.info("No BL auto-population data returned for BL: {}", blNumber);
-            return null;
-        }
-
-        enrichLovData(response);
-        return response;
+        return dataFound[0] ? response : null;
     }
 
     // ==================== Private Helper Methods ====================

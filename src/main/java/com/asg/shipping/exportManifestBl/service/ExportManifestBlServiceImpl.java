@@ -41,6 +41,7 @@ import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsRequestDto;
 import com.asg.shipping.importmanifestbl.dto.ChargeDefaultsResponseDto;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestDtlId;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestCargoDtlId;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -108,6 +109,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final ExportManifestBlBookingSelectionRepository bookingSelectionRepository;
     private final ShipVoyageHdrRepository shipVoyageHdrRepository;
     private final ApprovalService approvalService;
+    private final BlManifestValidationService blManifestValidationService;
 
     private String normalizeActionType(String actionType) {
         return actionType == null ? "" : actionType.trim().toLowerCase();
@@ -1317,6 +1319,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     }
 
     private void createChargeDetail(ChargeRequestDto detail, Long transactionPoid) {
+        blManifestValidationService.validateChargeTypeMandatory(detail.getChargeType());
+        blManifestValidationService.validateFreightTypeMandatory(detail.getFreightType());
         Long detRowId = detail.getDetRowId();
         ExportManifestBlChargesDtl entity = ExportManifestBlChargesDtl.builder()
                 .id(new ShipBlManifestDtlId(transactionPoid, detRowId))
@@ -1372,9 +1376,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setBuyPercharge(detail.getBuyPercharge());
         entity.setPerQuantityAmount(detail.getPerQuantityAmount());
         entity.setPaidAtPortPoid(detail.getPaidAtPortPoid());
-        entity.setChargeType(detail.getChargeType() != null ? detail.getChargeType() : "MANIFEST");
+        if (detail.getChargeType() != null) {
+            entity.setChargeType(detail.getChargeType());
+        }
         entity.setCurrencyCode(detail.getCurrencyCode());
-        entity.setFreightType(detail.getFreightType());
+        if (detail.getFreightType() != null) {
+            entity.setFreightType(detail.getFreightType());
+        }
         entity.setEdiChargeCode(detail.getEdiChargeCode());
         entity.setArShReceiptTransactionPoid(detail.getArShReceiptTransactionPoid());
         entity.setChargeBasisOn(detail.getChargeBasisOn());
@@ -1394,6 +1402,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setCnRefDetRowId(detail.getCnRefDetRowId());
         entity.setCnIssueInvoice(detail.getCnIssueInvoice());
         entity.setSelectRow(detail.getSelectRow());
+        blManifestValidationService.validateChargeTypeMandatory(entity.getChargeType());
+        blManifestValidationService.validateFreightTypeMandatory(entity.getFreightType());
         chargesDtlRepository.save(entity);
 
        
@@ -1544,7 +1554,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         // Save Charges Details
         if (dto.getChargeDetails() != null) {
             for (ChargeRequestDto detail : dto.getChargeDetails()) {
-              
+                blManifestValidationService.validateChargeTypeMandatory(detail.getChargeType());
+                blManifestValidationService.validateFreightTypeMandatory(detail.getFreightType());
                 ExportManifestBlChargesDtl entity = ExportManifestBlChargesDtl.builder()
                         .id(new ShipBlManifestDtlId(transactionPoid, detail.getDetRowId() != null ? detail.getDetRowId() : detRowId++))
                         .chargePoid(detail.getChargePoid())

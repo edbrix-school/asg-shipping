@@ -112,6 +112,20 @@ public class BlManifestValidationService {
     }
 
 
+    public void validateFreightTypeMandatory(String freightType) {
+        if (isBlank(freightType)) {
+            throw new ValidationException(BlManifestValidationMessages.FREIGHT_TYPE_MANDATORY);
+        }
+    }
+
+
+    public void validateChargeTypeMandatory(String chargeType) {
+        if (isBlank(chargeType)) {
+            throw new ValidationException(BlManifestValidationMessages.CHARGE_TYPE_MANDATORY);
+        }
+    }
+
+
     public void validateFreightType(String freightStatus, String holdReason,
                                      List<? extends ChargeValidatable> charges) {
         validateFreightType(freightStatus, holdReason, charges, List.of());
