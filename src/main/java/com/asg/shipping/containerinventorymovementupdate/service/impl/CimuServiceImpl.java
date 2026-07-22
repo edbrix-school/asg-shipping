@@ -81,6 +81,9 @@ public class CimuServiceImpl implements CimuService {
         boolean canEditActualDischargeDate = safeRight("000-279");
 
         List<ContainerInfoDto> info = queryRepository.fetchContainerInfo(containerNo, blNumber);
+        if (info == null || info.isEmpty()) {
+            throw new ValidationException("No record for query, please check the query parameter again");
+        }
         List<ContainerHistoryRowDto> history = (containerNo != null && containerNo.length() >= 4)
                 ? queryRepository.fetchHistoryByContainerNo(containerNo)
                 : List.of();
@@ -161,6 +164,10 @@ public class CimuServiceImpl implements CimuService {
         if (status == null || status.isBlank()) {
             log.warn("PROC_SHIP_CNT_INVT_UPDATE returned null/blank status; defaulting to TRUE. transactionPoid={}", transactionPoid);
             status = "TRUE";
+        }
+        // Legacy check: if status is not exactly "TRUE", the procedure reported a business error.
+        if (!status.equalsIgnoreCase("TRUE")) {
+            throw new ValidationException(status);
         }
         return UpdateCimuResponse.builder().status(status).build();
     }
