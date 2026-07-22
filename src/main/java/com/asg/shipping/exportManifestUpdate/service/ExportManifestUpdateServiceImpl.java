@@ -16,6 +16,7 @@ import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.entity.*;
 import com.asg.shipping.exportManifestUpdate.mapper.ExportManifestUpdateMapper;
 import com.asg.shipping.exportManifestUpdate.repository.*;
+import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import com.asg.shipping.address.entity.AddressDetails;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
 import lombok.RequiredArgsConstructor;
@@ -59,6 +60,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
     private final ExportShipBlManifestChargesDtlRepository chargesDtlRepository;
     private final ExportManifestBlCustomRepository customBLRepository;
     private final ExportManifestUpdateMapper mapper;
+    private final BlManifestValidationService blManifestValidationService;
     private final DocumentSearchService documentSearchService;
     private final LovService lovService;
 	private final PrintService printService;
@@ -756,6 +758,8 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                         break;
                     case ISCREATED:
                         if (dto.getChargePoid() == null) break;
+                        blManifestValidationService.validateChargeTypeMandatory(dto.getChargeType());
+                        blManifestValidationService.validateFreightTypeMandatory(dto.getFreightType());
                         detRowId = chargesDtlRepository.getNextDetRowId(transactionPoid);
                         ExportShipBlManifestChargesDtl newEntity = mapper.mapChargeToEntity(dto, transactionPoid, detRowId, userId);
                         chargesDtlRepository.save(newEntity);
@@ -778,6 +782,8 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
                             if (dto.getTaxPoid() != null) entity.setTaxPoid(dto.getTaxPoid());
                             if (dto.getTaxPercentage() != null) entity.setTaxPercentage(dto.getTaxPercentage());
                             if (dto.getTaxAmount() != null) entity.setTaxAmount(dto.getTaxAmount());
+                            blManifestValidationService.validateChargeTypeMandatory(entity.getChargeType());
+                            blManifestValidationService.validateFreightTypeMandatory(entity.getFreightType());
                             chargesDtlRepository.save(entity);
                         }
                         break;
