@@ -142,6 +142,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 		saveDetailRecords(hdr.getTransactionPoid(), createDto);
 
+		entityManager.refresh(hdr);
 		loggingService.createLogSummaryEntry(UserContext.getDocumentId(), hdr.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), hdr.getDocRef()));
 
 		// Call post-save procedure
