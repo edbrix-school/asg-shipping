@@ -35,6 +35,10 @@ public final class BlManifestValidationMessages {
     public static final String NEGATIVE_GAIN =
             "Total financial gain cannot be negative. Current gain: %s. Please review the charge amounts.";
 
+    public static final String CHARGE_TYPE_MANDATORY =
+            "Charge type is mandatory.";
+    public static final String FREIGHT_TYPE_MANDATORY =
+            "Freight type is mandatory.";
     public static final String FREIGHT_TYPE_NOT_ENTERED =
             "Freight type is not specified in the charge details. Please assign a freight type to the applicable charges.";
     public static final String FREIGHT_STATUS_MISMATCH_PREPAID =
