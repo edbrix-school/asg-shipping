@@ -30,6 +30,8 @@ public class ShippingReceiptValidationService {
 	private final ShipReceiptProcRepository procRepository;
 	private final ShipBlManifestHdrRepository manifestHdrRepository;
 
+	private static final String PAYMENT_REF_ALREADY_USED_VALIDATION_MESSAGE = "Payment reference already used";
+
 	public void validateReceiptCreation(ReceiptsCreateDto createDto) {
 		log.info("Starting receipt creation validation");
 
@@ -43,8 +45,17 @@ public class ShippingReceiptValidationService {
 		validateCashPayments(createDto.getPaymentDetail());
 		validateDemurrageAmounts(createDto.getBlPoid(), createDto.getCharges(), createDto.getContainer());
         validateDuplicateBlReceipt(createDto.getBlPoid(), createDto.getRemarks());
+		validateDuplicatePaymentRef(createDto.getBlPoid(), createDto.getPaymentReference());
 
 		log.info("Receipt creation validation completed successfully");
+	}
+
+	private void validateDuplicatePaymentRef(Long blPoid, String paymentReference) {
+		if (blPoid == null) return ;
+		String result = procRepository.validateDuplicatePaymentRef(blPoid, paymentReference);
+		if ("TRUE".equalsIgnoreCase(result)) {
+			throw new ValidationException(PAYMENT_REF_ALREADY_USED_VALIDATION_MESSAGE);
+		}
 	}
 
 	private void validateAmount(List<ReceiptCharges> charges,

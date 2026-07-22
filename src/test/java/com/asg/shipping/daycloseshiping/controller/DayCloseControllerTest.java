@@ -312,26 +312,26 @@ class DayCloseControllerTest {
     void print_Success() throws Exception {
         byte[] pdfBytes = "PDF".getBytes();
 
-        when(dayCloseService.print(100L)).thenReturn(pdfBytes);
+        when(dayCloseService.printDayClose(100L)).thenReturn(pdfBytes);
 
         mockMvc.perform(get("/v1/day-close-shipping/print/100"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition",
-                        "attachment; filename=day-close-shipping-100.pdf"))
+                        "attachment; filename=day-close-100.pdf"))
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
 
-        verify(dayCloseService).print(100L);
+        verify(dayCloseService).printDayClose(100L);
     }
 
     @Test
     void print_ThrowsException_ReturnsError() throws Exception {
-        when(dayCloseService.print(100L))
+        when(dayCloseService.printDayClose(100L))
                 .thenThrow(new RuntimeException("PDF generation failed"));
 
         mockMvc.perform(get("/v1/day-close-shipping/print/100"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.message").value("Failed to generate PDF: PDF generation failed"));
 
-        verify(dayCloseService).print(100L);
+        verify(dayCloseService).printDayClose(100L);
     }
 }

@@ -18,6 +18,11 @@ import com.asg.shipping.exportManifestBl.entity.*;
 import com.asg.shipping.exportManifestBl.repository.*;
 import com.asg.shipping.exportManifestBl.repository.ShipBlToFfRepository;
 import com.asg.shipping.exportManifestBl.util.ExportManifestBlMapper;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestCargoDtl;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestChargesDtl;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestContainerDtl;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestGeneralDtl;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestHdr;
 import com.asg.shipping.common.service.LovService;
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
@@ -78,6 +83,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     /** Matches document master DOC_NAME / ROUTE_NAME for SPA tab navigation. */
     private static final String SALES_INVOICE_DOCUMENT_NAME = "Sales Invoice (Shipping)";
     private static final String EXPORT_MANIFEST_DOCUMENT_ID = "100-104";
+    private static final String CARGO_DESCRIPTION_TYPE_DESC = "DESC";
+    private static final String LOG_TABLE_HDR = "SHIP_BL_MANIFEST_HDR";
+    private static final String LOG_TABLE_CARGO = "SHIP_BL_MANIFEST_CARGO_DTL";
 
     private final ExportManifestBlHdrRepository repository;
     private final ExportManifestBlGeneralDtlRepository generalDtlRepository;
@@ -170,6 +178,11 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         ExportManifestBlHdr oldEntity = new ExportManifestBlHdr();
         BeanUtils.copyProperties(entity, oldEntity);
 
+        String docId = UserContext.getDocumentId();
+        String docKeyPoid = id.toString();
+        String cargoDescriptionBefore = joinCargoTextForAudit(id, "DESC", "DESCRIPTION", "CARGO");
+        String cargoMarksBefore = joinCargoTextForAudit(id, "MARK", "MARKS");
+
         if (dto.getBlNumber() != null && !dto.getBlNumber().trim().equals(entity.getBlNumber())) {
             String trimmedBlNumber = dto.getBlNumber().trim();
             Long voyagePoid = dto.getVoyageTransactionPoid() != null 
@@ -187,19 +200,26 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
             formatEdiFields(entity);
         }
 
-        ExportManifestBlHdr saved = repository.save(entity);
+        ExportManifestBlHdr saved = repository.saveAndFlush(entity);
 
         if (hasDetailUpdates(dto)) {
             applyDetailActions(dto, id);
         }
 
-       
+        logAggregateCargoField(docId, docKeyPoid, "CargoDescription",
+                cargoDescriptionBefore, joinCargoTextForAudit(id, "DESC", "DESCRIPTION", "CARGO"));
+        logAggregateCargoField(docId, docKeyPoid, "Marks",
+                cargoMarksBefore, joinCargoTextForAudit(id, "MARK", "MARKS"));
+        if (dto.getBookingMateVoyageNo() != null) {
+            logBookingMateVoyageFilter(docId, docKeyPoid, dto.getPreviousBookingMateVoyageNo(), dto.getBookingMateVoyageNo());
+        }
+
         loggingService.logChanges(
-                oldEntity,
-                saved,
-                ExportManifestBlHdr.class,
-                UserContext.getDocumentId(),
-                id.toString(),
+                copyHdrForLog(oldEntity),
+                copyHdrForLog(saved),
+                ShipBlManifestHdr.class,
+                docId,
+                docKeyPoid,
                 LogDetailsEnum.MODIFIED,
                 "TRANSACTION_POID"
         );
@@ -495,6 +515,69 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     }
 
     @Override
+    @Transactional
+    public Map<String, Object> loadDamageClause(Long transactionPoid) {
+        log.info("Loading damage clause for Export Manifest BL: {}", transactionPoid);
+        validateActiveExportManifestBl(transactionPoid, UserContext.getCompanyPoid());
+
+        List<String> damageClauses;
+        try {
+            damageClauses = procRepository.loadDamageClauseLines();
+        } catch (Exception e) {
+            log.error("Error calling PROC_SHIP_BL_DAMAGE_LOAD for transactionPoid: {}", transactionPoid, e);
+            throw new ValidationException("Some error in PROC_SHIP_BL_DAMAGE_LOAD: " + e.getMessage());
+        }
+
+        if (damageClauses.isEmpty()) {
+            throw new ValidationException("No Damage Clause Found...");
+        }
+
+        String descriptionType = resolveDamageClauseDescriptionType(transactionPoid);
+        long nextDetRowId = cargoDtlRepository.findById_TransactionPoid(transactionPoid).stream()
+                .map(row -> row.getId().getDetRowId())
+                .max(Long::compareTo)
+                .orElse(0L);
+
+        for (String clause : damageClauses) {
+            nextDetRowId++;
+            createCargoDetail(
+                    CargoDescriptionRequestDto.builder()
+                            .detRowId(nextDetRowId)
+                            .descriptionType(descriptionType)
+                            .cargoDescription(clause)
+                            .recordOrder(nextDetRowId)
+                            .build(),
+                    transactionPoid);
+        }
+
+        List<CargoDescriptionRequestDto> cargoDescriptions = cargoDtlRepository
+                .findById_TransactionPoid(transactionPoid)
+                .stream()
+                .map(entity -> CargoDescriptionRequestDto.builder()
+                        .detRowId(entity.getId().getDetRowId())
+                        .descriptionType(entity.getId().getDescriptionType())
+                        .cargoDescription(entity.getCargoDescription())
+                        .recordOrder(entity.getRecordOrder())
+                        .build())
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("damageClauses", damageClauses);
+        response.put("cargoDescriptions", cargoDescriptions);
+        return response;
+    }
+
+    private String resolveDamageClauseDescriptionType(Long transactionPoid) {
+        return cargoDtlRepository.findById_TransactionPoid(transactionPoid).stream()
+                .map(row -> row.getId().getDescriptionType())
+                .filter(type -> type != null
+                        && !"MARK".equalsIgnoreCase(type)
+                        && !"MARKS".equalsIgnoreCase(type))
+                .findFirst()
+                .orElse(CARGO_DESCRIPTION_TYPE_DESC);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<BookingSelectionRowDto> listBookingSelection(
             Long issueVesselVoyagePoid,
@@ -612,6 +695,15 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         response.put("voyageTransactionPoid", resolvedVoyagePoid);
         response.put("transactionPoid", newBlPoid);
         response.put("message", "Booking data loaded, export BL created, and totals/auto-charges processed");
+
+        if (request.getBookingMateVoyageNo() != null && !request.getBookingMateVoyageNo().isBlank()) {
+            logBookingMateVoyageFilter(
+                    EXPORT_MANIFEST_DOCUMENT_ID,
+                    String.valueOf(newBlPoid),
+                    "",
+                    request.getBookingMateVoyageNo().trim());
+        }
+
         return response;
     }
 
@@ -995,9 +1087,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
         loggingService.createLogBatch(
                 List.of(new LogRequestDto<>(
-                        oldEntity,
-                        entity,
-                        ExportManifestBlGeneralDtl.class,
+                        copyGeneralForLog(oldEntity),
+                        copyGeneralForLog(entity),
+                        ShipBlManifestGeneralDtl.class,
                         docId,
                         docKeyPoid,
                         logDetail
@@ -1046,20 +1138,39 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setRecordOrder(detail.getRecordOrder());
         cargoDtlRepository.save(entity);
 
-        
         String docId = UserContext.getDocumentId();
         String docKeyPoid = transactionPoid.toString();
         String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
         loggingService.createLogBatch(
                 List.of(new LogRequestDto<>(
-                        oldEntity,
-                        entity,
-                        ExportManifestBlCargoDtl.class,
+                        copyCargoForLog(oldEntity),
+                        copyCargoForLog(entity),
+                        ShipBlManifestCargoDtl.class,
                         docId,
                         docKeyPoid,
                         logDetail
                 ))
         );
+    }
+
+    private String joinCargoTextForAudit(Long transactionPoid, String... descriptionTypes) {
+        return cargoDtlRepository.findById_TransactionPoid(transactionPoid).stream()
+                .filter(row -> {
+                    String type = row.getId().getDescriptionType();
+                    if (type == null) {
+                        return false;
+                    }
+                    for (String candidate : descriptionTypes) {
+                        if (candidate.equalsIgnoreCase(type)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                })
+                .sorted(java.util.Comparator.comparing(row -> row.getId().getDetRowId()))
+                .map(ExportManifestBlCargoDtl::getCargoDescription)
+                .filter(text -> text != null && !text.isBlank())
+                .collect(java.util.stream.Collectors.joining(" "));
     }
 
     private void deleteCargoDetail(CargoDescriptionRequestDto detail, Long transactionPoid) {
@@ -1129,9 +1240,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
         loggingService.createLogBatch(
                 List.of(new LogRequestDto<>(
-                        oldEntity,
-                        entity,
-                        ExportManifestBlContainerDtl.class,
+                        copyContainerForLog(oldEntity),
+                        copyContainerForLog(entity),
+                        ShipBlManifestContainerDtl.class,
                         docId,
                         docKeyPoid,
                         logDetail
@@ -1291,9 +1402,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
         loggingService.createLogBatch(
                 List.of(new LogRequestDto<>(
-                        oldEntity,
-                        entity,
-                        ExportManifestBlChargesDtl.class,
+                        copyChargeForLog(oldEntity),
+                        copyChargeForLog(entity),
+                        ShipBlManifestChargesDtl.class,
                         docId,
                         docKeyPoid,
                         logDetail
@@ -1765,6 +1876,88 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
             }
         }
         return innerCache.get(code);
+    }
+
+    // ==================== Document audit (100-104) ====================
+
+    private ShipBlManifestHdr copyHdrForLog(ExportManifestBlHdr source) {
+        if (source == null) {
+            return null;
+        }
+        ShipBlManifestHdr target = new ShipBlManifestHdr();
+        BeanUtils.copyProperties(source, target);
+        return target;
+    }
+
+    private ShipBlManifestCargoDtl copyCargoForLog(ExportManifestBlCargoDtl source) {
+        if (source == null) {
+            return null;
+        }
+        ShipBlManifestCargoDtl target = new ShipBlManifestCargoDtl();
+        BeanUtils.copyProperties(source, target);
+        return target;
+    }
+
+    private ShipBlManifestGeneralDtl copyGeneralForLog(ExportManifestBlGeneralDtl source) {
+        if (source == null) {
+            return null;
+        }
+        ShipBlManifestGeneralDtl target = new ShipBlManifestGeneralDtl();
+        BeanUtils.copyProperties(source, target);
+        return target;
+    }
+
+    private ShipBlManifestContainerDtl copyContainerForLog(ExportManifestBlContainerDtl source) {
+        if (source == null) {
+            return null;
+        }
+        ShipBlManifestContainerDtl target = new ShipBlManifestContainerDtl();
+        BeanUtils.copyProperties(source, target);
+        return target;
+    }
+
+    private ShipBlManifestChargesDtl copyChargeForLog(ExportManifestBlChargesDtl source) {
+        if (source == null) {
+            return null;
+        }
+        ShipBlManifestChargesDtl target = new ShipBlManifestChargesDtl();
+        BeanUtils.copyProperties(source, target);
+        return target;
+    }
+
+    private void logAggregateCargoField(
+            String documentId, String docKeyPoid, String fieldName, String beforeText, String afterText) {
+        if (java.util.Objects.equals(normalizeLogText(beforeText), normalizeLogText(afterText))) {
+            return;
+        }
+        String keyDetail = "KeyId = TRANSACTION_POID:" + docKeyPoid;
+        loggingService.createLogDetailsEntry(
+                documentId,
+                docKeyPoid,
+                fieldName,
+                normalizeLogText(beforeText),
+                normalizeLogText(afterText),
+                keyDetail,
+                LOG_TABLE_CARGO);
+    }
+
+    private void logBookingMateVoyageFilter(String documentId, String docKeyPoid, String before, String after) {
+        if (java.util.Objects.equals(normalizeLogText(before), normalizeLogText(after))) {
+            return;
+        }
+        String keyDetail = "KeyId = TRANSACTION_POID:" + docKeyPoid;
+        loggingService.createLogDetailsEntry(
+                documentId,
+                docKeyPoid,
+                "BookingMateVoyage",
+                normalizeLogText(before),
+                normalizeLogText(after),
+                keyDetail,
+                LOG_TABLE_HDR);
+    }
+
+    private static String normalizeLogText(String value) {
+        return value == null ? "" : value.trim();
     }
 }
 

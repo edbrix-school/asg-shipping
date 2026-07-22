@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
@@ -22,6 +23,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -159,6 +163,8 @@ class LinePayableTransferReportingServiceImplTest {
         assertNotNull(result);
         assertEquals(1L, result.getTransactionPoid());
         verify(hdrRepository).findActiveByTransactionPoid(1L);
+        // VIEWED logging is done by the controller, not the service
+        verifyNoInteractions(loggingService);
     }
 
     @Test
@@ -186,6 +192,8 @@ class LinePayableTransferReportingServiceImplTest {
         verify(hdrRepository).save(any());
         verify(hdrRepository).flush();
         verify(entityManager).refresh(any());
+        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+                eq(LogDetailsEnum.CREATED.getDescription() + " LPT-2024-001"));
     }
 
     @Test
@@ -235,6 +243,269 @@ class LinePayableTransferReportingServiceImplTest {
 
         assertNotNull(result);
         verify(hdrRepository).save(any());
+        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+                eq(LogDetailsEnum.MODIFIED.getDescription() + " LPT-2024-001"));
+    }
+
+    @Test
+    void updateLinePayableTransfer_DetachesDeletedDetailsBeforeReinserting() {
+        ShipLineReportTransferDtl existing = ShipLineReportTransferDtl.builder()
+                .transactionPoid(1L)
+                .detRowId(1L)
+                .build();
+
+        LinePayableTransferReportingUpdateDTO updateDTO = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("EXPORT")
+                .details(Collections.singletonList(testDetailDto))
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(1L)).thenReturn(Collections.singletonList(existing));
+        when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        doNothing().when(mapper).mapUpdateDTOToEntity(any(), any());
+
+        service.updateLinePayableTransfer(1L, updateDTO);
+
+        // The stale managed row must be detached after the bulk delete, otherwise re-saving
+        // DET_ROW_ID 1 is flushed as an UPDATE of a deleted row
+        InOrder inOrder = inOrder(dtlRepository, entityManager);
+        inOrder.verify(dtlRepository).deleteByTransactionPoid(1L);
+        inOrder.verify(entityManager).detach(existing);
+        inOrder.verify(dtlRepository).save(any());
+    }
+
+    @Test
+    void updateLinePayableTransfer_LogsHeaderBeforeDetails() {
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("EXPORT")
+                .details(Collections.singletonList(testDetailDto))
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(1L)).thenReturn(Collections.emptyList());
+        when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        doNothing().when(mapper).mapUpdateDTOToEntity(any(), any());
+
+        service.updateLinePayableTransfer(1L, dto);
+
+        InOrder inOrder = inOrder(loggingService, dtlRepository);
+        inOrder.verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+                eq(LogDetailsEnum.MODIFIED.getDescription() + " LPT-2024-001"));
+        inOrder.verify(loggingService).logDetails(any(), any(), eq(ShipLineReportTransferHdr.class),
+                any(), eq("1"), eq("TRANSACTION_POID"));
+        inOrder.verify(dtlRepository).save(any());
+        inOrder.verify(loggingService).createLogSummaryEntry(eq("100-432"), eq("1"),
+                eq("Row Created on Line Payable Transfer Detail with detRowId: 1"));
+    }
+
+    @Test
+    void createLinePayableTransfer_LogsHeaderBeforeDetails() {
+        createDTO.setDetails(Collections.singletonList(testDetailDto));
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.existsByDocRef(anyString(), any())).thenReturn(false);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        doNothing().when(hdrRepository).flush();
+        doNothing().when(entityManager).refresh(any());
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
+        when(dtlRepository.findMaxDetRowIdByTransactionPoid(anyLong())).thenReturn(0L);
+        when(dtlRepository.save(any())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        doNothing().when(mapper).mapCreateDTOToEntity(any(), any(), anyLong(), anyLong());
+
+        service.createLinePayableTransfer(createDTO);
+
+        InOrder inOrder = inOrder(loggingService, dtlRepository);
+        inOrder.verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+                eq(LogDetailsEnum.CREATED.getDescription() + " LPT-2024-001"));
+        inOrder.verify(dtlRepository).save(any());
+        inOrder.verify(loggingService).createLogSummaryEntry(eq("100-432"), eq("1"),
+                eq("Row Created on Line Payable Transfer Detail with detRowId: 1"));
+    }
+
+    @Test
+    void updateLinePayableTransfer_FilterUnchanged_LogsFieldDifferencesOfExistingRows() {
+        ShipLineReportTransferDtl stored = ShipLineReportTransferDtl.builder()
+                .transactionPoid(1L)
+                .detRowId(1L)
+                .blNumber("BL123")
+                .acutalAmount(BigDecimal.valueOf(1000))
+                .totalAmountTransfer(BigDecimal.valueOf(1000))
+                .isSelect("Y")
+                .build();
+
+        ShipLineReportTransferDtl incoming = ShipLineReportTransferDtl.builder()
+                .transactionPoid(1L)
+                .detRowId(1L)
+                .blNumber("BL123")
+                .acutalAmount(BigDecimal.valueOf(1000))
+                .totalAmountTransfer(BigDecimal.valueOf(750))
+                .isSelect("N")
+                .build();
+
+        // Same line, BL type and report dates as the stored header
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .details(Collections.singletonList(testDetailDto))
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(1L)).thenReturn(Collections.singletonList(stored));
+        when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(incoming);
+        when(dtlRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        doNothing().when(mapper).mapUpdateDTOToEntity(any(), any());
+
+        service.updateLinePayableTransfer(1L, dto);
+
+        // Rows are edited in place, not wiped and reinserted
+        verify(dtlRepository, never()).deleteByTransactionPoid(anyLong());
+        verify(loggingService, never()).createLogSummaryEntry(eq("100-432"), eq("1"),
+                eq("Row Created on Line Payable Transfer Detail with detRowId: 1"));
+
+        ArgumentCaptor<ShipLineReportTransferDtl> oldRow = ArgumentCaptor.forClass(ShipLineReportTransferDtl.class);
+        ArgumentCaptor<ShipLineReportTransferDtl> newRow = ArgumentCaptor.forClass(ShipLineReportTransferDtl.class);
+        verify(loggingService).createLog(oldRow.capture(), newRow.capture(), eq(ShipLineReportTransferDtl.class),
+                eq("100-432"), eq("1"), eq("KeyId = DET_ROW_ID:1"));
+
+        // The snapshot must hold the pre-update values, the saved row the payload values
+        assertEquals(0, BigDecimal.valueOf(1000).compareTo(oldRow.getValue().getTotalAmountTransfer()));
+        assertEquals("Y", oldRow.getValue().getIsSelect());
+        assertEquals(0, BigDecimal.valueOf(750).compareTo(newRow.getValue().getTotalAmountTransfer()));
+        assertEquals("N", newRow.getValue().getIsSelect());
+    }
+
+    @Test
+    void updateLinePayableTransfer_FilterUnchanged_DeletesRowsMissingFromPayload() {
+        ShipLineReportTransferDtl kept = ShipLineReportTransferDtl.builder()
+                .transactionPoid(1L).detRowId(1L).isSelect("Y").build();
+        ShipLineReportTransferDtl dropped = ShipLineReportTransferDtl.builder()
+                .transactionPoid(1L).detRowId(2L).isSelect("Y").build();
+
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .details(Collections.singletonList(testDetailDto))
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(1L)).thenReturn(Arrays.asList(kept, dropped));
+        when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+        when(dtlRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        doNothing().when(mapper).mapUpdateDTOToEntity(any(), any());
+
+        service.updateLinePayableTransfer(1L, dto);
+
+        verify(dtlRepository).delete(dropped);
+        verify(dtlRepository, never()).delete(kept);
+        verify(loggingService).logDelete(dropped, "100-432", "1");
+    }
+
+    @Test
+    void createLinePayableTransfer_LogsEachDetailRowIndividually() {
+        createDTO.setDetails(Arrays.asList(testDetailDto, testDetailDto, testDetailDto));
+
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.existsByDocRef(anyString(), any())).thenReturn(false);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        doNothing().when(hdrRepository).flush();
+        doNothing().when(entityManager).refresh(any());
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
+        when(dtlRepository.findMaxDetRowIdByTransactionPoid(anyLong())).thenReturn(0L);
+        when(dtlRepository.save(any())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        doNothing().when(mapper).mapCreateDTOToEntity(any(), any(), anyLong(), anyLong());
+
+        service.createLinePayableTransfer(createDTO);
+
+        verify(dtlRepository, times(3)).save(any());
+        verify(loggingService, times(3)).createLogSummaryEntry(eq("100-432"), eq("1"),
+                eq("Row Created on Line Payable Transfer Detail with detRowId: 1"));
+    }
+
+    @Test
+    void updateLinePayableTransfer_LogsChangedHeaderFields() {
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("EXPORT")
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        // Mimic the real mapper so the entity actually changes between snapshot and save
+        doAnswer(invocation -> {
+            LinePayableTransferReportingUpdateDTO source = invocation.getArgument(0);
+            ShipLineReportTransferHdr target = invocation.getArgument(1);
+            target.setBlType(source.getBlType());
+            return null;
+        }).when(mapper).mapUpdateDTOToEntity(any(), any());
+
+        service.updateLinePayableTransfer(1L, dto);
+
+        ArgumentCaptor<ShipLineReportTransferHdr> oldCaptor = ArgumentCaptor.forClass(ShipLineReportTransferHdr.class);
+        verify(loggingService).logDetails(oldCaptor.capture(), eq(testEntity), eq(ShipLineReportTransferHdr.class),
+                ArgumentMatchers.<String>isNull(), eq("1"), eq("TRANSACTION_POID"));
+
+        // The snapshot must hold the pre-update value, otherwise the diff would always be empty
+        assertEquals("IMPORT", oldCaptor.getValue().getBlType());
+        assertEquals("EXPORT", testEntity.getBlType());
+    }
+
+    @Test
+    void updateLinePayableTransfer_LogsEachDetailRowIndividually() {
+        LinePayableTransferReportingUpdateDTO dto = LinePayableTransferReportingUpdateDTO.builder()
+                .linePoid(1123L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31))
+                .details(Arrays.asList(testDetailDto, testDetailDto))
+                .build();
+
+        when(hdrRepository.findActiveByTransactionPoid(1L)).thenReturn(Optional.of(testEntity));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
+        when(dtlRepository.save(any())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlFromDto(any(), anyLong(), anyLong())).thenReturn(testDetailEntity);
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+        doNothing().when(mapper).mapUpdateDTOToEntity(any(), any());
+
+        service.updateLinePayableTransfer(1L, dto);
+
+        verify(dtlRepository, times(2)).save(any());
+        verify(loggingService, times(2)).createLogSummaryEntry(eq("100-432"), eq("1"),
+                eq("Row Created on Line Payable Transfer Detail with detRowId: 1"));
     }
 
     @Test

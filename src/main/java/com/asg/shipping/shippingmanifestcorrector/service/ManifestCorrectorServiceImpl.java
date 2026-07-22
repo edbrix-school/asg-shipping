@@ -522,8 +522,9 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         // Batch fetch by LOV name — one DB call per LOV name instead of one per field
         Map<Long, LovGetListDto> blMap = lovService.getDetailsByPoidsAndLovName(
                 filterNonNull(dto.getBlPoid()), "SHIP_BL_REPRINT");
+        Long notifyPoid = dto.getNotifyPoid() != null && dto.getNotifyPoid() > 1 ? dto.getNotifyPoid() : null;
         Map<Long, LovGetListDto> addressMap = lovService.getDetailsByPoidsAndLovName(
-                filterNonNull(dto.getConsigneePoid(), dto.getNotifyPoid()), "ADDRESS_MASTER");
+                filterNonNull(dto.getConsigneePoid(), notifyPoid), "ADDRESS_MASTER");
         Map<Long, LovGetListDto> glMap = lovService.getDetailsByPoidsAndLovName(
                 filterNonNull(dto.getPayableGlPoid(), dto.getIncomeGlPoid()), "GL_MASTER_LEDGERS");
         Map<Long, LovGetListDto> portMap = lovService.getDetailsByPoidsAndLovName(
@@ -531,8 +532,9 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
                         dto.getPortOfLoadingPoid(), dto.getPortOfDischargePoid()), "PORT_MASTER");
         Map<Long, LovGetListDto> voyageMap = lovService.getDetailsByPoidsAndLovName(
                 filterNonNull(dto.getVoyageTransactionPoid()), "VESSAL_VOYAGE");
-        Map<String, LovGetListDto> issueTypeMap = lovService.getDetailsByCodesAndLovName(
-                filterNonNullStr(dto.getIssueType()), "BL_ISSUE_TYPE");
+        Long issueTypePoid = parseLongSafely(dto.getIssueType());
+        Map<Long, LovGetListDto> issueTypeMap = lovService.getDetailsByPoidsAndLovName(
+                filterNonNull(issueTypePoid), "BL_ISSUE_TYPE");
         Map<String, LovGetListDto> blTypeMap = lovService.getDetailsByCodesAndLovName(
                 filterNonNullStr(dto.getBlType()), "BL_TYPE");
         Map<String, LovGetListDto> holdReasonMap = lovService.getDetailsByCodesAndLovName(
@@ -540,7 +542,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
 
         dto.setBlDet(blMap.get(dto.getBlPoid()));
         dto.setConsigneeDet(addressMap.get(dto.getConsigneePoid()));
-        dto.setNotifyDet(addressMap.get(dto.getNotifyPoid()));
+        dto.setNotifyDet(addressMap.get(notifyPoid));
         dto.setPayableGlDet(glMap.get(dto.getPayableGlPoid()));
         dto.setIncomeGlDet(glMap.get(dto.getIncomeGlPoid()));
         dto.setPlaceOfDeliveryDet(portMap.get(dto.getPlaceOfDeliveryPoid()));
@@ -548,7 +550,7 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         dto.setPortOfLoadingDet(portMap.get(dto.getPortOfLoadingPoid()));
         dto.setPortOfDischargeDet(portMap.get(dto.getPortOfDischargePoid()));
         dto.setVoyageTransactionDet(voyageMap.get(dto.getVoyageTransactionPoid()));
-        dto.setIssueTypeDet(issueTypeMap.get(dto.getIssueType()));
+        dto.setIssueTypeDet(issueTypeMap.get(issueTypePoid));
         dto.setBlTypeDet(blTypeMap.get(dto.getBlType()));
         dto.setHoldReasonDet(holdReasonMap.get(dto.getHoldReason()));
     }

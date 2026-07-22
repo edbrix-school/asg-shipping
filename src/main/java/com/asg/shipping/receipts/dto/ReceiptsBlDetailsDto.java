@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -37,6 +38,10 @@ public class ReceiptsBlDetailsDto {
     private List<ReceiptContainerDto> container;
     private List<ReceiptCharges> charges;
     private List<ReceiptPaymentDetailDto> paymentDetail;
+    private String createdBy;
+    private LocalDateTime createdDate;
+    private String lastModifiedBy;
+    private LocalDateTime lastModifiedDate;
 
 
 

@@ -531,7 +531,7 @@ class DayCloseServiceImplTest {
         when(printService.load(anyString())).thenReturn(mock(JasperReport.class));
         when(printService.fillReportToPdf(any(), any(), any())).thenReturn(new byte[0]);
 
-        byte[] result = service.print(1L);
+        byte[] result = service.printDayClose(1L);
 
         assertNotNull(result);
         verify(printService).fillReportToPdf(any(), any(), any());

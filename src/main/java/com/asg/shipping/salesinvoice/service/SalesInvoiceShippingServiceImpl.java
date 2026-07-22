@@ -473,7 +473,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         Long userPoid = getUserPoid();
         String userPoidStr = userPoid != null ? userPoid.toString() : getCurrentUser();
 
-        var result = callProcShipUpdateBooking(request.getBlPoid(), request.getCustomerPoid(), userPoidStr);
+        var result = callProcShipUpdateBooking(request.getBlPoid(), request.getBookingPartyPoid(), userPoidStr);
 
         log.info("Successfully updated booking party");
         return result.substring("INFO:".length()).trim();
@@ -1158,13 +1158,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     /**
      * Call PROC_SHIP_UPDATE_BOOKING
      */
-    private String callProcShipUpdateBooking(Long blPoid, Long customerPoid, String userPoid) {
+    private String callProcShipUpdateBooking(Long blPoid, Long bookingPartyPoid, String userPoid) {
         try {
             final String[] statusHolder = new String[1];
             String sql = "{call PROC_SHIP_UPDATE_BOOKING(?, ?, ?, ?)}";
             jdbcTemplate.execute(sql, (CallableStatement cs) -> {
                 cs.setLong(1, blPoid);
-                cs.setLong(2, customerPoid);
+                cs.setLong(2, bookingPartyPoid);
                 cs.registerOutParameter(3, Types.VARCHAR);
                 cs.setString(4, userPoid);
                 cs.execute();
@@ -2187,15 +2187,11 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         return jdbcTemplate.execute(sql, (CallableStatement cs) -> {
 
-            cs.setLong(1, request.getGroupPoid());
-            cs.setLong(2, request.getCompanyPoid());
-            cs.setLong(3, request.getUserPoid());
+            cs.setLong(1, UserContext.getGroupPoid());
+            cs.setLong(2, UserContext.getCompanyPoid());
+            cs.setLong(3, UserContext.getUserPoid());
 
-            if (request.getDocId() != null) {
-                cs.setLong(4, request.getDocId());
-            } else {
-                cs.setNull(4, Types.NUMERIC);
-            }
+            cs.setNull(4, Types.NUMERIC);
 
             if (request.getTransactionPoid() != null) {
                 cs.setLong(5, request.getTransactionPoid());

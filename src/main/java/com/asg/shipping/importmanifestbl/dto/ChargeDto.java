@@ -2,6 +2,8 @@ package com.asg.shipping.importmanifestbl.dto;
 
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -27,7 +29,7 @@ public class ChargeDto implements BlManifestValidationService.ChargeValidatable 
     private String currencyCode;
     private LovItem currencyCodeDet;
     private BigDecimal rate;
-
+    @NotNull
     private BigDecimal quantity;
     private BigDecimal buy;
     private BigDecimal buyAmount;
@@ -38,7 +40,7 @@ public class ChargeDto implements BlManifestValidationService.ChargeValidatable 
     private BigDecimal taxPercentage;
     private BigDecimal taxAmount;
     private BigDecimal gain;
-
+    @NotBlank
     private String freightType;
     private LovItem freightTypeDet;
     private Long paidAtPortPoid;
