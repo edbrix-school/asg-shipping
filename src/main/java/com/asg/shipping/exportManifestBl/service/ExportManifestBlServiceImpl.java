@@ -622,6 +622,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
 
         Long effectiveLinePoid = linePoid;
+        if (effectiveLinePoid == null || effectiveLinePoid == 0L) {
+            effectiveLinePoid = voyage.getLinePoid();
+        }
         if (effectiveLinePoid != null && effectiveLinePoid == 0L) {
             effectiveLinePoid = null;
         }
