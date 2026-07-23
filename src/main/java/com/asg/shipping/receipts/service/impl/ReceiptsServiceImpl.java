@@ -80,27 +80,73 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		log.info("Getting receipt with id: {}", transactionPoid);
 
 		ArShReceiptHdr hdr = getReceiptHdr(transactionPoid);
-
 		List<ArShReceiptContainerDtl> containers = containerRepository.findByIdTransactionPoid(transactionPoid);
 		List<ArShReceiptChargesDtl> charges = chargesRepository.findByIdTransactionPoid(transactionPoid);
 		List<ArShReceiptPymtDetails> payments = paymentRepository.findByIdTransactionPoid(transactionPoid);
 
 		ReceiptsBlDetailsDto dto = mapper.mapBlDetailsEntityToDto(hdr, containers, charges, payments);
-		Map<Long, LovGetListDto> blLovCache = new java.util.HashMap<>();
-		Map<Long, LovGetListDto> chargeLovCache = new java.util.HashMap<>();
-		
-		dto.setBlDet(getBlDetails(dto.getBlPoid(), blLovCache));
-		dto.setCompanyDet(fetchLovByPoid(dto.getCompanyPoid(), "COMPANY"));
-		dto.setPrintDoCustomerDet(fetchLovByPoid(dto.getPrintDoCustomerPoid(), "IMPORT_RECEIPT_CUSTOMER_PRINT"));
-		dto.setChequeCompanyDet(fetchLovByPoid(dto.getChequeCompany(), "SHIP_DIVISION_PRINT"));
-		enrichContainers(dto.getContainer(), blLovCache);
-		enrichCharges(dto.getCharges(), blLovCache, chargeLovCache);
-		if (dto.getPaymentDetail() != null) {
-			for (ReceiptPaymentDetailDto payment : dto.getPaymentDetail()) {
-				payment.setBankDet(fetchLovByPoid(payment.getBankPoid(), "ARCUSTBANKRCPT"));
-				payment.setTtBankDet(fetchLovByPoid(payment.getTtBankPoid(), "SHIP_REC_BANK_MASTER_ALL_COMPANY"));
-			}
-		}
+
+		// --- Collect all poids per LOV name ---
+		List<ReceiptContainerDto> cntDtos = dto.getContainer() != null ? dto.getContainer() : List.of();
+		List<ReceiptCharges> chgDtos = dto.getCharges() != null ? dto.getCharges() : List.of();
+		List<ReceiptPaymentDetailDto> pymtDtos = dto.getPaymentDetail() != null ? dto.getPaymentDetail() : List.of();
+
+		List<Long> allBlPoids = Stream.concat(
+				Stream.of(dto.getBlPoid()),
+				Stream.concat(
+						cntDtos.stream().map(ReceiptContainerDto::getBlPoid),
+						chgDtos.stream().map(ReceiptCharges::getBlPoid)
+				)
+		).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		List<Long> allChargePoids = chgDtos.stream().map(ReceiptCharges::getChargePoid)
+				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		List<Long> allTaxPoids = Stream.concat(
+				cntDtos.stream().map(ReceiptContainerDto::getCntTaxPoid),
+				chgDtos.stream().map(ReceiptCharges::getTaxPoid)
+		).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		List<Long> companyPoids = dto.getCompanyPoid() != null ? List.of(dto.getCompanyPoid()) : List.of();
+		List<Long> printCustomerPoids = dto.getPrintDoCustomerPoid() != null ? List.of(dto.getPrintDoCustomerPoid()) : List.of();
+		List<Long> chequeCompanyPoids = dto.getChequeCompany() != null ? List.of(dto.getChequeCompany()) : List.of();
+
+		List<Long> bankPoids = pymtDtos.stream().map(ReceiptPaymentDetailDto::getBankPoid)
+				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
+		List<Long> ttBankPoids = pymtDtos.stream().map(ReceiptPaymentDetailDto::getTtBankPoid)
+				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		// --- Single batch fetch per LOV name ---
+		Map<Long, LovGetListDto> blMap = lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER");
+		Map<Long, LovGetListDto> chargeMap = lovService.getDetailsByPoidsAndLovName(allChargePoids, "CHARGE_MASTER");
+		Map<Long, LovGetListDto> taxMap = lovService.getDetailsByPoidsAndLovName(allTaxPoids, "TAX_MASTER");
+		Map<Long, LovGetListDto> companyMap = lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY");
+		Map<Long, LovGetListDto> printCustomerMap = lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT");
+		Map<Long, LovGetListDto> chequeCompanyMap = lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT");
+		Map<Long, LovGetListDto> bankMap = lovService.getDetailsByPoidsAndLovName(bankPoids, "ARCUSTBANKRCPT");
+		Map<Long, LovGetListDto> ttBankMap = lovService.getDetailsByPoidsAndLovName(ttBankPoids, "SHIP_REC_BANK_MASTER_ALL_COMPANY");
+
+		// --- Apply from maps ---
+		dto.setBlDet(blMap.get(dto.getBlPoid()));
+		dto.setCompanyDet(companyMap.get(dto.getCompanyPoid()));
+		dto.setPrintDoCustomerDet(printCustomerMap.get(dto.getPrintDoCustomerPoid()));
+		dto.setChequeCompanyDet(chequeCompanyMap.get(dto.getChequeCompany()));
+
+		cntDtos.forEach(c -> {
+			c.setBlDet(blMap.get(c.getBlPoid()));
+			c.setTaxDet(taxMap.get(c.getCntTaxPoid()));
+		});
+
+		chgDtos.forEach(c -> {
+			c.setBlDet(blMap.get(c.getBlPoid()));
+			c.setChargeDet(chargeMap.get(c.getChargePoid()));
+			c.setTaxDet(taxMap.get(c.getTaxPoid()));
+		});
+
+		pymtDtos.forEach(p -> {
+			p.setBankDet(bankMap.get(p.getBankPoid()));
+			p.setTtBankDet(ttBankMap.get(p.getTtBankPoid()));
+		});
 
 		return dto;
 	}
@@ -444,16 +490,23 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 		// 4. Final Grand Total and LOV enrichment
 		BigDecimal grandTotal = totalDemAmount.add(totalDemTaxAmount);
-		Map<Long, com.asg.common.lib.dto.LovGetListDto> chargeLovCache = new java.util.HashMap<>();
-		
-		for (ReceiptCalculateDemurrageResponseDto.ChargeDetail detail : charges) {
-			detail.setChargeDet(getChargeDetails(detail.getChargePoid(), chargeLovCache));
-			detail.setTaxDet(fetchLovByPoid(detail.getTaxPoid(), "TAX_MASTER"));
-		}
-		
-		for (ReceiptCalculateDemurrageResponseDto.ContainerResult row : containerResults) {
-			row.setTaxDet(fetchLovByPoid(row.getTaxPoid(), "TAX_MASTER"));
-		}
+
+		List<Long> demChargePoids = charges.stream().map(ReceiptCalculateDemurrageResponseDto.ChargeDetail::getChargePoid)
+				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
+		List<Long> demTaxPoids = Stream.concat(
+				charges.stream().map(ReceiptCalculateDemurrageResponseDto.ChargeDetail::getTaxPoid),
+				containerResults.stream().map(ReceiptCalculateDemurrageResponseDto.ContainerResult::getTaxPoid)
+		).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		Map<Long, LovGetListDto> demChargeMap = lovService.getDetailsByPoidsAndLovName(demChargePoids, "CHARGE_MASTER");
+		Map<Long, LovGetListDto> demTaxMap = lovService.getDetailsByPoidsAndLovName(demTaxPoids, "TAX_MASTER");
+
+		charges.forEach(detail -> {
+			detail.setChargeDet(demChargeMap.get(detail.getChargePoid()));
+			detail.setTaxDet(demTaxMap.get(detail.getTaxPoid()));
+		});
+
+		containerResults.forEach(row -> row.setTaxDet(demTaxMap.get(row.getTaxPoid())));
 
 		for (int i = 1; i < charges.size(); i++) {
 			grandTotal = grandTotal.add(charges.get(i).getAmount()).add(charges.get(i).getTaxAmount());
@@ -693,36 +746,4 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		return hdrRepository.findById(transactionPoid)
 				.orElseThrow(() -> new ResourceNotFoundException("Receipt", "transactionPoid", transactionPoid.toString()));
 	}
-	private void enrichContainers(List<ReceiptContainerDto> containers, Map<Long, LovGetListDto> blCache) {
-		if (containers == null) return;
-		for (ReceiptContainerDto container : containers) {
-			container.setBlDet(getBlDetails(container.getBlPoid(), blCache));
-			container.setTaxDet(fetchLovByPoid(container.getCntTaxPoid(), "TAX_MASTER"));
-		}
-	}
-
-	private void enrichCharges(List<ReceiptCharges> charges, Map<Long, LovGetListDto> blCache, Map<Long, LovGetListDto> chargeCache) {
-		if (charges == null) return;
-		for (ReceiptCharges charge : charges) {
-			charge.setBlDet(getBlDetails(charge.getBlPoid(), blCache));
-			charge.setChargeDet(getChargeDetails(charge.getChargePoid(), chargeCache));
-			charge.setTaxDet(fetchLovByPoid(charge.getTaxPoid(), "TAX_MASTER"));
-		}
-	}
-
-	private LovGetListDto fetchLovByPoid(Long poid, String lovName) {
-		if (poid == null) return null;
-		return lovService.getDetailsByPoidAndLovName(poid, lovName);
-	}
-
-	private LovGetListDto getBlDetails(Long blPoid, Map<Long, LovGetListDto> cache) {
-		if (blPoid == null) return null;
-		return cache.computeIfAbsent(blPoid, id -> lovService.getDetailsByPoidAndLovName(id, "IMPORTBLNUMBER"));
-	}
-
-	private LovGetListDto getChargeDetails(Long chargePoid, Map<Long, LovGetListDto> cache) {
-		if (chargePoid == null) return null;
-		return cache.computeIfAbsent(chargePoid, id -> lovService.getDetailsByPoidAndLovName(id, "CHARGE_MASTER"));
-	}
-
 }
