@@ -147,7 +147,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         ImportManifestBlRequestDto dto = mapper.mapToDto(entity);
 
         loadDetailTables(dto, id);
-        //enrichLovData(dto);
+        enrichLovData(dto);
         dto.setSimpleCargoDescription(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "DESC", "DESCRIPTION"));
         dto.setSimpleCargoMarks(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "MARK", "MARKS"));
 
