@@ -130,11 +130,6 @@ public class CimuServiceImpl implements CimuService {
             throw new ValidationException("Missing user context (X-User-Id / X-User-Poid headers)");
         }
 
-        // Rights enforcement (server-side)
-        if (holdReturnForm && !rightsRepository.hasDocRight("000-248", userPoid)) {
-            throw new ValidationException("User have no right to hold Return Form (000-248)");
-        }
-
         // Build legacy-style dynamic SQL for milestone updates (optional; procedure executes it if present)
         // We only apply milestone updates for a specific container, not for ALL.
         String runStatement = buildRunStatement(
@@ -160,12 +155,9 @@ public class CimuServiceImpl implements CimuService {
                 cntRtnHold
         );
 
-        // Default to "TRUE" to match legacy behavior (legacy treats null as success).
         if (status == null || status.isBlank()) {
-            log.warn("PROC_SHIP_CNT_INVT_UPDATE returned null/blank status; defaulting to TRUE. transactionPoid={}", transactionPoid);
             status = "TRUE";
         }
-        // Legacy check: if status is not exactly "TRUE", the procedure reported a business error.
         if (!status.equalsIgnoreCase("TRUE")) {
             throw new ValidationException(status);
         }
