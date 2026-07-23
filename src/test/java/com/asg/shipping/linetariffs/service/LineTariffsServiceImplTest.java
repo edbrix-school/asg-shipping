@@ -743,6 +743,82 @@ class LineTariffsServiceImplTest {
     }
 
     @Test
+    void updateLineTariff_DoesNotAutoCopyCollectableToPayableOnSave() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getDocumentId).thenReturn("100-050");
+            mockedUserContext.when(UserContext::getTimeZoneCode).thenReturn("UTC");
+
+            long containerTypePoid = 216L;
+            TariffDetailUpdateDTO deleteCollectable = TariffDetailUpdateDTO.builder()
+                    .detRowId(1L)
+                    .containerTypePoid(containerTypePoid)
+                    .actionType("isDeleted")
+                    .build();
+            TariffDetailUpdateDTO createCollectable = TariffDetailUpdateDTO.builder()
+                    .containerTypePoid(containerTypePoid)
+                    .actionType("isCreated")
+                    .freeDays(3)
+                    .slab1Tilldays(3)
+                    .slab1Rate(BigDecimal.ONE)
+                    .build();
+            TariffDetailUpdateDTO payableNoChange = TariffDetailUpdateDTO.builder()
+                    .detRowId(1L)
+                    .containerTypePoid(containerTypePoid)
+                    .actionType("noChange")
+                    .freeDays(2)
+                    .build();
+
+            updateDTO.setImportDemurrageCollectable(List.of(deleteCollectable, createCollectable));
+            updateDTO.setImportDemurragePayable(List.of(payableNoChange));
+            updateDTO.setDescription(null);
+            hdr.setDescription("Updated");
+
+            ShipLineTariffImpDtl collectableToDelete = new ShipLineTariffImpDtl();
+            collectableToDelete.setDetRowId(1L);
+            collectableToDelete.setContainerTypePoid(containerTypePoid);
+
+            ShipLineTariffImpPayDtl payableToDelete = ShipLineTariffImpPayDtl.builder()
+                    .transactionPoid(1L)
+                    .detRowId(1L)
+                    .containerTypePoid(containerTypePoid)
+                    .freeDays(2)
+                    .build();
+
+            ShipLineTariffImpDtl newCollectable = new ShipLineTariffImpDtl();
+            newCollectable.setTransactionPoid(1L);
+            newCollectable.setDetRowId(2L);
+            newCollectable.setContainerTypePoid(containerTypePoid);
+            newCollectable.setFreeDays(3);
+            newCollectable.setSlab1Tilldays(3);
+            newCollectable.setSlab1Rate(BigDecimal.ONE);
+
+            when(tariffHdrRepository.findByTransactionPoidAndGroupPoid(1L, 1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.findById(1L)).thenReturn(Optional.of(hdr));
+            when(tariffHdrRepository.save(any(ShipLineTariffHdr.class))).thenReturn(hdr);
+            doNothing().when(tariffHdrRepository).flush();
+            when(containerTypeRepository.existsById(containerTypePoid)).thenReturn(true);
+            when(impDtlRepository.getMaxDetRowId(1L)).thenReturn(1L);
+            when(impDtlRepository.findByTransactionPoidAndDetRowId(1L, 1L))
+                    .thenReturn(Optional.of(collectableToDelete));
+            when(impPayDtlRepository.findByTransactionPoidAndDetRowId(1L, 1L))
+                    .thenReturn(Optional.of(payableToDelete));
+            when(mapper.mapImpDtlUpdateDTOToEntity(eq(createCollectable), eq(1L), eq(2L)))
+                    .thenReturn(newCollectable);
+            when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(newCollectable));
+            when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(Collections.emptyList());
+            when(mapper.mapToDto(eq(hdr), anyList(), anyList(), anyList(), anyList(), anyMap())).thenReturn(dto);
+
+            service.updateLineTariff(1L, updateDTO, 1L, 2L);
+
+            verify(impPayDtlRepository).deleteAllInBatch(argThat(list -> ((List<?>) list).size() == 1));
+            verify(impPayDtlRepository, never()).save(any());
+        }
+    }
+
+    @Test
     @Disabled
     void updateLineTariff_DeletesRowWithIsDeletedActionType() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
