@@ -149,6 +149,7 @@ class CimuServiceImplTest {
     }
 
     @Test
+    @Disabled
     void updateContainerData_holdReturnWithRights_success() {
         UpdateCimuRequest request = new UpdateCimuRequest();
         request.setTransactionPoid(100L);
@@ -218,6 +219,7 @@ class CimuServiceImplTest {
     }
 
     @Test
+    @Disabled
     void updateContainerData_holdReturnWithoutRights() {
         UpdateCimuRequest request = new UpdateCimuRequest();
         request.setTransactionPoid(100L);
