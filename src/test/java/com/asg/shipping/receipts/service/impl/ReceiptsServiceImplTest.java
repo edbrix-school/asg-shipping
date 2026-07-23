@@ -258,9 +258,6 @@ public class ReceiptsServiceImplTest {
             when(procRepository.getCombinedCharges(anyLong(), anyLong()))
                     .thenReturn(Collections.singletonList(chargeDto));
 
-            // For LOV enrichment
-            when(lovService.getDetailsByPoidAndLovName(any(), anyString())).thenReturn(null);
-
             ReceiptCalculateDemurrageResponseDto result = receiptsService.calculateDemurrage(requestDto);
 
             assertNotNull(result);
