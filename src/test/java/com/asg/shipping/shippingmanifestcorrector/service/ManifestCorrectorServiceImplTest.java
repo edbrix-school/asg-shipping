@@ -127,8 +127,12 @@ class ManifestCorrectorServiceImplTest {
         when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(mapper.mapToDto(any())).thenReturn(responseDTO);
-        when(lovService.getDetailsByPoidAndLovName(12345L, "SHIP_BL_REPRINT"))
-                .thenReturn(new LovGetListDto(12345L, "240988", "240988", 12345L, "240988", null, null));
+        when(lovService.getDetailsByPoidsAndLovName(anyList(), any()))
+                .thenReturn(new java.util.HashMap<>());
+        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("SHIP_BL_REPRINT")))
+                .thenReturn(Map.of(12345L, new LovGetListDto(12345L, "240988", "240988", 12345L, "240988", null, null)));
+        when(lovService.getDetailsByCodesAndLovName(anyList(), any()))
+                .thenReturn(new java.util.HashMap<>());
 
         responseDTO.setBlNumber("12345");
 

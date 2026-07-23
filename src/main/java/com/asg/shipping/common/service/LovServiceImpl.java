@@ -9,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,6 +56,42 @@ public class LovServiceImpl implements LovService {
                 "", groupPoid, companyPoid, userPoid,
                 lovName, 0, 0, "", "", List.of(code), null);
         return findByCode(code, result);
+    }
+
+    @Override
+    public Map<Long, LovItem> getLovItemsByPoids(List<Long> poids, String lovName, Long groupPoid, Long companyPoid, Long userPoid) {
+        if (poids == null || poids.isEmpty() || StringUtils.isBlank(lovName)) {
+            return Collections.emptyMap();
+        }
+        List<Long> distinctPoids = poids.stream().filter(p -> p != null).distinct().collect(Collectors.toList());
+        if (distinctPoids.isEmpty()) return Collections.emptyMap();
+        Map<String, Object> result = lovDataService.getLovList(
+                "", groupPoid, companyPoid, userPoid,
+                lovName, 0, 0, "", "", null, distinctPoids);
+        List<LovGetListDto> data = (List<LovGetListDto>) result.get("data");
+        List<LovGetListDto> defaults = (List<LovGetListDto>) result.get("defaultValues");
+        Map<Long, LovItem> map = new java.util.HashMap<>();
+        if (data != null) data.forEach(x -> { if (x.getPoid() != null) map.put(x.getPoid(), toItem(x)); });
+        if (defaults != null) defaults.forEach(x -> { if (x.getPoid() != null) map.putIfAbsent(x.getPoid(), toItem(x)); });
+        return map;
+    }
+
+    @Override
+    public Map<String, LovItem> getLovItemsByCodes(List<String> codes, String lovName, Long groupPoid, Long companyPoid, Long userPoid) {
+        if (codes == null || codes.isEmpty() || StringUtils.isBlank(lovName)) {
+            return Collections.emptyMap();
+        }
+        List<String> distinctCodes = codes.stream().filter(c -> !StringUtils.isBlank(c)).map(String::trim).distinct().collect(Collectors.toList());
+        if (distinctCodes.isEmpty()) return Collections.emptyMap();
+        Map<String, Object> result = lovDataService.getLovList(
+                "", groupPoid, companyPoid, userPoid,
+                lovName, 0, 0, "", "", distinctCodes, null);
+        List<LovGetListDto> data = (List<LovGetListDto>) result.get("data");
+        List<LovGetListDto> defaults = (List<LovGetListDto>) result.get("defaultValues");
+        Map<String, LovItem> map = new java.util.HashMap<>();
+        if (data != null) data.forEach(x -> { if (x.getCode() != null) map.put(x.getCode().toUpperCase(), toItem(x)); });
+        if (defaults != null) defaults.forEach(x -> { if (x.getCode() != null) map.putIfAbsent(x.getCode().toUpperCase(), toItem(x)); });
+        return map;
     }
 
     private LovItem findByPoid(Long poid, Map<String, Object> result) {

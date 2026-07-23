@@ -42,6 +42,7 @@ import java.sql.Statement;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -78,6 +79,7 @@ class ImportManifestServiceImplTest {
     @Mock private com.asg.shipping.importmanifestupdate.service.ImportManifestBlServiceImpl updateService;
     @Mock private AddressDetailsRepository addressDetailsRepository;
     @Mock private EntityManager entityManager;
+    @Mock private com.asg.shipping.common.service.LovService lovService;
     
     @InjectMocks
     private ImportManifestServiceImpl service;
@@ -394,8 +396,13 @@ class ImportManifestServiceImplTest {
         ShipBlManifestHdr header = createHeader();
         when(headerRepository.findById(1L)).thenReturn(Optional.of(header));
         when(updateService.getImportManifestBl(1L)).thenReturn(new ImportManifestBlRequestDto());
-        ImportManifestBlDto result = service.getImportManifest(1L);
-        assertNotNull(result);
+        when(lovService.getLovItemsByPoids(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
+        when(lovService.getLovItemsByCodes(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
+        try (MockedStatic<UserContext> mocked = mockStatic(UserContext.class)) {
+            mockUserContext(mocked);
+            ImportManifestBlDto result = service.getImportManifest(1L);
+            assertNotNull(result);
+        }
     }
 
     @Test

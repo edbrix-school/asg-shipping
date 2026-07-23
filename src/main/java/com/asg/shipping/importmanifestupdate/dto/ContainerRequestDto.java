@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 @Data
 @Builder
@@ -27,11 +28,11 @@ public class ContainerRequestDto implements BlManifestValidationService.Containe
     private String equipmentSize;
     private Long quantity;
     private Long grsVolume;
-    private Long grsWeight;
-    private Long netVolume;
-    private Long netWeight;
-    private Long tareWeight;
-    private Long noOfPacks;
+    private BigDecimal grsWeight;
+    private BigDecimal netVolume;
+    private BigDecimal netWeight;
+    private BigDecimal tareWeight;
+    private BigDecimal noOfPacks;
     private String packUnit;
     private Long comodityPoid;
     private LovItem comodityDet;

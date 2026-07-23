@@ -5,6 +5,7 @@ import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -58,19 +59,19 @@ public class ShipBlManifestContainerDtl extends BaseEntity {
     private Long grsVolume;
 
     @Column(name = "GRS_WEIGHT")
-    private Long grsWeight;
+    private BigDecimal grsWeight;
 
     @Column(name = "NET_VOLUME")
-    private Long netVolume;
+    private BigDecimal netVolume;
 
     @Column(name = "NET_WEIGHT")
-    private Long netWeight;
+    private BigDecimal netWeight;
 
     @Column(name = "TARE_WEIGHT")
-    private Long tareWeight;
+    private BigDecimal tareWeight;
 
     @Column(name = "NO_OF_PACKS")
-    private Long noOfPacks;
+    private BigDecimal noOfPacks;
 
     @Column(name = "PACK_UNIT", length = 6)
     private String packUnit;

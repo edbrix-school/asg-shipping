@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -34,16 +35,16 @@ public class ContainerDto implements BlManifestValidationService.ContainerValida
     private LovItem imcoTypeDet;
 
     @NotNull
-    private Long cbm;
+    private BigDecimal cbm;
     @NotNull
-    private Long grossWeight;
+    private BigDecimal grossWeight;
     @NotNull
-    private Long netWeight;
+    private BigDecimal netWeight;
     @NotNull
-    private Long tareWeight;
+    private BigDecimal tareWeight;
 
     @NotNull
-    private Long packs;
+    private BigDecimal packs;
     @NotBlank
     private String packsType;
 

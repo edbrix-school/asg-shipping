@@ -48,8 +48,10 @@ import org.springframework.data.domain.PageImpl;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
@@ -129,207 +131,135 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     }
 
     private void enrichLovData(ImportManifestBlDto dto) {
-        if (dto == null) {
-            return;
-        }
+        if (dto == null) return;
 
         Long groupPoid = UserContext.getGroupPoid();
         Long companyPoid = UserContext.getCompanyPoid();
         Long userPoid = UserContext.getUserPoid();
-        enrichHeaderLovData(dto, groupPoid, companyPoid, userPoid);
-        enrichGeneralCargoLovData(dto.getGeneralCargoDetails(), groupPoid, companyPoid, userPoid);
-        enrichContainerLovData(dto.getContainers(), groupPoid, companyPoid, userPoid);
-        enrichChargeLovData(dto.getCharges(), groupPoid, companyPoid, userPoid);
-        enrichOtherChargeLovData(dto.getOtherCharges(), groupPoid, companyPoid, userPoid);
-        enrichPartBlLovData(dto.getPartBls(), groupPoid, companyPoid, userPoid);
-    }
 
-    private void enrichHeaderLovData(ImportManifestBlDto dto, Long groupPoid, Long companyPoid,
-                                     Long userPoid) {
-        try {
-            if (dto.getQuotationPoid() != null) {
-                dto.setQuotationDet(
-                        lovService.getLovItemByPoid(dto.getQuotationPoid(), "SHIP_QUOTATION_IMPORT",
-                                groupPoid, companyPoid, userPoid));
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch LOV data for header detail with transactionPoid: {}", dto.getTransactionPoid(),
-                    e);
-        }
-    }
+        // --- Batch collect all poids/codes per LOV name ---
+        // Header
+        List<Long> quotationPoids = dto.getQuotationPoid() != null ? List.of(dto.getQuotationPoid()) : List.of();
 
-    private void enrichGeneralCargoLovData(List<GeneralCargoDto> dtos,
-                                           Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (GeneralCargoDto dto : dtos) {
-            try {
-                if (dto.getCommodityPoid() != null) {
-                    dto.setCommodityDet(
-                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getDestinationPortPoid() != null) {
-                    dto.setDestinationPortDet(
-                            lovService.getLovItemByPoid(dto.getDestinationPortPoid(), "PORT_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
+        // General cargo
+        List<GeneralCargoDto> generalCargos = dto.getGeneralCargoDetails() != null ? dto.getGeneralCargoDetails() : List.of();
+        List<Long> commodityPoidsGC = generalCargos.stream().map(GeneralCargoDto::getCommodityPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<Long> destPortPoidsGC = generalCargos.stream().map(GeneralCargoDto::getDestinationPortPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
 
-    private void enrichContainerLovData(List<ContainerDto> dtos,
-                                        Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (ContainerDto dto : dtos) {
-            try {
-                if (dto.getCommodityPoid() != null) {
-                    dto.setCommodityDet(
-                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getEquipmentIsoType() != null) {
-                    dto.setEquipmentIsoTypeDet(
-                            lovService.getLovItemByCode(dto.getEquipmentIsoType(), "CONTAINER_TYPE_MASTER",
-                                    groupPoid, companyPoid, userPoid));
-                }
-                if (dto.getImcoType() != null) {
-                    dto.setImcoTypeDet(
-                            lovService.getLovItemByCode(dto.getImcoType(), "IMCO_CLASS", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getOogType() != null) {
-                    dto.setOogTypeDet(
-                            lovService.getLovItemByCode(dto.getOogType(), "OOG_TYPE", groupPoid, companyPoid,
-                                    userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
+        // Containers
+        List<ContainerDto> containers = dto.getContainers() != null ? dto.getContainers() : List.of();
+        List<Long> commodityPoidsC = containers.stream().map(ContainerDto::getCommodityPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<String> isoTypes = containers.stream().map(ContainerDto::getEquipmentIsoType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> imcoTypes = containers.stream().map(ContainerDto::getImcoType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> oogTypes = containers.stream().map(ContainerDto::getOogType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
 
-    private void enrichChargeLovData(List<ChargeDto> dtos,
-            Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (ChargeDto dto : dtos) {
-            try {
-                if (dto.getChargePoid() != null) {
-                    dto.setChargeDet(
-                            lovService.getLovItemByPoid(dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getChargeType() != null) {
-                    dto.setChargeTypeDet(
-                            lovService.getLovItemByCode(dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getCurrencyCode() != null) {
-                    dto.setCurrencyCodeDet(
-                            lovService.getLovItemByCode(dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getFreightType() != null) {
-                    dto.setFreightTypeDet(
-                            lovService.getLovItemByCode(dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getBasisPoid() != null) {
-                    dto.setBasisDet(
-                            lovService.getLovItemByCode(dto.getBasisPoid(), "CONTAINER_TYPE_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getPaidAtPortPoid() != null) {
-                    dto.setPaidAtPortDet(
-                            lovService.getLovItemByPoid(dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getReceiptInvoicePoid() != null) {
-                    dto.setReceiptInvoiceDet(
-                            lovService.getLovItemByPoid(dto.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE",
-                                    groupPoid, companyPoid, userPoid));
-                }
-                if (dto.getTaxPoid() != null) {
-                    dto.setTaxDet(
-                            lovService.getLovItemByPoid(dto.getTaxPoid(), "TAX_MASTER", groupPoid, companyPoid,
-                                    userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
+        // Charges
+        List<ChargeDto> charges = dto.getCharges() != null ? dto.getCharges() : List.of();
+        List<Long> chargePoids = charges.stream().map(ChargeDto::getChargePoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<String> chargeTypes = charges.stream().map(ChargeDto::getChargeType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> currencyCodes = charges.stream().map(ChargeDto::getCurrencyCode).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> freightTypes = charges.stream().map(ChargeDto::getFreightType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> basisCodes = charges.stream().map(ChargeDto::getBasisPoid).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<Long> paidAtPortPoids = charges.stream().map(ChargeDto::getPaidAtPortPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<Long> receiptInvoicePoids = charges.stream().map(ChargeDto::getReceiptInvoicePoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<Long> taxPoids = charges.stream().map(ChargeDto::getTaxPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
 
-    private void enrichOtherChargeLovData(List<ChargeOtherDto> dtos,
-            Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
-        }
-        for (ChargeOtherDto dto : dtos) {
-            try {
-                if (dto.getChargePoid() != null) {
-                    dto.setChargeDet(
-                            lovService.getLovItemByPoid(dto.getChargePoid(), "CHARGE_MASTER", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getChargeType() != null) {
-                    dto.setChargeTypeDet(
-                            lovService.getLovItemByCode(dto.getChargeType(), "CHARGE_TYPE", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getCurrencyCode() != null) {
-                    dto.setCurrencyCodeDet(
-                            lovService.getLovItemByCode(dto.getCurrencyCode(), "CURRENCY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getFreightType() != null) {
-                    dto.setFreightTypeDet(
-                            lovService.getLovItemByCode(dto.getFreightType(), "SHIP_FREIGHT_TYPE", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getBasis() != null) {
-                    dto.setBasisDet(
-                            lovService.getLovItemByCode(dto.getBasis(), "CONTAINER_TYPE_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-                if (dto.getPaidAtPortPoid() != null) {
-                    dto.setPaidAtPortDet(
-                            lovService.getLovItemByPoid(dto.getPaidAtPortPoid(), "PORT_MASTER", groupPoid,
-                                    companyPoid, userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for other charge detail with detRowId: {}", dto.getDetRowId(), e);
-            }
-        }
-    }
+        // Other charges
+        List<ChargeOtherDto> otherCharges = dto.getOtherCharges() != null ? dto.getOtherCharges() : List.of();
+        List<Long> otherChargePoids = otherCharges.stream().map(ChargeOtherDto::getChargePoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<String> otherChargeTypes = otherCharges.stream().map(ChargeOtherDto::getChargeType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> otherCurrencyCodes = otherCharges.stream().map(ChargeOtherDto::getCurrencyCode).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> otherFreightTypes = otherCharges.stream().map(ChargeOtherDto::getFreightType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<String> otherBasisCodes = otherCharges.stream().map(ChargeOtherDto::getBasis).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<Long> otherPaidAtPortPoids = otherCharges.stream().map(ChargeOtherDto::getPaidAtPortPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
 
-    private void enrichPartBlLovData(List<PartBlDto> dtos,
-                                     Long groupPoid, Long companyPoid, Long userPoid) {
-        if (dtos == null || dtos.isEmpty()) {
-            return;
+        // Part BLs
+        List<PartBlDto> partBls = dto.getPartBls() != null ? dto.getPartBls() : List.of();
+        List<Long> partBlCommodityPoids = partBls.stream().map(PartBlDto::getCommodityPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<String> containerNos = partBls.stream().map(PartBlDto::getContainerNo).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+
+        // Merge port poids across sections
+        List<Long> allPortPoids = new ArrayList<>();
+        allPortPoids.addAll(destPortPoidsGC);
+        allPortPoids.addAll(paidAtPortPoids);
+        allPortPoids.addAll(otherPaidAtPortPoids);
+        List<Long> distinctPortPoids = allPortPoids.stream().distinct().collect(Collectors.toList());
+
+        // Merge commodity poids
+        List<Long> allCommodityPoids = new ArrayList<>();
+        allCommodityPoids.addAll(commodityPoidsGC);
+        allCommodityPoids.addAll(commodityPoidsC);
+        allCommodityPoids.addAll(partBlCommodityPoids);
+        List<Long> distinctCommodityPoids = allCommodityPoids.stream().distinct().collect(Collectors.toList());
+
+        // Merge charge types / currency / freight types
+        List<String> allChargeTypes = new ArrayList<>(chargeTypes);
+        allChargeTypes.addAll(otherChargeTypes);
+        List<String> allCurrencyCodes = new ArrayList<>(currencyCodes);
+        allCurrencyCodes.addAll(otherCurrencyCodes);
+        List<String> allFreightTypes = new ArrayList<>(freightTypes);
+        allFreightTypes.addAll(otherFreightTypes);
+        List<String> allBasisCodes = new ArrayList<>(basisCodes);
+        allBasisCodes.addAll(otherBasisCodes);
+        List<Long> allChargePoids = new ArrayList<>(chargePoids);
+        allChargePoids.addAll(otherChargePoids);
+
+        // --- Single batch fetch per LOV name ---
+        Map<Long, LovItem> quotationMap = lovService.getLovItemsByPoids(quotationPoids, "SHIP_QUOTATION_IMPORT", groupPoid, companyPoid, userPoid);
+        Map<Long, LovItem> commodityMap = lovService.getLovItemsByPoids(distinctCommodityPoids, "COMODITY", groupPoid, companyPoid, userPoid);
+        Map<Long, LovItem> portMap = lovService.getLovItemsByPoids(distinctPortPoids, "PORT_MASTER", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> isoTypeMap = lovService.getLovItemsByCodes(isoTypes, "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> imcoTypeMap = lovService.getLovItemsByCodes(imcoTypes, "IMCO_CLASS", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> oogTypeMap = lovService.getLovItemsByCodes(oogTypes, "OOG_TYPE", groupPoid, companyPoid, userPoid);
+        Map<Long, LovItem> chargeMasterMap = lovService.getLovItemsByPoids(allChargePoids, "CHARGE_MASTER", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> chargeTypeMap = lovService.getLovItemsByCodes(allChargeTypes.stream().distinct().collect(Collectors.toList()), "CHARGE_TYPE", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> currencyMap = lovService.getLovItemsByCodes(allCurrencyCodes.stream().distinct().collect(Collectors.toList()), "CURRENCY", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> freightTypeMap = lovService.getLovItemsByCodes(allFreightTypes.stream().distinct().collect(Collectors.toList()), "SHIP_FREIGHT_TYPE", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> basisMap = lovService.getLovItemsByCodes(allBasisCodes.stream().distinct().collect(Collectors.toList()), "CONTAINER_TYPE_MASTER", groupPoid, companyPoid, userPoid);
+        Map<Long, LovItem> receiptInvoiceMap = lovService.getLovItemsByPoids(receiptInvoicePoids, "MANIFEST_RECEIPT_INVOICE", groupPoid, companyPoid, userPoid);
+        Map<Long, LovItem> taxMap = lovService.getLovItemsByPoids(taxPoids, "TAX_MASTER", groupPoid, companyPoid, userPoid);
+        Map<String, LovItem> containerPartMap = lovService.getLovItemsByCodes(containerNos, "SH_CONTAINER_PART", groupPoid, companyPoid, userPoid);
+
+        // --- Apply from maps ---
+        if (dto.getQuotationPoid() != null)
+            dto.setQuotationDet(quotationMap.get(dto.getQuotationPoid()));
+
+        for (GeneralCargoDto gc : generalCargos) {
+            if (gc.getCommodityPoid() != null) gc.setCommodityDet(commodityMap.get(gc.getCommodityPoid()));
+            if (gc.getDestinationPortPoid() != null) gc.setDestinationPortDet(portMap.get(gc.getDestinationPortPoid()));
         }
-        for (PartBlDto dto : dtos) {
-            try {
-                if (dto.getCommodityPoid() != null) {
-                    dto.setCommodityDet(
-                            lovService.getLovItemByPoid(dto.getCommodityPoid(), "COMODITY", groupPoid, companyPoid,
-                                    userPoid));
-                }
-                if (dto.getContainerNo() != null && !dto.getContainerNo().trim().isEmpty()) {
-                    dto.setContainerNoDet(
-                            lovService.getLovItemByCode(dto.getContainerNo(), "SH_CONTAINER_PART", groupPoid,
-                                    companyPoid, userPoid));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for part BL detail with detRowId: {}", dto.getDetRowId(), e);
-            }
+
+        for (ContainerDto c : containers) {
+            if (c.getCommodityPoid() != null) c.setCommodityDet(commodityMap.get(c.getCommodityPoid()));
+            if (c.getEquipmentIsoType() != null) c.setEquipmentIsoTypeDet(isoTypeMap.get(c.getEquipmentIsoType().toUpperCase()));
+            if (c.getImcoType() != null) c.setImcoTypeDet(imcoTypeMap.get(c.getImcoType().toUpperCase()));
+            if (c.getOogType() != null) c.setOogTypeDet(oogTypeMap.get(c.getOogType().toUpperCase()));
+        }
+
+        for (ChargeDto ch : charges) {
+            if (ch.getChargePoid() != null) ch.setChargeDet(chargeMasterMap.get(ch.getChargePoid()));
+            if (ch.getChargeType() != null) ch.setChargeTypeDet(chargeTypeMap.get(ch.getChargeType().toUpperCase()));
+            if (ch.getCurrencyCode() != null) ch.setCurrencyCodeDet(currencyMap.get(ch.getCurrencyCode().toUpperCase()));
+            if (ch.getFreightType() != null) ch.setFreightTypeDet(freightTypeMap.get(ch.getFreightType().toUpperCase()));
+            if (ch.getBasisPoid() != null) ch.setBasisDet(basisMap.get(ch.getBasisPoid().toUpperCase()));
+            if (ch.getPaidAtPortPoid() != null) ch.setPaidAtPortDet(portMap.get(ch.getPaidAtPortPoid()));
+            if (ch.getReceiptInvoicePoid() != null) ch.setReceiptInvoiceDet(receiptInvoiceMap.get(ch.getReceiptInvoicePoid()));
+            if (ch.getTaxPoid() != null) ch.setTaxDet(taxMap.get(ch.getTaxPoid()));
+        }
+
+        for (ChargeOtherDto co : otherCharges) {
+            if (co.getChargePoid() != null) co.setChargeDet(chargeMasterMap.get(co.getChargePoid()));
+            if (co.getChargeType() != null) co.setChargeTypeDet(chargeTypeMap.get(co.getChargeType().toUpperCase()));
+            if (co.getCurrencyCode() != null) co.setCurrencyCodeDet(currencyMap.get(co.getCurrencyCode().toUpperCase()));
+            if (co.getFreightType() != null) co.setFreightTypeDet(freightTypeMap.get(co.getFreightType().toUpperCase()));
+            if (co.getBasis() != null) co.setBasisDet(basisMap.get(co.getBasis().toUpperCase()));
+            if (co.getPaidAtPortPoid() != null) co.setPaidAtPortDet(portMap.get(co.getPaidAtPortPoid()));
+        }
+
+        for (PartBlDto pb : partBls) {
+            if (pb.getCommodityPoid() != null) pb.setCommodityDet(commodityMap.get(pb.getCommodityPoid()));
+            if (pb.getContainerNo() != null && !pb.getContainerNo().isBlank())
+                pb.setContainerNoDet(containerPartMap.get(pb.getContainerNo().trim().toUpperCase()));
         }
     }
 
@@ -475,8 +405,15 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
         logSummaryEntries(logEntries, UserContext.getDocumentId(), transactionPoid.toString());
 
-        eventPublisher.publishEvent(new BlManifestSaveEvent(saved, UserContext.getGroupPoid(),
-                UserContext.getCompanyPoid(), "AUTOSUMWEIGHTPACKATE"));
+        boolean hasManualTotals = saved.getTotalNetVolume() != null
+                || saved.getTotalWeight() != null
+                || saved.getTotalNetWeight() != null
+                || saved.getTotalNoOfPacks() != null;
+
+        if (!hasManualTotals) {
+            eventPublisher.publishEvent(new BlManifestSaveEvent(saved, UserContext.getGroupPoid(),
+                    UserContext.getCompanyPoid(), "AUTOSUMWEIGHTPACKATE"));
+        }
 
         log.info("Successfully created Import Manifest BL with id: {}", transactionPoid);
         return new ImportManifestBlResponseDto("Import manifest created successfully", transactionPoid);
@@ -1121,7 +1058,22 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                         cargoDtlRepository.deleteByIdTransactionPoidAndIdDescriptionType(transactionPoid, detailDto.getDescriptionType());
                     }
                 }
-                case ACTION_ISCREATED -> saveCargoDescriptions(List.of(detailDto), transactionPoid, logEntries);
+                case ACTION_ISCREATED -> {
+                    // Guard against duplicate creates: if rows of this type already exist, update instead
+                    List<ShipBlManifestCargoDtl> existingRows = cargoDtlRepository
+                            .findByIdTransactionPoidAndIdDescriptionTypeOrderByIdDetRowId(transactionPoid, detailDto.getDescriptionType());
+                    if (existingRows.isEmpty()) {
+                        saveCargoDescriptions(List.of(detailDto), transactionPoid, logEntries);
+                    } else {
+                        ShipBlManifestCargoDtl first = existingRows.get(0);
+                        ShipBlManifestCargoDtl oldEntity = new ShipBlManifestCargoDtl();
+                        BeanUtils.copyProperties(first, oldEntity);
+                        first.setCargoDescription(detailDto.getCargoDescription());
+                        toUpdate.add(first);
+                        String logDetail = String.format("KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s TYPE: %s", transactionPoid, first.getId().getDetRowId(), detailDto.getDescriptionType());
+                        logRequests.add(new LogRequestDto<>(oldEntity, first, ShipBlManifestCargoDtl.class, docId, docKeyPoid, logDetail));
+                    }
+                }
                 case ACTION_ISUPDATED -> {
                     // find existing row(s) by type when detRowId is not known
                     if (detailDto.getDetRowId() == null) {
@@ -1483,27 +1435,6 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
     }
 
-    private void enrichContainerLovData(List<ContainerDto> containers) {
-        if (containers == null || containers.isEmpty()) {
-            return;
-        }
-
-        Long groupPoid = UserContext.getGroupPoid();
-        Long companyPoid = UserContext.getCompanyPoid();
-        Long userPoid = UserContext.getUserPoid();
-
-        for (ContainerDto container : containers) {
-            if (container.getEquipmentIsoType() != null) {
-                LovItem lov = lovService.getLovItemByCode(
-                        container.getEquipmentIsoType(),
-                        "CONTAINER_TYPE_MASTER",
-                        groupPoid,
-                        companyPoid,
-                        userPoid);
-                container.setEquipmentIsoTypeDet(lov);
-            }
-        }
-    }
 
     @Override
     public ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request) {
