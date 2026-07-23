@@ -8,6 +8,7 @@ import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
+import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.common.dto.LovItem;
@@ -16,6 +17,7 @@ import com.asg.shipping.exportManifestUpdate.dto.*;
 import com.asg.shipping.exportManifestUpdate.entity.*;
 import com.asg.shipping.exportManifestUpdate.mapper.ExportManifestUpdateMapper;
 import com.asg.shipping.exportManifestUpdate.repository.*;
+import com.asg.shipping.exportManifestUpdate.util.ExportManifestAddressTypeAudit;
 import com.asg.shipping.importmanifestupdate.service.BlManifestValidationService;
 import com.asg.shipping.address.entity.AddressDetails;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
@@ -66,6 +68,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 	private final PrintService printService;
 	private final DataSource dataSource;
     private final AddressDetailsRepository addressDetailsRepository;
+    private final LoggingService loggingService;
 
     // ========== Header Operations ==========
 
@@ -213,6 +216,8 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         ExportShipBlManifestHdr entity = hdrRepository
                 .findExportBlByTransactionPoid(transactionPoid, groupPoid, companyPoid)
                 .orElseThrow(() -> new RuntimeException("Export BL not found with ID: " + transactionPoid));
+
+        Long shipperAddressPoidBefore = entity.getShipperAddressPoid();
         
         // Validate BL number uniqueness if changed
         if (request.getBlNumber() != null && !request.getBlNumber().trim().equals(entity.getBlNumber())) {
@@ -225,7 +230,7 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Store old cargo type for comparison
         String oldCargoType = entity.getCargoType();
-        
+
         // Map request fields to entity
         mapper.mapRequestToEntity(request, entity, groupPoid, companyPoid, userId);
         
@@ -246,6 +251,15 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
         
         // Save entity
         ExportShipBlManifestHdr saved = hdrRepository.save(entity);
+
+        String docId = UserContext.getDocumentId() != null ? UserContext.getDocumentId() : DOC_ID;
+        ExportManifestAddressTypeAudit.logShipperAddressTypeChange(
+                loggingService,
+                addressDetailsRepository,
+                docId,
+                transactionPoid.toString(),
+                shipperAddressPoidBefore,
+                request.getShipperAddressType());
 
         log.info("Successfully updated Export BL with ID: {}", saved.getTransactionPoid());
         return mapper.mapToResponse(saved);
