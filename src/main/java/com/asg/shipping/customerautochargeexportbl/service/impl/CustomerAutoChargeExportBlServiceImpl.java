@@ -59,7 +59,8 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
     private static final String LOG_ROW_DELETED = "Row Deleted on Customer Charge Detail with DetRowId: %s";
     private static final String LOG_KEY_ID = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
     private static final String ERR_PERIOD_NULL = "Period From and Period To must not be null";
-    private static final String ERR_PERIOD_ORDER = "Period From cannot be after Period To";
+    private static final String ERR_PERIOD_ORDER = "To Date should be after From date";
+    private static final String ERR_PERIOD_OVERLAP = "Period selected is overlapping with some existing period, please check...";
     private static final String ERR_DET_ROW_ID_NULL = "Customer Charge Detail DetRowId is null";
 
     private final DocumentSearchService documentSearchService;
@@ -153,6 +154,7 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         log.info("Creating customer auto charge export BL");
 
         validatePeriodDates(createDTO.getPeriodFrom(), createDTO.getPeriodTo());
+        validateDateOverlap(createDTO.getCustomerPoid(), createDTO.getPeriodFrom(), createDTO.getPeriodTo(), null);
 
         ShipCustomerChargesHdrEntity entity = ShipCustomerChargesHdrEntity.builder().build();
         mapper.mapCreateDTOToEntity(createDTO, entity, UserContext.getGroupPoid());
@@ -201,6 +203,8 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
                 ? updateDTO.getPeriodTo()
                 : existingEntity.getPeriodTo();
         validatePeriodDates(periodFrom, periodTo);
+        Long customerPoid = updateDTO.getCustomerPoid() != null ? updateDTO.getCustomerPoid() : existingEntity.getCustomerPoid();
+        validateDateOverlap(customerPoid, periodFrom, periodTo, id);
 
         mapper.mapUpdateDTOToEntity(updateDTO, existingEntity);
         existingEntity = headerRepository.save(existingEntity);
@@ -234,9 +238,14 @@ public class CustomerAutoChargeExportBlServiceImpl implements CustomerAutoCharge
         if (from == null || to == null) {
             throw new ValidationException(ERR_PERIOD_NULL);
         }
-
         if (from.isAfter(to)) {
             throw new ValidationException(ERR_PERIOD_ORDER);
+        }
+    }
+
+    private void validateDateOverlap(Long customerPoid, LocalDate periodFrom, LocalDate periodTo, Long excludeId) {
+        if (headerRepository.countOverlappingPeriod(customerPoid, periodFrom, periodTo, excludeId) > 0) {
+            throw new ValidationException(ERR_PERIOD_OVERLAP);
         }
     }
 
