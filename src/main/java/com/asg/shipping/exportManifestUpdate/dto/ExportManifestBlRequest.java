@@ -138,5 +138,7 @@ public class ExportManifestBlRequest {
     private String holdReason;       // e.g. "5"
     private String blStatus;         // "OPEN" / "CLOSED" etc.
     private String releasedStatus;   // "NONE" etc.
+
+    private String shipperAddressType;
 }
 

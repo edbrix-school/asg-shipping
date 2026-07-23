@@ -31,6 +31,8 @@ import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
+import com.asg.shipping.exportManifestUpdate.util.ExportManifestAddressTypeAudit;
+import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.bookingFormSH.entity.ShipMateContainerDtl;
 import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.bookingFormSH.repository.ShipMateContainerDtlRepository;
@@ -63,6 +65,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.asg.common.lib.security.util.UserContext.getCompanyPoid;
 import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
@@ -110,6 +115,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private final ShipVoyageHdrRepository shipVoyageHdrRepository;
     private final ApprovalService approvalService;
     private final BlManifestValidationService blManifestValidationService;
+    private final AddressDetailsRepository addressDetailsRepository;
 
     private String normalizeActionType(String actionType) {
         return actionType == null ? "" : actionType.trim().toLowerCase();
@@ -179,6 +185,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         ExportManifestBlHdr oldEntity = new ExportManifestBlHdr();
         BeanUtils.copyProperties(entity, oldEntity);
+        Long shipperAddressPoidBefore = oldEntity.getShipperAddressPoid();
 
         String docId = UserContext.getDocumentId();
         String docKeyPoid = id.toString();
@@ -215,6 +222,14 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         if (dto.getBookingMateVoyageNo() != null) {
             logBookingMateVoyageFilter(docId, docKeyPoid, dto.getPreviousBookingMateVoyageNo(), dto.getBookingMateVoyageNo());
         }
+
+        ExportManifestAddressTypeAudit.logShipperAddressTypeChange(
+                loggingService,
+                addressDetailsRepository,
+                docId,
+                docKeyPoid,
+                shipperAddressPoidBefore,
+                dto.getShipperAddressType());
 
         loggingService.logChanges(
                 copyHdrForLog(oldEntity),
@@ -678,6 +693,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                             + "). Verify GLOBAL_TEMP_BOOKING_SELECTED rows and QA_DB_USER.FUNC_LOAD_BOOKING_TO_BL.");
         }
 
+        copyQuotationFromMateBooking(newBlPoid, selections, groupPoid, companyPoid);
+
         try {
             procRepository.processAfterSave(
                     groupPoid,
@@ -746,6 +763,85 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
             }
         }
         return rows;
+    }
+
+    private void copyQuotationFromMateBooking(
+            long blTransactionPoid,
+            List<BookingSelectionItemDto> selections,
+            Long groupPoid,
+            Long companyPoid) {
+        Optional<ExportManifestBlHdr> blOpt =
+                repository.findExportBlByTransactionPoid(blTransactionPoid, groupPoid, companyPoid);
+        if (blOpt.isEmpty()) {
+            log.warn("Export BL {} not found after load booking; skipping quotation copy", blTransactionPoid);
+            return;
+        }
+        ExportManifestBlHdr bl = blOpt.get();
+        if (bl.getQuotationTransactionPoid() != null) {
+            return;
+        }
+
+        Long mateTransactionPoid = resolveMateTransactionPoidForLoadedBl(blTransactionPoid, selections);
+        if (mateTransactionPoid == null) {
+            log.warn("Could not resolve mate booking for export BL {}; quotation not copied", blTransactionPoid);
+            return;
+        }
+
+        shipMateHdrRepository.findByTransactionPoid(mateTransactionPoid).ifPresentOrElse(mate -> {
+            Long quotationPoid = mate.getQuotationTransactionPoid();
+            if (quotationPoid == null) {
+                log.debug("Mate booking {} has no quotation; nothing to copy to BL {}", mateTransactionPoid, blTransactionPoid);
+                return;
+            }
+            if (!groupPoid.equals(mate.getGroupPoid()) || !companyPoid.equals(mate.getCompanyPoid())) {
+                log.warn("Mate booking {} company mismatch; quotation not copied to BL {}", mateTransactionPoid, blTransactionPoid);
+                return;
+            }
+            bl.setQuotationTransactionPoid(quotationPoid);
+            repository.save(bl);
+            log.info(
+                    "Copied quotation {} from mate booking {} to export BL {}",
+                    quotationPoid,
+                    mateTransactionPoid,
+                    blTransactionPoid);
+        }, () -> log.warn("Mate booking {} not found; quotation not copied to BL {}", mateTransactionPoid, blTransactionPoid));
+    }
+
+    private Long resolveMateTransactionPoidForLoadedBl(
+            long blTransactionPoid, List<BookingSelectionItemDto> selections) {
+        List<Long> fromContainers = containerDtlRepository.findById_TransactionPoid(blTransactionPoid).stream()
+                .map(ExportManifestBlContainerDtl::getMateTransactionPoid)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (fromContainers.size() == 1) {
+            return fromContainers.getFirst();
+        }
+        if (fromContainers.size() > 1) {
+            log.warn(
+                    "Export BL {} has multiple mate bookings on containers {}; using first for quotation copy",
+                    blTransactionPoid,
+                    fromContainers);
+            return fromContainers.getFirst();
+        }
+
+        List<Long> fromSelection = selections.stream()
+                .filter(s -> s.getIsSelected() == null || "Y".equalsIgnoreCase(s.getIsSelected()))
+                .map(BookingSelectionItemDto::getTransactionPoid)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (fromSelection.size() == 1) {
+            return fromSelection.getFirst();
+        }
+        if (fromSelection.isEmpty()) {
+            return null;
+        }
+        log.warn(
+                "Multiple mate bookings in load selection {}; using first for quotation copy on BL {}",
+                fromSelection,
+                blTransactionPoid);
+        return fromSelection.getFirst();
     }
 
     @Override
