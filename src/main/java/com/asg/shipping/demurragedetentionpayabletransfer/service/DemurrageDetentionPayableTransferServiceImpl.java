@@ -715,7 +715,7 @@ public class DemurrageDetentionPayableTransferServiceImpl implements DemurrageDe
                     try {
                         List<ShipDemDetnTransferDtl> existing = transferDtlRepository.findByTransactionPoidOrderByDetRowId(id);
                         boolean isCurrentRecord = existing.stream()
-                                .anyMatch(e -> e.getDetRowId().equals(detail.getDetRowId()) &&
+                                .anyMatch(e -> "Y".equals(e.getSelected()) &&
                                         e.getMainfestTransactionPoid().equals(detail.getMainfestTransactionPoid()) &&
                                         e.getContainerNo().equals(detail.getContainerNo()));
 
