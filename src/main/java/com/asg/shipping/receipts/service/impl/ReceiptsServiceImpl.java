@@ -475,7 +475,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 			 mainReport = printService.load("Shipping/SH/SH_INVOICE_IMP_EXP.jrxml");
 
         }else {
-			mainReport = printService.load("Shipping/SH/SH_ALL_BILL_RECEIPT.jrxml");
+			mainReport = printService.load("Shipping/SH/SH_RECEIPT.jrxml");
         }
         return printService.fillReportToPdf(mainReport,params,dataSource);
 
