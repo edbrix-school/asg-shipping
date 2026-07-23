@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -152,13 +153,12 @@ public class ExportManifestBlController {
     @Operation(
             summary = "Select Booking popup grid (legacy VwPendingMateToBlView1)",
             description = """
-                    **Legacy mapping (Eblmanifestpagebn.loadDataBooking):**
-                    - Path `{issueVesselVoyagePoid}` = **Issue Vessel Voyage** LOV (`pVoyageVesselPoid1`) — export job POID; also passed to `FUNC_LOAD_BOOKING_TO_BL`.
-                    - Query `bookingMateVoyageNo` = **Booking Mate Voyage** (`inputVoyageLoad`) — optional extra filter on `VOYAGE_NO` in the popup.
-                    - Query `linePoid` = optional; legacy applies line from issue voyage when UI passes it (omit to not filter by line).
-                    - Data source: `VW_PENDING_MATE_TO_BL` only (legacy view entity).
-                    - Scope: `(COMPANY_POID, VESSEL_POID, VOYAGE_NO)` from issue voyage POID (`PendingMateBookingToBLView` / `Pvoyagepoid`).
-                    - Search: `containerNo`, `bookingNo` (legacy Search Container / Search Booking).
+                    **Legacy mapping (Eblmanifestpagebn.loadDataBooking → VwPendingMateToBlView1):**
+                    - Path `{issueVesselVoyagePoid}` = **Issue Vessel Voyage** (`pVoyageVesselPoid1`) — line default and `FUNC_LOAD_BOOKING_TO_BL`; not used to filter the export popup grid.
+                    - Query `bookingMateVoyageNo` = **Booking Mate Voyage** (`inputVoyageLoad`) — filters `VOYAGE_NO`.
+                    - Query `linePoid` = optional; when omitted, line from issue voyage (`SHIP_VOYAGE_HDR.LINE_POID`); `0` = no line filter.
+                    - Data source: `VW_PENDING_MATE_TO_BL` only.
+                    - Search: `containerNo`, `bookingNo` or alias `bookingIssueNo`.
                     
                     **Load Selected:** `POST /voyage/{issueVesselVoyagePoid}/load-booking` with `selections` or `selectedBookingIds`; then `GET /{transactionPoid}` for header/containers/general.
                     """
@@ -173,10 +173,13 @@ public class ExportManifestBlController {
             @Parameter(description = "Container number search (partial match)")
             @RequestParam(required = false) String containerNo,
             @Parameter(description = "Booking issue number search (partial match)")
-            @RequestParam(required = false) String bookingNo) {
+            @RequestParam(required = false) String bookingNo,
+            @Parameter(description = "Alias for bookingNo (legacy query param name)")
+            @RequestParam(required = false) String bookingIssueNo) {
         try {
+            String effectiveBookingNo = StringUtils.hasText(bookingNo) ? bookingNo : bookingIssueNo;
             List<BookingSelectionRowDto> rows = service.listBookingSelection(
-                    issueVesselVoyagePoid, bookingMateVoyageNo, linePoid, containerNo, bookingNo);
+                    issueVesselVoyagePoid, bookingMateVoyageNo, linePoid, containerNo, effectiveBookingNo);
             return success("Booking selection list fetched successfully", rows);
         } catch (ValidationException e) {
             log.warn("Booking selection validation failed for voyage {}: {}", issueVesselVoyagePoid, e.getMessage());
