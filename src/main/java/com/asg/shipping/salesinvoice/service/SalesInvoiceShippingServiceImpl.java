@@ -437,10 +437,16 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
         Long ffJobPoid = result.get("ffJobPoid") != null ? ((Number) result.get("ffJobPoid")).longValue() : null;
         String status = (String) result.get("status");
+        String statusCode = "SUCCESS";
+
+        if (status != null && !status.isBlank() && ffJobPoid == null) {
+            statusCode = "FAILURE";
+        }
 
         return CreateFFJobResponseDTO.builder()
                 .ffJobPoid(ffJobPoid)
                 .status(status != null ? status : "SUCCESS")
+                .statusCode(statusCode)
                 .build();
     }
 

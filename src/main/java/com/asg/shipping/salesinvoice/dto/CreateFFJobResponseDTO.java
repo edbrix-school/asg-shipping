@@ -16,5 +16,6 @@ public class CreateFFJobResponseDTO {
 
     private Long ffJobPoid;
     private String status;
+    private String statusCode;
 }
 
