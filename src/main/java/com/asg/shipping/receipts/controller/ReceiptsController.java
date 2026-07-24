@@ -29,6 +29,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 import java.util.Map;
 import static com.asg.common.lib.dto.response.ApiResponse.*;
 
@@ -314,10 +316,20 @@ public class ReceiptsController {
 	@PostMapping("/list")
 	public ResponseEntity<?> list(
 			@ParameterObject Pageable pageable,
-			@RequestBody(required = false) FilterRequestDto filters
-	) {
-			Map<String, Object> response = receiptsService.list(filters, pageable);
+			@RequestBody(required = false) FilterRequestDto filters,
+			@RequestParam(required = false) LocalDate startDate,
+			@RequestParam(required = false) LocalDate endDate
+			) {
+		try {
+			if ((startDate == null && endDate != null) || (startDate != null && endDate == null)) {
+				return badRequest("Both startDate and endDate should be specified or both should be empty.");
+			}
+			Map<String, Object> response = receiptsService.list(filters, pageable, startDate, endDate);
 			return success("Receipt list retrieved successfully", response);
+		} catch (Exception e) {
+			log.error("Error fetching receipts list", e);
+			return internalServerError("Failed to fetch list: " + e.getMessage());
+		}
 	}
 
 	@GetMapping("/autopopulate")

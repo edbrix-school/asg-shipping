@@ -56,6 +56,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private static final String ACTION_ISCREATED = "ISCREATED";
 	private static final String ACTION_ISUPDATED = "ISUPDATED";
 	private static final String ACTION_ISDELETED = "ISDELETED";
+	private static final String FILTER_TRANSACTION_DATE = "TRANSACTION_DATE";
 
 	private final DocumentSearchService documentSearchService;
 	private final ReceiptHdrRepository hdrRepository;
@@ -298,10 +299,10 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 
 
 	@Override
-	public Map<String, Object> list(FilterRequestDto filters, Pageable pageable) {
+	public Map<String, Object> list(FilterRequestDto filters, Pageable pageable, LocalDate startDate, LocalDate endDate) {
 		String operator = documentSearchService.resolveOperator(filters);
 		String isDeleted = documentSearchService.resolveIsDeleted(filters);
-		List<FilterDto> filterList = documentSearchService.resolveFilters(filters);
+		List<FilterDto> filterList = documentSearchService.resolveDateFilters(filters, FILTER_TRANSACTION_DATE, startDate, endDate);
 
 		RawSearchResult raw = documentSearchService.search(
 				UserContext.getDocumentId(),
