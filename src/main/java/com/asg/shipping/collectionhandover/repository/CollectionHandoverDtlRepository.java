@@ -32,6 +32,11 @@ public interface CollectionHandoverDtlRepository extends JpaRepository<ArShDayEn
     void deleteByTransactionPoid(Long transactionPoid);
 
     /**
+     * Bulk-delete the given DET_ROW_IDs for a transaction in a single statement
+     */
+    void deleteByTransactionPoidAndDetRowIdIn(Long transactionPoid, List<Long> detRowIds);
+
+    /**
      * Get max DET_ROW_ID for a transaction (for generating new DET_ROW_ID)
      */
     @Query("SELECT COALESCE(MAX(d.detRowId), 0) FROM CollectionHandoverDtl d WHERE d.transactionPoid = :transactionPoid")

@@ -19,7 +19,8 @@ import java.math.BigDecimal;
 @Builder
 public class CollectionHandoverDetailCreateDTO {
 
-    @NotNull(message = "Detail row ID is required")
+    // Optional on create: when omitted the server assigns the next DET_ROW_ID
+    // (legacy auto-numbered rows via LastRowNumber++).
     private Long detRowId;
 
     @NotNull(message = "Currency amount is required")
