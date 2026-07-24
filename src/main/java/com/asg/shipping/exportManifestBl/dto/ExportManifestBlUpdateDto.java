@@ -1,6 +1,5 @@
 package com.asg.shipping.exportManifestBl.dto;
 
-import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
@@ -281,7 +280,8 @@ public class ExportManifestBlUpdateDto {
     private List<ContainerRequestDto> containers;
 
     /* ================= DESCRIPTION & MARKS ================= */
-    private List<CargoDescriptionRequestDto> cargoDescriptions;
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
 
     /* ================= Charge BL ================= */
     private List<ChargeRequestDto> chargeDetails;

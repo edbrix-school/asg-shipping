@@ -18,7 +18,6 @@ import com.asg.shipping.exportManifestBl.entity.*;
 import com.asg.shipping.exportManifestBl.repository.*;
 import com.asg.shipping.exportManifestBl.repository.ShipBlToFfRepository;
 import com.asg.shipping.exportManifestBl.util.ExportManifestBlMapper;
-import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestCargoDtl;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestChargesDtl;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestContainerDtl;
 import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestGeneralDtl;
@@ -90,8 +89,10 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private static final String SALES_INVOICE_DOCUMENT_NAME = "Sales Invoice (Shipping)";
     private static final String EXPORT_MANIFEST_DOCUMENT_ID = "100-104";
     private static final String CARGO_DESCRIPTION_TYPE_DESC = "DESC";
+    private static final String CARGO_DESCRIPTION_TYPE_CARGO = "CARGO";
+    private static final String CARGO_DESCRIPTION_TYPE_MARK = "MARK";
     private static final String LOG_TABLE_HDR = "SHIP_BL_MANIFEST_HDR";
-    private static final String LOG_TABLE_CARGO = "SHIP_BL_MANIFEST_CARGO_DTL";
+    private static final String LOG_CARGO_KEY_ID_FORMAT = "KeyId = TRANSACTION_POID: %s DESCRIPTION_TYPE: %s";
 
     private final ExportManifestBlHdrRepository repository;
     private final ExportManifestBlGeneralDtlRepository generalDtlRepository;
@@ -189,8 +190,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         String docId = UserContext.getDocumentId();
         String docKeyPoid = id.toString();
-        String cargoDescriptionBefore = joinCargoTextForAudit(id, "DESC", "DESCRIPTION", "CARGO");
-        String cargoMarksBefore = joinCargoTextForAudit(id, "MARK", "MARKS");
 
         if (dto.getBlNumber() != null && !dto.getBlNumber().trim().equals(entity.getBlNumber())) {
             String trimmedBlNumber = dto.getBlNumber().trim();
@@ -215,10 +214,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
             applyDetailActions(dto, id);
         }
 
-        logAggregateCargoField(docId, docKeyPoid, "CargoDescription",
-                cargoDescriptionBefore, joinCargoTextForAudit(id, "DESC", "DESCRIPTION", "CARGO"));
-        logAggregateCargoField(docId, docKeyPoid, "Marks",
-                cargoMarksBefore, joinCargoTextForAudit(id, "MARK", "MARKS"));
         if (dto.getBookingMateVoyageNo() != null) {
             logBookingMateVoyageFilter(docId, docKeyPoid, dto.getPreviousBookingMateVoyageNo(), dto.getBookingMateVoyageNo());
         }
@@ -589,7 +584,9 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .map(row -> row.getId().getDescriptionType())
                 .filter(type -> type != null
                         && !"MARK".equalsIgnoreCase(type)
-                        && !"MARKS".equalsIgnoreCase(type))
+                        && !"MARKS".equalsIgnoreCase(type)
+                        && !"CARGO".equalsIgnoreCase(type)
+                        && !"DESCRIPTION".equalsIgnoreCase(type))
                 .findFirst()
                 .orElse(CARGO_DESCRIPTION_TYPE_DESC);
     }
@@ -1055,7 +1052,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
     private boolean hasDetailUpdates(ExportManifestBlUpdateDto dto) {
         return (dto.getGeneralCargoDetails() != null && !dto.getGeneralCargoDetails().isEmpty()) ||
-                (dto.getCargoDescriptions() != null && !dto.getCargoDescriptions().isEmpty()) ||
+                dto.getSimpleCargoDescription() != null ||
+                dto.getSimpleCargoMarks() != null ||
                 (dto.getContainers() != null && !dto.getContainers().isEmpty()) ||
                 (dto.getChargeDetails() != null && !dto.getChargeDetails().isEmpty());
     }
@@ -1064,8 +1062,12 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         if (dto.getGeneralCargoDetails() != null) {
             applyGeneralDetailActions(dto.getGeneralCargoDetails(), transactionPoid);
         }
-        if (dto.getCargoDescriptions() != null) {
-            applyCargoDetailActions(dto.getCargoDescriptions(), transactionPoid);
+        // Same as Export Manifest Update OPS-BL — Description & Marks via simpleCargo* only
+        if (dto.getSimpleCargoDescription() != null) {
+            saveSimpleCargoText(transactionPoid, CARGO_DESCRIPTION_TYPE_CARGO, dto.getSimpleCargoDescription());
+        }
+        if (dto.getSimpleCargoMarks() != null) {
+            saveSimpleCargoText(transactionPoid, CARGO_DESCRIPTION_TYPE_MARK, dto.getSimpleCargoMarks());
         }
         if (dto.getContainers() != null) {
             applyContainerDetailActions(dto.getContainers(), transactionPoid);
@@ -1073,6 +1075,53 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         if (dto.getChargeDetails() != null) {
             applyChargeDetailActions(dto.getChargeDetails(), transactionPoid);
         }
+    }
+
+    private void saveSimpleCargoText(Long transactionPoid, String descriptionType, String text) {
+        String previousText = joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, descriptionType));
+        cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, descriptionType);
+
+        if (text != null && !text.trim().isEmpty()) {
+            ExportManifestBlCargoDtl entity = ExportManifestBlCargoDtl.builder()
+                    .id(new ShipBlManifestCargoDtlId(transactionPoid, 1L, descriptionType))
+                    .cargoDescription(text)
+                    .recordOrder(1L)
+                    .build();
+            cargoDtlRepository.save(entity);
+        }
+
+        String fieldName = CARGO_DESCRIPTION_TYPE_MARK.equals(descriptionType)
+                ? "simpleCargoMarks"
+                : "simpleCargoDescription";
+        logSimpleCargoTextChange(transactionPoid, descriptionType, fieldName, previousText, text);
+    }
+
+    private void logSimpleCargoTextChange(Long transactionPoid, String descriptionType, String fieldName,
+                                          String oldText, String newText) {
+        String oldValue = oldText == null ? "" : oldText;
+        String newValue = newText == null ? "" : newText;
+        if (oldValue.equals(newValue)) {
+            return;
+        }
+        loggingService.logSimpleFieldChange(
+                ExportManifestBlCargoDtl.class,
+                UserContext.getDocumentId(),
+                transactionPoid.toString(),
+                fieldName,
+                oldValue,
+                newValue,
+                String.format(LOG_CARGO_KEY_ID_FORMAT, transactionPoid, descriptionType));
+    }
+
+    private String joinDescriptionStrings(List<String> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        String joined = rows.stream()
+                .filter(s -> s != null && !s.isEmpty())
+                .collect(Collectors.joining(" "));
+        return joined.isEmpty() ? null : joined;
     }
 
     private void applyGeneralDetailActions(List<GeneralCargoRequestDto> details, Long transactionPoid) {
@@ -1086,21 +1135,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                     // no-op
                 }
                 default -> log.warn("Unknown actionType '{}' for general cargo detail. Skipping.", detail.getActionType());
-            }
-        }
-    }
-
-    private void applyCargoDetailActions(List<CargoDescriptionRequestDto> details, Long transactionPoid) {
-        for (CargoDescriptionRequestDto detail : details) {
-            String action = normalizeActionType(detail.getActionType());
-            switch (action) {
-                case "iscreated" -> createCargoDetail(detail, transactionPoid);
-                case "isupdated" -> updateCargoDetail(detail, transactionPoid);
-                case "isdeleted" -> deleteCargoDetail(detail, transactionPoid);
-                case "nochange", "" -> {
-                    // no-op
-                }
-                default -> log.warn("Unknown actionType '{}' for cargo description detail. Skipping.", detail.getActionType());
             }
         }
     }
@@ -1209,8 +1243,14 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     }
 
     private void createCargoDetail(CargoDescriptionRequestDto detail, Long transactionPoid) {
-        Long detRowId = detail.getDetRowId();
         String descriptionType = detail.getDescriptionType();
+        Long detRowId = detail.getDetRowId();
+        if (detRowId == null) {
+            detRowId = cargoDtlRepository.findById_TransactionPoid(transactionPoid).stream()
+                    .map(row -> row.getId().getDetRowId())
+                    .max(Long::compareTo)
+                    .orElse(0L) + 1;
+        }
         ExportManifestBlCargoDtl entity = ExportManifestBlCargoDtl.builder()
                 .id(new ShipBlManifestCargoDtlId(transactionPoid, detRowId, descriptionType))
                 .cargoDescription(detail.getCargoDescription())
@@ -1222,67 +1262,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         String docId = UserContext.getDocumentId();
         String docKeyPoid = transactionPoid.toString();
         String logDetail = "Row Created on Export Manifest BL Cargo Detail with detRowId: " + detRowId;
-        loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-    }
-
-    private void updateCargoDetail(CargoDescriptionRequestDto detail, Long transactionPoid) {
-        Long detRowId = detail.getDetRowId();
-        String descriptionType = detail.getDescriptionType();
-        ShipBlManifestCargoDtlId id = new ShipBlManifestCargoDtlId(transactionPoid, detRowId, descriptionType);
-        ExportManifestBlCargoDtl entity = cargoDtlRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cargo Description Detail", "detRowId", detRowId.toString()));
-
-        ExportManifestBlCargoDtl oldEntity = new ExportManifestBlCargoDtl();
-        BeanUtils.copyProperties(entity, oldEntity);
-
-        entity.setCargoDescription(detail.getCargoDescription());
-        entity.setRecordOrder(detail.getRecordOrder());
-        cargoDtlRepository.save(entity);
-
-        String docId = UserContext.getDocumentId();
-        String docKeyPoid = transactionPoid.toString();
-        String logDetail = "KeyId = TRANSACTION_POID:" + transactionPoid + " DET_ROW_ID:" + detRowId;
-        loggingService.createLogBatch(
-                List.of(new LogRequestDto<>(
-                        copyCargoForLog(oldEntity),
-                        copyCargoForLog(entity),
-                        ShipBlManifestCargoDtl.class,
-                        docId,
-                        docKeyPoid,
-                        logDetail
-                ))
-        );
-    }
-
-    private String joinCargoTextForAudit(Long transactionPoid, String... descriptionTypes) {
-        return cargoDtlRepository.findById_TransactionPoid(transactionPoid).stream()
-                .filter(row -> {
-                    String type = row.getId().getDescriptionType();
-                    if (type == null) {
-                        return false;
-                    }
-                    for (String candidate : descriptionTypes) {
-                        if (candidate.equalsIgnoreCase(type)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                })
-                .sorted(java.util.Comparator.comparing(row -> row.getId().getDetRowId()))
-                .map(ExportManifestBlCargoDtl::getCargoDescription)
-                .filter(text -> text != null && !text.isBlank())
-                .collect(java.util.stream.Collectors.joining(" "));
-    }
-
-    private void deleteCargoDetail(CargoDescriptionRequestDto detail, Long transactionPoid) {
-        Long detRowId = detail.getDetRowId();
-        String descriptionType = detail.getDescriptionType();
-        cargoDtlRepository.deleteById(new ShipBlManifestCargoDtlId(transactionPoid, detRowId, descriptionType));
-
-       
-        String docId = UserContext.getDocumentId();
-        String docKeyPoid = transactionPoid.toString();
-        String logDetail = "Row Deleted on Export Manifest BL Cargo Detail with detRowId: " + detRowId;
         loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
     }
 
@@ -1563,24 +1542,11 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
             }
         }
 
-        // Save Cargo Details
-        if (dto.getCargoDescriptions() != null) {
-            for (CargoDescriptionRequestDto detail : dto.getCargoDescriptions()) {
-             
-                ExportManifestBlCargoDtl entity = ExportManifestBlCargoDtl.builder()
-                        .id(new ShipBlManifestCargoDtlId(
-                                transactionPoid,
-                                detail.getDetRowId() != null ? detail.getDetRowId() : detRowId++,
-                                detail.getDescriptionType()))
-                        .cargoDescription(detail.getCargoDescription())
-                        .recordOrder(detail.getRecordOrder())
-                        .build();
-                cargoDtlRepository.save(entity);
-
-                Long rowId = entity.getId().getDetRowId();
-                String logDetail = "Row Created on Export Manifest BL Cargo Detail with detRowId: " + rowId;
-                loggingService.createLogSummaryEntry(docId, docKeyPoid, logDetail);
-            }
+        if (dto.getSimpleCargoDescription() != null) {
+            saveSimpleCargoText(transactionPoid, CARGO_DESCRIPTION_TYPE_CARGO, dto.getSimpleCargoDescription());
+        }
+        if (dto.getSimpleCargoMarks() != null) {
+            saveSimpleCargoText(transactionPoid, CARGO_DESCRIPTION_TYPE_MARK, dto.getSimpleCargoMarks());
         }
 
         // Save Container Details
@@ -1717,17 +1683,11 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         dto.setGeneralCargoDetails(generalDetails);
         enrichGeneralCargoLovData(generalDetails);
 
-        // Load Cargo Details
-        List<CargoDescriptionRequestDto> cargoDetails = cargoDtlRepository.findById_TransactionPoid(transactionPoid)
-                .stream()
-                .map(entity -> CargoDescriptionRequestDto.builder()
-                        .detRowId(entity.getId().getDetRowId())
-                        .descriptionType(entity.getId().getDescriptionType())
-                        .cargoDescription(entity.getCargoDescription())
-                        .recordOrder(entity.getRecordOrder())
-                        .build())
-                .toList();
-        dto.setCargoDescriptions(cargoDetails);
+        // Description & Marks — same as Export Manifest Update OPS-BL (no cargoDescriptions list)
+        dto.setSimpleCargoDescription(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, CARGO_DESCRIPTION_TYPE_CARGO)));
+        dto.setSimpleCargoMarks(joinDescriptionStrings(
+                cargoDtlRepository.findDescriptionStringsByType(transactionPoid, CARGO_DESCRIPTION_TYPE_MARK)));
 
         // Load Container Details
         List<ContainerRequestDto> containerDetails = containerDtlRepository.findById_TransactionPoid(transactionPoid)
@@ -1999,15 +1959,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         return target;
     }
 
-    private ShipBlManifestCargoDtl copyCargoForLog(ExportManifestBlCargoDtl source) {
-        if (source == null) {
-            return null;
-        }
-        ShipBlManifestCargoDtl target = new ShipBlManifestCargoDtl();
-        BeanUtils.copyProperties(source, target);
-        return target;
-    }
-
     private ShipBlManifestGeneralDtl copyGeneralForLog(ExportManifestBlGeneralDtl source) {
         if (source == null) {
             return null;
@@ -2033,22 +1984,6 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         ShipBlManifestChargesDtl target = new ShipBlManifestChargesDtl();
         BeanUtils.copyProperties(source, target);
         return target;
-    }
-
-    private void logAggregateCargoField(
-            String documentId, String docKeyPoid, String fieldName, String beforeText, String afterText) {
-        if (java.util.Objects.equals(normalizeLogText(beforeText), normalizeLogText(afterText))) {
-            return;
-        }
-        String keyDetail = "KeyId = TRANSACTION_POID:" + docKeyPoid;
-        loggingService.createLogDetailsEntry(
-                documentId,
-                docKeyPoid,
-                fieldName,
-                normalizeLogText(beforeText),
-                normalizeLogText(afterText),
-                keyDetail,
-                LOG_TABLE_CARGO);
     }
 
     private void logBookingMateVoyageFilter(String documentId, String docKeyPoid, String before, String after) {
