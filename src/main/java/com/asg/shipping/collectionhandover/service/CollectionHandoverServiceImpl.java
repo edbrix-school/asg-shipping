@@ -15,7 +15,6 @@ import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.collectionhandover.dto.*;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtl;
-import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtlId;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverHdrRepository;
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverDtlRepository;
@@ -392,7 +391,14 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
                             .orElse(new ArShDayEndCloseDtl());
                     ArShDayEndCloseDtl oldEntity = new ArShDayEndCloseDtl();
                     BeanUtils.copyProperties(existing, oldEntity);
-                    BeanUtils.copyProperties(entity, existing);
+                    // Apply ONLY the editable scalar columns onto the managed entity. A blanket
+                    // BeanUtils.copyProperties(entity, existing) also copies the freshly-built entity's
+                    // null 'header' association and null audit fields, nulling them on 'existing' — which
+                    // wipes CREATED_BY/CREATED_DATE and logs a phantom "Header" change per detail row.
+                    existing.setCurrencyAmount(entity.getCurrencyAmount());
+                    existing.setCurrencyType(entity.getCurrencyType());
+                    existing.setNoOfTran(entity.getNoOfTran());
+                    existing.setCashAmount(entity.getCashAmount());
                     existing.setTransactionPoid(transactionPoid);
                     existing.setDetRowId(detRowId);
                     toUpdate.add(existing);
@@ -420,12 +426,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
             if (!logRequests.isEmpty()) loggingService.createLogBatch(logRequests);
         }
         if (!toDelete.isEmpty()) {
-            toDelete.forEach(rowId -> {
-                ArShDayEndCloseDtlId pk = new ArShDayEndCloseDtlId();
-                pk.setTransactionPoid(transactionPoid);
-                pk.setDetRowId(rowId);
-                detailRepository.deleteById(pk);
-            });
+            detailRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
         }
     }
 
