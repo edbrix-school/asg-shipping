@@ -16,6 +16,7 @@ public class QueryCimuResponse {
     private Permissions permissions;
     private List<ContainerInfoDto> containerInfoList;
     private List<ContainerHistoryRowDto> containerHistoryList;
+    private String errorMessage;
 
     @Data
     @NoArgsConstructor
