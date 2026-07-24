@@ -564,35 +564,7 @@ public class LineTariffsServiceImpl implements LineTariffsService {
         }
     }
 
-    /**
-     * Update detail records for all four detail tables
-     */
     private void updateDetailRecords(Long transactionPoid, LineTariffUpdateDTO dto) {
-        // Collect deleted detRowIds from collectable tables to cascade to payable
-        Set<Long> deletedImpDetRowIds = dto.getImportDemurrageCollectable() == null ? Set.of() :
-                dto.getImportDemurrageCollectable().stream()
-                        .filter(d -> "isDeleted".equalsIgnoreCase(d.getActionType()) && d.getDetRowId() != null)
-                        .map(TariffDetailUpdateDTO::getDetRowId)
-                        .collect(Collectors.toSet());
-
-        Set<Long> deletedExpDetRowIds = dto.getExportDetentionCollectable() == null ? Set.of() :
-                dto.getExportDetentionCollectable().stream()
-                        .filter(d -> "isDeleted".equalsIgnoreCase(d.getActionType()) && d.getDetRowId() != null)
-                        .map(TariffDetailUpdateDTO::getDetRowId)
-                        .collect(Collectors.toSet());
-
-        // Cascade deletes to payable lists
-        if (!deletedImpDetRowIds.isEmpty() && dto.getImportDemurragePayable() != null) {
-            dto.getImportDemurragePayable().stream()
-                    .filter(d -> deletedImpDetRowIds.contains(d.getDetRowId()))
-                    .forEach(d -> d.setActionType("isDeleted"));
-        }
-        if (!deletedExpDetRowIds.isEmpty() && dto.getExportDetentionPayable() != null) {
-            dto.getExportDetentionPayable().stream()
-                    .filter(d -> deletedExpDetRowIds.contains(d.getDetRowId()))
-                    .forEach(d -> d.setActionType("isDeleted"));
-        }
-
         updateDetailRecordsImpDtl(transactionPoid, dto.getImportDemurrageCollectable());
         updateDetailRecordsImpPayDtl(transactionPoid, dto.getImportDemurragePayable());
         updateDetailRecordsExpDtl(transactionPoid, dto.getExportDetentionCollectable());
