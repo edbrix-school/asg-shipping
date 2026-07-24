@@ -4,6 +4,7 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import static com.asg.shipping.common.ApiResponse.success;
+import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.DemurrageCalculateRequest;
 import com.asg.shipping.containerinventorymovementupdate.dto.DemurrageCalculateResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.InspectionLoadResponse;
@@ -65,6 +66,9 @@ public class CimuController {
                 docId, UserContext.getActionRequested(), UserContext.getUserId(), UserContext.getUserPoid(),
                 UserContext.getGroupPoid(), UserContext.getCompanyPoid(), request.getContainerNo(), request.getBlNumber());
         QueryCimuResponse response = cimuService.queryScreenData(request);
+        if (response.getErrorMessage() != null) {
+            return ApiResponse.badRequest(response.getErrorMessage());
+        }
         return success("Container data fetched successfully", response);
     }
 

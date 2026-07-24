@@ -78,25 +78,34 @@ public class CimuServiceImpl implements CimuService {
             throw new ValidationException("Either containerNo or blNumber is required");
         }
 
-        boolean canEditActualDischargeDate = safeRight("000-279");
+        try {
+            boolean canEditActualDischargeDate = safeRight("000-279");
 
-        List<ContainerInfoDto> info = queryRepository.fetchContainerInfo(containerNo, blNumber);
-        if (info == null || info.isEmpty()) {
-            throw new ValidationException("No record for query, please check the query parameter again");
+            List<ContainerInfoDto> info = queryRepository.fetchContainerInfo(containerNo, blNumber);
+            if (info == null || info.isEmpty()) {
+                throw new ValidationException("No record for query, please check the query parameter again");
+            }
+            List<ContainerHistoryRowDto> history = (containerNo != null && containerNo.length() >= 4)
+                    ? queryRepository.fetchHistoryByContainerNo(containerNo)
+                    : List.of();
+
+            return QueryCimuResponse.builder()
+                    .queryEcho(QueryCimuResponse.QueryEcho.builder().containerNo(containerNo).blNumber(blNumber).build())
+                    .permissions(QueryCimuResponse.Permissions.builder()
+                            .canEditActualDischargeDate(canEditActualDischargeDate)
+                            .build())
+                    .containerInfoList(info)
+                    .containerHistoryList(history)
+                    .build();
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return QueryCimuResponse.builder()
+                    .queryEcho(QueryCimuResponse.QueryEcho.builder().containerNo(containerNo).blNumber(blNumber).build())
+                    .errorMessage("Some error occured while loading data, please check the log")
+                    .build();
         }
-        List<ContainerHistoryRowDto> history = (containerNo != null && containerNo.length() >= 4)
-                ? queryRepository.fetchHistoryByContainerNo(containerNo)
-                : List.of();
-
-
-        return QueryCimuResponse.builder()
-                .queryEcho(QueryCimuResponse.QueryEcho.builder().containerNo(containerNo).blNumber(blNumber).build())
-                .permissions(QueryCimuResponse.Permissions.builder()
-                        .canEditActualDischargeDate(canEditActualDischargeDate)
-                        .build())
-                .containerInfoList(info)
-                .containerHistoryList(history)
-                .build();
     }
 
     @Override
