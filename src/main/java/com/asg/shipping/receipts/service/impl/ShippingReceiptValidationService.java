@@ -363,7 +363,7 @@ public class ShippingReceiptValidationService {
 	}
 
     private void validateDuplicateBlReceipt(Long blPoid, String remarks) {
-        if (blPoid == null) return;
+        if (blPoid == null || remarks == null || remarks.isBlank()) return;
         String result = procRepository.validateDuplicateBlReceipt(blPoid, remarks);
         if ("TRUE".equalsIgnoreCase(result)) {
             throw new ValidationException("BL already invoiced with remarks (" + remarks + ") reference, please check remarks...");
