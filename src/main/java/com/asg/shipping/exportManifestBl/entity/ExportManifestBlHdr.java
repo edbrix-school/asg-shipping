@@ -53,7 +53,7 @@ public class ExportManifestBlHdr extends BaseEntity {
     /* ================= PARTY DETAILS ================= */
 
     @Column(name = "SHIPPER_POID")
-    private Long shipperPoid;
+    private BigDecimal shipperPoid;
 
     @Column(name = "SHIPPER_ADDRESS_POID")
     private Long shipperAddressPoid;

@@ -27,7 +27,7 @@ public class ExportManifestBlRequestDto {
     private Long voyageTransactionPoid;
     private String blNumber;
     private String agentReference;
-    private Long shipperPoid;
+    private BigDecimal shipperPoid;
     private Long shipperAddressPoid;
     private Long consigneePoid;
     private Long consigneeAddressPoid;
