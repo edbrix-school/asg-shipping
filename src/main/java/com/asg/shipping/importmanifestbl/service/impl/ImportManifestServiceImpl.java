@@ -116,7 +116,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         dto.setSimpleCargoDescription(getCargoDescriptionByType(updateDto.getCargoDescriptions(), CARGO_TYPE_DESCRIPTION, "DESCRIPTION"));
         dto.setSimpleCargoMarks(getCargoDescriptionByType(updateDto.getCargoDescriptions(), CARGO_TYPE_MARKS, "MARKS"));
         dto.setDescriptionsAndMarks(ImportManifestMapper.mapToDescriptionAndMarks(updateDto.getCargoDescriptions()));
-        dto.setOtherNotifies(ImportManifestMapper.mapToOtherNotifies(updateDto));
+        // otherNotifies already set from entity in mapToDto(entity) above — keep it, don't overwrite from updateDto
         dto.setGeneralCargoDetails(ImportManifestMapper.mapToGeneralCargoDetails(updateDto.getGeneralCargoDetails()));
         dto.setContainers(ImportManifestMapper.mapToContainers(updateDto.getContainers()));
         dto.setCharges(ImportManifestMapper.mapToCharges(updateDto.getChargeDetails()));
@@ -1435,6 +1435,31 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
     }
 
+
+    @Override
+    public List<ConsigneeEmailDto> getConsigneeEmails(Long transactionPoId) {
+        List<ShipBlManifestEmailFaxDtl> rows = emailFaxDtlRepository
+                .findByIdTransactionPoidOrderByIdDetRowId(transactionPoId);
+
+        List<ConsigneeEmailDto> result = new ArrayList<>();
+        for (int i = 0; i < rows.size(); i++) {
+            ShipBlManifestEmailFaxDtl r = rows.get(i);
+            result.add(ConsigneeEmailDto.builder()
+                    .sn((long) (i + 1))
+                    .send("Y".equalsIgnoreCase(r.getSendYesNo()))
+                    .select(false)
+                    .detRowId(r.getId().getDetRowId())
+                    .addressPoid(r.getAddressPoid())
+                    .email1(r.getEmail1())
+                    .email2(r.getEmail2())
+                    .addressType(r.getId().getAddressType())
+                    .sendYesNo(r.getSendYesNo())
+                    .sendEmailFax(r.getSendEmailFax())
+                    .actionType(null)
+                    .build());
+        }
+        return result;
+    }
 
     @Override
     public ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request) {

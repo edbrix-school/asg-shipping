@@ -449,6 +449,22 @@ public class ImportManifestController {
         }
     }
 
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(summary = "Get Consignee Emails", description = "Get email details for consignee address.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Consignee emails retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Import Manifest BL not found")
+    })
+    @GetMapping("/{id}/consignee-emails")
+    public ResponseEntity<?> getConsigneeEmails(
+            @Parameter(description = "Transaction POID", required = true)
+            @PathVariable Long id
+    ) {
+        return com.asg.common.lib.dto.response.ApiResponse.success(
+                "Consignee emails retrieved successfully",
+                importManifestService.getConsigneeEmails(id));
+    }
+
     @Operation(
             summary = "Get Charge Tax Defaults",
             description = "Fetch tax POID and tax percentage for a selected charge. Called when the user selects a charge from the LOV."

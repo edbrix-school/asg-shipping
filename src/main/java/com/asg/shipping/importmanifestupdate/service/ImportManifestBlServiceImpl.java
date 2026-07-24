@@ -433,6 +433,22 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                 entity.setNotify1EdiAddress(entity.getNotify1EdiAddress()
                         .replace("\n", "").replace("\r", "").trim());
             }
+            if (entity.getNotify2EdiName() != null) {
+                entity.setNotify2EdiName(entity.getNotify2EdiName()
+                        .replace("\n", "").replace("\r", "").trim());
+            }
+            if (entity.getNotify2EdiAddress() != null) {
+                entity.setNotify2EdiAddress(entity.getNotify2EdiAddress()
+                        .replace("\n", "").replace("\r", "").trim());
+            }
+            if (entity.getNotify3EdiName() != null) {
+                entity.setNotify3EdiName(entity.getNotify3EdiName()
+                        .replace("\n", "").replace("\r", "").trim());
+            }
+            if (entity.getNotify3EdiAddress() != null) {
+                entity.setNotify3EdiAddress(entity.getNotify3EdiAddress()
+                        .replace("\n", "").replace("\r", "").trim());
+            }
         } else {
             // For EXPORT: convert to uppercase
             if (entity.getShipperEdiName() != null) {
@@ -452,6 +468,18 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             }
             if (entity.getNotify1EdiAddress() != null) {
                 entity.setNotify1EdiAddress(entity.getNotify1EdiAddress().toUpperCase());
+            }
+            if (entity.getNotify2EdiName() != null) {
+                entity.setNotify2EdiName(entity.getNotify2EdiName().toUpperCase());
+            }
+            if (entity.getNotify2EdiAddress() != null) {
+                entity.setNotify2EdiAddress(entity.getNotify2EdiAddress().toUpperCase());
+            }
+            if (entity.getNotify3EdiName() != null) {
+                entity.setNotify3EdiName(entity.getNotify3EdiName().toUpperCase());
+            }
+            if (entity.getNotify3EdiAddress() != null) {
+                entity.setNotify3EdiAddress(entity.getNotify3EdiAddress().toUpperCase());
             }
         }
 
