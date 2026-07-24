@@ -456,6 +456,11 @@ public class SalesInvoiceShippingController {
         try {
             log.info("Create FF job request for invoice id: {}, BL POID: {}", id, blPoid);
             CreateFFJobResponseDTO result = service.createFFJob(id, blPoid);
+
+            if (result.getStatusCode() != null && result.getStatusCode().equalsIgnoreCase("FAILURE")) {
+                return error("Error creating FF job: " + result.getStatus(), 400);
+            }
+
             return success("FF job created successfully", result);
         } catch (Exception e) {
             return internalServerError("Error creating FF job: " + e.getMessage());

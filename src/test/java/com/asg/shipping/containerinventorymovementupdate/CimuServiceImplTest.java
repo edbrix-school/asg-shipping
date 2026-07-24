@@ -159,7 +159,6 @@ class CimuServiceImplTest {
         request.setActualDischargeDate("2025-01-03 10:00:00");
 
         when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
-        when(rightsRepository.hasDocRight("000-248", 1L)).thenReturn(true);
         when(updateRepository.callProcShipCntInvtUpdate(
                 any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("TRUE");
@@ -224,9 +223,13 @@ class CimuServiceImplTest {
         request.setContainerNo("CONT001");
         request.setHoldReturnForm(true);
         when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
-        when(rightsRepository.hasDocRight("000-248", 1L)).thenReturn(false);
+        when(updateRepository.callProcShipCntInvtUpdate(
+                any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn("Free days not updated, bl issue type not updated, User have no right to hold Return Form");
 
-        assertThrows(ValidationException.class, () -> service.updateContainerData(request));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.updateContainerData(request));
+        assertTrue(ex.getMessage().contains("User have no right to hold Return Form"));
     }
 
     // ---------- socUpdate ----------

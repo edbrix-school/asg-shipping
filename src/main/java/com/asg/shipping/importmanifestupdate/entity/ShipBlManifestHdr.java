@@ -406,6 +406,7 @@ public class ShipBlManifestHdr extends BaseEntity {
     @Column(name = "MANIFEST_EMAIL_VERIFIED", length = 1)
     private String manifestEmailVerified;
 
+    @AuditIgnore
     @Column(name = "EMAIL_VERIFIED_WITH_SPECIAL_C", length = 1)
     private String emailVerifiedWithSpecialC;
 }

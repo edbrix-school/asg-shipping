@@ -116,12 +116,9 @@ public class ExportManifestUpdateController {
             @PathVariable Long id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Updated Export BL and details", required = true)
             @Valid @RequestBody ExportManifestUpdateRequest request) {
-        try {
-            return success("Export BL and details updated successfully", service.updateExportBlCombined(id, request));
-        } catch (Exception e) {
-            log.error("Error updating Export BL with ID: {}", id, e);
-            return error("Error updating Export BL: " + e.getMessage(), 500);
-        }
+        // No catch-all here: GlobalExceptionHandler maps DB and validation failures to
+        // proper 400/404 responses. Swallowing them turns every one into a raw 500.
+        return success("Export BL and details updated successfully", service.updateExportBlCombined(id, request));
     }
 
     @AllowedAction(UserRolesRightsEnum.DELETE)

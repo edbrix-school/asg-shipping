@@ -15,7 +15,6 @@ import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.collectionhandover.dto.*;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtl;
-import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtlId;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverHdrRepository;
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverDtlRepository;
@@ -145,11 +144,16 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
     public CollectionHandoverDto createCollectionHandover(CollectionHandoverCreateDTO dto, Long groupPoid, Long userPoid) {
         log.info("Creating collection handover");
 
-        validateForCreate(dto, groupPoid);
+        // Company is authoritative from the session/user context (legacy: getLoginCompanyPoid()),
+        // never taken from the client payload.
+        Long companyPoid = UserContext.getCompanyPoid() != null ? UserContext.getCompanyPoid() : dto.getCompanyPoid();
+
+        validateForCreate(dto, groupPoid, companyPoid);
         validateAmounts(dto.getTotalAmount(), dto.getCashAmount(), dto.getChequeAmount(), dto.getDetails());
 
         ArShDayEndCloseHdr handover = new ArShDayEndCloseHdr();
         mapper.mapCreateDTOToEntity(dto, handover, groupPoid);
+        handover.setCompanyPoid(companyPoid);
         ArShDayEndCloseHdr saved = headerRepository.save(handover);
         // Flush so the DB trigger fires and populates TRANSACTION_POID + DOC_REF,
         // then refresh to read trigger-generated values back into the entity.
@@ -159,7 +163,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
         saveDetailRecords(saved.getTransactionPoid(), dto.getDetails());
 
         // DocumentAfterSave: call GL procedure.
-        // P_LOGIN_USER_POID is VARCHAR2 in the procedure — pass as String.
+        // P_LOGIN_USER_POID is VARCHAR2 in the procedure — pass the user POID as String.
         String procResult = callProcGlChoIntoChqMainShip(
                 saved.getTransactionPoid(), saved.getTransactionDate(),
                 UserContext.getDocumentId(), saved.getDocRef(),
@@ -196,10 +200,12 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
         validateForUpdate(dto, id);
         validateAmounts(dto.getTotalAmount(), dto.getCashAmount(), dto.getChequeAmount(), dto.getDetails());
 
-        // DocumentBeforeSave: main-office user must set VerifiedRcvd='Y' + remarks before saving.
-        // Only enforce when the caller is explicitly submitting these fields (non-null in DTO).
-        if (dto.getVerifiedRcvd() != null || dto.getMainOfcRemarks() != null) {
-            validateMainOfficeFields(dto.getVerifiedRcvd(), dto.getMainOfcRemarks());
+        // DocumentBeforeSave: when the main office marks the handover as verified/received
+        // (VerifiedRcvd='Y'), main-office remarks are mandatory. A save that leaves VerifiedRcvd='N'
+        // (or omits it) must NOT be blocked — legacy only warned and let the save proceed.
+        if ("Y".equalsIgnoreCase(dto.getVerifiedRcvd())
+                && (dto.getMainOfcRemarks() == null || dto.getMainOfcRemarks().length() <= 1)) {
+            throw new ValidationException("Verified yes & Main office remarks check.");
         }
 
         ArShDayEndCloseHdr oldHandover = new ArShDayEndCloseHdr();
@@ -249,6 +255,11 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
 
         if (verifiedRcvd != null && !verifiedRcvd.matches("^[YN]$")) {
             throw new ValidationException("Verified received must be Y or N");
+        }
+
+        // Marking as verified/received requires main-office remarks (legacy DocumentBeforeSave check).
+        if ("Y".equalsIgnoreCase(verifiedRcvd) && (mainOfcRemarks == null || mainOfcRemarks.length() <= 1)) {
+            throw new ValidationException("Verified yes & Main office remarks check.");
         }
 
         handover.setVerifiedRcvd(verifiedRcvd);
@@ -317,21 +328,12 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
         }
     }
 
-    /** DocumentBeforeSave: main-office user (000-208/Edit equivalent) must fill VerifiedRcvd + remarks */
-    private void validateMainOfficeFields(String verifiedRcvd, String mainOfcRemarks) {
-        boolean verifiedMissing = verifiedRcvd == null || verifiedRcvd.equalsIgnoreCase("N") || verifiedRcvd.isEmpty();
-        boolean remarksMissing  = mainOfcRemarks == null || mainOfcRemarks.length() <= 1;
-        if (verifiedMissing || remarksMissing) {
-            throw new ValidationException("Verified yes & Main office remarks check.");
-        }
-    }
-
-    private void validateForCreate(CollectionHandoverCreateDTO dto, Long groupPoid) {
+    private void validateForCreate(CollectionHandoverCreateDTO dto, Long groupPoid, Long companyPoid) {
         // DOC_REF is trigger-generated on INSERT — no uniqueness check needed here.
         // Duplicate transaction date check (matches DayCloseServiceImpl)
-        if (dto.getTransactionDate() != null && dto.getCompanyPoid() != null
+        if (dto.getTransactionDate() != null && companyPoid != null
                 && headerRepository.countByTransactionDateAndGroupPoidAndCompanyPoid(
-                        dto.getTransactionDate(), groupPoid, dto.getCompanyPoid()) > 0) {
+                        dto.getTransactionDate(), groupPoid, companyPoid) > 0) {
             throw new ValidationException("Transaction date already closed: " + dto.getTransactionDate());
         }
     }
@@ -381,12 +383,22 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
                     toSave.add(entity);
                 }
                 case "ISUPDATED" -> {
+                    if (detRowId == null) {
+                        throw new ValidationException("detRowId is required for an update (ISUPDATED) detail action.");
+                    }
                     ArShDayEndCloseDtl existing = detailRepository
                             .findByTransactionPoidAndDetRowId(transactionPoid, detRowId)
                             .orElse(new ArShDayEndCloseDtl());
                     ArShDayEndCloseDtl oldEntity = new ArShDayEndCloseDtl();
                     BeanUtils.copyProperties(existing, oldEntity);
-                    BeanUtils.copyProperties(entity, existing);
+                    // Apply ONLY the editable scalar columns onto the managed entity. A blanket
+                    // BeanUtils.copyProperties(entity, existing) also copies the freshly-built entity's
+                    // null 'header' association and null audit fields, nulling them on 'existing' — which
+                    // wipes CREATED_BY/CREATED_DATE and logs a phantom "Header" change per detail row.
+                    existing.setCurrencyAmount(entity.getCurrencyAmount());
+                    existing.setCurrencyType(entity.getCurrencyType());
+                    existing.setNoOfTran(entity.getNoOfTran());
+                    existing.setCashAmount(entity.getCashAmount());
                     existing.setTransactionPoid(transactionPoid);
                     existing.setDetRowId(detRowId);
                     toUpdate.add(existing);
@@ -394,6 +406,9 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
                             docId, docKeyPoid, "DAYENDCLOSE DET_ROW_ID: " + detRowId));
                 }
                 case "ISDELETED" -> {
+                    if (detRowId == null) {
+                        throw new ValidationException("detRowId is required for a delete (ISDELETED) detail action.");
+                    }
                     toDelete.add(detRowId);
                     loggingService.logDelete(raw, docId, docKeyPoid);
                 }
@@ -411,12 +426,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
             if (!logRequests.isEmpty()) loggingService.createLogBatch(logRequests);
         }
         if (!toDelete.isEmpty()) {
-            toDelete.forEach(rowId -> {
-                ArShDayEndCloseDtlId pk = new ArShDayEndCloseDtlId();
-                pk.setTransactionPoid(transactionPoid);
-                pk.setDetRowId(rowId);
-                detailRepository.deleteById(pk);
-            });
+            detailRepository.deleteByTransactionPoidAndDetRowIdIn(transactionPoid, toDelete);
         }
     }
 
@@ -436,7 +446,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
 
     /**
      * DocumentAfterSave: PROC_GL_CHO_INTO_CHQ_MAIN_SHIP.
-     * P_LOGIN_USER_POID is declared VARCHAR2 in the procedure — always pass as String.
+     * P_LOGIN_USER_POID is declared VARCHAR2 in the procedure — pass the user POID as String.
      */
     private String callProcGlChoIntoChqMainShip(Long transactionPoid, LocalDate transactionDate,
             String docId, String docRef, Long groupPoid, Long companyPoid, String loginUserPoid) {
@@ -448,7 +458,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
                 cs.setString(2, transactionDate != null ? transactionDate.toString() : null);
                 cs.setLong(3, groupPoid);
                 cs.setLong(4, companyPoid);
-                cs.setString(5, loginUserPoid);   // VARCHAR2 in procedure
+                cs.setString(5, loginUserPoid);   // VARCHAR2 in procedure — user POID as String
                 cs.setString(6, docId);
                 cs.setString(7, docRef);
                 cs.registerOutParameter(8, Types.VARCHAR);

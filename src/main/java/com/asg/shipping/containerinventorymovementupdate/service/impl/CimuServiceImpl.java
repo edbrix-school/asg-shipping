@@ -78,25 +78,34 @@ public class CimuServiceImpl implements CimuService {
             throw new ValidationException("Either containerNo or blNumber is required");
         }
 
-        boolean canEditActualDischargeDate = safeRight("000-279");
+        try {
+            boolean canEditActualDischargeDate = safeRight("000-279");
 
-        List<ContainerInfoDto> info = queryRepository.fetchContainerInfo(containerNo, blNumber);
-        if (info == null || info.isEmpty()) {
-            throw new ValidationException("No record for query, please check the query parameter again");
+            List<ContainerInfoDto> info = queryRepository.fetchContainerInfo(containerNo, blNumber);
+            if (info == null || info.isEmpty()) {
+                throw new ValidationException("No record for query, please check the query parameter again");
+            }
+            List<ContainerHistoryRowDto> history = (containerNo != null && containerNo.length() >= 4)
+                    ? queryRepository.fetchHistoryByContainerNo(containerNo)
+                    : List.of();
+
+            return QueryCimuResponse.builder()
+                    .queryEcho(QueryCimuResponse.QueryEcho.builder().containerNo(containerNo).blNumber(blNumber).build())
+                    .permissions(QueryCimuResponse.Permissions.builder()
+                            .canEditActualDischargeDate(canEditActualDischargeDate)
+                            .build())
+                    .containerInfoList(info)
+                    .containerHistoryList(history)
+                    .build();
+        } catch (ValidationException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            return QueryCimuResponse.builder()
+                    .queryEcho(QueryCimuResponse.QueryEcho.builder().containerNo(containerNo).blNumber(blNumber).build())
+                    .errorMessage("Some error occured while loading data, please check the log")
+                    .build();
         }
-        List<ContainerHistoryRowDto> history = (containerNo != null && containerNo.length() >= 4)
-                ? queryRepository.fetchHistoryByContainerNo(containerNo)
-                : List.of();
-
-
-        return QueryCimuResponse.builder()
-                .queryEcho(QueryCimuResponse.QueryEcho.builder().containerNo(containerNo).blNumber(blNumber).build())
-                .permissions(QueryCimuResponse.Permissions.builder()
-                        .canEditActualDischargeDate(canEditActualDischargeDate)
-                        .build())
-                .containerInfoList(info)
-                .containerHistoryList(history)
-                .build();
     }
 
     @Override
@@ -130,11 +139,6 @@ public class CimuServiceImpl implements CimuService {
             throw new ValidationException("Missing user context (X-User-Id / X-User-Poid headers)");
         }
 
-        // Rights enforcement (server-side)
-        if (holdReturnForm && !rightsRepository.hasDocRight("000-248", userPoid)) {
-            throw new ValidationException("User have no right to hold Return Form (000-248)");
-        }
-
         // Build legacy-style dynamic SQL for milestone updates (optional; procedure executes it if present)
         // We only apply milestone updates for a specific container, not for ALL.
         String runStatement = buildRunStatement(
@@ -160,12 +164,9 @@ public class CimuServiceImpl implements CimuService {
                 cntRtnHold
         );
 
-        // Default to "TRUE" to match legacy behavior (legacy treats null as success).
         if (status == null || status.isBlank()) {
-            log.warn("PROC_SHIP_CNT_INVT_UPDATE returned null/blank status; defaulting to TRUE. transactionPoid={}", transactionPoid);
             status = "TRUE";
         }
-        // Legacy check: if status is not exactly "TRUE", the procedure reported a business error.
         if (!status.equalsIgnoreCase("TRUE")) {
             throw new ValidationException(status);
         }

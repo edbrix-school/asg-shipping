@@ -45,9 +45,5 @@ public class ArShDayEndCloseDtl extends BaseEntity {
 
     @Column(name = "CASH_AMOUNT")
     private BigDecimal cashAmount;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TRANSACTION_POID", insertable = false, updatable = false)
-    private ArShDayEndCloseHdr header;
 }
 

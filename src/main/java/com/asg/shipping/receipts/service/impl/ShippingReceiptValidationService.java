@@ -288,8 +288,6 @@ public class ShippingReceiptValidationService {
 				validateCashRounding(payment);
 			}
 		}
-
-		validateSplitPayments(payments);
 	}
 
 	private void validateCashRounding(ReceiptPaymentDetailDto payment) {
@@ -301,20 +299,6 @@ public class ShippingReceiptValidationService {
 					ValidationMessages.CASH_ROUNDING_INVALID.replace("{0}", cashAmount.toString())
 				);
 			}
-		}
-	}
-
-	private void validateSplitPayments(List<ReceiptPaymentDetailDto> payments) {
-		int paymentCount = 0;
-
-		for (ReceiptPaymentDetailDto payment : payments) {
-			if (payment.getAmount() != null && payment.getAmount().doubleValue() > 0) {
-				paymentCount++;
-			}
-		}
-
-		if (paymentCount > 1) {
-			throw new ValidationException(ValidationMessages.SPLIT_PAYMENT_NOT_ALLOWED);
 		}
 	}
 
@@ -379,7 +363,7 @@ public class ShippingReceiptValidationService {
 	}
 
     private void validateDuplicateBlReceipt(Long blPoid, String remarks) {
-        if (blPoid == null) return;
+        if (blPoid == null || remarks == null || remarks.isBlank()) return;
         String result = procRepository.validateDuplicateBlReceipt(blPoid, remarks);
         if ("TRUE".equalsIgnoreCase(result)) {
             throw new ValidationException("BL already invoiced with remarks (" + remarks + ") reference, please check remarks...");

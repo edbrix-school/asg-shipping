@@ -511,6 +511,67 @@ public class ExportManifestUpdateMapper {
     }
 
     /**
+     * Apply an edited Container row onto an existing entity.
+     * Covers the same fields as {@link #mapContainerToEntity} so a column that can be
+     * created can also be edited (and therefore shows up in the audit log).
+     * Only non-null values overwrite, matching the header merge behaviour.
+     */
+    public void mapContainerUpdatesToEntity(ContainerDetailDto dto, ExportShipBlManifestContainerDtl entity) {
+        if (dto == null || entity == null) {
+            return;
+        }
+
+        if (dto.getMateTransactionPoid() != null) entity.setMateTransactionPoid(dto.getMateTransactionPoid());
+        if (dto.getContainerNo() != null) entity.setContainerNo(dto.getContainerNo().trim());
+        if (dto.getEquipmentShipperOwn() != null) entity.setEquipmentShipperOwn(dto.getEquipmentShipperOwn());
+        if (dto.getCargoDescription() != null) entity.setCargoDescription(dto.getCargoDescription());
+        if (dto.getEquipmentSealNo() != null) entity.setEquipmentSealNo(dto.getEquipmentSealNo());
+        if (dto.getEquipmentIsoType() != null) entity.setEquipmentIsoType(dto.getEquipmentIsoType());
+        if (dto.getQuantity() != null) entity.setQuantity(dto.getQuantity());
+        if (dto.getGrsVolume() != null) entity.setGrsVolume(dto.getGrsVolume());
+        if (dto.getGrsWeight() != null) entity.setGrsWeight(dto.getGrsWeight());
+        if (dto.getNetVolume() != null) entity.setNetVolume(dto.getNetVolume());
+        if (dto.getNetWeight() != null) entity.setNetWeight(dto.getNetWeight());
+        if (dto.getTareWeight() != null) entity.setTareWeight(dto.getTareWeight());
+        if (dto.getNoOfPacks() != null) entity.setNoOfPacks(dto.getNoOfPacks());
+        if (dto.getPackUnit() != null) entity.setPackUnit(dto.getPackUnit());
+        if (dto.getComodityPoid() != null) entity.setComodityPoid(dto.getComodityPoid());
+        if (dto.getDestinationPortPoid() != null) entity.setDestinationPortPoid(dto.getDestinationPortPoid());
+
+        // IMCO / hazardous
+        if (dto.getIsImco() != null) entity.setIsImco(dto.getIsImco());
+        if (dto.getImo() != null) entity.setImo(dto.getImo());
+        if (dto.getImcoClassType() != null) entity.setImcoClassType(dto.getImcoClassType());
+        if (dto.getImcoClassActual() != null) entity.setImcoClassActual(dto.getImcoClassActual());
+
+        // Guarantee
+        if (dto.getGuaranteeFlag() != null) entity.setGuaranteeFlag(dto.getGuaranteeFlag());
+        if (dto.getGuaranteedBy() != null) entity.setGuaranteedBy(dto.getGuaranteedBy());
+
+        // Out of gauge
+        if (dto.getIsOog() != null) entity.setIsOog(dto.getIsOog());
+        if (dto.getOogType() != null) entity.setOogType(dto.getOogType());
+        if (dto.getOogL() != null) entity.setOogL(dto.getOogL());
+        if (dto.getOogB() != null) entity.setOogB(dto.getOogB());
+        if (dto.getOogH() != null) entity.setOogH(dto.getOogH());
+        if (dto.getOogLW() != null) entity.setOogLW(dto.getOogLW());
+        if (dto.getOogRW() != null) entity.setOogRW(dto.getOogRW());
+        if (dto.getOogF() != null) entity.setOogF(dto.getOogF());
+        if (dto.getOogA() != null) entity.setOogA(dto.getOogA());
+
+        // Reefer
+        if (dto.getIsRefer() != null) entity.setIsRefer(dto.getIsRefer());
+        if (dto.getReferType() != null) entity.setReferType(dto.getReferType());
+        if (dto.getRefferTemp() != null) entity.setRefferTemp(dto.getRefferTemp());
+        if (dto.getRefferHum() != null) entity.setRefferHum(dto.getRefferHum());
+        if (dto.getRefferVent() != null) entity.setRefferVent(dto.getRefferVent());
+
+        // Free days
+        if (dto.getExtraFreeDays() != null) entity.setExtraFreeDays(dto.getExtraFreeDays());
+        if (dto.getExtraFreeDaysPrnpls() != null) entity.setExtraFreeDaysPrnpls(dto.getExtraFreeDaysPrnpls());
+    }
+
+    /**
      * Convert Cargo Description Entity to DTO
      */
     public CargoDescriptionDto mapCargoDescriptionToDto(ExportShipBlManifestCargoDtl entity) {
@@ -684,6 +745,53 @@ public class ExportManifestUpdateMapper {
         entity.setCnIssueInvoice(dto.getCnIssueInvoice());
         entity.setSelectRow(dto.getSelectRow());
         return entity;
+    }
+
+    /**
+     * Apply an edited Charge row onto an existing entity.
+     * Covers the same fields as {@link #mapChargeToEntity} so a column that can be
+     * created can also be edited (and therefore shows up in the audit log).
+     * Only non-null values overwrite, matching the header merge behaviour.
+     */
+    public void mapChargeUpdatesToEntity(ChargeDetailDto dto, ExportShipBlManifestChargesDtl entity) {
+        if (dto == null || entity == null) {
+            return;
+        }
+
+        if (dto.getChargePoid() != null) entity.setChargePoid(dto.getChargePoid());
+        if (dto.getChargeType() != null) entity.setChargeType(dto.getChargeType());
+        if (dto.getChargeDescription() != null) entity.setChargeDescription(dto.getChargeDescription());
+        if (dto.getFreightType() != null) entity.setFreightType(dto.getFreightType());
+        if (dto.getChargeBasisOn() != null) entity.setChargeBasisOn(dto.getChargeBasisOn());
+        if (dto.getEdiChargeCode() != null) entity.setEdiChargeCode(dto.getEdiChargeCode());
+        if (dto.getPrintGroup() != null) entity.setPrintGroup(dto.getPrintGroup());
+
+        // Amounts
+        if (dto.getCurrencyCode() != null) entity.setCurrencyCode(dto.getCurrencyCode());
+        if (dto.getCurrencyExchange() != null) entity.setCurrencyExchange(dto.getCurrencyExchange());
+        if (dto.getBuyPercharge() != null) entity.setBuyPercharge(dto.getBuyPercharge());
+        if (dto.getPerQuantityAmount() != null) entity.setPerQuantityAmount(dto.getPerQuantityAmount());
+        if (dto.getQuantity() != null) entity.setQuantity(dto.getQuantity());
+        if (dto.getPaidAtPortPoid() != null) entity.setPaidAtPortPoid(dto.getPaidAtPortPoid());
+
+        // Tax
+        if (dto.getTaxPoid() != null) entity.setTaxPoid(dto.getTaxPoid());
+        if (dto.getTaxPercentage() != null) entity.setTaxPercentage(dto.getTaxPercentage());
+        if (dto.getTaxAmount() != null) entity.setTaxAmount(dto.getTaxAmount());
+
+        // Invoice / credit note linkage
+        if (dto.getReceiptInvoicePoid() != null) entity.setReceiptInvoicePoid(dto.getReceiptInvoicePoid());
+        if (dto.getArShReceiptTransactionPoid() != null) entity.setArShReceiptTransactionPoid(dto.getArShReceiptTransactionPoid());
+        if (dto.getInvoiceType() != null) entity.setInvoiceType(dto.getInvoiceType());
+        if (dto.getAutoCanInvoiceNo() != null) entity.setAutoCanInvoiceNo(dto.getAutoCanInvoiceNo());
+        if (dto.getDocRefLinkNo() != null) entity.setDocRefLinkNo(dto.getDocRefLinkNo());
+        if (dto.getReprintDetRowId() != null) entity.setReprintDetRowId(dto.getReprintDetRowId());
+        if (dto.getReprintTransactionPoid() != null) entity.setReprintTransactionPoid(dto.getReprintTransactionPoid());
+        if (dto.getCnRefDocId() != null) entity.setCnRefDocId(dto.getCnRefDocId());
+        if (dto.getCnRefDocPoid() != null) entity.setCnRefDocPoid(dto.getCnRefDocPoid());
+        if (dto.getCnRefDetRowId() != null) entity.setCnRefDetRowId(dto.getCnRefDetRowId());
+        if (dto.getCnIssueInvoice() != null) entity.setCnIssueInvoice(dto.getCnIssueInvoice());
+        if (dto.getSelectRow() != null) entity.setSelectRow(dto.getSelectRow());
     }
 
     /**

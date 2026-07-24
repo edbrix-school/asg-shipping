@@ -262,11 +262,11 @@ public class ImportManifestMapper {
                         .commodityDet(dto.getComodityDet())
                         .imcoType(dto.getImcoClassType())
                         .imcoTypeDet(dto.getImcoClassTypeDet())
-                        .cbm(dto.getNetVolume())
-                        .grossWeight(dto.getGrsWeight())
-                        .netWeight(dto.getNetWeight())
-                        .tareWeight(dto.getTareWeight())
-                        .packs(dto.getNoOfPacks())
+                        .cbm((dto.getNetVolume()))
+                        .grossWeight((dto.getGrsWeight()))
+                        .netWeight((dto.getNetWeight()))
+                        .tareWeight((dto.getTareWeight()))
+                        .packs((dto.getNoOfPacks()))
                         .packsType(dto.getPackUnit())
                         .hsCode(dto.getHsCode())
                         .hsDescription(dto.getHsDescription())
@@ -668,11 +668,11 @@ public class ImportManifestMapper {
             entity.setId(id);
         }
 
-        entity.setAddressPoid(dto.getAddressPoid());
+        entity.setAddressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid() : 1L);
         entity.setEmail1(dto.getEmail1());
         entity.setEmail2(dto.getEmail2());
         entity.setSendYesNo(dto.getSendYesNo());
-        entity.setSendEmailFax(dto.getSendEmailFax());
+        entity.setSendEmailFax(dto.getSendEmailFax() != null ? dto.getSendEmailFax() : "BOTH");
 
         return entity;
     }

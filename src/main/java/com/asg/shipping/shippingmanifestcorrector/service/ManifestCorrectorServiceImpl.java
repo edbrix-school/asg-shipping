@@ -45,7 +45,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static com.asg.common.lib.security.util.UserContext.*;
 
@@ -497,34 +496,57 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     }
 
     private void enrichLovData(ManifestCorrectorDto dto) {
-        if (dto == null) {
-            return;
-        }
+        if (dto == null) return;
 
-        Map<String, Map<Long, LovGetListDto>> poidLovCache = new HashMap<>();
-        Map<String, Map<String, LovGetListDto>> codeLovCache = new HashMap<>();
+        List<ManifestCorrectorChargeDtlDto> charges = dto.getChargesDetails() != null ? dto.getChargesDetails() : List.of();
 
-        enrichLovByPoid(parseLongSafely(dto.getBlNumber()), dto::setBlNumberDet, "SHIP_BL_REPRINT", poidLovCache);
-        enrichLovByCode(dto.getIssueType(), dto::setIssueTypeDet, "BL_ISSUE_TYPE", codeLovCache);
-        enrichLovByPoid(dto.getConsigneePoid(), dto::setConsigneeDet, "ADDRESS_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getNotifyPoid(), dto::setNotifyDet, "ADDRESS_MASTER", poidLovCache);
-        enrichLovByCode(dto.getHoldReason(), dto::setHoldReasonDet, "SHIP_DO_ANOTICE_HOLD", codeLovCache);
-        enrichLovByPoid(dto.getPlaceOfDeliveryPoid(), dto::setPlaceOfDeliveryDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getPlaceOfReceiptPoid(), dto::setPlaceOfReceiptDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getPortOfLoadingPoid(), dto::setPortOfLoadingDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getPortOfDischargePoid(), dto::setPortOfDischargeDet, "PORT_MASTER", poidLovCache);
-        enrichLovByPoid(dto.getVoyageTransactionPoid(), dto::setVoyageTransactionDet, "VESSAL_VOYAGE", poidLovCache);
-        enrichLovByPoid(dto.getCompanyPoid(), dto::setCompanyDet, "COMPANY", poidLovCache);
+        // Collect all poids per LOV name
+        List<Long> portPoids = filterNonNull(
+                dto.getPlaceOfDeliveryPoid(), dto.getPlaceOfReceiptPoid(),
+                dto.getPortOfLoadingPoid(), dto.getPortOfDischargePoid());
+        charges.forEach(c -> { if (c.getPaidAtPortPoid() != null) portPoids.add(c.getPaidAtPortPoid()); });
 
-        if (dto.getChargesDetails() != null) {
-            for (ManifestCorrectorChargeDtlDto charge : dto.getChargesDetails()) {
-                enrichLovByPoid(charge.getChargePoid(), charge::setChargeDet, "CHARGE_MASTER", poidLovCache);
-                enrichLovByPoid(charge.getPaidAtPortPoid(), charge::setPaidAtPortDet, "PORT_MASTER", poidLovCache);
-                enrichLovByCode(charge.getCurrencyCode(), charge::setCurrencyDet, "CURRENCY", codeLovCache);
-                enrichLovByCode(charge.getChargeType(), charge::setChargeTypeDet, "CHARGE_TYPE", codeLovCache);
-                enrichLovByCode(charge.getFreightType(), charge::setFreightTypeDet, "SHIP_FREIGHT_TYPE", codeLovCache);
-                enrichLovByCode(charge.getChargeBasisOn(), charge::setChargeBasisOnDet, "CONTAINER_TYPE_MASTER", codeLovCache);
-            }
+        List<Long> chargePoids = charges.stream().map(ManifestCorrectorChargeDtlDto::getChargePoid).filter(java.util.Objects::nonNull).toList();
+
+        // Batch fetch — one DB call per LOV name
+        Map<Long, LovGetListDto> blMap       = lovService.getDetailsByPoidsAndLovName(filterNonNull(parseLongSafely(dto.getBlNumber())), "SHIP_BL_REPRINT");
+        Map<Long, LovGetListDto> addressMap  = lovService.getDetailsByPoidsAndLovName(filterNonNull(dto.getConsigneePoid(), dto.getNotifyPoid()), "ADDRESS_MASTER");
+        Map<Long, LovGetListDto> portMap     = lovService.getDetailsByPoidsAndLovName(portPoids, "PORT_MASTER");
+        Map<Long, LovGetListDto> voyageMap   = lovService.getDetailsByPoidsAndLovName(filterNonNull(dto.getVoyageTransactionPoid()), "VESSAL_VOYAGE");
+        Map<Long, LovGetListDto> chargeMap   = lovService.getDetailsByPoidsAndLovName(chargePoids, "CHARGE_MASTER");
+
+        List<String> currencyCodes   = charges.stream().map(ManifestCorrectorChargeDtlDto::getCurrencyCode).filter(c -> c != null && !c.isBlank()).distinct().toList();
+        List<String> chargeTypeCodes = charges.stream().map(ManifestCorrectorChargeDtlDto::getChargeType).filter(c -> c != null && !c.isBlank()).distinct().toList();
+        List<String> freightCodes    = charges.stream().map(ManifestCorrectorChargeDtlDto::getFreightType).filter(c -> c != null && !c.isBlank()).distinct().toList();
+        List<String> basisCodes      = charges.stream().map(ManifestCorrectorChargeDtlDto::getChargeBasisOn).filter(c -> c != null && !c.isBlank()).distinct().toList();
+
+        Map<String, LovGetListDto> issueTypeMap   = lovService.getDetailsByCodesAndLovName(filterNonNullStr(dto.getIssueType()), "BL_ISSUE_TYPE");
+        Map<String, LovGetListDto> holdReasonMap  = lovService.getDetailsByCodesAndLovName(filterNonNullStr(dto.getHoldReason()), "SHIP_DO_ANOTICE_HOLD");
+        Map<String, LovGetListDto> currencyMap    = lovService.getDetailsByCodesAndLovName(currencyCodes, "CURRENCY");
+        Map<String, LovGetListDto> chargeTypeMap  = lovService.getDetailsByCodesAndLovName(chargeTypeCodes, "CHARGE_TYPE");
+        Map<String, LovGetListDto> freightMap     = lovService.getDetailsByCodesAndLovName(freightCodes, "SHIP_FREIGHT_TYPE");
+        Map<String, LovGetListDto> basisMap       = lovService.getDetailsByCodesAndLovName(basisCodes, "CONTAINER_TYPE_MASTER");
+
+        // Resolve header fields
+        dto.setBlNumberDet(blMap.get(parseLongSafely(dto.getBlNumber())));
+        dto.setIssueTypeDet(issueTypeMap.get(dto.getIssueType()));
+        dto.setConsigneeDet(addressMap.get(dto.getConsigneePoid()));
+        dto.setNotifyDet(addressMap.get(dto.getNotifyPoid()));
+        dto.setHoldReasonDet(holdReasonMap.get(dto.getHoldReason()));
+        dto.setPlaceOfDeliveryDet(portMap.get(dto.getPlaceOfDeliveryPoid()));
+        dto.setPlaceOfReceiptDet(portMap.get(dto.getPlaceOfReceiptPoid()));
+        dto.setPortOfLoadingDet(portMap.get(dto.getPortOfLoadingPoid()));
+        dto.setPortOfDischargeDet(portMap.get(dto.getPortOfDischargePoid()));
+        dto.setVoyageTransactionDet(voyageMap.get(dto.getVoyageTransactionPoid()));
+
+        // Resolve charge detail fields
+        for (ManifestCorrectorChargeDtlDto charge : charges) {
+            charge.setChargeDet(chargeMap.get(charge.getChargePoid()));
+            charge.setPaidAtPortDet(portMap.get(charge.getPaidAtPortPoid()));
+            charge.setCurrencyDet(currencyMap.get(charge.getCurrencyCode()));
+            charge.setChargeTypeDet(chargeTypeMap.get(charge.getChargeType()));
+            charge.setFreightTypeDet(freightMap.get(charge.getFreightType()));
+            charge.setChargeBasisOnDet(basisMap.get(charge.getChargeBasisOn()));
         }
     }
 
@@ -581,70 +603,6 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             if (c != null && !c.isBlank()) result.add(c);
         }
         return result;
-    }
-
-    private void enrichLovByPoid(Long poid,
-                                  Consumer<LovGetListDto> setter,
-                                  String lovName,
-                                  Map<String, Map<Long, LovGetListDto>> cache) {
-        if (poid == null) {
-            return;
-        }
-
-        try {
-            setter.accept(fetchLovByPoid(cache, poid, lovName));
-        } catch (Exception e) {
-            log.warn("Failed to fetch {} LOV for poid: {}", lovName, poid, e);
-        }
-    }
-
-    private void enrichLovByCode(String code,
-                                 Consumer<LovGetListDto> setter,
-                                 String lovName,
-                                 Map<String, Map<String, LovGetListDto>> cache) {
-        if (code == null || code.isBlank()) {
-            return;
-        }
-
-        try {
-            setter.accept(fetchLovByCode(cache, code, lovName));
-        } catch (Exception e) {
-            log.warn("Failed to fetch {} LOV for code: {}", lovName, code, e);
-        }
-    }
-
-    private LovGetListDto fetchLovByPoid(Map<String, Map<Long, LovGetListDto>> cache, Long poid, String lovName) {
-        Map<Long, LovGetListDto> lovCache = cache.computeIfAbsent(lovName, key -> new HashMap<>());
-        if (lovCache.containsKey(poid)) {
-            return lovCache.get(poid);
-        }
-
-        try {
-            LovGetListDto lov = lovService.getDetailsByPoidAndLovName(poid, lovName);
-            lovCache.put(poid, lov);
-            return lov;
-        } catch (Exception e) {
-            log.warn("Failed to fetch {} LOV for poid: {}", lovName, poid, e);
-            lovCache.put(poid, null);
-            return null;
-        }
-    }
-
-    private LovGetListDto fetchLovByCode(Map<String, Map<String, LovGetListDto>> cache, String code, String lovName) {
-        Map<String, LovGetListDto> lovCache = cache.computeIfAbsent(lovName, key -> new HashMap<>());
-        if (lovCache.containsKey(code)) {
-            return lovCache.get(code);
-        }
-
-        try {
-            LovGetListDto lov = lovService.getDetailsByCodeAndLovName(code, lovName);
-            lovCache.put(code, lov);
-            return lov;
-        } catch (Exception e) {
-            log.warn("Failed to fetch {} LOV for code: {}", lovName, code, e);
-            lovCache.put(code, null);
-            return null;
-        }
     }
 
     private Long parseLongSafely(String value) {

@@ -17,9 +17,9 @@ public class ExportManifestBlBookingSelectionRepositoryImpl implements ExportMan
     private final JdbcTemplate jdbcTemplate;
 
     /**
-     * {@code VW_PENDING_MATE_TO_BL} with legacy issue-voyage scope ({@code PendingMateBookingToBLView} /
-     * {@code Pvoyagepoid}): mate triple matches {@code SHIP_VOYAGE_HDR}, or mate is linked on
-     * {@code MATE_LOAD_VOYAGE_POID} (Booking Data tab assignment when header voyage/vessel differ).
+     * {@code VW_PENDING_MATE_TO_BL} with export legacy popup scope ({@code Eblmanifestpagebn.loadDataBooking} →
+     * {@code VwPendingMateToBlView1}): company/group on the view; {@code VoyageNo} and {@code LinePoid} are optional
+     * filters (export ADF does not scope the popup by issue-voyage vessel/voyage match).
      */
     private static final String PENDING_VIEW_SQL = """
             SELECT
@@ -42,18 +42,6 @@ public class ExportManifestBlBookingSelectionRepositoryImpl implements ExportMan
             FROM VW_PENDING_MATE_TO_BL P
             WHERE P.GROUP_POID = ?
               AND P.COMPANY_POID = ?
-              AND (
-                    EXISTS (
-                        SELECT 1
-                        FROM SHIP_VOYAGE_HDR SV
-                        WHERE SV.TRANSACTION_POID = ?
-                          AND SV.GROUP_POID = ?
-                          AND P.COMPANY_POID = SV.COMPANY_POID
-                          AND P.VESSEL_POID = SV.VESSEL_POID
-                          AND TRIM(P.VOYAGE_NO) = TRIM(SV.VOYAGE_NO)
-                    )
-                    OR P.MATE_LOAD_VOYAGE_POID = ?
-                  )
             """;
 
     @Override
@@ -70,9 +58,6 @@ public class ExportManifestBlBookingSelectionRepositoryImpl implements ExportMan
         List<Object> params = new ArrayList<>();
         params.add(groupPoid);
         params.add(companyPoid);
-        params.add(issueVesselVoyagePoid);
-        params.add(groupPoid);
-        params.add(issueVesselVoyagePoid);
 
         appendOptionalFilters(sql, params, bookingMateVoyageNo, linePoid, containerNo, bookingNo, "P");
         sql.append(" ORDER BY P.BOOKING_ISSUE_NO, P.DET_ROW_ID ");

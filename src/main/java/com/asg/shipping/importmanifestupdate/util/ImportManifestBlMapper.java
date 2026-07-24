@@ -125,6 +125,7 @@ public class ImportManifestBlMapper {
             return null;
         }
         return ImportManifestBlUpdateDTO.builder()
+                .transactionDate(screenDto.getTransactionDate())
                 .voyageTransactionPoid(screenDto.getVoyageTransactionPoid())
                 .blNumber(screenDto.getBlNumber())
                 .agentReference(screenDto.getAgentReference())
@@ -168,10 +169,13 @@ public class ImportManifestBlMapper {
                 .holdRemarks(screenDto.getHoldRemarks())
                 .holdReason(screenDto.getHoldReason())
                 .holdCanDo(screenDto.getHoldCanDo())
+                .manifestEmailVerified(screenDto.getManifestEmailVerified())
+                .emailVerifiedWithSpecialC(screenDto.getEmailVerifiedWithSpecialC())
                 .doNo(screenDto.getDoNo())
                 .freightStatus(screenDto.getFreightStatus())
                 .cargoType(screenDto.getCargoType())
                 .blType(screenDto.getBlType())
+                .blIssueType(screenDto.getBlIssueType())
                 . documentCompanyPoid(screenDto.getDocumentCompanyPoid())
                 .documentCompanyDivisionPoid(screenDto.getDocumentCompanyDivisionPoid())
                 .notifyParties(screenDto.getAddressDetails())
@@ -424,7 +428,6 @@ public class ImportManifestBlMapper {
                 .stopUcanAlert(dto.getStopUcanAlert())
                 .isMbl(dto.getIsMbl())
                 .forwarderPin(dto.getForwarderPin())
-                .deleted("N")
                 .build();
     }
 
@@ -478,6 +481,8 @@ public class ImportManifestBlMapper {
         entity.setBlIssueType(dto.getBlIssueType());
         entity.setShipperEdiName(dto.getShipperEdiName());
         entity.setShipperEdiAddress(dto.getShipperEdiAddress());
+        entity.setManifestEmailVerified(dto.getManifestEmailVerified());
+        entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
         entity.setConsigneeEdiName(dto.getConsigneeEdiName());
         entity.setConsigneeEdiAddress(dto.getConsigneeEdiAddress());
         entity.setNotify1EdiName(dto.getNotify1EdiName());
@@ -527,9 +532,6 @@ public class ImportManifestBlMapper {
         entity.setForwarderPin(dto.getForwarderPin());
         entity.setManifestEmailVerified(dto.getManifestEmailVerified());
         entity.setEmailVerifiedWithSpecialC(dto.getEmailVerifiedWithSpecialC());
-        if (entity.getDeleted() == null) {
-            entity.setDeleted("N");
-        }
         return entity;
     }
 

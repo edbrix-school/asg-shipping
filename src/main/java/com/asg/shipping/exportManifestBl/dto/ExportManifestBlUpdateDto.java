@@ -1,6 +1,5 @@
 package com.asg.shipping.exportManifestBl.dto;
 
-import com.asg.shipping.importmanifestupdate.dto.CargoDescriptionRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
@@ -30,7 +29,7 @@ public class ExportManifestBlUpdateDto {
     @Size(max = 200, message = "Agent reference must not exceed 200 characters")
     private String agentReference;
 
-    private Long shipperPoid;
+    private BigDecimal shipperPoid;
     private Long shipperAddressPoid;
     private Long consigneePoid;
     private Long consigneeAddressPoid;
@@ -281,7 +280,8 @@ public class ExportManifestBlUpdateDto {
     private List<ContainerRequestDto> containers;
 
     /* ================= DESCRIPTION & MARKS ================= */
-    private List<CargoDescriptionRequestDto> cargoDescriptions;
+    private String simpleCargoDescription;
+    private String simpleCargoMarks;
 
     /* ================= Charge BL ================= */
     private List<ChargeRequestDto> chargeDetails;
