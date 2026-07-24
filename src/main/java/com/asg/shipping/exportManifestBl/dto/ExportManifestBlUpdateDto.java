@@ -29,7 +29,7 @@ public class ExportManifestBlUpdateDto {
     @Size(max = 200, message = "Agent reference must not exceed 200 characters")
     private String agentReference;
 
-    private Long shipperPoid;
+    private BigDecimal shipperPoid;
     private Long shipperAddressPoid;
     private Long consigneePoid;
     private Long consigneeAddressPoid;
