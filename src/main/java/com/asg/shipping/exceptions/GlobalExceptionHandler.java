@@ -24,11 +24,16 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private static final Pattern ORA_12899_PATTERN = Pattern.compile(
+            "column\\s+\"[^\"]+\"\\.\"[^\"]+\"\\.\"([^\"]+)\"\\s*\\(actual:\\s*(\\d+),\\s*maximum:\\s*(\\d+)\\)");
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<?> handleAsgException(CustomException ex) {
@@ -135,6 +140,10 @@ public class GlobalExceptionHandler {
         if (msg != null && msg.contains("ORA-00001")) {
             return ApiResponse.conflict("Duplicate record: a record with the same unique key already exists.");
         }
+        // ORA-12899: a value exceeds the column width
+        if (msg != null && msg.contains("ORA-12899")) {
+            return ApiResponse.badRequest(formatValueTooLarge(msg));
+        }
         return ApiResponse.error("Data integrity error: " + cleanOraMessage(msg), HttpStatus.BAD_REQUEST.value());
     }
 
@@ -158,6 +167,10 @@ public class GlobalExceptionHandler {
         if (msg != null && msg.contains("ORA-00001")) {
             return ApiResponse.conflict("Duplicate record: a record with the same unique key already exists.");
         }
+        // ORA-12899: a value exceeds the column width
+        if (msg != null && msg.contains("ORA-12899")) {
+            return ApiResponse.badRequest(formatValueTooLarge(msg));
+        }
         return ApiResponse.error(cleanOraMessage(msg), HttpStatus.INTERNAL_SERVER_ERROR.value());
     }
 
@@ -177,6 +190,19 @@ public class GlobalExceptionHandler {
             return extracted.isEmpty() ? fallback : extracted;
         }
         return fallback;
+    }
+
+    /**
+     * Turns an ORA-12899 into a message naming the field and its limit.
+     * Oracle format: ORA-12899: value too large for column "USER"."TABLE"."COLUMN" (actual: 7, maximum: 6)
+     */
+    private String formatValueTooLarge(String raw) {
+        Matcher m = ORA_12899_PATTERN.matcher(raw);
+        if (m.find()) {
+            return String.format("Value too large for field '%s': %s characters supplied, maximum allowed is %s.",
+                    m.group(1), m.group(2), m.group(3));
+        }
+        return "One of the submitted values is longer than the field allows.";
     }
 
     /**
