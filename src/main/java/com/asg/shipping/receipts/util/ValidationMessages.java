@@ -27,9 +27,6 @@ public class ValidationMessages {
 	// Cash payment messages
 	public static final String CASH_ROUNDING_INVALID = "Cash ({0}) should be roundoff";
 	
-	// Split payment messages
-	public static final String SPLIT_PAYMENT_NOT_ALLOWED = "Multiple payment methods cannot be combined. Please use a single payment method.";
-	
 	// Blacklist messages
 	public static final String CUSTOMER_BLACKLISTED = "Customer with Account Number {0} is blacklisted and cannot process payments. Please contact administrator.";
 	
