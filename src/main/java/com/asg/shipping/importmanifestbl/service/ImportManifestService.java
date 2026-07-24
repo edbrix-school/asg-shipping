@@ -48,4 +48,5 @@ public interface ImportManifestService {
 
     String saveEmails(Long transactionPoId, SaveEmailsRequestDto request);
     ChargeDefaultsResponseDto getChargeDefaults(ChargeDefaultsRequestDto request);
+    java.util.List<ConsigneeEmailDto> getConsigneeEmails(Long transactionPoId);
 }
