@@ -9,6 +9,7 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestupdate.service.ImportManifestBlService;
@@ -27,7 +28,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -50,6 +51,7 @@ public class ImportManifestBlController {
     private final LoggingService loggingService;
     private final ImportManifestService manifestService;
     private final ImportManifestBlService service;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
@@ -320,8 +322,9 @@ public class ImportManifestBlController {
         try {
             byte[] pdf = manifestService.printCargoArrivalNotice(voyageTransactionPoid, transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-update-bl-cargo-arrival-notice-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            UserContext.getDocumentId(), transactionPoid,
+                            "import-manifest-update-bl-cargo-arrival-notice", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -339,8 +342,9 @@ public class ImportManifestBlController {
         try {
             byte[] pdf = manifestService.printUnclearedCargoNotice(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-update-bl-uncleared-cargo-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            UserContext.getDocumentId(), transactionPoid,
+                            "import-manifest-update-bl-uncleared-cargo", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -362,8 +366,9 @@ public class ImportManifestBlController {
         try {
             byte[] pdf = manifestService.printCargoManifest(transactionPoid, isCargoManifestPrint);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-update-bl-cargo-manifest-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            UserContext.getDocumentId(), transactionPoid,
+                            "import-manifest-update-bl-cargo-manifest", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
