@@ -76,9 +76,9 @@ public interface LineTariffsService {
     LineTariffDto copyLineTariff(Long id, CopyTariffRequestDTO request, Long groupPoid, Long userPoid);
 
     /**
-     * Copy slab data from collectable to payable detail records (matching by containerTypePoid).
-     * DMG: copies ImpDtl slabs -> ImpPayDtl
-     * DTN: copies ExpDtl slabs -> ExpPayDtl
+     * Copy slab data from collectable to payable detail records as a full mirror.
+     * DMG: mirrors ImpDtl rows -> ImpPayDtl (clears existing payable, then creates one payable row per collectable)
+     * DTN: mirrors ExpDtl rows -> ExpPayDtl (clears existing payable, then creates one payable row per collectable)
      *
      * @param id TRANSACTION_POID
      * @param type "DMG" for import demurrage, "DTN" for export detention
