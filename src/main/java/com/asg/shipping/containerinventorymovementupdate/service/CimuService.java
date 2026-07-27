@@ -19,6 +19,8 @@ public interface CimuService {
 
     InspectionLoadResponse loadContainerDetails();
 
+    OpenExportManifestResponse openExportManifestData(OpenExportManifestRequest request);
+
 }
 
 

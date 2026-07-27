@@ -195,6 +195,26 @@ public class CimuQueryRepository {
         jdbcTemplate.update(sql);
     }
 
+    /**
+     * Legacy: FUNC_SHIP_GET_EBL_POID(exportBlNumber) — returns the export BL transaction poid as VARCHAR.
+     */
+    public Long fetchEblPoid(String exportBlNumber) {
+        String sql = "BEGIN ? := FUNC_SHIP_GET_EBL_POID(?); END;";
+        log.info("Calling FUNC_SHIP_GET_EBL_POID | exportBlNumber={}", exportBlNumber);
+        return jdbcTemplate.execute((java.sql.Connection con) -> {
+            try (java.sql.CallableStatement cs = con.prepareCall(sql)) {
+                cs.registerOutParameter(1, java.sql.Types.VARCHAR);
+                cs.setObject(2, exportBlNumber);
+                cs.execute();
+                String retVal = cs.getString(1);
+                return retVal != null ? new java.math.BigDecimal(retVal).longValue() : null;
+            } catch (java.sql.SQLException e) {
+                log.error("Error calling FUNC_SHIP_GET_EBL_POID: {}", e.getMessage(), e);
+                throw new RuntimeException("Error calling FUNC_SHIP_GET_EBL_POID: " + e.getMessage(), e);
+            }
+        });
+    }
+
     public void insertInspectionTempTable(String slNo, String containerNo, String movesDate,
                                           String lineName, String sizeType, String locationStatus,
                                           String containerStatus, String remarks) {
