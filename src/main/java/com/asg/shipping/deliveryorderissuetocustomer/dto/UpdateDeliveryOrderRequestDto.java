@@ -36,6 +36,12 @@ public class UpdateDeliveryOrderRequestDto {
     @Size(max = 50, message = "Principal DO number must not exceed 50 characters")
     private String principalDoNumber;
 
+    @Size(max = 1, message = "DO count to consignee must not exceed 1 character")
+    private String doCntToConsignee;
+
+    @Size(max = 1, message = "DO count to notify must not exceed 1 character")
+    private String doCntToNotify;
+
     @Size(max = 1, message = "DO count to others must not exceed 1 character")
     private String doCntToOthers;
 
