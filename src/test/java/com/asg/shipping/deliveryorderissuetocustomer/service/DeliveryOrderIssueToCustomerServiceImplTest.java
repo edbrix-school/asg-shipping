@@ -7,12 +7,14 @@ import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import com.asg.shipping.deliveryorderissuetocustomer.dto.ValidateDocumentDto;
 import com.asg.shipping.deliveryorderissuetocustomer.entity.DoShPrintingDtl;
 import com.asg.shipping.deliveryorderissuetocustomer.entity.ShipBlManifestHDR;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIssueToCustomerRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
 import com.asg.shipping.receipts.repository.ReceiptHdrRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.validation.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -23,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -55,6 +58,9 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
 
     @Mock
     private ReceiptHdrRepository receiptHdrRepository;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private DeliveryOrderIssueToCustomerServiceImpl service;
@@ -112,6 +118,8 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
                 .doPriority("MEDIUM")
                 .deliverySentTo("N")
                 .build();
+
+        ReflectionTestUtils.setField(service, "entityManager", entityManager);
     }
 
     @Test
@@ -240,18 +248,18 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
             userContextMock.when(UserContext::getUserName).thenReturn("testuser");
-            
-            when(doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.of(mockPrintingDtl));
-            when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.of(mockEntity));
-            when(blManifestRepository.save(any(ShipBlManifestHDR.class))).thenReturn(mockEntity);
-            when(doShPrintingDtlRepository.save(any(DoShPrintingDtl.class))).thenReturn(mockPrintingDtl);
+            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
+            userContextMock.when(UserContext::getDocumentId).thenReturn("DOC001");
 
-            Long result = service.updateDeliveryOrder(transactionPoid, updateRequest);
+            when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.of(mockEntity));
+            when(doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.of(mockPrintingDtl));
+            doNothing().when(entityManager).refresh(any());
+            when(viewRepository.getGlobalParameterValue(any(), any(), any(), any())).thenReturn("N");
+
+            ValidateDocumentDto result = service.updateDeliveryOrder(transactionPoid, updateRequest);
 
             assertNotNull(result);
-            assertEquals(transactionPoid, result);
-            verify(blManifestRepository).save(any(ShipBlManifestHDR.class));
-            verify(doShPrintingDtlRepository).save(any(DoShPrintingDtl.class));
         }
     }
 
@@ -261,12 +269,18 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
         
         try (MockedStatic<UserContext> userContextMock = mockStatic(UserContext.class)) {
             userContextMock.when(UserContext::getUserName).thenReturn("testuser");
-            
+            userContextMock.when(UserContext::getGroupPoid).thenReturn(1L);
+            userContextMock.when(UserContext::getCompanyPoid).thenReturn(100L);
+            userContextMock.when(UserContext::getDocumentId).thenReturn("DOC001");
+
             when(blManifestRepository.findById(transactionPoid)).thenReturn(Optional.of(mockEntity));
             when(doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)).thenReturn(Optional.empty());
+            doNothing().when(entityManager).refresh(any());
+            when(viewRepository.getGlobalParameterValue(any(), any(), any(), any())).thenReturn("N");
 
-            assertThrows(ResourceNotFoundException.class, 
-                    () -> service.updateDeliveryOrder(transactionPoid, updateRequest));
+            // proc-based path treats missing DoShPrintingDtl as null (orElse(null)), not an exception
+            ValidateDocumentDto result = service.updateDeliveryOrder(transactionPoid, updateRequest);
+            assertNotNull(result);
         }
     }
 
