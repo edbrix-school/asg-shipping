@@ -31,6 +31,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import javax.sql.DataSource;
 import java.io.InputStream;
 import java.sql.CallableStatement;
@@ -59,6 +61,9 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final LoggingService loggingService;
     private final DocumentSearchService documentSearchService;
     private final ReceiptHdrRepository receiptHdrRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private static final String ARSHRCPTPRINTUPDATE = "ARSHRCPTPRINTUPDATE";
     private static final String TRANSACTIONPOID = "transactionPoid";
@@ -114,8 +119,134 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     @Override
     @Transactional
-    public Long updateDeliveryOrder(Long transactionPoid, UpdateDeliveryOrderRequestDto request) {
+    public ValidateDocumentDto updateDeliveryOrder(Long transactionPoid, UpdateDeliveryOrderRequestDto request) {
+        return updateDeliveryOrderViaProc(transactionPoid, request);
+    }
 
+    // update via PROC_SHIP_DO_CNT_PRINT_AFTER — P_DO_PRIORITY = 'C' or 'N' triggers the main update block
+    private ValidateDocumentDto updateDeliveryOrderViaProc(Long transactionPoid, UpdateDeliveryOrderRequestDto request) {
+        log.info("Updating delivery order via procedure for BL transaction: {}", transactionPoid);
+
+        // UI sends LOV value (poid: "1","2","3","4") — DB/procedure expects LOV code ("C","N","B","O")
+        String doPriorityCode = mapDoPriorityToCode(request.getDoPriority());
+        String deliverySentToCode = mapDeliverySentToCode(request.getDeliverySentTo());
+
+        log.info("[updateDeliveryOrder] doPriority: {} -> {}, deliverySentTo: {} -> {}",
+                request.getDoPriority(), doPriorityCode, request.getDeliverySentTo(), deliverySentToCode);
+
+        // snapshot BEFORE procedure runs — for logDetails diff
+        ShipBlManifestHDR oldBlManifest = blManifestRepository.findById(transactionPoid)
+                .orElseThrow(() -> new ResourceNotFoundException("BL Manifest", TRANSACTIONPOID, transactionPoid.toString()));
+        ShipBlManifestHDR oldBlManifestSnapshot = new ShipBlManifestHDR();
+        BeanUtils.copyProperties(oldBlManifest, oldBlManifestSnapshot);
+
+        log.info("[updateDeliveryOrder] BEFORE — doPriority={}, deliverySentTo={}, doCntToConsignee={}, doCntToNotify={}, doCntToOthers={}, doCntToOthersMails={}, principalDoNumber={}, doIssueAuth={}",
+                oldBlManifest.getDoPriority(), oldBlManifest.getDeliverySentTo(),
+                oldBlManifest.getDoCntToConsignee(), oldBlManifest.getDoCntToNotify(),
+                oldBlManifest.getDoCntToOthers(), oldBlManifest.getDoCntToOthersMails(),
+                oldBlManifest.getPrincipalDoNumber(), oldBlManifest.getDoIssueAuth());
+
+        DoShPrintingDtl oldDoShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid)
+                .orElse(null);
+        DoShPrintingDtl oldDoShPrintingDtlSnapshot = null;
+        if (oldDoShPrintingDtl != null) {
+            oldDoShPrintingDtlSnapshot = new DoShPrintingDtl();
+            BeanUtils.copyProperties(oldDoShPrintingDtl, oldDoShPrintingDtlSnapshot);
+            log.info("[updateDeliveryOrder] BEFORE — doReleasedIdPerson={}, doReleasedToPerson={}, doReleasedAddrsPerson={}, orignalBlReleaseCr={}, reprintBy={}",
+                    oldDoShPrintingDtl.getDoReleasedIdPerson(), oldDoShPrintingDtl.getDoReleasedToPerson(),
+                    oldDoShPrintingDtl.getDoReleasedAddrsPerson(), oldDoShPrintingDtl.getOrignalBlReleaseCr(),
+                    oldDoShPrintingDtl.getReprintBy());
+        } else {
+            log.info("[updateDeliveryOrder] BEFORE — DoShPrintingDtl row does not exist yet for transactionPoid={}", transactionPoid);
+        }
+
+        callProcShipDoCntPrintAfter(
+                getGroupPoid(),
+                getCompanyPoid(),
+                transactionPoid,
+                null,
+                doPriorityCode,                    // P_UPDATE_TYPE: 'C' or 'N' triggers main update block
+                getUserName(),
+                request.getDoReleasedIdPerson(),
+                request.getDoReleasedToPerson(),
+                request.getDoReleasedAddressPerson(),
+                request.getOriginalBlReleaseCr(),
+                doPriorityCode,                    // P_DO_PRIORITY: code value for get_address_DO_NAME()
+                StringUtils.defaultIfBlank(request.getDoCntToConsignee(), "N"),
+                StringUtils.defaultIfBlank(request.getDoCntToNotify(), "N"),
+                request.getDoCntToOthers(),
+                request.getDoCntToOthersMails(),
+                null,                              // P_DO_CNT_TO_REGS_MAILS: computed internally by procedure
+                deliverySentToCode,
+                request.getPrincipalDoNumber()
+        );
+
+        // refresh AFTER procedure runs — evict from JPA cache first so we get fresh DB values
+        // procedure uses AUTONOMOUS_TRANSACTION so its COMMIT is already done
+        entityManager.refresh(oldBlManifest);
+        ShipBlManifestHDR newBlManifest = oldBlManifest;
+
+        DoShPrintingDtl newDoShPrintingDtl = null;
+        if (oldDoShPrintingDtl != null) {
+            entityManager.refresh(oldDoShPrintingDtl);
+            newDoShPrintingDtl = oldDoShPrintingDtl;
+        } else {
+            // row may have been inserted by procedure — try loading it now
+            newDoShPrintingDtl = doShPrintingDtlRepository.findByTransactionPoid(transactionPoid).orElse(null);
+        }
+
+        log.info("[updateDeliveryOrder] AFTER — doPriority={}, deliverySentTo={}, doCntToConsignee={}, doCntToNotify={}, doCntToOthers={}, doCntToOthersMails={}, principalDoNumber={}, doIssueAuth={}",
+                newBlManifest.getDoPriority(), newBlManifest.getDeliverySentTo(),
+                newBlManifest.getDoCntToConsignee(), newBlManifest.getDoCntToNotify(),
+                newBlManifest.getDoCntToOthers(), newBlManifest.getDoCntToOthersMails(),
+                newBlManifest.getPrincipalDoNumber(), newBlManifest.getDoIssueAuth());
+
+        if (newDoShPrintingDtl != null) {
+            log.info("[updateDeliveryOrder] AFTER — doReleasedIdPerson={}, doReleasedToPerson={}, doReleasedAddrsPerson={}, orignalBlReleaseCr={}, reprintBy={}",
+                    newDoShPrintingDtl.getDoReleasedIdPerson(), newDoShPrintingDtl.getDoReleasedToPerson(),
+                    newDoShPrintingDtl.getDoReleasedAddrsPerson(), newDoShPrintingDtl.getOrignalBlReleaseCr(),
+                    newDoShPrintingDtl.getReprintBy());
+        } else {
+            log.info("[updateDeliveryOrder] AFTER — DoShPrintingDtl row still does not exist for transactionPoid={}", transactionPoid);
+        }
+
+        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, UserContext.getDocumentId(), transactionPoid.toString());
+        loggingService.logDetails(oldBlManifestSnapshot, newBlManifest, ShipBlManifestHDR.class, UserContext.getDocumentId(), transactionPoid.toString(), "TRANSACTION_POID");
+        if (oldDoShPrintingDtlSnapshot != null && newDoShPrintingDtl != null) {
+            loggingService.logDetails(oldDoShPrintingDtlSnapshot, newDoShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), "TRANSACTION_POID");
+        }
+
+        String canSendEmail = viewRepository.getGlobalParameterValue("START_DO_CNT_DIRECT_CUST", "START_DO_CNT_CUST", "1", "N");
+        log.info("[updateDeliveryOrder] canSendEmail={}", canSendEmail);
+        if ("Y".equalsIgnoreCase(canSendEmail)) {
+            return new ValidateDocumentDto(false, "Verification Completed");
+        }
+        return new ValidateDocumentDto(true, null);
+    }
+
+    // DO_PRIORITY_SH: poid 1=C(Consignee), 2=N(Notify)
+    private String mapDoPriorityToCode(String value) {
+        return switch (StringUtils.defaultIfBlank(value, "1")) {
+            case "1" -> "C";
+            case "2" -> "N";
+            default  -> value; // already a code (C/N), pass as-is
+        };
+    }
+
+    // DELIVERY_SENT_TO: poid 1=C(Consignee), 2=N(Notify), 3=B(Both), 4=O(Only Additional Emails)
+    private String mapDeliverySentToCode(String value) {
+        return switch (StringUtils.defaultIfBlank(value, "1")) {
+            case "1" -> "C";
+            case "2" -> "N";
+            case "3" -> "B";
+            case "4" -> "O";
+            default  -> value; // already a code (C/N/B/O), pass as-is
+        };
+    }
+
+    // OLD: update via JPA (kept for reference)
+    /*
+    private Long updateDeliveryOrderViaJpa(Long transactionPoid, UpdateDeliveryOrderRequestDto request) {
         log.info("Updating delivery order for BL transaction: {}", transactionPoid);
 
         ShipBlManifestHDR blManifest = blManifestRepository.findById(transactionPoid)
@@ -171,6 +302,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         loggingService.logDetails(oldDoShPrintingDtl, doShPrintingDtl, DoShPrintingDtl.class, UserContext.getDocumentId(), transactionPoid.toString(), "TRANSACTION_POID");
         return transactionPoid;
     }
+    */
 
     @Override
     public byte[] print(Long transactionPoid, IssueDeliveryOrderRequestDto requestDto, ButtonType buttonType) throws Exception {
@@ -188,7 +320,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                 dtl.getDoReleasedIdPerson(), dtl.getDoReleasedToPerson(), dtl.getDoReleasedAddrsPerson(), dtl.getOrignalBlReleaseCr());
 
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-414");
-        params.put("P_TRAN_NO", transactionPoid);
+        params.put("P_TRAN_NO", transactionPoid.toString()); // JRXML declares P_TRAN_NO as java.lang.String
         log.info("[PRINT] Params built, keys={}", params.keySet());
 
         byte[] result = generatePrintByButtonType(transactionPoid, buttonType, params);
@@ -205,6 +337,8 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         return new byte[0]; // unreachable — generate methods now throw instead of returning null
     }
 
+    // validateDocument is no longer used — edit API handles save + canPrint check
+    /*
     @Override
     public ValidateDocumentDto validateDocument(Long id, IssueDeliveryOrderRequestDto requestDto) {
 
@@ -238,6 +372,12 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         }
         return new ValidateDocumentDto(true, null);
     }
+    */
+
+    @Override
+    public ValidateDocumentDto validateDocument(Long id, IssueDeliveryOrderRequestDto requestDto) {
+        throw new UnsupportedOperationException("validateDocument is no longer used. Use the edit API instead.");
+    }
 
     private byte[] generatePrintByButtonType(Long transactionPoid, ButtonType buttonType, Map<String, Object> params) throws Exception {
         return switch (buttonType) {
@@ -248,11 +388,24 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     }
 
     private byte[] generateDeliveryOrderPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
-        if (!validatePrintDocument(transactionPoid, "DO")) {
+        log.info("[DELIVERYORDERPRINT] Starting for transactionPoid={}", transactionPoid);
+        boolean canPrint = validatePrintDocument(transactionPoid, "DO");
+        log.info("[DELIVERYORDERPRINT] validatePrintDocument result={}", canPrint);
+        if (!canPrint) {
             throw new ValidationException("Delivery order print is not enabled for this shipping line");
         }
-        JasperReport mainReport = printService.load("Shipping/SH/DO_SH.jrxml");
-        return printService.fillReportToPdf(mainReport, params, dataSource);
+        String templatePath = "Shipping/SH/DO_SH.jrxml";
+        log.info("[DELIVERYORDERPRINT] Loading template={}", templatePath);
+        JasperReport mainReport = printService.load(templatePath);
+        log.info("[DELIVERYORDERPRINT] Template loaded, calling fillReportToPdf with P_TRAN_NO={}, paramKeys={}",
+                params.get("P_TRAN_NO"), params.keySet());
+        byte[] pdf = printService.fillReportToPdf(mainReport, params, dataSource);
+        log.info("[DELIVERYORDERPRINT] fillReportToPdf completed, pdfSize={} bytes", pdf != null ? pdf.length : 0);
+        if (pdf != null && pdf.length <= 1024) {
+            log.warn("[DELIVERYORDERPRINT] PDF is suspiciously small ({} bytes) — likely empty report (no rows returned by query) for transactionPoid={}",
+                    pdf.length, transactionPoid);
+        }
+        return pdf;
     }
 
     private byte[] generateContainerFormPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
@@ -302,9 +455,15 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             }
         }
 
-        log.info("[CONTAINERFORMPRINT] Calling fillReportToPdf with params keys={}", params.keySet());
+        log.info("[CONTAINERFORMPRINT] Calling fillReportToPdf with P_TRAN_NO={}, paramKeys={}",
+                params.get("P_TRAN_NO"), params.keySet());
         byte[] pdf = printService.fillReportToPdf(mainReport, params, dataSource);
         log.info("[CONTAINERFORMPRINT] fillReportToPdf completed, pdfSize={} bytes", pdf != null ? pdf.length : 0);
+        if (pdf != null && pdf.length <= 1024) {
+            log.warn("[CONTAINERFORMPRINT] PDF is suspiciously small ({} bytes) — likely empty report (no rows returned by query) for transactionPoid={}",
+                    pdf.length, transactionPoid);
+            diagnoseCntFormQuery(transactionPoid);
+        }
         return pdf;
     }
 
@@ -322,25 +481,40 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         JasperReport mainReport = printService.load(templatePath);
         log.info("[RETURNFORMPRINT] Template loaded successfully");
 
-        log.info("[RETURNFORMPRINT] Calling fillReportToPdf with params keys={}", params.keySet());
+        log.info("[RETURNFORMPRINT] Calling fillReportToPdf with P_TRAN_NO={}, paramKeys={}",
+                params.get("P_TRAN_NO"), params.keySet());
         byte[] pdf = printService.fillReportToPdf(mainReport, params, dataSource);
         log.info("[RETURNFORMPRINT] fillReportToPdf completed, pdfSize={} bytes", pdf != null ? pdf.length : 0);
+        if (pdf != null && pdf.length <= 1024) {
+            log.warn("[RETURNFORMPRINT] PDF is suspiciously small ({} bytes) — likely empty report (no rows returned by query) for transactionPoid={}",
+                    pdf.length, transactionPoid);
+        }
         return pdf;
     }
 
     private boolean validatePrintDocument(Long transactionPoid, String docType) {
+        log.info("[validatePrintDocument] START transactionPoid={}, docType={}", transactionPoid, docType);
+
         String printCheck = checkPrintDocumentData(transactionPoid, docType);
-        log.info("[validatePrintDocument] transactionPoid={}, docType={}, lineEnabledCheck={}", transactionPoid, docType, printCheck);
+        log.info("[validatePrintDocument] SHIP_LINE_MASTER check: docType={}, lineEnabled={}, transactionPoid={}",
+                docType, printCheck, transactionPoid);
         if ("N".equalsIgnoreCase(printCheck)) {
-            log.warn("[validatePrintDocument] Print not enabled in SHIP_LINE_MASTER for docType={}, transactionPoid={}", docType, transactionPoid);
+            log.warn("[validatePrintDocument] BLOCKED — print not enabled in SHIP_LINE_MASTER for docType={}, transactionPoid={}",
+                    docType, transactionPoid);
             return false;
         }
+
         String alreadyPrinted = viewRepository.printDocumentAlreadyPrinted(docType, transactionPoid);
-        log.info("[validatePrintDocument] alreadyPrinted={} for docType={}, transactionPoid={}", alreadyPrinted, docType, transactionPoid);
+        log.info("[validatePrintDocument] alreadyPrinted check: docType={}, alreadyPrinted={}, transactionPoid={}",
+                docType, alreadyPrinted, transactionPoid);
         if ("Y".equalsIgnoreCase(alreadyPrinted)) {
-            log.warn("[validatePrintDocument] Document already printed for docType={}, transactionPoid={}", docType, transactionPoid);
+            log.warn("[validatePrintDocument] BLOCKED — document already printed for docType={}, transactionPoid={}",
+                    docType, transactionPoid);
             return false;
         }
+
+        log.info("[validatePrintDocument] PASSED — proceeding to fill report for docType={}, transactionPoid={}",
+                docType, transactionPoid);
         return true;
     }
 
@@ -500,10 +674,12 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     }
 
     public String checkPrintDocumentData(Long transactionPoid, String printType) {
+        log.info("[checkPrintDocumentData] START transactionPoid={}, printType={}", transactionPoid, printType);
         try {
             List<Object[]> results = viewRepository.fetchShipLineDetails(transactionPoid);
 
             if (results.isEmpty()) {
+                log.warn("[checkPrintDocumentData] No SHIP_LINE_MASTER row found for transactionPoid={} — returning N", transactionPoid);
                 return "N";
             }
 
@@ -514,20 +690,105 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             String lineCode = convertToString(row[3]);
             String rcptPrintLine = convertToString(row[4]);
 
-            log.info("checkPrintDocumentData for transactionPoid={}, printType={}: CONTAINER_FORM_VHENT={}, CONTAINER_FORM_RTN={}, DO_PRINT_LINE={}, LINE_CODE={}, RCPT_PRINT_LINE={}",
+            log.info("[checkPrintDocumentData] SHIP_LINE_MASTER values: transactionPoid={}, printType={}, " +
+                            "CONTAINER_FORM_VHENT={}, CONTAINER_FORM_RTN={}, DO_PRINT_LINE={}, LINE_CODE={}, RCPT_PRINT_LINE={}",
                     transactionPoid, printType, containerFormVhent, containerFormRtn, doPrintLine, lineCode, rcptPrintLine);
 
-            return switch (printType.toUpperCase()) {
-                case "DO" -> doPrintLine != null ? doPrintLine : "N";
+            String result = switch (printType.toUpperCase()) {
+                case "DO"     -> doPrintLine != null ? doPrintLine : "N";
                 case "RTNCNT" -> containerFormRtn != null ? containerFormRtn : "N";
                 case "DLVCNT" -> containerFormVhent != null ? containerFormVhent : "N";
                 case "RCPCNT" -> rcptPrintLine != null ? rcptPrintLine : "N";
-                default -> "N";
+                default       -> "N";
             };
 
+            log.info("[checkPrintDocumentData] Result for printType={}: enabled={}, transactionPoid={}",
+                    printType, result, transactionPoid);
+            return result;
+
         } catch (Exception e) {
-            log.error("Error checking print document data", e);
+            log.error("[checkPrintDocumentData] Error fetching SHIP_LINE_MASTER for transactionPoid={}, printType={}",
+                    transactionPoid, printType, e);
             return "N";
+        }
+    }
+
+    /**
+     * Runs each WHERE-clause filter of Container_Delivery_Validity.jrxml independently
+     * and logs the row count so we can pinpoint which condition eliminates the data.
+     * Called only when the PDF comes back suspiciously small (empty report).
+     */
+    private void diagnoseCntFormQuery(Long transactionPoid) {
+        log.warn("[DIAGNOSE-CNTFORM] Starting query filter diagnosis for transactionPoid={}", transactionPoid);
+
+        // Base join — no filters yet
+        String base =
+            "SELECT COUNT(*) FROM SHIP_BL_MANIFEST_CONTAINER_DTL D " +
+            "JOIN SHIP_BL_MANIFEST_HDR H ON D.TRANSACTION_POID = H.TRANSACTION_POID " +
+            "JOIN SHIP_VOYAGE_HDR VY ON VY.TRANSACTION_POID = H.VOYAGE_TRANSACTION_POID " +
+            "JOIN SHIP_LINE_MASTER SLN ON SLN.LINE_POID = VY.LINE_POID " +
+            "JOIN SHIP_CONTAINER_TYPE_MASTER CONTTYP ON CONTTYP.CONTAINER_TYPE_CODE = D.EQUIPMENT_ISO_TYPE " +
+            "JOIN SHIP_LINE_TARIFF_HDR shlinetHD ON shlinetHD.LINE_POID = VY.LINE_POID " +
+            "JOIN SHIP_LINE_TARIFF_IMP_DTL shlinetrf ON shlinetHD.TRANSACTION_POID = shlinetrf.TRANSACTION_POID " +
+            "  AND shlinetrf.CONTAINER_TYPE_POID = GET_CONTAINER_CODE_POID(D.EQUIPMENT_ISO_TYPE) " +
+            "WHERE H.TRANSACTION_POID = ?";
+
+        logCount("[DIAGNOSE-CNTFORM] 1. Base joins only (no filters)", base, transactionPoid);
+
+        logCount("[DIAGNOSE-CNTFORM] 2. + RETURN_FROM_CONSIGNEE IS NULL",
+            base + " AND D.RETURN_FROM_CONSIGNEE IS NULL", transactionPoid);
+
+        logCount("[DIAGNOSE-CNTFORM] 3. + HOLD_REASON filter (IS NULL OR NOT IN '1','3')",
+            base + " AND D.RETURN_FROM_CONSIGNEE IS NULL" +
+            " AND (D.HOLD_REASON IS NULL OR D.HOLD_REASON NOT IN ('1','3'))", transactionPoid);
+
+        logCount("[DIAGNOSE-CNTFORM] 4. + CONTAINER_TYPE_CATEGORY NOT IN ('SPL','REF')",
+            base + " AND D.RETURN_FROM_CONSIGNEE IS NULL" +
+            " AND (D.HOLD_REASON IS NULL OR D.HOLD_REASON NOT IN ('1','3'))" +
+            " AND CONTTYP.CONTAINER_TYPE_CATEGORY NOT IN ('SPL','REF')", transactionPoid);
+
+        logCount("[DIAGNOSE-CNTFORM] 5. + NVL(SLN.CONTAINER_FORM_RTN,'N')='Y'",
+            base + " AND D.RETURN_FROM_CONSIGNEE IS NULL" +
+            " AND (D.HOLD_REASON IS NULL OR D.HOLD_REASON NOT IN ('1','3'))" +
+            " AND CONTTYP.CONTAINER_TYPE_CATEGORY NOT IN ('SPL','REF')" +
+            " AND NVL(SLN.CONTAINER_FORM_RTN,'N') = 'Y'", transactionPoid);
+
+        logCount("[DIAGNOSE-CNTFORM] 6. + LINE_POID NOT IN (COS/BSL 20ft exclusion)",
+            base + " AND D.RETURN_FROM_CONSIGNEE IS NULL" +
+            " AND (D.HOLD_REASON IS NULL OR D.HOLD_REASON NOT IN ('1','3'))" +
+            " AND CONTTYP.CONTAINER_TYPE_CATEGORY NOT IN ('SPL','REF')" +
+            " AND NVL(SLN.CONTAINER_FORM_RTN,'N') = 'Y'" +
+            " AND VY.LINE_POID NOT IN (SELECT LINE_POID FROM SHIP_LINE_MASTER WHERE LINE_CODE IN ('COS','BSL') AND CONTAINER_TYPE_SIZE='20')",
+            transactionPoid);
+
+        logCount("[DIAGNOSE-CNTFORM] 7. + ARRIVAL_DATE BETWEEN PERIOD_FROM AND PERIOD_TO (tariff date range)",
+            base + " AND D.RETURN_FROM_CONSIGNEE IS NULL" +
+            " AND (D.HOLD_REASON IS NULL OR D.HOLD_REASON NOT IN ('1','3'))" +
+            " AND CONTTYP.CONTAINER_TYPE_CATEGORY NOT IN ('SPL','REF')" +
+            " AND NVL(SLN.CONTAINER_FORM_RTN,'N') = 'Y'" +
+            " AND VY.LINE_POID NOT IN (SELECT LINE_POID FROM SHIP_LINE_MASTER WHERE LINE_CODE IN ('COS','BSL') AND CONTAINER_TYPE_SIZE='20')" +
+            " AND TO_DATE(NVL(VY.ARRIVAL_DATE, VY.EXPECTED_DATE)) BETWEEN TO_DATE(shlinetrf.PERIOD_FROM) AND TO_DATE(shlinetrf.PERIOD_TO)",
+            transactionPoid);
+
+        logCount("[DIAGNOSE-CNTFORM] 8. + NVL(print_return_form_DEFAULT,'N') IN ('Y','MANUALLYPRINT') — FULL query",
+            base + " AND D.RETURN_FROM_CONSIGNEE IS NULL" +
+            " AND (D.HOLD_REASON IS NULL OR D.HOLD_REASON NOT IN ('1','3'))" +
+            " AND CONTTYP.CONTAINER_TYPE_CATEGORY NOT IN ('SPL','REF')" +
+            " AND NVL(SLN.CONTAINER_FORM_RTN,'N') = 'Y'" +
+            " AND VY.LINE_POID NOT IN (SELECT LINE_POID FROM SHIP_LINE_MASTER WHERE LINE_CODE IN ('COS','BSL') AND CONTAINER_TYPE_SIZE='20')" +
+            " AND TO_DATE(NVL(VY.ARRIVAL_DATE, VY.EXPECTED_DATE)) BETWEEN TO_DATE(shlinetrf.PERIOD_FROM) AND TO_DATE(shlinetrf.PERIOD_TO)" +
+            " AND NVL(shlinetrf.PRINT_RETURN_FORM_DEFAULT,'N') IN ('Y','MANUALLYPRINT')",
+            transactionPoid);
+
+        log.warn("[DIAGNOSE-CNTFORM] Diagnosis complete for transactionPoid={}", transactionPoid);
+    }
+
+    private void logCount(String label, String sql, Long transactionPoid) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(sql, Integer.class, transactionPoid);
+            log.warn("{} => rowCount={}", label, count);
+        } catch (Exception e) {
+            log.error("{} => ERROR: {}", label, e.getMessage());
         }
     }
 

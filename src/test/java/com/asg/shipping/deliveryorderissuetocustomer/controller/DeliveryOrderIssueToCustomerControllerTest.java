@@ -7,6 +7,7 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.DeliveryOrderIssueToCustomerDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.IssueDeliveryOrderRequestDto;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.UpdateDeliveryOrderRequestDto;
+import com.asg.shipping.deliveryorderissuetocustomer.dto.ValidateDocumentDto;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,9 +43,7 @@ public class DeliveryOrderIssueToCustomerControllerTest {
     private LoggingService loggingService;
 
     @Spy
-
     private DocumentDownloadHeaderService downloadHeaderService =
-
             new DocumentDownloadHeaderService(mock(JdbcTemplate.class));
 
 
@@ -165,7 +164,7 @@ public class DeliveryOrderIssueToCustomerControllerTest {
     void updateDeliveryOrder_Success() throws Exception {
         Long id = 1L;
         when(service.updateDeliveryOrder(eq(id), any(UpdateDeliveryOrderRequestDto.class)))
-                .thenReturn(id);
+                .thenReturn(new ValidateDocumentDto(true, null));
 
         mockMvc.perform(put("/v1/delivery-order-issue-to-customer/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)

@@ -99,6 +99,10 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         // If customer was changed, delete old master + details first
         if (request.getOldCustomerPoid() != null
                 && !request.getOldCustomerPoid().equals(request.getCustomerPoid())) {
+            String docId = UserContext.getDocumentId();
+            String oldKey = request.getOldCustomerPoid().toString();
+            loggingService.createLogSummaryEntry(docId, oldKey,
+                    String.format("Customer changed from %s to %s", request.getOldCustomerPoid(), request.getCustomerPoid()));
             detailRepo.deleteAll(detailRepo.findByIdCustomerPoid(request.getOldCustomerPoid()));
             masterRepo.findById(request.getOldCustomerPoid()).ifPresent(masterRepo::delete);
         }
@@ -113,6 +117,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
 
         String docId = UserContext.getDocumentId();
         String key = request.getCustomerPoid().toString();
+        // Note: docId/key for old customer already used above if customer changed
 
         if (isNewRecord) {
             loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);

@@ -12,7 +12,7 @@ public interface DeliveryOrderIssueToCustomerService {
 
     void issueDeliveryOrder(Long id, IssueDeliveryOrderRequestDto request);
 
-    Long updateDeliveryOrder(Long id, UpdateDeliveryOrderRequestDto request);
+    ValidateDocumentDto updateDeliveryOrder(Long id, UpdateDeliveryOrderRequestDto request);
 
     byte[] print(Long transactionPoid, @Valid IssueDeliveryOrderRequestDto requestDto, ButtonType buttonType) throws Exception;
 

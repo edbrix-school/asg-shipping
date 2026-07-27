@@ -72,8 +72,8 @@ public class DeliveryOrderIssueToCustomerController {
     public ResponseEntity<?> updateDeliveryOrder(@PathVariable @NotNull Long id,
                                                  @Valid @RequestBody UpdateDeliveryOrderRequestDto request) {
         log.info("Update request for Delivery Order Issue To Customer with id: {}", id);
-        Long transactionPoid = deliveryOrderIssueToCustomerService.updateDeliveryOrder(id, request);
-        return success("Delivery order updated successfully", transactionPoid);
+        ValidateDocumentDto result = deliveryOrderIssueToCustomerService.updateDeliveryOrder(id, request);
+        return success("Delivery order updated successfully", result);
     }
 
 
@@ -98,6 +98,8 @@ public class DeliveryOrderIssueToCustomerController {
 
     }
 
+    // validateDocument endpoint is no longer used — edit API handles save + canPrint check
+    /*
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @PostMapping("/validate-document/{id}")
     public ResponseEntity<?> validateDocument(@PathVariable Long id, @Valid @RequestBody IssueDeliveryOrderRequestDto requestDto) {
@@ -105,6 +107,7 @@ public class DeliveryOrderIssueToCustomerController {
         loggingService.createLogSummaryEntry(LogDetailsEnum.VIEWED, UserContext.getDocumentId(), id.toString());
         return success("Delivery order validated successfully", dto);
     }
+    */
 
 
     /**
