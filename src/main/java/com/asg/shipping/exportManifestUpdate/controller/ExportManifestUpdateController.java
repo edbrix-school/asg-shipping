@@ -5,7 +5,9 @@ import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.shipping.exportManifestUpdate.dto.*;
+import com.asg.shipping.exportManifestUpdate.entity.ExportShipBlManifestHdr;
 import com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,6 +44,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.error;
 public class ExportManifestUpdateController {
 
     private final ExportManifestBlService service;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     // ========== Header Operations ==========
 
@@ -209,8 +212,8 @@ public class ExportManifestUpdateController {
             String docId = UserContext.getDocumentId();
             byte[] pdf = service.generateBlPrint(transactionPoid, request, docId);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=bl-print-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ExportShipBlManifestHdr.class, transactionPoid, "bl-print", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (ValidationException e) {
@@ -232,11 +235,10 @@ public class ExportManifestUpdateController {
         try {
             String docId = UserContext.getDocumentId();
             byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-            String fileName = request.isCargoManifest()
-                    ? "cargo-manifest-" : "freight-manifest-";
+            String prefix = request.isCargoManifest() ? "cargo-manifest" : "freight-manifest";
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=" + fileName + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ExportShipBlManifestHdr.class, transactionPoid, prefix, "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -254,8 +256,8 @@ public class ExportManifestUpdateController {
             String docId = UserContext.getDocumentId();
             byte[] pdf = service.generateDetentionStorage(transactionPoid, docId);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=detention-storage-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ExportShipBlManifestHdr.class, transactionPoid, "detention-storage", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
