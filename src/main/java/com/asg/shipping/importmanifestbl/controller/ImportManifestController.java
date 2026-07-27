@@ -29,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -230,7 +231,7 @@ public class ImportManifestController {
     })
     @GetMapping("/load-email-fax")
     public ResponseEntity<?> loadEmailFax(
-            @RequestParam Long addressMasterPoid,
+            @RequestParam BigDecimal addressMasterPoid,
             @RequestParam String addressType
     ) {
             LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(addressMasterPoid, addressType);

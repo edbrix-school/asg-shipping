@@ -646,6 +646,7 @@ public class ImportManifestMapper {
         entity.setPartBlNumber(dto.getPartBlNumber());
         entity.setShipperName(dto.getShipperName());
         entity.setConsigneeName(dto.getConsigneeName());
+        entity.setContainerNo(dto.getContainerNo() != null ? dto.getContainerNo().trim() : null);
         entity.setCargoDescription(dto.getCargoDescription());
         entity.setComodityPoid(dto.getCommodityPoid());
         entity.setNoOfPacks(dto.getPackageDetails());
@@ -668,7 +669,7 @@ public class ImportManifestMapper {
             entity.setId(id);
         }
 
-        entity.setAddressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid() : 1L);
+        entity.setAddressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid().longValue() : 1L);
         entity.setEmail1(dto.getEmail1());
         entity.setEmail2(dto.getEmail2());
         entity.setSendYesNo(dto.getSendYesNo());
