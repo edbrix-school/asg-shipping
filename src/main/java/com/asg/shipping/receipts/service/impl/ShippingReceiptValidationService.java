@@ -116,6 +116,7 @@ public class ShippingReceiptValidationService {
 		validateCashPayments(updateDto.getPaymentDetail());
 		validateDemurrageAmounts(updateDto.getBlPoid(), updateDto.getCharges(), updateDto.getContainer());
         validateDuplicateBlReceipt(updateDto.getBlPoid(), updateDto.getRemarks());
+		validateDuplicatePaymentRef(updateDto.getBlPoid(), updateDto.getPaymentReference());
 
 		log.info("Receipt update validation completed successfully");
 	}
