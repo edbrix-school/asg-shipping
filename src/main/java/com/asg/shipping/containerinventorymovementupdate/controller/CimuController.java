@@ -9,6 +9,8 @@ import com.asg.shipping.containerinventorymovementupdate.dto.DemurrageCalculateR
 import com.asg.shipping.containerinventorymovementupdate.dto.DemurrageCalculateResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.InspectionLoadResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.InspectionUploadResponse;
+import com.asg.shipping.containerinventorymovementupdate.dto.OpenExportManifestRequest;
+import com.asg.shipping.containerinventorymovementupdate.dto.OpenExportManifestResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.QueryCimuRequest;
 import com.asg.shipping.containerinventorymovementupdate.dto.QueryCimuResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.SocUpdateRequest;
@@ -136,6 +138,19 @@ public class CimuController {
 
         InspectionLoadResponse response = cimuService.loadContainerDetails();
         return success("Container details loaded", response);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @PostMapping("/open-export-manifest")
+    public ResponseEntity<?> openExportManifestData(
+            @Valid @RequestBody OpenExportManifestRequest request,
+            @RequestHeader("X-Document-Id") String docId
+    ) {
+        log.info("CIMU open-export-manifest | docId={} actionRequested={} userId={} userPoid={} exportBlNumber={} companyPoid={}",
+                docId, UserContext.getActionRequested(), UserContext.getUserId(), UserContext.getUserPoid(),
+                request.getExportBlNumber(), request.getCompanyPoid());
+        OpenExportManifestResponse response = cimuService.openExportManifestData(request);
+        return success("Export manifest data fetched successfully", response);
     }
 
 }
