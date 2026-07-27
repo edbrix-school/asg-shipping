@@ -2,6 +2,8 @@ package com.asg.shipping.importmanifestbl.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @Builder
@@ -13,7 +15,7 @@ public class ConsigneeEmailDto {
     private boolean send;
     private boolean select;
     private Long detRowId;
-    private Long addressPoid;
+    private BigDecimal addressPoid;
     private String email1;
     private String email2;
     private String addressType;

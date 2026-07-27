@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -200,7 +201,7 @@ class ImportManifestControllerTest {
     void testLoadEmailFax() throws Exception {
         LoadEmailFaxResponseDto response = LoadEmailFaxResponseDto.builder().build();
 
-        when(service.loadEmailFax(eq(1L), eq("CONSIGNEE"))).thenReturn(response);
+        when(service.loadEmailFax(eq(BigDecimal.valueOf(1L)), eq("CONSIGNEE"))).thenReturn(response);
 
         mockMvc.perform(get("/v1/import-manifest-bl/load-email-fax")
                         .param("addressMasterPoid", "1")

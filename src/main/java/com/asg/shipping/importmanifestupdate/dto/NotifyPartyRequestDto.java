@@ -2,6 +2,8 @@ package com.asg.shipping.importmanifestupdate.dto;
 
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @Builder
@@ -9,7 +11,7 @@ import lombok.*;
 @AllArgsConstructor
 public class NotifyPartyRequestDto {
     private Long detRowId;
-    private Long addressPoid;
+    private BigDecimal addressPoid;
     private String fax;
     private String email1;
     private String email2;

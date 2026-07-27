@@ -17,4 +17,8 @@ public interface ShipBlManifestEmailFaxDtlRepository  extends JpaRepository<Ship
 
     @Query("SELECT COALESCE(MAX(d.id.detRowId), 0) FROM ShipBlManifestEmailFaxDtl d WHERE d.id.transactionPoid = :transactionPoid")
     Long getMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
+
+    @Query("SELECT d FROM ShipBlManifestEmailFaxDtl d WHERE d.id.transactionPoid = :transactionPoid AND d.id.addressType = :addressType ORDER BY d.id.detRowId ASC")
+    List<ShipBlManifestEmailFaxDtl> findByIdTransactionPoidAndIdAddressType(
+            @Param("transactionPoid") Long transactionPoid, @Param("addressType") String addressType);
 }
