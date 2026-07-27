@@ -344,9 +344,11 @@ public class ExportManifestUpdateServiceImpl implements ExportManifestBlService 
 
         // --- Header ---
         // With @JsonUnwrapped, header is always non-null but fields may all be null if FE sent nothing.
-        // Use voyageTransactionPoid as a meaningful presence check.
+        // Voyage is the usual presence signal; also accept comodityPoid so commodity-only header edits persist.
         ExportManifestBlRequest headerReq = request.getHeader();
-        ExportManifestBlResponse headerResponse = (headerReq != null && headerReq.getVoyageTransactionPoid() != null)
+        boolean hasHeaderUpdate = headerReq != null
+                && (headerReq.getVoyageTransactionPoid() != null || headerReq.getComodityPoid() != null);
+        ExportManifestBlResponse headerResponse = hasHeaderUpdate
                 ? updateExportBl(transactionPoid, headerReq)
                 : loadMinimalHeader(transactionPoid);
 

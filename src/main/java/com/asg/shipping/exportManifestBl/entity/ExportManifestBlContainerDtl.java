@@ -52,11 +52,11 @@ public class ExportManifestBlContainerDtl extends BaseEntity {
     @Column(name = "EQUIPMENT_SIZE", length = 20)
     private String equipmentSize;
 
-    @Column(name = "QUANTITY")
-    private Long quantity;
+    @Column(name = "QUANTITY", precision = 25, scale = 3)
+    private BigDecimal quantity;
 
-    @Column(name = "GRS_VOLUME")
-    private Long grsVolume;
+    @Column(name = "GRS_VOLUME", precision = 25, scale = 3)
+    private BigDecimal grsVolume;
 
     @Column(name = "GRS_WEIGHT")
     private BigDecimal grsWeight;
