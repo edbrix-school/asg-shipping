@@ -33,7 +33,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -1213,100 +1212,101 @@ public class LineTariffsServiceImpl implements LineTariffsService {
     public void copySlabsToPayable(Long id, String type) {
         log.info("Copying slabs to payable for transactionPoid: {}, type: {}", id, type);
         if ("DMG".equalsIgnoreCase(type)) {
-            List<ShipLineTariffImpDtl> collectables = impDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-            List<ShipLineTariffImpPayDtl> payables = impPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-            Map<Long, ShipLineTariffImpPayDtl> payableByContainerType = payables.stream()
-                    .filter(p -> p.getContainerTypePoid() != null)
-                    .collect(Collectors.toMap(ShipLineTariffImpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
-            long maxDetRowId = payables.stream().map(ShipLineTariffImpPayDtl::getDetRowId).filter(Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
-            for (ShipLineTariffImpDtl col : collectables) {
-                if (col.getContainerTypePoid() == null || !hasTariffDetailData(
-                        col.getFreeDays(),
-                        col.getSlab1Tilldays(), col.getSlab1Rate(),
-                        col.getSlab2Tilldays(), col.getSlab2Rate(),
-                        col.getSlab3Tilldays(), col.getSlab3Rate(),
-                        col.getSlab4Tilldays(), col.getSlab4Rate(),
-                        col.getSlab5Tilldays(), col.getSlab5Rate(),
-                        col.getSlab6Tilldays(), col.getSlab6Rate(),
-                        col.getSlab7Tilldays(), col.getSlab7Rate())) {
-                    continue;
-                }
-                ShipLineTariffImpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
-                if (pay == null) {
-                    pay = new ShipLineTariffImpPayDtl();
-                    pay.setTransactionPoid(id);
-                    pay.setDetRowId(++maxDetRowId);
-                    pay.setContainerTypePoid(col.getContainerTypePoid());
-                    payableByContainerType.put(col.getContainerTypePoid(), pay);
-                }
-                pay.setFreeDays(col.getFreeDays());
-                pay.setSlab1Tilldays(col.getSlab1Tilldays()); pay.setSlab1Rate(col.getSlab1Rate());
-                pay.setSlab2Tilldays(col.getSlab2Tilldays()); pay.setSlab2Rate(col.getSlab2Rate());
-                pay.setSlab3Tilldays(col.getSlab3Tilldays()); pay.setSlab3Rate(col.getSlab3Rate());
-                pay.setSlab4Tilldays(col.getSlab4Tilldays()); pay.setSlab4Rate(col.getSlab4Rate());
-                pay.setSlab5Tilldays(col.getSlab5Tilldays()); pay.setSlab5Rate(col.getSlab5Rate());
-                pay.setSlab6Tilldays(col.getSlab6Tilldays()); pay.setSlab6Rate(col.getSlab6Rate());
-                pay.setSlab7Tilldays(col.getSlab7Tilldays()); pay.setSlab7Rate(col.getSlab7Rate());
-                impPayDtlRepository.save(pay);
-            }
+            copyImpCollectableToPayable(id);
         } else if ("DTN".equalsIgnoreCase(type)) {
-            List<ShipLineTariffExpDtl> collectables = expDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-            List<ShipLineTariffExpPayDtl> payables = expPayDtlRepository.findByTransactionPoidOrderByDetRowId(id);
-            Map<Long, ShipLineTariffExpPayDtl> payableByContainerType = payables.stream()
-                    .filter(p -> p.getContainerTypePoid() != null)
-                    .collect(Collectors.toMap(ShipLineTariffExpPayDtl::getContainerTypePoid, p -> p, (a, b) -> a));
-            long maxDetRowId = payables.stream().map(ShipLineTariffExpPayDtl::getDetRowId).filter(Objects::nonNull).mapToLong(Long::longValue).max().orElse(0L);
-            for (ShipLineTariffExpDtl col : collectables) {
-                if (col.getContainerTypePoid() == null || !hasTariffDetailData(
-                        col.getFreeDays(),
-                        col.getSlab1Tilldays(), col.getSlab1Rate(),
-                        col.getSlab2Tilldays(), col.getSlab2Rate(),
-                        col.getSlab3Tilldays(), col.getSlab3Rate(),
-                        col.getSlab4Tilldays(), col.getSlab4Rate(),
-                        col.getSlab5Tilldays(), col.getSlab5Rate(),
-                        col.getSlab6Tilldays(), col.getSlab6Rate(),
-                        col.getSlab7Tilldays(), col.getSlab7Rate())) {
-                    continue;
-                }
-                ShipLineTariffExpPayDtl pay = payableByContainerType.get(col.getContainerTypePoid());
-                if (pay == null) {
-                    pay = new ShipLineTariffExpPayDtl();
-                    pay.setTransactionPoid(id);
-                    pay.setDetRowId(++maxDetRowId);
-                    pay.setContainerTypePoid(col.getContainerTypePoid());
-                    payableByContainerType.put(col.getContainerTypePoid(), pay);
-                }
-                pay.setFreeDays(col.getFreeDays());
-                pay.setSlab1Tilldays(col.getSlab1Tilldays()); pay.setSlab1Rate(col.getSlab1Rate());
-                pay.setSlab2Tilldays(col.getSlab2Tilldays()); pay.setSlab2Rate(col.getSlab2Rate());
-                pay.setSlab3Tilldays(col.getSlab3Tilldays()); pay.setSlab3Rate(col.getSlab3Rate());
-                pay.setSlab4Tilldays(col.getSlab4Tilldays()); pay.setSlab4Rate(col.getSlab4Rate());
-                pay.setSlab5Tilldays(col.getSlab5Tilldays()); pay.setSlab5Rate(col.getSlab5Rate());
-                pay.setSlab6Tilldays(col.getSlab6Tilldays()); pay.setSlab6Rate(col.getSlab6Rate());
-                pay.setSlab7Tilldays(col.getSlab7Tilldays()); pay.setSlab7Rate(col.getSlab7Rate());
-                expPayDtlRepository.save(pay);
-            }
+            copyExpCollectableToPayable(id);
         } else {
             throw new ValidationException("Invalid type. Must be DMG or DTN");
         }
         log.info("Successfully copied slabs to payable for transactionPoid: {}, type: {}", id, type);
     }
 
-    private boolean hasTariffDetailData(Integer freeDays, Integer slab1Tilldays, BigDecimal slab1Rate,
-                                        Integer slab2Tilldays, BigDecimal slab2Rate,
-                                        Integer slab3Tilldays, BigDecimal slab3Rate,
-                                        Integer slab4Tilldays, BigDecimal slab4Rate,
-                                        Integer slab5Tilldays, BigDecimal slab5Rate,
-                                        Integer slab6Tilldays, BigDecimal slab6Rate,
-                                        Integer slab7Tilldays, BigDecimal slab7Rate) {
-        return freeDays != null
-                || slab1Tilldays != null || slab1Rate != null
-                || slab2Tilldays != null || slab2Rate != null
-                || slab3Tilldays != null || slab3Rate != null
-                || slab4Tilldays != null || slab4Rate != null
-                || slab5Tilldays != null || slab5Rate != null
-                || slab6Tilldays != null || slab6Rate != null
-                || slab7Tilldays != null || slab7Rate != null;
+    /**
+     * Mirror every collectable Imp row into payable (1:1).
+     * Existing payable rows are cleared, then each collectable record is created in payable
+     * with the same detRowId, container type, free days and slabs.
+     */
+    private void copyImpCollectableToPayable(Long transactionPoid) {
+        List<ShipLineTariffImpDtl> collectables = impDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+
+        impPayDtlRepository.deleteByTransactionPoid(transactionPoid);
+        entityManager.flush();
+        entityManager.clear();
+
+        long detRowId = 0L;
+        for (ShipLineTariffImpDtl col : collectables) {
+            if (col.getContainerTypePoid() == null) {
+                continue;
+            }
+            ShipLineTariffImpPayDtl pay = new ShipLineTariffImpPayDtl();
+            pay.setTransactionPoid(transactionPoid);
+            pay.setDetRowId(col.getDetRowId() != null ? col.getDetRowId() : ++detRowId);
+            pay.setContainerTypePoid(col.getContainerTypePoid());
+            applyImpCollectableSlabs(col, pay);
+            impPayDtlRepository.save(pay);
+        }
+    }
+
+    /**
+     * Mirror every collectable Exp row into payable (1:1).
+     * Existing payable rows are cleared, then each collectable record is created in payable
+     * with the same detRowId, container type, free days and slabs.
+     */
+    private void copyExpCollectableToPayable(Long transactionPoid) {
+        List<ShipLineTariffExpDtl> collectables = expDtlRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+
+        expPayDtlRepository.deleteByTransactionPoid(transactionPoid);
+        entityManager.flush();
+        entityManager.clear();
+
+        long detRowId = 0L;
+        for (ShipLineTariffExpDtl col : collectables) {
+            if (col.getContainerTypePoid() == null) {
+                continue;
+            }
+            ShipLineTariffExpPayDtl pay = new ShipLineTariffExpPayDtl();
+            pay.setTransactionPoid(transactionPoid);
+            pay.setDetRowId(col.getDetRowId() != null ? col.getDetRowId() : ++detRowId);
+            pay.setContainerTypePoid(col.getContainerTypePoid());
+            applyExpCollectableSlabs(col, pay);
+            expPayDtlRepository.save(pay);
+        }
+    }
+
+    private void applyImpCollectableSlabs(ShipLineTariffImpDtl col, ShipLineTariffImpPayDtl pay) {
+        pay.setFreeDays(col.getFreeDays());
+        pay.setSlab1Tilldays(col.getSlab1Tilldays());
+        pay.setSlab1Rate(col.getSlab1Rate());
+        pay.setSlab2Tilldays(col.getSlab2Tilldays());
+        pay.setSlab2Rate(col.getSlab2Rate());
+        pay.setSlab3Tilldays(col.getSlab3Tilldays());
+        pay.setSlab3Rate(col.getSlab3Rate());
+        pay.setSlab4Tilldays(col.getSlab4Tilldays());
+        pay.setSlab4Rate(col.getSlab4Rate());
+        pay.setSlab5Tilldays(col.getSlab5Tilldays());
+        pay.setSlab5Rate(col.getSlab5Rate());
+        pay.setSlab6Tilldays(col.getSlab6Tilldays());
+        pay.setSlab6Rate(col.getSlab6Rate());
+        pay.setSlab7Tilldays(col.getSlab7Tilldays());
+        pay.setSlab7Rate(col.getSlab7Rate());
+    }
+
+    private void applyExpCollectableSlabs(ShipLineTariffExpDtl col, ShipLineTariffExpPayDtl pay) {
+        pay.setFreeDays(col.getFreeDays());
+        pay.setSlab1Tilldays(col.getSlab1Tilldays());
+        pay.setSlab1Rate(col.getSlab1Rate());
+        pay.setSlab2Tilldays(col.getSlab2Tilldays());
+        pay.setSlab2Rate(col.getSlab2Rate());
+        pay.setSlab3Tilldays(col.getSlab3Tilldays());
+        pay.setSlab3Rate(col.getSlab3Rate());
+        pay.setSlab4Tilldays(col.getSlab4Tilldays());
+        pay.setSlab4Rate(col.getSlab4Rate());
+        pay.setSlab5Tilldays(col.getSlab5Tilldays());
+        pay.setSlab5Rate(col.getSlab5Rate());
+        pay.setSlab6Tilldays(col.getSlab6Tilldays());
+        pay.setSlab6Rate(col.getSlab6Rate());
+        pay.setSlab7Tilldays(col.getSlab7Tilldays());
+        pay.setSlab7Rate(col.getSlab7Rate());
     }
 }
 

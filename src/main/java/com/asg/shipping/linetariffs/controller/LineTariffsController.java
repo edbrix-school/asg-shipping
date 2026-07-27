@@ -342,7 +342,7 @@ public class LineTariffsController {
     @PostMapping("/{id}/copy-slabs")
     @Operation(
             summary = "Copy collectable slabs to payable",
-            description = "Copy slab data from collectable to payable matched by container type.",
+            description = "Mirror all collectable records into payable. Existing payable rows are cleared, then each collectable row is created in payable.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     public ResponseEntity<?> copySlabsToPayable(
