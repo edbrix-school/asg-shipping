@@ -7,12 +7,14 @@ import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.bookingFormSH.service.BookingFormService;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.portMaster.dto.PortMasterResponse;
@@ -47,6 +49,7 @@ public class BookingFormController {
     private final BookingFormService bookingFormService;
     private final ExcelExportService excelExportService;
     private final LoggingService loggingService;
+    private final DocumentDownloadHeaderService downloadHeaderService;
     private static final String FAILEDTOGENERATEPDF = "Failed to generate PDF: ";
     private static final String FAILEDTOGENERATEPDFFORBOOKINGFORM = "Failed to generate PDF for Banking Form SH: {}";
 
@@ -194,8 +197,8 @@ public class BookingFormController {
         try {
             byte[] pdf = bookingFormService.mateBookingPrintForm(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=container-mate-receipts-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipMateHdr.class, transactionPoid, "container-mate-receipts", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -210,8 +213,8 @@ public class BookingFormController {
         try {
             byte[] pdf = bookingFormService.cntEmptyBookingPrintForm(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=container-empty-release-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipMateHdr.class, transactionPoid, "container-empty-release", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -227,8 +230,8 @@ public class BookingFormController {
         try {
             byte[] pdf = bookingFormService.cntReturnBookingPrintFormAll(transactionPoid, printStamp);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=all-container-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipMateHdr.class, transactionPoid, "all-container", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -244,8 +247,8 @@ public class BookingFormController {
         try {
             byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, null);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=container-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipMateHdr.class, transactionPoid, "container", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -263,8 +266,8 @@ public class BookingFormController {
             if (StringUtil.isBlank(containerNo)) throw new ValidationException("Container number is required");
             byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, containerNo);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=container-individual" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipMateHdr.class, transactionPoid, "container-individual", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);

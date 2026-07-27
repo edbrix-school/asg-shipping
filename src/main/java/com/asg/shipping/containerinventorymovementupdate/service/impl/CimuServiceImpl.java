@@ -9,6 +9,8 @@ import com.asg.shipping.containerinventorymovementupdate.dto.DemurrageCalculateR
 import com.asg.shipping.containerinventorymovementupdate.dto.ExcelInspectionRow;
 import com.asg.shipping.containerinventorymovementupdate.dto.InspectionLoadResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.InspectionUploadResponse;
+import com.asg.shipping.containerinventorymovementupdate.dto.OpenExportManifestRequest;
+import com.asg.shipping.containerinventorymovementupdate.dto.OpenExportManifestResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.QueryCimuRequest;
 import com.asg.shipping.containerinventorymovementupdate.dto.QueryCimuResponse;
 import com.asg.shipping.containerinventorymovementupdate.dto.SocUpdateRequest;
@@ -465,6 +467,27 @@ public class CimuServiceImpl implements CimuService {
      * @param searchTerms Multiple possible column header names to search for
      * @return First matching column value, or null if not found
      */
+    @Override
+    public OpenExportManifestResponse openExportManifestData(OpenExportManifestRequest request) {
+        if (request == null) throw new ValidationException("Request body is required");
+        String exportBlNumber = normalize(request.getExportBlNumber());
+        if (exportBlNumber == null) throw new ValidationException("exportBlNumber is required");
+        if (request.getCompanyPoid() == null) throw new ValidationException("companyPoid is required");
+
+        // Legacy: retVal = FUNC_SHIP_GET_EBL_POID(exportBlNumber)
+        //         DrillDownViewDocument_WithoutLoadingPage(companyPoid, "100-104", retVal)
+        Long transactionPoid = queryRepository.fetchEblPoid(exportBlNumber);
+        if (transactionPoid == null) {
+            throw new ValidationException("No export BL found for exportBlNumber: " + exportBlNumber);
+        }
+
+        return OpenExportManifestResponse.builder()
+                .transactionPoid(transactionPoid)
+                .companyPoid(request.getCompanyPoid())
+                .documentCode("100-104")
+                .build();
+    }
+
     private String findColumnValue(Map<String, String> columns, String... searchTerms) {
         if (columns == null || columns.isEmpty()) return null;
 

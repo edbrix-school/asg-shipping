@@ -1080,12 +1080,18 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private void saveSimpleCargoText(Long transactionPoid, String descriptionType, String text) {
         String previousText = joinDescriptionStrings(
                 cargoDtlRepository.findDescriptionStringsByType(transactionPoid, descriptionType));
+        String normalizedText = normalizeCargoText(text);
+
+        if (Objects.equals(normalizeCargoText(previousText), normalizedText)) {
+            return;
+        }
+
         cargoDtlRepository.deleteAllByTransactionPoidAndDescriptionType(transactionPoid, descriptionType);
 
-        if (text != null && !text.trim().isEmpty()) {
+        if (normalizedText != null) {
             ExportManifestBlCargoDtl entity = ExportManifestBlCargoDtl.builder()
                     .id(new ShipBlManifestCargoDtlId(transactionPoid, 1L, descriptionType))
-                    .cargoDescription(text)
+                    .cargoDescription(normalizedText)
                     .recordOrder(1L)
                     .build();
             cargoDtlRepository.save(entity);
@@ -1094,7 +1100,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         String fieldName = CARGO_DESCRIPTION_TYPE_MARK.equals(descriptionType)
                 ? "simpleCargoMarks"
                 : "simpleCargoDescription";
-        logSimpleCargoTextChange(transactionPoid, descriptionType, fieldName, previousText, text);
+        logSimpleCargoTextChange(transactionPoid, descriptionType, fieldName, previousText, normalizedText);
     }
 
     private void logSimpleCargoTextChange(Long transactionPoid, String descriptionType, String fieldName,
@@ -1114,12 +1120,21 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 String.format(LOG_CARGO_KEY_ID_FORMAT, transactionPoid, descriptionType));
     }
 
+    private String normalizeCargoText(String text) {
+        if (text == null) {
+            return null;
+        }
+        String trimmed = text.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private String joinDescriptionStrings(List<String> rows) {
         if (rows == null || rows.isEmpty()) {
             return null;
         }
         String joined = rows.stream()
-                .filter(s -> s != null && !s.isEmpty())
+                .map(this::normalizeCargoText)
+                .filter(Objects::nonNull)
                 .collect(Collectors.joining(" "));
         return joined.isEmpty() ? null : joined;
     }

@@ -4,8 +4,10 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.*;
+import com.asg.shipping.deliveryorderissuetocustomer.entity.ShipBlManifestHDR;
 import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
+
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +35,7 @@ public class DeliveryOrderIssueToCustomerController {
 
     private final DeliveryOrderIssueToCustomerService deliveryOrderIssueToCustomerService;
     private final LoggingService loggingService;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     /**
      * Get delivery order by BL transaction POID
@@ -82,9 +85,10 @@ public class DeliveryOrderIssueToCustomerController {
         try {
             byte[] pdf = deliveryOrderIssueToCustomerService.print(transactionPoid, requestDto, buttonType);
 
+            String prefix = "delivery-order-issue-to-customer-" + buttonType.name().toLowerCase();
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=delivery-order-issue-to-customer-" + buttonType.name().toLowerCase() + "-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipBlManifestHDR.class, transactionPoid, prefix, "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {

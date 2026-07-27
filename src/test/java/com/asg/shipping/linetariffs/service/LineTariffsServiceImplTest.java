@@ -643,96 +643,117 @@ class LineTariffsServiceImplTest {
     @Test
     void copySlabsToPayable_DMG_CopiesMatchingContainerType() {
         ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
+        col.setDetRowId(1L);
         col.setContainerTypePoid(1L);
         col.setFreeDays(5);
         col.setSlab1Tilldays(10);
         col.setSlab1Rate(BigDecimal.valueOf(100));
 
-        ShipLineTariffImpPayDtl pay = ShipLineTariffImpPayDtl.builder()
-                .transactionPoid(1L)
-                .detRowId(1L)
-                .containerTypePoid(1L)
-                .freeDays(0)
-                .build();
-
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
-        when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
         service.copySlabsToPayable(1L, "DMG");
 
-        verify(impPayDtlRepository).save(pay);
-        assertEquals(5, pay.getFreeDays());
-        assertEquals(10, pay.getSlab1Tilldays());
-        assertEquals(BigDecimal.valueOf(100), pay.getSlab1Rate());
+        verify(impPayDtlRepository).deleteByTransactionPoid(1L);
+        verify(impPayDtlRepository).save(argThat(p ->
+                Long.valueOf(1L).equals(p.getDetRowId())
+                        && Long.valueOf(1L).equals(p.getContainerTypePoid())
+                        && Integer.valueOf(5).equals(p.getFreeDays())
+                        && Integer.valueOf(10).equals(p.getSlab1Tilldays())
+                        && BigDecimal.valueOf(100).equals(p.getSlab1Rate())));
     }
 
     @Test
-    void copySlabsToPayable_DMG_PayableHasData_CopiesWithoutConfirm() {
+    void copySlabsToPayable_DMG_PayableHasData_ClearsAndMirrorsCollectable() {
         ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
+        col.setDetRowId(1L);
         col.setContainerTypePoid(50L);
         col.setFreeDays(1);
         col.setSlab1Tilldays(10);
 
-        ShipLineTariffImpPayDtl pay = ShipLineTariffImpPayDtl.builder()
-                .transactionPoid(1L)
-                .detRowId(1L)
-                .containerTypePoid(50L)
-                .freeDays(20)
-                .slab1Tilldays(10)
-                .build();
-
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
-        when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
         service.copySlabsToPayable(1L, "DMG");
 
-        verify(impPayDtlRepository).save(pay);
-        assertEquals(1, pay.getFreeDays());
-        assertEquals(10, pay.getSlab1Tilldays());
+        verify(impPayDtlRepository).deleteByTransactionPoid(1L);
+        verify(impPayDtlRepository).save(argThat(p ->
+                Long.valueOf(50L).equals(p.getContainerTypePoid())
+                        && Integer.valueOf(1).equals(p.getFreeDays())
+                        && Integer.valueOf(10).equals(p.getSlab1Tilldays())));
+    }
+
+    @Test
+    void copySlabsToPayable_DMG_MirrorsAllCollectableRecordsIntoPayable() {
+        ShipLineTariffImpDtl col1 = new ShipLineTariffImpDtl();
+        col1.setDetRowId(1L);
+        col1.setContainerTypePoid(10L);
+        col1.setFreeDays(5);
+        col1.setSlab1Tilldays(15);
+        col1.setSlab1Rate(BigDecimal.valueOf(200));
+
+        ShipLineTariffImpDtl col2 = new ShipLineTariffImpDtl();
+        col2.setDetRowId(2L);
+        col2.setContainerTypePoid(20L);
+        col2.setFreeDays(7);
+        col2.setSlab1Tilldays(20);
+        col2.setSlab1Rate(BigDecimal.valueOf(300));
+
+        // empty collectable row (container only) must still be mirrored
+        ShipLineTariffImpDtl col3 = new ShipLineTariffImpDtl();
+        col3.setDetRowId(3L);
+        col3.setContainerTypePoid(30L);
+
+        when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col1, col2, col3));
+
+        service.copySlabsToPayable(1L, "DMG");
+
+        verify(impPayDtlRepository).deleteByTransactionPoid(1L);
+        verify(impPayDtlRepository).save(argThat(p ->
+                Long.valueOf(1L).equals(p.getDetRowId())
+                        && Long.valueOf(10L).equals(p.getContainerTypePoid())
+                        && Integer.valueOf(5).equals(p.getFreeDays())));
+        verify(impPayDtlRepository).save(argThat(p ->
+                Long.valueOf(2L).equals(p.getDetRowId())
+                        && Long.valueOf(20L).equals(p.getContainerTypePoid())
+                        && Integer.valueOf(7).equals(p.getFreeDays())));
+        verify(impPayDtlRepository).save(argThat(p ->
+                Long.valueOf(3L).equals(p.getDetRowId())
+                        && Long.valueOf(30L).equals(p.getContainerTypePoid())
+                        && p.getFreeDays() == null));
     }
 
     @Test
     void copySlabsToPayable_DTN_CopiesMatchingContainerType() {
         ShipLineTariffExpDtl col = new ShipLineTariffExpDtl();
+        col.setDetRowId(1L);
         col.setContainerTypePoid(1L);
         col.setFreeDays(7);
         col.setSlab1Tilldays(14);
         col.setSlab1Rate(BigDecimal.valueOf(80));
 
-        ShipLineTariffExpPayDtl pay = new ShipLineTariffExpPayDtl();
-        pay.setTransactionPoid(1L);
-        pay.setDetRowId(1L);
-        pay.setContainerTypePoid(1L);
-        pay.setFreeDays(0);
-
         when(expDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
-        when(expPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
         service.copySlabsToPayable(1L, "DTN");
 
-        verify(expPayDtlRepository).save(pay);
-        assertEquals(7, pay.getFreeDays());
-        assertEquals(14, pay.getSlab1Tilldays());
-        assertEquals(BigDecimal.valueOf(80), pay.getSlab1Rate());
+        verify(expPayDtlRepository).deleteByTransactionPoid(1L);
+        verify(expPayDtlRepository).save(argThat(p ->
+                Long.valueOf(1L).equals(p.getContainerTypePoid())
+                        && Integer.valueOf(7).equals(p.getFreeDays())
+                        && Integer.valueOf(14).equals(p.getSlab1Tilldays())
+                        && BigDecimal.valueOf(80).equals(p.getSlab1Rate())));
     }
 
     @Test
     void copySlabsToPayable_NoMatchingContainerType_CreatesNewPayableRow() {
         ShipLineTariffImpDtl col = new ShipLineTariffImpDtl();
+        col.setDetRowId(1L);
         col.setContainerTypePoid(1L);
         col.setFreeDays(5);
 
-        ShipLineTariffImpPayDtl pay = ShipLineTariffImpPayDtl.builder()
-                .containerTypePoid(2L) // different container type
-                .detRowId(1L)
-                .build();
-
         when(impDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(col));
-        when(impPayDtlRepository.findByTransactionPoidOrderByDetRowId(1L)).thenReturn(List.of(pay));
 
         service.copySlabsToPayable(1L, "DMG");
 
-        // new payable row created for containerTypePoid=1 since no match existed
+        verify(impPayDtlRepository).deleteByTransactionPoid(1L);
         verify(impPayDtlRepository).save(argThat(p ->
                 p.getContainerTypePoid().equals(1L) && p.getFreeDays() == 5));
     }
