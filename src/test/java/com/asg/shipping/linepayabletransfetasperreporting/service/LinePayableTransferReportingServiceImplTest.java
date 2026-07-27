@@ -7,6 +7,7 @@ import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.model.CustomAuthDetails;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
@@ -45,6 +46,7 @@ import java.sql.ResultSet;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -1060,6 +1062,59 @@ class LinePayableTransferReportingServiceImplTest {
 
         assertEquals(0, BigDecimal.valueOf(300).compareTo(result.get(0).getAcutalAmount()));
         assertEquals(0, BigDecimal.valueOf(3.75).compareTo(result.get(0).getCurrencyExchange()));
+    }
+
+    // ==================== LOV enrichment ====================
+
+    /**
+     * The three LOV lookups run on worker threads. LovDataService resolves the tenant from
+     * UserContext, a plain ThreadLocal, and PROC_LOV_GETLIST silently falls back to group 1 /
+     * company 1 / user 0 rather than failing, so losing the context here would return another
+     * tenant's descriptions with no error anywhere.
+     */
+    @Test
+    void loadDataBeforeCreate_LovLookupsSeeTheCallersUserContext() throws Exception {
+        CustomAuthDetails caller = CustomAuthDetails.builder()
+                .groupPoid(77L)
+                .companyPoid(88L)
+                .userPoid(99L)
+                .build();
+
+        Set<Long> groupsSeenByWorkers = ConcurrentHashMap.newKeySet();
+        Set<Long> companiesSeenByWorkers = ConcurrentHashMap.newKeySet();
+
+        when(lovDataService.getDetailsByPoidsAndLovName(any(), any())).thenAnswer(invocation -> {
+            groupsSeenByWorkers.add(UserContext.getGroupPoid());
+            companiesSeenByWorkers.add(UserContext.getCompanyPoid());
+            return Collections.emptyMap();
+        });
+        when(lovDataService.getDetailsByCodesAndLovName(any(), any())).thenAnswer(invocation -> {
+            groupsSeenByWorkers.add(UserContext.getGroupPoid());
+            companiesSeenByWorkers.add(UserContext.getCompanyPoid());
+            return Collections.emptyMap();
+        });
+
+        UserContext.setCurrentUser(caller);
+        try {
+            CallableStatement cs = mock(CallableStatement.class);
+            ResultSet rs = mock(ResultSet.class);
+            when(rs.next()).thenReturn(true).thenReturn(false);
+            when(rs.getObject("TRANSACTION_POID")).thenReturn(100L);
+            when(rs.getObject("CHARGE_POID")).thenReturn(1L);
+            when(rs.getString("CURRENCY_CODE")).thenReturn("USD");
+            when(cs.getObject(8)).thenReturn(rs);
+            when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class))).thenAnswer(invocation -> {
+                CallableStatementCallback<?> callback = invocation.getArgument(1);
+                return callback.doInCallableStatement(cs);
+            });
+
+            service.loadDataBeforeCreate(validLoadRequest().build());
+        } finally {
+            UserContext.clear();
+        }
+
+        assertEquals(Set.of(77L), groupsSeenByWorkers, "workers must see the caller's group, not the fallback");
+        assertEquals(Set.of(88L), companiesSeenByWorkers, "workers must see the caller's company, not the fallback");
     }
 
     // ==================== DocumentAfterSave post processing ====================

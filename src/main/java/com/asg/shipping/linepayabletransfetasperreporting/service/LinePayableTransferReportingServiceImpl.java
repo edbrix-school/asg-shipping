@@ -9,6 +9,7 @@ import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.security.model.CustomAuthDetails;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
@@ -43,6 +44,7 @@ import java.sql.*;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -525,6 +527,26 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
     }
 
     /**
+     * Run a LOV lookup on a worker thread under the calling request's user context.
+     *
+     * <p>LovDataService reads the group, company and user from {@link UserContext}, a plain
+     * ThreadLocal that a pooled thread cannot see. PROC_LOV_GETLIST is then called with the
+     * defaults it falls back to (group 1, company 1, user 0), which returns another tenant's rows
+     * rather than failing, so the caller's context is carried onto the worker and removed again
+     * once the lookup is done.
+     */
+    private <T> CompletableFuture<T> supplyWithUserContext(CustomAuthDetails caller, Supplier<T> work) {
+        return CompletableFuture.supplyAsync(() -> {
+            UserContext.setCurrentUser(caller);
+            try {
+                return work.get();
+            } finally {
+                UserContext.clear();
+            }
+        });
+    }
+
+    /**
      * Run {@code work} in its own transaction, which is committed before this method returns
      */
     private <T> T inNewTransaction(Supplier<T> work) {
@@ -863,26 +885,26 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
 
     private void enrichLovData(LinePayableTransferReportingDto dto) {
         // --- Header ---
-        if (dto.getLinePoid() != null) {
-            Map<Long, LovGetListDto> lineMap = lovDataService.getDetailsByPoidsAndLovName(
-                    List.of(dto.getLinePoid()), LOV_LINE_MASTER);
-            LovGetListDto lineLov = lineMap.get(dto.getLinePoid());
+        // Started first so it runs while the detail lookups below are in flight
+        CompletableFuture<Map<Long, LovGetListDto>> lineFuture = dto.getLinePoid() == null ? null
+                : supplyWithUserContext(UserContext.getCurrentUser(),
+                        () -> lovDataService.getDetailsByPoidsAndLovName(List.of(dto.getLinePoid()), LOV_LINE_MASTER));
+
+        enrichDetailListWithLov(dto.getDetails());
+
+        if (lineFuture != null) {
+            LovGetListDto lineLov = lineFuture.join().get(dto.getLinePoid());
             if (lineLov != null) {
                 dto.setLineDet(lineLov);
                 dto.setLineName(lineLov.getDescription());
                 dto.setLineCode(lineLov.getCode());
             }
         }
-
-        enrichDetailListWithLov(dto.getDetails());
     }
 
     /**
-     * Fill in the LOV descriptions of a detail list, one batch call per LOV type.
-     *
-     * <p>The lookups run on the calling thread on purpose: LovDataService reads the group, company
-     * and user from the request scoped {@code UserContext}, which is a plain ThreadLocal and is not
-     * visible from a pooled worker thread.
+     * Fill in the LOV descriptions of a detail list, one batch call per LOV type, the three calls
+     * running concurrently
      */
     private void enrichDetailListWithLov(List<LinePayableTransferReportingDtlDto> details) {
         if (details == null || details.isEmpty()) return;
@@ -899,9 +921,20 @@ public class LinePayableTransferReportingServiceImpl implements LinePayableTrans
                 .map(LinePayableTransferReportingDtlDto::getCurrencyCode)
                 .filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-        Map<Long, LovGetListDto> mainfestMap = lovDataService.getDetailsByPoidsAndLovName(mainfestPoids, LOV_ALL_BL_NUMBER);
-        Map<Long, LovGetListDto> chargeMap = lovDataService.getDetailsByPoidsAndLovName(chargePoids, LOV_CHARGE_MASTER);
-        Map<String, LovGetListDto> currencyMap = lovDataService.getDetailsByCodesAndLovName(currencyCodes, LOV_CURRENCY);
+        CustomAuthDetails caller = UserContext.getCurrentUser();
+
+        CompletableFuture<Map<Long, LovGetListDto>> mainfestFuture = supplyWithUserContext(caller,
+                () -> lovDataService.getDetailsByPoidsAndLovName(mainfestPoids, LOV_ALL_BL_NUMBER));
+        CompletableFuture<Map<Long, LovGetListDto>> chargeFuture = supplyWithUserContext(caller,
+                () -> lovDataService.getDetailsByPoidsAndLovName(chargePoids, LOV_CHARGE_MASTER));
+        CompletableFuture<Map<String, LovGetListDto>> currencyFuture = supplyWithUserContext(caller,
+                () -> lovDataService.getDetailsByCodesAndLovName(currencyCodes, LOV_CURRENCY));
+
+        CompletableFuture.allOf(mainfestFuture, chargeFuture, currencyFuture).join();
+
+        Map<Long, LovGetListDto> mainfestMap = mainfestFuture.join();
+        Map<Long, LovGetListDto> chargeMap = chargeFuture.join();
+        Map<String, LovGetListDto> currencyMap = currencyFuture.join();
 
         for (LinePayableTransferReportingDtlDto detail : details) {
             if (detail.getMainfestTransactionPoid() != null) {
