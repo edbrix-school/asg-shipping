@@ -12,6 +12,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importmanifestupdate.dto.*;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestHdr;
 import com.asg.shipping.importmanifestupdate.service.ImportManifestBlService;
 import com.asg.shipping.importmanifestbl.dto.ResendCanRequestDto;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
@@ -323,7 +324,7 @@ public class ImportManifestBlController {
             byte[] pdf = manifestService.printCargoArrivalNotice(voyageTransactionPoid, transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid,
+                            ShipBlManifestHdr.class, transactionPoid,
                             "import-manifest-update-bl-cargo-arrival-notice", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
@@ -343,7 +344,7 @@ public class ImportManifestBlController {
             byte[] pdf = manifestService.printUnclearedCargoNotice(transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid,
+                            ShipBlManifestHdr.class, transactionPoid,
                             "import-manifest-update-bl-uncleared-cargo", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
@@ -367,7 +368,7 @@ public class ImportManifestBlController {
             byte[] pdf = manifestService.printCargoManifest(transactionPoid, isCargoManifestPrint);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid,
+                            ShipBlManifestHdr.class, transactionPoid,
                             "import-manifest-update-bl-cargo-manifest", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);

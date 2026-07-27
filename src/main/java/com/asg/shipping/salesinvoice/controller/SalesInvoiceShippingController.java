@@ -12,6 +12,7 @@ import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.salesinvoice.dto.*;
+import com.asg.shipping.salesinvoice.entity.ArShSalesInvoiceHdr;
 import com.asg.shipping.salesinvoice.service.SalesInvoiceShippingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -786,7 +787,7 @@ public class SalesInvoiceShippingController {
             byte[] pdf = service.printCustomerAutoCharge(transactionPoid,blPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid,
+                            ArShSalesInvoiceHdr.class, transactionPoid,
                             "sales-invoice-shipping-customer-autocharge", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
@@ -809,7 +810,7 @@ public class SalesInvoiceShippingController {
             byte[] pdf = service.print(transactionPoid, blPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid,
+                            ArShSalesInvoiceHdr.class, transactionPoid,
                             "sales-invoice-shipping", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);

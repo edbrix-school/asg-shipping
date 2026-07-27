@@ -14,6 +14,7 @@ import com.asg.shipping.bookingFormSH.dto.BookingFormAddressMasterDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
 import com.asg.shipping.bookingFormSH.dto.BookingFormDto;
 import com.asg.shipping.bookingFormSH.dto.BookingFormUpdateDTO;
+import com.asg.shipping.bookingFormSH.entity.ShipMateHdr;
 import com.asg.shipping.bookingFormSH.service.BookingFormService;
 import com.asg.shipping.exceptions.ValidationException;
 import com.asg.shipping.portMaster.dto.PortMasterResponse;
@@ -197,7 +198,7 @@ public class BookingFormController {
             byte[] pdf = bookingFormService.mateBookingPrintForm(transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "container-mate-receipts", "pdf"))
+                            ShipMateHdr.class, transactionPoid, "container-mate-receipts", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -213,7 +214,7 @@ public class BookingFormController {
             byte[] pdf = bookingFormService.cntEmptyBookingPrintForm(transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "container-empty-release", "pdf"))
+                            ShipMateHdr.class, transactionPoid, "container-empty-release", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -230,7 +231,7 @@ public class BookingFormController {
             byte[] pdf = bookingFormService.cntReturnBookingPrintFormAll(transactionPoid, printStamp);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "all-container", "pdf"))
+                            ShipMateHdr.class, transactionPoid, "all-container", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -247,7 +248,7 @@ public class BookingFormController {
             byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, null);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "container", "pdf"))
+                            ShipMateHdr.class, transactionPoid, "container", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);
@@ -266,7 +267,7 @@ public class BookingFormController {
             byte[] pdf = bookingFormService.cntReturnBookingPrintForm(transactionPoid, printStamp, containerNo);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "container-individual", "pdf"))
+                            ShipMateHdr.class, transactionPoid, "container-individual", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF).body(pdf);
         } catch (Exception e) {
             log.error(FAILEDTOGENERATEPDFFORBOOKINGFORM, transactionPoid, e);

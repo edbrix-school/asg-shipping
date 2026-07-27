@@ -11,6 +11,7 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.daycloseshiping.dto.DayCloseDto;
 import com.asg.shipping.daycloseshiping.dto.DayCloseHdrDto;
 import com.asg.shipping.daycloseshiping.dto.DayCloseSummaryProjection;
+import com.asg.shipping.daycloseshiping.entity.ArShDayEndCloseHdr;
 import com.asg.shipping.daycloseshiping.service.DayCloseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -147,7 +148,7 @@ public class DayCloseController {
             byte[] pdf = dayCloseService.printDayClose(transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "day-close", "pdf"))
+                            ArShDayEndCloseHdr.class, transactionPoid, "day-close", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -166,7 +167,7 @@ public class DayCloseController {
             byte[] pdf = dayCloseService.printDetails(transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "day-close-details", "pdf"))
+                            ArShDayEndCloseHdr.class, transactionPoid, "day-close-details", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -185,7 +186,7 @@ public class DayCloseController {
             byte[] pdf = dayCloseService.printSplitReceipt(transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "day-close-split-receipt", "pdf"))
+                            ArShDayEndCloseHdr.class, transactionPoid, "day-close-split-receipt", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -204,7 +205,7 @@ public class DayCloseController {
             byte[] pdf = dayCloseService.printSummary(transactionPoid);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "day-close-summary", "pdf"))
+                            ArShDayEndCloseHdr.class, transactionPoid, "day-close-summary", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {

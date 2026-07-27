@@ -7,6 +7,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.deliveryorderissuetocustomer.dto.*;
+import com.asg.shipping.deliveryorderissuetocustomer.entity.ShipBlManifestHDR;
 import com.asg.shipping.deliveryorderissuetocustomer.enums.ButtonType;
 import com.asg.shipping.deliveryorderissuetocustomer.service.DeliveryOrderIssueToCustomerService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -87,7 +88,7 @@ public class DeliveryOrderIssueToCustomerController {
             String prefix = "delivery-order-issue-to-customer-" + buttonType.name().toLowerCase();
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, prefix, "pdf"))
+                            ShipBlManifestHDR.class, transactionPoid, prefix, "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {

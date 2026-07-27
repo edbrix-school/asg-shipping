@@ -4,6 +4,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.excel.ExcelFileData;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.ExcelExportService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.bookingFormSH.dto.BookingFormCreateDTO;
@@ -18,10 +19,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -52,6 +55,13 @@ class BookingFormControllerTest {
 
     @Mock
     private LoggingService loggingService;
+
+    @Spy
+
+    private DocumentDownloadHeaderService downloadHeaderService =
+
+            new DocumentDownloadHeaderService(mock(JdbcTemplate.class));
+
 
     @InjectMocks
     private BookingFormController controller;
@@ -268,7 +278,7 @@ class BookingFormControllerTest {
 
         mockMvc.perform(get("/v1/booking-form-sh/mateBookingPrintForm/21"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=container-mate-receipts-21.pdf"))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"Container-Mate-Receipts-21.pdf\""))
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
 
         verify(bookingFormService).mateBookingPrintForm(21L);
@@ -292,7 +302,7 @@ class BookingFormControllerTest {
 
         mockMvc.perform(get("/v1/booking-form-sh/empty-release/21"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=container-empty-release-21.pdf"))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"Container-Empty-Release-21.pdf\""))
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
 
         verify(bookingFormService).cntEmptyBookingPrintForm(21L);
@@ -316,7 +326,7 @@ class BookingFormControllerTest {
 
         mockMvc.perform(get("/v1/booking-form-sh/all-container/21").param("printStamp", "Y"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=all-container-21.pdf"))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"All-Container-21.pdf\""))
                 .andExpect(content().contentType(MediaType.APPLICATION_PDF));
 
         verify(bookingFormService).cntReturnBookingPrintFormAll(21L, "Y");

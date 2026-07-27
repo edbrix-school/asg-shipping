@@ -7,6 +7,7 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.shipping.exportManifestUpdate.dto.*;
+import com.asg.shipping.exportManifestUpdate.entity.ExportShipBlManifestHdr;
 import com.asg.shipping.exportManifestUpdate.service.ExportManifestBlService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -212,7 +213,7 @@ public class ExportManifestUpdateController {
             byte[] pdf = service.generateBlPrint(transactionPoid, request, docId);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "bl-print", "pdf"))
+                            ExportShipBlManifestHdr.class, transactionPoid, "bl-print", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (ValidationException e) {
@@ -237,7 +238,7 @@ public class ExportManifestUpdateController {
             String prefix = request.isCargoManifest() ? "cargo-manifest" : "freight-manifest";
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, prefix, "pdf"))
+                            ExportShipBlManifestHdr.class, transactionPoid, prefix, "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -256,7 +257,7 @@ public class ExportManifestUpdateController {
             byte[] pdf = service.generateDetentionStorage(transactionPoid, docId);
             return ResponseEntity.ok()
                     .headers(downloadHeaderService.buildAttachmentHeaders(
-                            UserContext.getDocumentId(), transactionPoid, "detention-storage", "pdf"))
+                            ExportShipBlManifestHdr.class, transactionPoid, "detention-storage", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
