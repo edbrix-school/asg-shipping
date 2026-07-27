@@ -30,8 +30,12 @@ public class LoadDataByDateRangeRequest {
     private LocalDate reportEndDate;
 
     /**
-     * Charge filter passed to PROC_SHIP_REPORT_LINE_DATEWISE.
-     * Legacy values are ALL, FRTTHC, and OTHERS.
+     * Charge filter passed to PROC_SHIP_REPORT_LINE_DATEWISE. Only ALL, FRTTHC and OTHERS are
+     * accepted, and an absent value means ALL.
+     *
+     * <p>Legacy derives it from the page's two checkboxes, both of which start ticked:
+     * Frt/Thc and Others both ticked gives ALL, only Frt/Thc gives FRTTHC, only Others gives
+     * OTHERS, and neither ticked falls back to ALL. The caller owns that derivation.
      */
     @Builder.Default
     private String chargeFilter = "ALL";

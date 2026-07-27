@@ -147,6 +147,41 @@ public class LinePayableTransferReportingController {
     }
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
+    @PostMapping("/apply-exchange-rate")
+    @Operation(
+            summary = "Apply a new exchange rate",
+            description = "Recalculate the actual and transfer amounts of every detail row carrying the given currency code, "
+                    + "using CURRENCY_AMOUNT * the supplied rate. Mirrors the legacy \"Apply New Exchange Rate\" action, "
+                    + "which works on the grid before the document is saved.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully applied the exchange rate",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request parameters",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    public ResponseEntity<?> applyExchangeRate(
+            @Parameter(description = "Currency code, new rate and the detail rows to recalculate", required = true)
+            @Valid @RequestBody ApplyExchangeRateRequest request) {
+        log.info("Applying new exchange rate for currency: {}", request.getCurrencyCode());
+        List<LinePayableTransferReportingDtlDto> details = service.applyExchangeRate(request);
+        log.info("Successfully applied new exchange rate to {} detail records", details.size());
+        return ApiResponse.success("Exchange rate applied successfully", details);
+    }
+
+    @AllowedAction(UserRolesRightsEnum.VIEW)
     @GetMapping("/{transactionPoid}")
     @Operation(
             summary = "Get line payable transfer details",

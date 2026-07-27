@@ -3,6 +3,7 @@ package com.asg.shipping.linepayabletransfetasperreporting.service;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
@@ -36,6 +37,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.CallableStatementCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.sql.CallableStatement;
@@ -79,6 +81,9 @@ class LinePayableTransferReportingServiceImplTest {
     @Mock
     private EntityManager entityManager;
 
+    @Mock
+    private PlatformTransactionManager transactionManager;
+
     @InjectMocks
     private LinePayableTransferReportingServiceImpl service;
 
@@ -94,6 +99,18 @@ class LinePayableTransferReportingServiceImplTest {
         ReflectionTestUtils.setField(service, "entityManager", entityManager);
         when(lovDataService.getDetailsByPoidsAndLovName(any(), any())).thenReturn(Collections.emptyMap());
         when(lovDataService.getDetailsByCodesAndLovName(any(), any())).thenReturn(Collections.emptyMap());
+
+        // BL type is validated against the REPORT_CNT_BL_TYPE list of values
+        LovGetListDto importType = new LovGetListDto();
+        importType.setCode("IMPORT");
+        LovGetListDto exportType = new LovGetListDto();
+        exportType.setCode("EXPORT");
+        when(lovDataService.getLovList(anyString(), any(), any(), any(), eq("REPORT_CNT_BL_TYPE"),
+                anyInt(), anyInt(), anyString(), anyString()))
+                .thenReturn(Map.of("data", List.of(importType, exportType)));
+
+        // Lines resolve and documents are found unless a test says otherwise
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(1);
 
         testEntity = ShipLineReportTransferHdr.builder()
                 .transactionPoid(1L)
@@ -149,6 +166,9 @@ class LinePayableTransferReportingServiceImplTest {
                 .totalAmountTransfer(BigDecimal.valueOf(1000))
                 .isSelect("Y")
                 .build();
+
+        // Create and update read the header back after PROC_SHIP_BL_PAGE_SAVE_AFTER has run
+        when(hdrRepository.findActiveByTransactionPoid(anyLong())).thenReturn(Optional.of(testEntity));
     }
 
     @Test
@@ -192,7 +212,7 @@ class LinePayableTransferReportingServiceImplTest {
         verify(hdrRepository).save(any());
         verify(hdrRepository).flush();
         verify(entityManager).refresh(any());
-        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+        verify(loggingService).createLogSummaryEntry(eq("100-432"), eq("1"),
                 eq(LogDetailsEnum.CREATED.getDescription() + " LPT-2024-001"));
     }
 
@@ -243,7 +263,7 @@ class LinePayableTransferReportingServiceImplTest {
 
         assertNotNull(result);
         verify(hdrRepository).save(any());
-        verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+        verify(loggingService).createLogSummaryEntry(eq("100-432"), eq("1"),
                 eq(LogDetailsEnum.MODIFIED.getDescription() + " LPT-2024-001"));
     }
 
@@ -299,7 +319,7 @@ class LinePayableTransferReportingServiceImplTest {
         service.updateLinePayableTransfer(1L, dto);
 
         InOrder inOrder = inOrder(loggingService, dtlRepository);
-        inOrder.verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+        inOrder.verify(loggingService).createLogSummaryEntry(eq("100-432"), eq("1"),
                 eq(LogDetailsEnum.MODIFIED.getDescription() + " LPT-2024-001"));
         inOrder.verify(loggingService).logDetails(any(), any(), eq(ShipLineReportTransferHdr.class),
                 any(), eq("1"), eq("TRANSACTION_POID"));
@@ -328,7 +348,7 @@ class LinePayableTransferReportingServiceImplTest {
         service.createLinePayableTransfer(createDTO);
 
         InOrder inOrder = inOrder(loggingService, dtlRepository);
-        inOrder.verify(loggingService).createLogSummaryEntry(ArgumentMatchers.<String>isNull(), eq("1"),
+        inOrder.verify(loggingService).createLogSummaryEntry(eq("100-432"), eq("1"),
                 eq(LogDetailsEnum.CREATED.getDescription() + " LPT-2024-001"));
         inOrder.verify(dtlRepository).save(any());
         inOrder.verify(loggingService).createLogSummaryEntry(eq("100-432"), eq("1"),
@@ -474,7 +494,7 @@ class LinePayableTransferReportingServiceImplTest {
 
         ArgumentCaptor<ShipLineReportTransferHdr> oldCaptor = ArgumentCaptor.forClass(ShipLineReportTransferHdr.class);
         verify(loggingService).logDetails(oldCaptor.capture(), eq(testEntity), eq(ShipLineReportTransferHdr.class),
-                ArgumentMatchers.<String>isNull(), eq("1"), eq("TRANSACTION_POID"));
+                eq("100-432"), eq("1"), eq("TRANSACTION_POID"));
 
         // The snapshot must hold the pre-update value, otherwise the diff would always be empty
         assertEquals("IMPORT", oldCaptor.getValue().getBlType());
@@ -861,5 +881,237 @@ class LinePayableTransferReportingServiceImplTest {
         assertNotNull(result);
         assertNotNull(result.getDetails());
         assertEquals(1, result.getDetails().size());
+    }
+
+    // ==================== Charge filter ====================
+
+    private CallableStatement stubEmptyReportLineDatewiseCursor() throws Exception {
+        CallableStatement cs = mock(CallableStatement.class);
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.next()).thenReturn(false);
+        when(cs.getObject(8)).thenReturn(rs);
+        when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class))).thenAnswer(invocation -> {
+            CallableStatementCallback<?> callback = invocation.getArgument(1);
+            return callback.doInCallableStatement(cs);
+        });
+        return cs;
+    }
+
+    private LoadDataByDateRangeRequest.LoadDataByDateRangeRequestBuilder validLoadRequest() {
+        return LoadDataByDateRangeRequest.builder()
+                .linePoid(1123L)
+                .blType("IMPORT")
+                .reportStartDate(LocalDate.of(2024, 1, 1))
+                .reportEndDate(LocalDate.of(2024, 1, 31));
+    }
+
+    /**
+     * Load the given request and assert which charge filter reached the procedure
+     */
+    private void assertChargeFilterSent(LoadDataByDateRangeRequest request, String expected) throws Exception {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            CallableStatement cs = stubEmptyReportLineDatewiseCursor();
+            service.loadDataBeforeCreate(request);
+            verify(cs).setString(7, expected);
+        }
+    }
+
+    @Test
+    void loadDataBeforeCreate_DefaultsToAllFilter() throws Exception {
+        assertChargeFilterSent(validLoadRequest().build(), "ALL");
+    }
+
+    @Test
+    void loadDataBeforeCreate_SendsFrtThcFilter() throws Exception {
+        assertChargeFilterSent(validLoadRequest().chargeFilter("FRTTHC").build(), "FRTTHC");
+    }
+
+    @Test
+    void loadDataBeforeCreate_SendsOthersFilter() throws Exception {
+        assertChargeFilterSent(validLoadRequest().chargeFilter("OTHERS").build(), "OTHERS");
+    }
+
+    @Test
+    void loadDataBeforeCreate_BlankFilterFallsBackToAll() throws Exception {
+        assertChargeFilterSent(validLoadRequest().chargeFilter("  ").build(), "ALL");
+    }
+
+    @Test
+    void loadDataBeforeCreate_NormalisesFilterCase() throws Exception {
+        assertChargeFilterSent(validLoadRequest().chargeFilter("others").build(), "OTHERS");
+    }
+
+    @Test
+    void loadDataBeforeCreate_RejectsUnknownChargeFilter() {
+        LoadDataByDateRangeRequest request = validLoadRequest().chargeFilter("SOMETHING").build();
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.loadDataBeforeCreate(request));
+        assertEquals("Charge filter must be one of: ALL, FRTTHC, OTHERS", ex.getMessage());
+    }
+
+    // ==================== Legacy messages ====================
+
+    @Test
+    void loadDataBeforeCreate_NullCursorReportsNoDataFound() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            CallableStatement cs = mock(CallableStatement.class);
+            when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class))).thenAnswer(invocation -> {
+                CallableStatementCallback<?> callback = invocation.getArgument(1);
+                return callback.doInCallableStatement(cs);
+            });
+
+            ValidationException ex = assertThrows(ValidationException.class,
+                    () -> service.loadDataBeforeCreate(validLoadRequest().build()));
+            assertEquals("No Data Found...", ex.getMessage());
+        }
+    }
+
+    @Test
+    void loadDataBeforeCreate_ProcedureFailureReportsLegacyMessage() {
+        try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
+            mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
+            mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(1L);
+
+            when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class)))
+                    .thenThrow(new IllegalStateException("ORA-06550"));
+
+            ValidationException ex = assertThrows(ValidationException.class,
+                    () -> service.loadDataBeforeCreate(validLoadRequest().build()));
+            assertEquals("Some error occured while loading data, please check the log...", ex.getMessage());
+        }
+    }
+
+    @Test
+    void loadDataBeforeCreate_LineNotFound() {
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), anyLong())).thenReturn(0);
+
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> service.loadDataBeforeCreate(validLoadRequest().build()));
+        assertEquals("Line not found: 1123", ex.getMessage());
+    }
+
+    // ==================== Apply New Exchange Rate ====================
+
+    @Test
+    void applyExchangeRate_RecalculatesRowsOfTheGivenCurrency() {
+        LinePayableTransferReportingDtlDto usdRow = LinePayableTransferReportingDtlDto.builder()
+                .currencyCode("USD")
+                .currencyAmount(BigDecimal.valueOf(100))
+                .currencyExchange(BigDecimal.valueOf(3))
+                .acutalAmount(BigDecimal.valueOf(300))
+                .totalAmountTransfer(BigDecimal.valueOf(300))
+                .build();
+
+        List<LinePayableTransferReportingDtlDto> result = service.applyExchangeRate(
+                ApplyExchangeRateRequest.builder()
+                        .currencyCode("usd")
+                        .currencyExchange(BigDecimal.valueOf(3.75))
+                        .details(new ArrayList<>(List.of(usdRow)))
+                        .build());
+
+        assertEquals(1, result.size());
+        assertEquals(0, BigDecimal.valueOf(3.75).compareTo(result.get(0).getCurrencyExchange()));
+        assertEquals(0, BigDecimal.valueOf(375).compareTo(result.get(0).getAcutalAmount()));
+        assertEquals(0, BigDecimal.valueOf(375).compareTo(result.get(0).getTotalAmountTransfer()));
+    }
+
+    @Test
+    void applyExchangeRate_LeavesOtherCurrenciesUntouched() {
+        LinePayableTransferReportingDtlDto eurRow = LinePayableTransferReportingDtlDto.builder()
+                .currencyCode("EUR")
+                .currencyAmount(BigDecimal.valueOf(100))
+                .currencyExchange(BigDecimal.valueOf(4))
+                .acutalAmount(BigDecimal.valueOf(400))
+                .totalAmountTransfer(BigDecimal.valueOf(400))
+                .build();
+
+        List<LinePayableTransferReportingDtlDto> result = service.applyExchangeRate(
+                ApplyExchangeRateRequest.builder()
+                        .currencyCode("USD")
+                        .currencyExchange(BigDecimal.valueOf(3.75))
+                        .details(new ArrayList<>(List.of(eurRow)))
+                        .build());
+
+        assertEquals(0, BigDecimal.valueOf(4).compareTo(result.get(0).getCurrencyExchange()));
+        assertEquals(0, BigDecimal.valueOf(400).compareTo(result.get(0).getAcutalAmount()));
+    }
+
+    @Test
+    void applyExchangeRate_RowWithoutCurrencyAmountKeepsItsAmounts() {
+        LinePayableTransferReportingDtlDto row = LinePayableTransferReportingDtlDto.builder()
+                .currencyCode("USD")
+                .acutalAmount(BigDecimal.valueOf(300))
+                .totalAmountTransfer(BigDecimal.valueOf(300))
+                .build();
+
+        List<LinePayableTransferReportingDtlDto> result = service.applyExchangeRate(
+                ApplyExchangeRateRequest.builder()
+                        .currencyCode("USD")
+                        .currencyExchange(BigDecimal.valueOf(3.75))
+                        .details(new ArrayList<>(List.of(row)))
+                        .build());
+
+        assertEquals(0, BigDecimal.valueOf(300).compareTo(result.get(0).getAcutalAmount()));
+        assertEquals(0, BigDecimal.valueOf(3.75).compareTo(result.get(0).getCurrencyExchange()));
+    }
+
+    // ==================== DocumentAfterSave post processing ====================
+
+    @Test
+    void createLinePayableTransfer_RunsAfterSaveProcedure() {
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+
+        service.createLinePayableTransfer(createDTO);
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate).execute(sql.capture(), any(CallableStatementCallback.class));
+        assertTrue(sql.getValue().contains("PROC_SHIP_BL_PAGE_SAVE_AFTER"));
+
+        // The procedure is PRAGMA AUTONOMOUS_TRANSACTION, so the rows must be committed before it
+        // runs, otherwise it cannot see them
+        InOrder inOrder = inOrder(transactionManager, jdbcTemplate);
+        inOrder.verify(transactionManager).commit(any());
+        inOrder.verify(jdbcTemplate).execute(anyString(), any(CallableStatementCallback.class));
+    }
+
+    @Test
+    void updateLinePayableTransfer_RunsAfterSaveProcedure() {
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(mapper.mapToDto(any())).thenReturn(testDto);
+        when(dtlRepository.findByTransactionPoid(anyLong())).thenReturn(Collections.emptyList());
+        when(mapper.mapDtlListToDto(anyList())).thenReturn(Collections.emptyList());
+
+        service.updateLinePayableTransfer(1L, updateDTO);
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate).execute(sql.capture(), any(CallableStatementCallback.class));
+        assertTrue(sql.getValue().contains("PROC_SHIP_BL_PAGE_SAVE_AFTER"));
+
+        InOrder inOrder = inOrder(transactionManager, jdbcTemplate);
+        inOrder.verify(transactionManager).commit(any());
+        inOrder.verify(jdbcTemplate).execute(anyString(), any(CallableStatementCallback.class));
+    }
+
+    @Test
+    void createLinePayableTransfer_AfterSaveFailureSurfacesWithTheDocumentAlreadySaved() {
+        when(hdrRepository.save(any())).thenReturn(testEntity);
+        when(jdbcTemplate.execute(anyString(), any(CallableStatementCallback.class)))
+                .thenThrow(new IllegalStateException("ORA-20001"));
+
+        assertThrows(ValidationException.class, () -> service.createLinePayableTransfer(createDTO));
+
+        // Legacy behaves the same way: the document is committed and only the hook reports an error
+        verify(transactionManager).commit(any());
+        verify(transactionManager, never()).rollback(any());
     }
 }
