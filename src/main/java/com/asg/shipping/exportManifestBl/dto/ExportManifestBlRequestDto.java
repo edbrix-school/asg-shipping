@@ -1,5 +1,6 @@
 package com.asg.shipping.exportManifestBl.dto;
 
+import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.importmanifestupdate.dto.ChargeRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.ContainerRequestDto;
 import com.asg.shipping.importmanifestupdate.dto.GeneralCargoRequestDto;
@@ -40,6 +41,7 @@ public class ExportManifestBlRequestDto {
     private Long quotationTransactionPoid;
     private Long salesmanPoid;
     private Long comodityPoid;
+    private LovItem comodityDet; 
     private Long noOfOrgnlBls;
     private String exportReference;
     private String lpoSrnNo;

@@ -170,6 +170,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         ExportManifestBlRequestDto result = mapper.mapToDto(saved);
         loadDetailTables(result, transactionPoid);
+        enrichHeaderLovData(result);
 
         log.info("Successfully created Export Manifest BL with id: {}", transactionPoid);
         return result;
@@ -238,6 +239,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         ExportManifestBlRequestDto result = mapper.mapToDto(saved);
         loadDetailTables(result, id);
+        enrichHeaderLovData(result);
 
         log.info("Successfully updated Export Manifest BL with id: {}", id);
         return result;
@@ -285,6 +287,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         ExportManifestBlRequestDto dto = mapper.mapToDto(entity);
         loadDetailTables(dto, id);
+        enrichHeaderLovData(dto);
 
         
         loggingService.createLogSummaryEntry(
@@ -1190,13 +1193,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .id(new ShipBlManifestDtlId(transactionPoid, detRowId))
                 .comodityPoid(detail.getComodityPoid())
                 .cargoDescription(detail.getCargoDescription())
-                .quantity(detail.getQuantity())
-                .grsVolume(detail.getGrsVolume())
-                .grsWeight(detail.getGrsWeight())
-                .netVolume(detail.getNetVolume())
-                .netWeight(detail.getNetWeight())
-                .tareWeight(detail.getTareWeight())
-                .noOfPacks(detail.getNoOfPacks())
+                .quantity(toBigDecimal(detail.getQuantity()))
+                .grsVolume(toBigDecimal(detail.getGrsVolume()))
+                .grsWeight(toBigDecimal(detail.getGrsWeight()))
+                .netVolume(toBigDecimal(detail.getNetVolume()))
+                .netWeight(toBigDecimal(detail.getNetWeight()))
+                .tareWeight(toBigDecimal(detail.getTareWeight()))
+                .noOfPacks(toBigDecimal(detail.getNoOfPacks()))
                 .packUnit(detail.getPackUnit())
                 .destinationPortPoid(detail.getDestinationPortPoid())
                 .build();
@@ -1220,13 +1223,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
 
         entity.setComodityPoid(detail.getComodityPoid());
         entity.setCargoDescription(detail.getCargoDescription());
-        entity.setQuantity(detail.getQuantity());
-        entity.setGrsVolume(detail.getGrsVolume());
-        entity.setGrsWeight(detail.getGrsWeight());
-        entity.setNetVolume(detail.getNetVolume());
-        entity.setNetWeight(detail.getNetWeight());
-        entity.setTareWeight(detail.getTareWeight());
-        entity.setNoOfPacks(detail.getNoOfPacks());
+        entity.setQuantity(toBigDecimal(detail.getQuantity()));
+        entity.setGrsVolume(toBigDecimal(detail.getGrsVolume()));
+        entity.setGrsWeight(toBigDecimal(detail.getGrsWeight()));
+        entity.setNetVolume(toBigDecimal(detail.getNetVolume()));
+        entity.setNetWeight(toBigDecimal(detail.getNetWeight()));
+        entity.setTareWeight(toBigDecimal(detail.getTareWeight()));
+        entity.setNoOfPacks(toBigDecimal(detail.getNoOfPacks()));
         entity.setPackUnit(detail.getPackUnit());
         entity.setDestinationPortPoid(detail.getDestinationPortPoid());
         generalDtlRepository.save(entity);
@@ -1365,8 +1368,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         entity.setEquipmentIsoType(detail.getEquipmentIsoType());
         entity.setEquipmentType(detail.getEquipmentType());
         entity.setEquipmentSize(detail.getEquipmentSize());
-        entity.setQuantity(detail.getQuantity());
-        entity.setGrsVolume(detail.getGrsVolume());
+        entity.setQuantity(toBigDecimal(detail.getQuantity()));
+        entity.setGrsVolume(toBigDecimal(detail.getGrsVolume()));
         entity.setGrsWeight(detail.getGrsWeight());
         entity.setNetVolume(detail.getNetVolume());
         entity.setNetWeight(detail.getNetWeight());
@@ -1539,13 +1542,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .id(new ShipBlManifestDtlId(transactionPoid, detail.getDetRowId() != null ? detail.getDetRowId() : detRowId++))
                         .comodityPoid(detail.getComodityPoid())
                         .cargoDescription(detail.getCargoDescription())
-                        .quantity(detail.getQuantity())
-                        .grsVolume(detail.getGrsVolume())
-                        .grsWeight(detail.getGrsWeight())
-                        .netVolume(detail.getNetVolume())
-                        .netWeight(detail.getNetWeight())
-                        .tareWeight(detail.getTareWeight())
-                        .noOfPacks(detail.getNoOfPacks())
+                        .quantity(toBigDecimal(detail.getQuantity()))
+                        .grsVolume(toBigDecimal(detail.getGrsVolume()))
+                        .grsWeight(toBigDecimal(detail.getGrsWeight()))
+                        .netVolume(toBigDecimal(detail.getNetVolume()))
+                        .netWeight(toBigDecimal(detail.getNetWeight()))
+                        .tareWeight(toBigDecimal(detail.getTareWeight()))
+                        .noOfPacks(toBigDecimal(detail.getNoOfPacks()))
                         .packUnit(detail.getPackUnit())
                         .destinationPortPoid(detail.getDestinationPortPoid())
                         .build();
@@ -1578,8 +1581,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .equipmentIsoType(detail.getEquipmentIsoType())
                         .equipmentType(detail.getEquipmentType())
                         .equipmentSize(detail.getEquipmentSize())
-                        .quantity(detail.getQuantity())
-                        .grsVolume(detail.getGrsVolume())
+                        .quantity(toBigDecimal(detail.getQuantity()))
+                        .grsVolume(toBigDecimal(detail.getGrsVolume()))
                         .grsWeight(detail.getGrsWeight())
                         .netVolume(detail.getNetVolume())
                         .netWeight(detail.getNetWeight())
@@ -1684,13 +1687,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .detRowId(entity.getId().getDetRowId())
                         .comodityPoid(entity.getComodityPoid())
                         .cargoDescription(entity.getCargoDescription())
-                        .quantity(entity.getQuantity())
-                        .grsVolume(entity.getGrsVolume())
-                        .grsWeight(entity.getGrsWeight())
-                        .netVolume(entity.getNetVolume())
-                        .netWeight(entity.getNetWeight())
-                        .tareWeight(entity.getTareWeight())
-                        .noOfPacks(entity.getNoOfPacks())
+                        .quantity(toLong(entity.getQuantity()))
+                        .grsVolume(toLong(entity.getGrsVolume()))
+                        .grsWeight(toLong(entity.getGrsWeight()))
+                        .netVolume(toLong(entity.getNetVolume()))
+                        .netWeight(toLong(entity.getNetWeight()))
+                        .tareWeight(toLong(entity.getTareWeight()))
+                        .noOfPacks(toLong(entity.getNoOfPacks()))
                         .packUnit(entity.getPackUnit())
                         .destinationPortPoid(entity.getDestinationPortPoid())
                         .build())
@@ -1717,8 +1720,8 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                         .equipmentIsoType(entity.getEquipmentIsoType())
                         .equipmentType(entity.getEquipmentType())
                         .equipmentSize(entity.getEquipmentSize())
-                        .quantity(entity.getQuantity())
-                        .grsVolume(entity.getGrsVolume())
+                        .quantity(toLong(entity.getQuantity()))
+                        .grsVolume(toLong(entity.getGrsVolume()))
                         .grsWeight(entity.getGrsWeight())
                         .netVolume(entity.getNetVolume())
                         .netWeight(entity.getNetWeight())
@@ -1803,6 +1806,26 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
                 .toList();
         dto.setChargeDetails(chargeDetails);
         enrichChargeLovData(chargeDetails);
+    }
+
+    private void enrichHeaderLovData(ExportManifestBlRequestDto dto) {
+        if (dto == null) {
+            return;
+        }
+
+        Long groupPoid = UserContext.getGroupPoid();
+        Long companyPoid = UserContext.getCompanyPoid();
+        Long userPoid = UserContext.getUserPoid();
+
+        try {
+            if (dto.getComodityPoid() != null && dto.getComodityPoid() > 0) {
+                dto.setComodityDet(
+                        lovService.getLovItemByPoid(dto.getComodityPoid(), "COMODITY", groupPoid, companyPoid,
+                                userPoid));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch header LOV data for Export Manifest BL: {}", dto.getTransactionPoid(), e);
+        }
     }
 
     private void enrichGeneralCargoLovData(List<GeneralCargoRequestDto> dtos) {
@@ -1980,6 +2003,13 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
         ShipBlManifestGeneralDtl target = new ShipBlManifestGeneralDtl();
         BeanUtils.copyProperties(source, target);
+        target.setQuantity(toLong(source.getQuantity()));
+        target.setGrsVolume(toLong(source.getGrsVolume()));
+        target.setGrsWeight(toLong(source.getGrsWeight()));
+        target.setNetVolume(toLong(source.getNetVolume()));
+        target.setNetWeight(toLong(source.getNetWeight()));
+        target.setTareWeight(toLong(source.getTareWeight()));
+        target.setNoOfPacks(toLong(source.getNoOfPacks()));
         return target;
     }
 
@@ -1989,7 +2019,17 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         }
         ShipBlManifestContainerDtl target = new ShipBlManifestContainerDtl();
         BeanUtils.copyProperties(source, target);
+        target.setQuantity(toLong(source.getQuantity()));
+        target.setGrsVolume(toLong(source.getGrsVolume()));
         return target;
+    }
+
+    private static BigDecimal toBigDecimal(Long value) {
+        return value == null ? null : BigDecimal.valueOf(value);
+    }
+
+    private static Long toLong(BigDecimal value) {
+        return value == null ? null : value.longValue();
     }
 
     private ShipBlManifestChargesDtl copyChargeForLog(ExportManifestBlChargesDtl source) {

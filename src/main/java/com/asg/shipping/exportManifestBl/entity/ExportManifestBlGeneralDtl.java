@@ -8,6 +8,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "SHIP_BL_MANIFEST_GENERAL_DTL")
 @Getter
@@ -26,26 +28,26 @@ public class ExportManifestBlGeneralDtl extends BaseEntity {
     @Column(name = "CARGO_DESCRIPTION", length = 200)
     private String cargoDescription;
 
-    @Column(name = "QUANTITY")
-    private Long quantity;
+    @Column(name = "QUANTITY", precision = 25, scale = 3)
+    private BigDecimal quantity;
 
-    @Column(name = "GRS_VOLUME")
-    private Long grsVolume;
+    @Column(name = "GRS_VOLUME", precision = 25, scale = 3)
+    private BigDecimal grsVolume;
 
-    @Column(name = "GRS_WEIGHT")
-    private Long grsWeight;
+    @Column(name = "GRS_WEIGHT", precision = 25, scale = 3)
+    private BigDecimal grsWeight;
 
-    @Column(name = "NET_VOLUME")
-    private Long netVolume;
+    @Column(name = "NET_VOLUME", precision = 25, scale = 3)
+    private BigDecimal netVolume;
 
-    @Column(name = "NET_WEIGHT")
-    private Long netWeight;
+    @Column(name = "NET_WEIGHT", precision = 25, scale = 3)
+    private BigDecimal netWeight;
 
-    @Column(name = "TARE_WEIGHT")
-    private Long tareWeight;
+    @Column(name = "TARE_WEIGHT", precision = 25, scale = 3)
+    private BigDecimal tareWeight;
 
-    @Column(name = "NO_OF_PACKS")
-    private Long noOfPacks;
+    @Column(name = "NO_OF_PACKS", precision = 25, scale = 3)
+    private BigDecimal noOfPacks;
 
     @Column(name = "PACK_UNIT", length = 6)
     private String packUnit;
@@ -54,4 +56,3 @@ public class ExportManifestBlGeneralDtl extends BaseEntity {
     private Long destinationPortPoid;
 
 }
-
