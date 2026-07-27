@@ -2,6 +2,7 @@ package com.asg.shipping.linepayabletransfetasperreporting.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.shipping.linepayabletransfetasperreporting.dto.ApplyExchangeRateRequest;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingCreateDTO;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingDto;
 import com.asg.shipping.linepayabletransfetasperreporting.dto.LinePayableTransferReportingDtlDto;
@@ -62,4 +63,9 @@ public interface LinePayableTransferReportingService {
      * Process weekly BL report before create (without transaction ID)
      */
     List<LinePayableTransferReportingDtlDto> processWeeklyBeforeCreate(LoadDataByDateRangeRequest request);
+
+    /**
+     * Apply a new exchange rate to every detail row carrying the given currency code
+     */
+    List<LinePayableTransferReportingDtlDto> applyExchangeRate(ApplyExchangeRateRequest request);
 }
