@@ -530,9 +530,15 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     @Transactional
-    public String transferTranshipments(Long voyagePoid, TranshipmentTransferRequest request) {
+    public Map<String, Object> transferTranshipments(Long voyagePoid, TranshipmentTransferRequest request) {
         if (request.getDetRowIds() == null || request.getDetRowIds().isEmpty()) {
-            return "No rows selected for transfer.";
+            Map<String, Object> empty = new HashMap<>();
+            empty.put("message", "No rows selected for transfer.");
+            empty.put("loadTransactionPoid", null);
+            return empty;
+        }
+        if (request.getTargetVoyagePoid() == null) {
+            throw new IllegalArgumentException("Check Transfer Job NO...");
         }
         List<ShipVoyageTranshipDtlEntity> rows = transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
         Set<Long> ids = new HashSet<>(request.getDetRowIds());
@@ -544,7 +550,10 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
             updated++;
         }
         transhipDtlRepository.saveAll(rows);
-        return "Transfer Assignment Completed (" + updated + " rows). Press Save/Refresh.";
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "Transfer Assignment Completed (" + updated + " rows). Press Save/Refresh.");
+        result.put("loadTransactionPoid", request.getTargetVoyagePoid());
+        return result;
     }
 
     @Override

@@ -13,7 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class TranshipmentTransferRequest {
-    @NotNull
     private Long targetVoyagePoid;
 
     private List<Long> detRowIds;
