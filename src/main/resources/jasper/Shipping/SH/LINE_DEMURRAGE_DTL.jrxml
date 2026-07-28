@@ -1,0 +1,448 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="LINE_DEMURRAGE_DTL" language="groovy" pageWidth="780" pageHeight="595" orientation="Landscape" columnWidth="740" leftMargin="20" rightMargin="20" topMargin="10" bottomMargin="20" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.3310000000000004"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_TILL_DATE" class="java.lang.String"/>
+	<parameter name="P_DISCOUNT" class="java.lang.String" isForPrompting="false"/>
+	<queryString>
+		<![CDATA[SELECT LINE, BL_NUMBER,BL_POID,EQUIPMENT_SHIPPER_OWN,CONTAINER_NO,fmdate,TODATE,days,
+DM_AMT1 - ((TO_NUMBER($P{P_DISCOUNT})/100)*DM_AMT1) DM_AMT,
+DM_AMT1,
+$P{P_DISCOUNT} DISC,
+REMARKS,EQUIPMENT_ISO_TYPE,FREE_DAYS,EMPTY_IN,DO_STATUS
+FROM (
+SELECT GET_LINE_NAME(LINE_POID) LINE, BL_NUMBER,BL_POID,EQUIPMENT_SHIPPER_OWN,CONTAINER_NO,NVL(DM_TILL_DATE,FROMDATE) fmdate, to_date( nvl(EMPTY_IN ,TODATE)) TODATE,
+(to_date(to_date( nvl(EMPTY_IN ,TODATE)))-NVL(DM_TILL_DATE,FROMDATE))+1 days,
+FUNC_RTN_DEM_DETTN_FULL(GROUP_POID, COMPANY_POID,$P{DOC_KEY_POID}, BL_POID,CONTAINER_NO ,GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE((ARRIVAL_DATE)) ,to_date(to_date( nvl(EMPTY_IN ,TODATE))), 'DEMM' ,NVL(EXTRA_FREE_DAYS,0)) DM_AMT1,
+FUNC_RTN_DEM_DETTN_FULL_TEXT(GROUP_POID, COMPANY_POID,$P{DOC_KEY_POID}, BL_POID,CONTAINER_NO ,GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID, TO_DATE((ARRIVAL_DATE)) ,to_date(to_date( nvl(EMPTY_IN ,TODATE))), 'DEMM' ,NVL(EXTRA_FREE_DAYS,0))  REMARKS,
+EQUIPMENT_ISO_TYPE,FREE_DAYS,EMPTY_IN ,
+NVL((SELECT 'DOISSUED' FROM DO_SH_PRINTING_DTL WHERE  NVL (DO_PRINTED, 'N') = 'Y' AND transaction_poid =  bl_poid),'DONOTISSUED') DO_STATUS
+FROM
+(
+SELECT
+BLHDR.BL_NUMBER, TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) ARRIVAL_DATE, BLHDR.GROUP_POID, BLHDR.COMPANY_POID, EQUIPMENT_ISO_TYPE ,
+VHDR.LINE_POID,EXTRA_FREE_DAYS,CONTAINERDTL.TRANSACTION_POID BL_POID, EQUIPMENT_SHIPPER_OWN,CONTAINER_NO,
+TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) +DECODE(NVL(EXTRA_FREE_DAYS,0),0,
+FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FROMDATE,
+ TODATE,
+(
+SELECT MAX(DM_TO_DATE)+1
+FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL
+WHERE ARCONTAINERDTL.BL_POID=CONTAINERDTL.TRANSACTION_POID
+AND ARCONTAINERDTL.CONTAINER_NO=CONTAINERDTL.CONTAINER_NO
+AND TRANSACTION_POID<>$P{DOC_KEY_POID}) DM_TILL_DATE ,DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FREE_DAYS,
+(
+select to_date(trunc(MOVES_DATE_TIME)) MOVES_DATE_TIME from SHIP_CONTAINER_INVENTORY
+where MOVES_TYPE='MTIN' and LINK_TRANSACTION_POID=BLHDR.transaction_poid
+and CONTAINER_NO=CONTAINERDTL.container_no
+) EMPTY_IN
+FROM  SHIP_VOYAGE_HDR VHDR
+INNER JOIN  SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID
+INNER JOIN  SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID
+INNER JOIN  SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID AND to_date(TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
+INNER JOIN SHIP_LINE_TARIFF_IMP_DTL CONTAINERTRIFIMP ON SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID= GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE)
+INNER JOIN SHIP_LINE_MASTER SLM ON VHDR.LINE_POID=SLM.LINE_POID
+LEFT JOIN (SELECT to_char(to_date(SUBSTR($P{P_TILL_DATE},1,10),'RRRR-MM-DD'))  TODATE FROM DUAL) TODT ON 1=1
+WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
+)
+)]]>
+	</queryString>
+	<field name="LINE" class="java.lang.String"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="BL_POID" class="java.math.BigDecimal"/>
+	<field name="EQUIPMENT_SHIPPER_OWN" class="java.lang.String"/>
+	<field name="CONTAINER_NO" class="java.lang.String"/>
+	<field name="FMDATE" class="java.sql.Timestamp"/>
+	<field name="TODATE" class="java.sql.Timestamp"/>
+	<field name="DAYS" class="java.math.BigDecimal"/>
+	<field name="DM_AMT" class="java.math.BigDecimal"/>
+	<field name="DM_AMT1" class="java.math.BigDecimal"/>
+	<field name="DISC" class="java.lang.String"/>
+	<field name="REMARKS" class="java.lang.String"/>
+	<field name="EQUIPMENT_ISO_TYPE" class="java.lang.String"/>
+	<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+	<field name="EMPTY_IN" class="java.sql.Timestamp"/>
+	<field name="DO_STATUS" class="java.lang.String"/>
+	<variable name="variable1" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{DM_AMT}]]></variableExpression>
+		<initialValueExpression><![CDATA[$F{DM_AMT}]]></initialValueExpression>
+	</variable>
+	<variable name="TOT_AMT" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{DM_AMT1}]]></variableExpression>
+		<initialValueExpression><![CDATA[$F{DM_AMT1}]]></initialValueExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="58" splitType="Stretch">
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="3" y="2" width="735" height="1" uuid="9ec55f57-eda0-48ce-a06e-ffab81edbcc6"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+			<staticText>
+				<reportElement x="5" y="38" width="60" height="20" uuid="89044db6-448c-4629-88d7-670f94dc87db"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[CONTAINER]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="65" y="38" width="37" height="20" uuid="b8794504-1a20-45ae-b44d-62512044cc72"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[ISO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="102" y="38" width="50" height="20" uuid="acd8595c-0a73-4744-9c3f-7dfeca857842"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<text><![CDATA[FROM DATE	]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="152" y="38" width="50" height="20" uuid="399e7148-8113-4878-ad25-5147c8f684f0"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<text><![CDATA[TO DATE	]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="202" y="38" width="48" height="20" uuid="5ea444df-c9d4-4588-b777-cf73cc4fe800"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[FREE DAYS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="250" y="38" width="25" height="20" uuid="09d814a0-c976-4931-93b3-3bc3c8d170f0"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[DAYS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="413" y="38" width="50" height="20" uuid="76999d61-997c-4d24-b16b-f2d3bd9f3ecc"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<text><![CDATA[EMPTY IN]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="275" y="38" width="55" height="20" uuid="236df049-0214-4917-b55d-bf53f159efc9"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[BASE AMT ]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="464" y="38" width="275" height="20" uuid="3cdee474-7e18-4540-ad9c-3a54309a3faa"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<text><![CDATA[CALCULATION DETAILS (BEFORE APPLYING DISCOUNT)]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="5" y="9" width="733" height="19" uuid="d0efdb5d-3315-41b2-9e40-7f3e33ce1c8c"/>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="14" isBold="true"/>
+				</textElement>
+				<text><![CDATA[Demurrage Calculation]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="330" y="38" width="27" height="20" uuid="f89e083c-5340-4540-adf8-ce8feb7a9511"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+				</textElement>
+				<text><![CDATA[DISC%]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="358" y="38" width="55" height="20" uuid="50300e5e-6949-4d95-9223-ce505af4569b"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[AMOUNT]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="40" splitType="Stretch">
+			<textField>
+				<reportElement x="5" y="0" width="60" height="38" uuid="a11c2392-efb6-4bc0-9cfc-70495e59685b"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTAINER_NO}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="65" y="0" width="37" height="38" uuid="7ccfd1bb-4793-419f-87c8-e8921a78d3e4"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EQUIPMENT_ISO_TYPE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="102" y="0" width="50" height="38" uuid="ca1c1d98-bd3c-4d52-a146-65f1a4d8f487"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FMDATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="152" y="0" width="50" height="38" uuid="8a4a91b8-b073-4a88-9493-5a06f2f8dd05"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{TODATE}]]></textFieldExpression>
+			</textField>
+			<textField isBlankWhenNull="true">
+				<reportElement x="202" y="0" width="48" height="38" uuid="03ff090f-ae99-4b3a-bf40-7e47eb28203b"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FREE_DAYS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="250" y="0" width="25" height="38" uuid="41898694-f264-410c-a87d-0822f6d8828e"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{DAYS} <= 0 ? 0 : $F{DAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="dd-MMM-yyyy" isBlankWhenNull="true">
+				<reportElement x="413" y="0" width="50" height="38" uuid="fc410352-5288-4c7d-a44f-07a76779ac88"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{EMPTY_IN}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="275" y="0" width="55" height="38" uuid="62847cff-ee69-4f30-a4d5-4d4325f561ed"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{DM_AMT1} <= 0 ? 0 : $F{DM_AMT1})]]></textFieldExpression>
+			</textField>
+			<textField pattern="" isBlankWhenNull="true">
+				<reportElement x="464" y="0" width="275" height="38" uuid="9d5761e5-3623-4da7-887f-4d36a813eed1"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Left" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{REMARKS}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="330" y="0" width="27" height="38" uuid="ac54d345-a8e2-42e9-81ce-8590dc00a570"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{DISC}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="358" y="0" width="55" height="38" uuid="62ae7582-7c38-49c8-8da6-5359d7885cac"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{DM_AMT} <= 0 ? 0 : $F{DM_AMT})]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<lastPageFooter>
+		<band height="23">
+			<textField pattern="#,##,##0.000">
+				<reportElement x="358" y="0" width="55" height="20" uuid="63d47d9e-32b9-410e-87b0-86a6d473cf0f"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="10" isBold="true" isUnderline="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($V{variable1} <= 0 ? 0 : $V{variable1})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000">
+				<reportElement x="276" y="0" width="55" height="20" uuid="931fc517-d51e-4aa6-a31d-600ca23861b2"/>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="10" isBold="true" isUnderline="true"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($V{TOT_AMT} <= 0 ? 0 : $V{TOT_AMT})]]></textFieldExpression>
+			</textField>
+		</band>
+	</lastPageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>
