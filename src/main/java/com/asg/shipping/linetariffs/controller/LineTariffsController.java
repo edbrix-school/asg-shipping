@@ -13,7 +13,9 @@ import com.asg.shipping.linetariffs.dto.LineTariffUpdateDTO;
 import com.asg.shipping.linetariffs.dto.LoadContainerTypesResponseDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.shipping.linetariffs.entity.ShipLineTariffHdr;
 import com.asg.shipping.linetariffs.service.LineTariffsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -30,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -56,6 +57,7 @@ public class LineTariffsController {
 
     private final LineTariffsService lineTariffsService;
     private final LoggingService loggingService;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/search")
@@ -426,8 +428,8 @@ public class LineTariffsController {
         try {
             byte[] pdf = lineTariffsService.print(id);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=line-tariff-notice-to-trade-" + id + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipLineTariffHdr.class, id, "line-tariff-notice-to-trade", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (com.asg.shipping.exceptions.ResourceNotFoundException e) {

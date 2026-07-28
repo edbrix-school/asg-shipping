@@ -2,9 +2,11 @@ package com.asg.shipping.linecommission.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.shipping.containertypes.dto.ContainerTypeDto;
 import com.asg.shipping.linecommission.dto.LineCommissionResponse;
 import com.asg.shipping.linecommission.dto.LineCommissionRequest;
+import com.asg.shipping.linecommission.entity.ShipLineCommHdrEntity;
 import com.asg.shipping.linecommission.service.LineCommissionService;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
@@ -20,7 +22,6 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
@@ -41,6 +42,7 @@ import static com.asg.shipping.common.ApiResponse.success;
 public class LineCommissionController {
 
     private final LineCommissionService service;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     /**
      * Controller signature mirrors ags-shipping pattern (see ContainerTerminalTypeController).
@@ -108,8 +110,8 @@ public class LineCommissionController {
         try {
             byte[] pdf = service.print(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=line-commission-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipLineCommHdrEntity.class, transactionPoid, "line-commission", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
