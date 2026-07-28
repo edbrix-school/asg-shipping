@@ -33,6 +33,10 @@ public class OFOQApiServiceImpl implements OFOQApiService {
      */
     private static final long STATUS_POLL_DELAY_MS = 3000L;
 
+    /** Recorded when OFOQ could not be reached at all, so the attempt is still stored against the document. */
+    private static final int TRANSPORT_FAILURE_CODE = 0;
+    private static final String TRANSPORT_FAILURE_TEXT = "Connection Failed";
+
     private final ShippingOFOQProcRepository procRepository;
     private final RestTemplate restTemplates;
     private final GlobalParameterService globalParameterService;
@@ -85,7 +89,8 @@ public class OFOQApiServiceImpl implements OFOQApiService {
         HttpHeaders headers = createHeaders();
 
         int statusCode;
-        String responseBody;
+        String statusText;
+        String responseMessage;
 
         try {
             HttpEntity<String> requestEntity = new HttpEntity<>(xmlData, headers);
@@ -99,33 +104,42 @@ public class OFOQApiServiceImpl implements OFOQApiService {
 
             log.debug("OFOQ API response status: {}", response.getStatusCode());
             statusCode = response.getStatusCode().value();
-            responseBody = response.getBody();
+            statusText = reasonPhrase(statusCode);
+            responseMessage = extractMessage(response.getBody());
 
         } catch (HttpClientErrorException | HttpServerErrorException ex) {
-            // Legacy reads the error stream and stores the failed response just like a successful one.
+            // Legacy reads the error stream and stores the rejected response just like a successful
+            // one, so the failure is visible on the Manifest Response tab.
             log.error(
-                    "OFOQ API failed | status={} | response={}",
+                    "OFOQ API rejected the manifest | status={} | response={}",
                     ex.getStatusCode(),
                     ex.getResponseBodyAsString()
             );
             statusCode = ex.getStatusCode().value();
-            responseBody = ex.getResponseBodyAsString();
+            statusText = reasonPhrase(statusCode);
+            responseMessage = extractMessage(ex.getResponseBodyAsString());
+            if (responseMessage == null) {
+                responseMessage = ex.getResponseBodyAsString();
+            }
 
         } catch (Exception e) {
-            log.error("Unexpected error calling OFOQ API", e);
-            throw new ValidationException("Error while calling OFOQ API: " + e.getMessage());
+            // Connection refused, timeout, TLS or DNS failure: OFOQ never answered. Record the
+            // attempt against the document instead of losing it, and let the caller carry on so
+            // the saved document (and this row) survive the transaction.
+            log.error("Unable to reach the OFOQ API for transactionPoid: {}", transactionPoId, e);
+            statusCode = TRANSPORT_FAILURE_CODE;
+            statusText = TRANSPORT_FAILURE_TEXT;
+            responseMessage = failureMessage(e);
         }
-
-        String extractedMessage = extractMessage(responseBody);
 
         return procRepository.saveOFOQApiResponse(
                 transactionPoId,
                 docRef,
                 manifestType,
                 statusCode,
-                reasonPhrase(statusCode),
+                statusText,
                 // Legacy never passes NULL here - an unparsable body yields an empty message.
-                extractedMessage != null ? extractedMessage : ""
+                responseMessage != null ? responseMessage : ""
         );
     }
 
@@ -174,8 +188,15 @@ public class OFOQApiServiceImpl implements OFOQApiService {
                     .responseBody(ex.getResponseBodyAsString())
                     .build();
         } catch (Exception e) {
-            log.error("Unexpected error fetching OFOQ manifest status for functionalRefId: {}", functionalRefId, e);
-            throw new ValidationException("Failed to fetch manifest status: " + e.getMessage());
+            // OFOQ never answered. Return the failure as a normal result so the caller records it
+            // through PROC_SAVE_OFOQ_API_MANIFEST_RESPONSE, exactly like a rejected status.
+            log.error("Unable to reach the OFOQ API while fetching manifest status for functionalRefId: {}", functionalRefId, e);
+            return OFOQCheckStatusCustomsResponseDto.builder()
+                    .functionalReference(functionalRefId)
+                    .statusCode(String.valueOf(TRANSPORT_FAILURE_CODE))
+                    .statusText(TRANSPORT_FAILURE_TEXT)
+                    .responseMessage(failureMessage(e))
+                    .build();
         }
     }
 
@@ -191,6 +212,10 @@ public class OFOQApiServiceImpl implements OFOQApiService {
             log.debug("XML parser does not support all hardening options: {}", e.getMessage());
         }
         return factory;
+    }
+
+    private String failureMessage(Exception e) {
+        return e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
     }
 
     private String reasonPhrase(int statusCode) {

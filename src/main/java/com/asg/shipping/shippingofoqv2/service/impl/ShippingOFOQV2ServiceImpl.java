@@ -34,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -567,26 +566,49 @@ public class ShippingOFOQV2ServiceImpl implements ShippingOFOQV2Service {
                     functionalRefId != null ? functionalRefId : "not returned"));
 
             if (functionalRefId == null) {
+                // The submission was rejected or never reached OFOQ. The failed reply has already
+                // been stored by PROC_SAVE_OFOQ_API_RESPONSE, so the document is returned as saved
+                // and the failure shows up on the Manifest Response tab.
                 log.warn("No functional reference is available for transactionPoid: {}", transactionPoid);
-                entityManager.clear();
-                OfoqApiDataHdrEntity header = findEntityById(transactionPoid);
-                OFOQCheckStatusResponseDto responseDto = new OFOQCheckStatusResponseDto();
-                responseDto.setHeader(ofoqMapper.toHeaderDto(header, null));
-                responseDto.setManifestResponses(new ArrayList<>());
-                return responseDto;
+                return buildStoredResponse(transactionPoid, null);
             }
 
             log.info("OFOQ manifest submitted successfully with functionalRefId: {}", functionalRefId);
-            return checkStatus(OFOQCheckStatusDto.builder()
-                    .functionalReference(functionalRefId)
-                    .transactionPoid(transactionPoid)
-                    .docReference(docRef)
-                    .blNumber(blNumber)
-                    .build(), manifestType);
+
+            try {
+                return checkStatus(OFOQCheckStatusDto.builder()
+                        .functionalReference(functionalRefId)
+                        .transactionPoid(transactionPoid)
+                        .docReference(docRef)
+                        .blNumber(blNumber)
+                        .build(), manifestType);
+            } catch (Exception e) {
+                // OFOQ has accepted the manifest and the reply is stored; failing the whole request
+                // here would roll that back. Report it and let the user press Check Status again.
+                log.error("Manifest was submitted for transactionPoid: {} (functionalRef: {}) but the status check failed",
+                        transactionPoid, functionalRefId, e);
+                logOFOQActivity(transactionPoid, String.format(
+                        "OFOQ status check failed for Functional Reference: %s%s | %s",
+                        functionalRefId, blSuffix(blNumber), abbreviate(e.getMessage())));
+                return buildStoredResponse(transactionPoid, functionalRefId);
+            }
         } catch (Exception e) {
             log.error("Error submitting OFOQ manifest for transactionPoid: {}", transactionPoid, e);
             throw e;
         }
+    }
+
+    /** Returns the document as it currently stands in the database, responses included. */
+    private OFOQCheckStatusResponseDto buildStoredResponse(Long transactionPoid, String functionalRefId) {
+        entityManager.clear();
+
+        OFOQCheckStatusResponseDto responseDto = new OFOQCheckStatusResponseDto();
+        responseDto.setHeader(ofoqMapper.toHeaderDto(findEntityById(transactionPoid), functionalRefId));
+        responseDto.setManifestResponses(
+                OFOQManifestResponseDtlRepository.findByTransactionPoid(transactionPoid).stream()
+                        .map(ofoqMapper::toManifestResponseDto)
+                        .toList());
+        return responseDto;
     }
 
 }
