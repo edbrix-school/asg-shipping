@@ -122,7 +122,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[CONTAINER]]></text>
 			</staticText>
@@ -135,7 +135,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[ISO]]></text>
 			</staticText>
@@ -148,7 +148,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Left" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 					<paragraph leftIndent="2"/>
 				</textElement>
 				<text><![CDATA[FROM DATE	]]></text>
@@ -162,7 +162,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Left" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 					<paragraph leftIndent="2"/>
 				</textElement>
 				<text><![CDATA[TO DATE	]]></text>
@@ -176,7 +176,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[FREE DAYS]]></text>
 			</staticText>
@@ -189,7 +189,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[DAYS]]></text>
 			</staticText>
@@ -202,7 +202,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Left" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 					<paragraph leftIndent="2"/>
 				</textElement>
 				<text><![CDATA[EMPTY IN]]></text>
@@ -216,7 +216,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 					<paragraph rightIndent="3"/>
 				</textElement>
 				<text><![CDATA[BASE AMT ]]></text>
@@ -230,15 +230,15 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Left" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 					<paragraph leftIndent="2"/>
 				</textElement>
 				<text><![CDATA[CALCULATION DETAILS (BEFORE APPLYING DISCOUNT)]]></text>
 			</staticText>
 			<staticText>
-				<reportElement x="5" y="9" width="733" height="19" uuid="d0efdb5d-3315-41b2-9e40-7f3e33ce1c8c"/>
+				<reportElement x="5" y="9" width="733" height="24" uuid="d0efdb5d-3315-41b2-9e40-7f3e33ce1c8c"/>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="14" isBold="true"/>
+					<font size="14" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[Demurrage Calculation]]></text>
 			</staticText>
@@ -251,7 +251,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Center" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<text><![CDATA[DISC%]]></text>
 			</staticText>
@@ -264,7 +264,7 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 					<rightPen lineWidth="0.5"/>
 				</box>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="8" isBold="true"/>
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
 					<paragraph rightIndent="3"/>
 				</textElement>
 				<text><![CDATA[AMOUNT]]></text>
@@ -429,14 +429,14 @@ WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}
 			<textField pattern="#,##,##0.000">
 				<reportElement x="358" y="0" width="55" height="20" uuid="63d47d9e-32b9-410e-87b0-86a6d473cf0f"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="10" isBold="true" isUnderline="true"/>
+					<font size="10" isBold="true" isUnderline="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[($V{variable1} <= 0 ? 0 : $V{variable1})]]></textFieldExpression>
 			</textField>
 			<textField pattern="#,##,##0.000">
 				<reportElement x="276" y="0" width="55" height="20" uuid="931fc517-d51e-4aa6-a31d-600ca23861b2"/>
 				<textElement textAlignment="Right" verticalAlignment="Middle">
-					<font size="10" isBold="true" isUnderline="true"/>
+					<font size="10" isBold="true" isUnderline="true" pdfFontName="Helvetica-Bold"/>
 				</textElement>
 				<textFieldExpression><![CDATA[($V{TOT_AMT} <= 0 ? 0 : $V{TOT_AMT})]]></textFieldExpression>
 			</textField>

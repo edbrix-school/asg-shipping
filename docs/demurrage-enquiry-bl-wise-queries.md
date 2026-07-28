@@ -493,8 +493,8 @@ Legacy: `PrintDemurrageCalc()`.
 | Jasper | `Shipping/SH/LINE_DEMURRAGE_CALC.jrxml` |
 | `DOC_ID` | `100-144` |
 | `DOC_KEY_POID` | BL POID as a String (**not** a document POID — the enquiry stores nothing) |
-| `P_TILL_DATE` | To Date, formatted `dd-MMM-yyyy` (the report declares it as `java.lang.String`) |
-| `P_DISCOUNT` | Discount %, plain string, `0` when not entered |
+| `P_TILL_DATE` | To Date as **`yyyy-MM-dd`** (declared `java.lang.String`) |
+| `P_DISCOUNT` | Discount %, plain number as a string, `0` when not entered |
 | `SUBREPORT_DEMURRAGE_MASTER` | compiled `Shipping/SH/LINE_DEMURRAGE_MASTER.jrxml` |
 | `SUBREPORT_DEMURRAGE_DTL` | compiled `Shipping/SH/LINE_DEMURRAGE_DTL.jrxml` |
 | `SUB_HEADER`, `LOGIN_COMP_POID`, `LOGIN_USER_POID`, `LOGIN_GROUP_POID` | supplied by `PrintService.buildBaseParams` |
@@ -507,6 +507,54 @@ resolved `.jasper` files off the `SUBREPORT_DIR` network share
 `PORT_STORAGE_CALC.jrxml` was migrated. `MASTER` and `LINE_DEMURRAGE_DTL` have no nested subreports
 and were copied unchanged. `DemurrageCalcReportCompilationTest` compiles all three and asserts the
 parameter contract.
+
+### Bold styling
+
+The templates mark their headings, column headers, labels and totals with `isBold="true"`, but that
+alone is dropped by the PDF exporter: with no font extension providing the family it falls back to
+plain `Helvetica` and everything prints in normal weight - which is why the first migrated output
+looked flat next to the legacy print. Every bold `<font>` in the three templates therefore also
+carries `pdfFontName="Helvetica-Bold"` (35 elements). `DemurrageCalcReportCompilationTest` fails the
+build if a bold font is added without it, and asserts `Helvetica-Bold` really lands in the exported
+PDF.
+
+Worth knowing when migrating further reports from `Alsharif_Code/Reports/` - the same silent loss
+applies to any of them.
+
+### Headings clipped away
+
+Jasper empties a text element whose box is shorter than one line of its own font instead of
+overflowing it - nothing is drawn and nothing is logged. The **Demurrage Calculation** heading (14pt
+in a 19px box, in the column header band of `LINE_DEMURRAGE_DTL`) vanished exactly that way: the
+element was laid out, its text came out empty. The legacy font metrics fitted; this JVM's do not.
+
+Heights raised for the two headings that sat on the limit:
+
+| Template | Element | Was | Now |
+|---|---|---|---|
+| `LINE_DEMURRAGE_DTL` | `Demurrage Calculation` | 19 | 24 (column headers start at y=38) |
+| `LINE_DEMURRAGE_CALC` | `Demurrage/Detention Tariff` | 20 | 23 (fills its 23px band) |
+
+Rule of thumb when porting: a text box needs roughly `fontSize * 1.45` of height, or
+`isStretchWithOverflow="true"`. `DemurrageCalcReportCompilationTest.headingsAreTallEnoughToRender`
+fills the report and asserts the heading text really is printed.
+
+### Parameter formats the subreports impose
+
+`LINE_DEMURRAGE_DTL` consumes both screen inputs inside its own query, so the formats are not free:
+
+```sql
+LEFT JOIN (SELECT TO_CHAR(TO_DATE(SUBSTR($P{P_TILL_DATE},1,10),'RRRR-MM-DD')) TODATE FROM DUAL) TODT ON 1=1
+...
+DM_AMT1 - ((TO_NUMBER($P{P_DISCOUNT})/100) * DM_AMT1) DM_AMT
+```
+
+- `P_TILL_DATE` must be `yyyy-MM-dd`. Any other pattern (`dd-MMM-yyyy` for instance) fails the fill
+  with **ORA-01858 - a non-numeric character was found where a numeric was expected**. The legacy fed
+  it `attrCreatedDate.getInputValue().toString()`, which is `yyyy-MM-dd`.
+- `P_DISCOUNT` must be a plain number as a string - it goes through `TO_NUMBER`.
+- The discount is applied a second time *inside* the report; the service does not pre-discount the
+  amounts it sends, it only forwards the percentage.
 
 ---
 

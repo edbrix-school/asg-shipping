@@ -209,6 +209,37 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 	}
 
 	@Test
+	void printDemurrageCalculation_passesTheParametersTheReportCanParse() throws Exception {
+		Map<String, Object> baseParams = new java.util.HashMap<>();
+		when(printService.buildBaseParams(BL_POID, "100-144")).thenReturn(baseParams);
+		when(printService.load(anyString())).thenReturn(null);
+		when(printService.fillReportToPdf(any(), any(), any())).thenReturn(new byte[]{1, 2, 3});
+
+		service.printDemurrageCalculation(BL_POID, TO_DATE, new BigDecimal("12.5"));
+
+		// LINE_DEMURRAGE_DTL does to_date(SUBSTR(P_TILL_DATE,1,10),'RRRR-MM-DD') - anything but
+		// yyyy-MM-dd fails the fill with ORA-01858.
+		assertEquals("2025-07-28", baseParams.get("P_TILL_DATE"));
+		// ... and TO_NUMBER(P_DISCOUNT), so it has to stay a plain number without a percent sign.
+		assertEquals("12.5", baseParams.get("P_DISCOUNT"));
+		assertEquals(String.valueOf(BL_POID), baseParams.get("DOC_KEY_POID"));
+		assertTrue(baseParams.containsKey("SUBREPORT_DEMURRAGE_MASTER"));
+		assertTrue(baseParams.containsKey("SUBREPORT_DEMURRAGE_DTL"));
+	}
+
+	@Test
+	void printDemurrageCalculation_defaultsDiscountToZero() throws Exception {
+		Map<String, Object> baseParams = new java.util.HashMap<>();
+		when(printService.buildBaseParams(BL_POID, "100-144")).thenReturn(baseParams);
+		when(printService.load(anyString())).thenReturn(null);
+		when(printService.fillReportToPdf(any(), any(), any())).thenReturn(new byte[]{1});
+
+		service.printDemurrageCalculation(BL_POID, TO_DATE, null);
+
+		assertEquals("0", baseParams.get("P_DISCOUNT"));
+	}
+
+	@Test
 	void getBlDetails_clearsCalculatedColumns() {
 		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
 

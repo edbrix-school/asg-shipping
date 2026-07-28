@@ -3,6 +3,7 @@ package com.asg.shipping.demurrageenquiryblwise.controller;
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryRequestDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryResponseDto;
 import com.asg.shipping.demurrageenquiryblwise.service.DemurrageEnquiryBlWiseService;
@@ -37,6 +38,7 @@ import java.util.Map;
 import static com.asg.common.lib.dto.response.ApiResponse.badRequest;
 import static com.asg.common.lib.dto.response.ApiResponse.error;
 import static com.asg.common.lib.dto.response.ApiResponse.internalServerError;
+import static com.asg.common.lib.dto.response.ApiResponse.notFound;
 import static com.asg.common.lib.dto.response.ApiResponse.success;
 
 /**
@@ -130,7 +132,8 @@ public class DemurrageEnquiryBlWiseController {
 	}
 
 	@AllowedAction(UserRolesRightsEnum.PRINT)
-	@GetMapping("/demurrage-calculation")
+	@GetMapping(value = "/demurrage-calculation",
+			produces = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_JSON_VALUE})
 	@Operation(
 			summary = "View Demurrage Calculation",
 			description = "Demurrage charges tariff calculation of the BL as a PDF (SH/LINE_DEMURRAGE_CALC)."
@@ -155,10 +158,22 @@ public class DemurrageEnquiryBlWiseController {
 							"attachment; filename=demurrage-calculation-" + blPoid + ".pdf")
 					.contentType(MediaType.APPLICATION_PDF)
 					.body(pdf);
+		} catch (ResourceNotFoundException e) {
+			return asJson(notFound(e.getMessage()));
 		} catch (Exception e) {
 			log.error("Failed to generate the demurrage calculation PDF for BL: {}", blPoid, e);
-			return error("Failed to generate PDF: " + e.getMessage(), 500);
+			return asJson(error("Failed to generate PDF: " + e.getMessage(), 500));
 		}
+	}
+
+	/**
+	 * The client asks for application/pdf, so an error body has to carry an explicit content type -
+	 * otherwise content negotiation rejects it with 406 and the real failure never reaches the caller.
+	 */
+	private ResponseEntity<?> asJson(ResponseEntity<?> response) {
+		return ResponseEntity.status(response.getStatusCode())
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(response.getBody());
 	}
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)

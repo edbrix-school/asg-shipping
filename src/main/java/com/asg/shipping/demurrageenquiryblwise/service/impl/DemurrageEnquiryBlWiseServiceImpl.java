@@ -53,7 +53,12 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 	private static final String DEMURRAGE_CALC_REPORT = "Shipping/SH/LINE_DEMURRAGE_CALC.jrxml";
 	private static final String DEMURRAGE_MASTER_SUBREPORT = "Shipping/SH/LINE_DEMURRAGE_MASTER.jrxml";
 	private static final String DEMURRAGE_DTL_SUBREPORT = "Shipping/SH/LINE_DEMURRAGE_DTL.jrxml";
-	private static final DateTimeFormatter REPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+	/**
+	 * LINE_DEMURRAGE_DTL parses the parameter with
+	 * {@code to_date(SUBSTR(P_TILL_DATE,1,10),'RRRR-MM-DD')}, so it has to arrive as yyyy-MM-dd -
+	 * the format the legacy screen produced from the ADF date binding.
+	 */
+	private static final DateTimeFormatter REPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 	private static final String BL_LOV = "ALLBLNUMBER";
 	private static final String CHARGE_LOV = "CHARGE_MASTER";

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "b1f3a5c8-4d21-4f7e-9c6a-1c9e7d0a1441",
 		"name": "ASG Shipping - Demurrage Enquiry BL wise (100-144)",
-		"description": "Demurrage Enquiry - BL wise (Shipping -> Transactions, document 100-144).\n\nDisplay only document: nothing is persisted, every figure is derived from the BL, the line tariff and the charge masters.\n\n## Setup\n1. Select the environment / edit the collection variables: `baseUrl`, `token`, `blPoid`.\n2. `token` is a bearer JWT - the company, group, user and document context are read from it.\n3. Run **Apply Date** first; it fills `blPoid` driven results and stores the calculated totals in collection variables for the follow up requests.\n\n## Flow on the screen\n- `GET /bl-details` - runs when a BL is picked in the ALLBLNUMBER LOV\n- `POST /apply-date` - the Apply Date button (containers + charges + totals)\n- `GET /demurrage-calculation` - the View Demurrage Calculation link (PDF)\n- `POST /list` - List of Records common feature",
+		"description": "Demurrage Enquiry - BL wise (Shipping -> Transactions, document 100-144).\n\nDisplay only document: nothing is persisted, every figure is derived from the BL, the line tariff and the charge masters.\n\n## Setup\n1. Select the environment / edit the collection variables: `baseUrl`, `token`, `blPoid`.\n2. `token` is a bearer JWT - the company, group, user and document context are read from it.\n3. Run **Apply Date** first; it fills `blPoid` driven results and stores the calculated totals in collection variables for the follow up requests.\n\n## Flow on the screen\n- `GET /bl-details` - runs when a BL is picked in the ALLBLNUMBER LOV\n- `POST /apply-date` - the Apply Date button (containers + charges + totals)\n- `GET /demurrage-calculation` - the View Demurrage Calculation link (PDF)\n- `POST /list` - List of Records common feature\n\n## Request context headers\nThe service reads the whole user context from `X-*` headers (`AsgCommonInterceptor`), not from the bearer token, so every request carries them:\n- `X-Action-Requested` must match the endpoint's `@AllowedAction` - `VIEW` everywhere except the PDF, which needs `PRINT`\n- `X-Company-Poid` drives the tax lookups and the print parameters\n- `X-TimeZone-Code` resolves the To Date default; without it the request fails\n\nWhen calling through the API gateway these are injected for you and the values set here are ignored - they matter when hitting the service directly.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -49,6 +49,60 @@
 			"key": "discountPercentage",
 			"value": "0",
 			"type": "string"
+		},
+		{
+			"key": "companyPoid",
+			"value": "1",
+			"type": "string",
+			"description": "Login company POID."
+		},
+		{
+			"key": "groupPoid",
+			"value": "1",
+			"type": "string",
+			"description": "Login group POID."
+		},
+		{
+			"key": "userPoid",
+			"value": "1",
+			"type": "string",
+			"description": "Login user POID."
+		},
+		{
+			"key": "userId",
+			"value": "admin",
+			"type": "string",
+			"description": "Login user id."
+		},
+		{
+			"key": "userName",
+			"value": "Admin",
+			"type": "string",
+			"description": "Login user name."
+		},
+		{
+			"key": "userEmail",
+			"value": "admin@alsharifbahrain.com",
+			"type": "string",
+			"description": "Login user email."
+		},
+		{
+			"key": "userRole",
+			"value": "Admin",
+			"type": "string",
+			"description": "Primary role of this document per the SRS."
+		},
+		{
+			"key": "timeZoneCode",
+			"value": "Asia/Bahrain",
+			"type": "string",
+			"description": "IANA zone id; the To Date default is resolved in it."
+		},
+		{
+			"key": "logEnabled",
+			"value": "true",
+			"type": "string",
+			"description": "Toggles the common-lib log summary entries."
 		}
 	],
 	"event": [
@@ -71,8 +125,51 @@
 				"method": "GET",
 				"header": [
 					{
+						"key": "X-Action-Requested",
+						"value": "VIEW",
+						"description": "Must match the @AllowedAction of this endpoint, otherwise the rights check rejects the call."
+					},
+					{
 						"key": "X-Document-Id",
 						"value": "{{docId}}"
+					},
+					{
+						"key": "X-Company-Poid",
+						"value": "{{companyPoid}}",
+						"description": "Drives the tax lookups (RTN_GLOBAL_PARAMETER) and the print parameters."
+					},
+					{
+						"key": "X-Group-Poid",
+						"value": "{{groupPoid}}"
+					},
+					{
+						"key": "X-User-Poid",
+						"value": "{{userPoid}}"
+					},
+					{
+						"key": "X-User-Id",
+						"value": "{{userId}}"
+					},
+					{
+						"key": "X-User-Name",
+						"value": "{{userName}}"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "{{userEmail}}"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "{{userRole}}"
+					},
+					{
+						"key": "X-TimeZone-Code",
+						"value": "{{timeZoneCode}}",
+						"description": "Used for the To Date default; a missing value fails the request."
+					},
+					{
+						"key": "X-Log-Enabled",
+						"value": "{{logEnabled}}"
 					},
 					{
 						"key": "Accept",
@@ -216,12 +313,55 @@
 				"method": "POST",
 				"header": [
 					{
-						"key": "Content-Type",
-						"value": "application/json"
+						"key": "X-Action-Requested",
+						"value": "VIEW",
+						"description": "Must match the @AllowedAction of this endpoint, otherwise the rights check rejects the call."
 					},
 					{
 						"key": "X-Document-Id",
 						"value": "{{docId}}"
+					},
+					{
+						"key": "X-Company-Poid",
+						"value": "{{companyPoid}}",
+						"description": "Drives the tax lookups (RTN_GLOBAL_PARAMETER) and the print parameters."
+					},
+					{
+						"key": "X-Group-Poid",
+						"value": "{{groupPoid}}"
+					},
+					{
+						"key": "X-User-Poid",
+						"value": "{{userPoid}}"
+					},
+					{
+						"key": "X-User-Id",
+						"value": "{{userId}}"
+					},
+					{
+						"key": "X-User-Name",
+						"value": "{{userName}}"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "{{userEmail}}"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "{{userRole}}"
+					},
+					{
+						"key": "X-TimeZone-Code",
+						"value": "{{timeZoneCode}}",
+						"description": "Used for the To Date default; a missing value fails the request."
+					},
+					{
+						"key": "X-Log-Enabled",
+						"value": "{{logEnabled}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
 					},
 					{
 						"key": "Accept",
@@ -335,12 +475,55 @@
 				"method": "POST",
 				"header": [
 					{
-						"key": "Content-Type",
-						"value": "application/json"
+						"key": "X-Action-Requested",
+						"value": "VIEW",
+						"description": "Must match the @AllowedAction of this endpoint, otherwise the rights check rejects the call."
 					},
 					{
 						"key": "X-Document-Id",
 						"value": "{{docId}}"
+					},
+					{
+						"key": "X-Company-Poid",
+						"value": "{{companyPoid}}",
+						"description": "Drives the tax lookups (RTN_GLOBAL_PARAMETER) and the print parameters."
+					},
+					{
+						"key": "X-Group-Poid",
+						"value": "{{groupPoid}}"
+					},
+					{
+						"key": "X-User-Poid",
+						"value": "{{userPoid}}"
+					},
+					{
+						"key": "X-User-Id",
+						"value": "{{userId}}"
+					},
+					{
+						"key": "X-User-Name",
+						"value": "{{userName}}"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "{{userEmail}}"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "{{userRole}}"
+					},
+					{
+						"key": "X-TimeZone-Code",
+						"value": "{{timeZoneCode}}",
+						"description": "Used for the To Date default; a missing value fails the request."
+					},
+					{
+						"key": "X-Log-Enabled",
+						"value": "{{logEnabled}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
 					}
 				],
 				"body": {
@@ -390,12 +573,56 @@
 				"method": "GET",
 				"header": [
 					{
+						"key": "X-Action-Requested",
+						"value": "PRINT",
+						"description": "Must match the @AllowedAction of this endpoint, otherwise the rights check rejects the call."
+					},
+					{
 						"key": "X-Document-Id",
 						"value": "{{docId}}"
 					},
 					{
+						"key": "X-Company-Poid",
+						"value": "{{companyPoid}}",
+						"description": "Drives the tax lookups (RTN_GLOBAL_PARAMETER) and the print parameters."
+					},
+					{
+						"key": "X-Group-Poid",
+						"value": "{{groupPoid}}"
+					},
+					{
+						"key": "X-User-Poid",
+						"value": "{{userPoid}}"
+					},
+					{
+						"key": "X-User-Id",
+						"value": "{{userId}}"
+					},
+					{
+						"key": "X-User-Name",
+						"value": "{{userName}}"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "{{userEmail}}"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "{{userRole}}"
+					},
+					{
+						"key": "X-TimeZone-Code",
+						"value": "{{timeZoneCode}}",
+						"description": "Used for the To Date default; a missing value fails the request."
+					},
+					{
+						"key": "X-Log-Enabled",
+						"value": "{{logEnabled}}"
+					},
+					{
 						"key": "Accept",
-						"value": "application/pdf"
+						"value": "application/pdf, application/json",
+						"description": "JSON is accepted too so a 404/500 error body can be read instead of a 406."
 					}
 				],
 				"url": {
@@ -426,7 +653,7 @@
 						}
 					]
 				},
-				"description": "The **View Demurrage Calculation** link - renders `Shipping/SH/LINE_DEMURRAGE_CALC.jrxml` (with the LINE_DEMURRAGE_MASTER and LINE_DEMURRAGE_DTL subreports) as a PDF.\n\nRequires role right PRINT. Use *Send and Download* in Postman to save the file.\n\nReport parameters sent by the service: `DOC_ID=100-144`, `DOC_KEY_POID=<blPoid>`, `P_TILL_DATE` (dd-MMM-yyyy), `P_DISCOUNT`.\n\nOn a failure the endpoint answers 500 with a JSON body instead of a PDF."
+				"description": "The **View Demurrage Calculation** link - renders `Shipping/SH/LINE_DEMURRAGE_CALC.jrxml` (with the LINE_DEMURRAGE_MASTER and LINE_DEMURRAGE_DTL subreports) as a PDF.\n\nRequires role right PRINT. Use *Send and Download* in Postman to save the file.\n\nReport parameters sent by the service: `DOC_ID=100-144`, `DOC_KEY_POID=<blPoid>`, `P_TILL_DATE` (dd-MMM-yyyy), `P_DISCOUNT`.\n\nOn a failure the endpoint answers 500 with a JSON body instead of a PDF.\n\nReport parameter formats are dictated by the LINE_DEMURRAGE_DTL query: `P_TILL_DATE` is sent as yyyy-MM-dd (it is parsed with to_date(SUBSTR(...,1,10),'RRRR-MM-DD')) and `P_DISCOUNT` as a plain number (TO_NUMBER). Keep `Accept` permissive - on a failure the endpoint answers 404/500 with a JSON body."
 			},
 			"response": []
 		},
@@ -436,12 +663,55 @@
 				"method": "POST",
 				"header": [
 					{
-						"key": "Content-Type",
-						"value": "application/json"
+						"key": "X-Action-Requested",
+						"value": "VIEW",
+						"description": "Must match the @AllowedAction of this endpoint, otherwise the rights check rejects the call."
 					},
 					{
 						"key": "X-Document-Id",
 						"value": "{{docId}}"
+					},
+					{
+						"key": "X-Company-Poid",
+						"value": "{{companyPoid}}",
+						"description": "Drives the tax lookups (RTN_GLOBAL_PARAMETER) and the print parameters."
+					},
+					{
+						"key": "X-Group-Poid",
+						"value": "{{groupPoid}}"
+					},
+					{
+						"key": "X-User-Poid",
+						"value": "{{userPoid}}"
+					},
+					{
+						"key": "X-User-Id",
+						"value": "{{userId}}"
+					},
+					{
+						"key": "X-User-Name",
+						"value": "{{userName}}"
+					},
+					{
+						"key": "X-User-Email",
+						"value": "{{userEmail}}"
+					},
+					{
+						"key": "X-User-Role",
+						"value": "{{userRole}}"
+					},
+					{
+						"key": "X-TimeZone-Code",
+						"value": "{{timeZoneCode}}",
+						"description": "Used for the To Date default; a missing value fails the request."
+					},
+					{
+						"key": "X-Log-Enabled",
+						"value": "{{logEnabled}}"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
 					}
 				],
 				"body": {
