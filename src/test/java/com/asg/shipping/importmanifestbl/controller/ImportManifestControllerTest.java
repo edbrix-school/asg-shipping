@@ -201,7 +201,7 @@ class ImportManifestControllerTest {
     void testLoadEmailFax() throws Exception {
         LoadEmailFaxResponseDto response = LoadEmailFaxResponseDto.builder().build();
 
-        when(service.loadEmailFax(eq(BigDecimal.valueOf(1L)), eq("CONSIGNEE"))).thenReturn(response);
+        when(service.loadEmailFax(eq(Long.valueOf(1L)), eq("CONSIGNEE"))).thenReturn(response);
 
         mockMvc.perform(get("/v1/import-manifest-bl/load-email-fax")
                         .param("addressMasterPoid", "1")

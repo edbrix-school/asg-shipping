@@ -231,7 +231,7 @@ public class ImportManifestController {
     })
     @GetMapping("/load-email-fax")
     public ResponseEntity<?> loadEmailFax(
-            @RequestParam BigDecimal addressMasterPoid,
+            @RequestParam Long addressMasterPoid,
             @RequestParam String addressType
     ) {
             LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(addressMasterPoid, addressType);

@@ -332,10 +332,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
     @Override
     @Transactional
-    public LoadEmailFaxResponseDto loadEmailFax(BigDecimal addressMasterPoid, String addressType) {
+    public LoadEmailFaxResponseDto loadEmailFax(Long addressMasterPoid, String addressType) {
         try {
             var addressDetails = addressDetailsRepository.findByAddressMasterPoidAndAddressType(
-                    addressMasterPoid, addressType);
+                    addressMasterPoid, "CAN");
             var emailFaxDetails = addressDetails.stream()
                     .map(ad -> EmailFaxDetailDto.builder()
                             .actionType("isCreated")
