@@ -1252,6 +1252,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         if (details == null) return;
 
         List<String> logEntries = new ArrayList<>();
+        List<PartBlDto> toCreate = new ArrayList<>();
         List<ShipBlManifestPartBL> toUpdate = new ArrayList<>();
         List<ShipBlManifestDtlId> toDelete = new ArrayList<>();
         List<LogRequestDto<ShipBlManifestPartBL>> logRequests = new ArrayList<>();
@@ -1259,7 +1260,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         for (PartBlDto detailDto : details) {
             String action = resolveAction(detailDto.getActionType());
             switch (action) {
-                case ACTION_ISCREATED -> savePartBls(List.of(detailDto), transactionPoid, logEntries);
+                case ACTION_ISCREATED -> toCreate.add(detailDto);
                 case ACTION_ISUPDATED -> {
                     ShipBlManifestPartBL existing = containerPrtRepository.findById(new ShipBlManifestDtlId(transactionPoid, detailDto.getDetRowId()))
                             .orElseThrow(() -> new ResourceNotFoundException("Part BL Detail", "detRowId", detailDto.getDetRowId()));
@@ -1278,6 +1279,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 default -> {}
             }
         }
+        savePartBls(toCreate, transactionPoid, logEntries);
         processUpdates(containerPrtRepository, toUpdate, logRequests);
         logSummaryEntries(logEntries, docId, docKeyPoid);
 
