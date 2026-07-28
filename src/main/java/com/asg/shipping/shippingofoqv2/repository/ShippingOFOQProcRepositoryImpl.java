@@ -11,19 +11,40 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Slf4j
 @Repository
 public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepository {
+
+    /** Legacy passes the arrival date to the procedure as a dd-MMM-yyyy string (common.getDateSql). */
+    private static final DateTimeFormatter ORACLE_DATE =
+            DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH);
 
     @PersistenceContext
     private EntityManager entityManager;
 
     @Override
     public OFOQLoadItemDetailsResponse loadOFOQDetails(LoadOFOQDetailsRequest request) {
+
+        if (request.getVoyageNo() == null || request.getVoyageNo().isBlank()) {
+            throw new ValidationException("Voyage number is mandatory. Please insert the same.");
+        }
+        if (request.getVesselPoid() == null) {
+            throw new ValidationException("Vessel details is mandatory. Please insert the same.");
+        }
+        if (request.getArrivalDate() == null) {
+            throw new ValidationException("Arrival date is mandatory. Please insert the same.");
+        }
 
         StoredProcedureQuery query =
                 entityManager.createStoredProcedureQuery("PROC_LOAD_OFOQ_API_DATA");
@@ -46,62 +67,66 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
         query.setParameter("P_LOGIN_USER", UserContext.getUserPoid());
         query.setParameter("P_DOC_ID", UserContext.getDocumentId());
         query.setParameter("P_DOC_KEY_POID", request.getTransactionPoid());
-        query.setParameter("P_VESSEL_POID", request.getVesselPoid().toString());
-        query.setParameter("P_ARRIVAL_DATE", request.getArrivalDate().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")));
+        query.setParameter("P_VESSEL_POID", String.valueOf(request.getVesselPoid()));
+        query.setParameter("P_ARRIVAL_DATE", request.getArrivalDate().format(ORACLE_DATE));
+        // Legacy always passes NULL here - data is loaded on a single arrival date.
         query.setParameter("P_ARRIVAL_DATE_TO", null);
 
         query.execute();
 
         String status = (String) query.getOutputParameterValue("P_STATUS");
-        if (!"SUCCESS".equalsIgnoreCase(status)) {
-            throw new IllegalStateException("Failed to load OFOQ details : " + status);
+        if (isProcedureError(status)) {
+            log.error("Error from PROC_LOAD_OFOQ_API_DATA: {}", status);
+            throw new ValidationException("Some error occured while loading the vessel details. " + status);
         }
 
-        ResultSet manifestRs = (ResultSet) query.getOutputParameterValue("P_MANIFEST_OUTDATA");
         List<OFOQItemDtlDto> lineDetails = new ArrayList<>();
-        try {
-            while (manifestRs.next()) {
-                lineDetails.add(OFOQItemDtlDto.builder()
-                        .drillDownLinkInfo(manifestRs.getString(1))
-                        .vesselVoyagePoid(manifestRs.getLong(3))
-                        .lineName(manifestRs.getString(4))
-                        .linePoid(manifestRs.getLong(5))
-                        .vesselName(manifestRs.getString(6))
-                        .voyageNo(manifestRs.getString(7))
-                        .jobNo(manifestRs.getString(8))
-                        .arrivalDate(
-                                manifestRs.getTimestamp(9) != null
-                                        ? manifestRs.getTimestamp(9).toLocalDateTime().toLocalDate()
-                                        : null
-                        )
-                        .sailDate(
-                                manifestRs.getTimestamp(10) != null
-                                        ? manifestRs.getTimestamp(10).toLocalDateTime().toLocalDate()
-                                        : null
-                        )
-
-                        .build());
+        ResultSet manifestRs = (ResultSet) query.getOutputParameterValue("P_MANIFEST_OUTDATA");
+        if (manifestRs != null) {
+            try {
+                Set<String> columns = columnLabels(manifestRs);
+                while (manifestRs.next()) {
+                    lineDetails.add(OFOQItemDtlDto.builder()
+                            .drillDownLinkInfo(getString(manifestRs, columns, "DRILLDOWN_LINK_INFO"))
+                            .vesselVoyagePoid(getLong(manifestRs, columns, "VESSEL_VOYAGE_POID"))
+                            .lineName(getString(manifestRs, columns, "LINE_NAME"))
+                            .linePoid(getLong(manifestRs, columns, "LINE_POID"))
+                            .vesselName(getString(manifestRs, columns, "VESSEL_NAME"))
+                            .voyageNo(getString(manifestRs, columns, "VOYAGE_NO"))
+                            .jobNo(getString(manifestRs, columns, "JOB_NO"))
+                            .arrivalDate(getLocalDate(manifestRs, columns, "ARRIVAL_DATE"))
+                            .sailDate(getLocalDate(manifestRs, columns, "SAIL_DATE"))
+                            .build());
+                }
+            } catch (SQLException e) {
+                log.error("Error reading manifest cursor", e);
+                throw new ValidationException("Error loading manifest details: " + e.getMessage());
             }
-        } catch (Exception e) {
-            log.error("Error reading manifest cursor", e);
-            throw new ValidationException("Error loading manifest details: " + e.getMessage());
         }
 
-        ResultSet blRs = (ResultSet) query.getOutputParameterValue("P_BL_OUTDATA");
         List<OFOQBlDtlDto> blDetails = new ArrayList<>();
-        try {
-            while (blRs.next()) {
-                blDetails.add(OFOQBlDtlDto.builder()
-                        .drillDownLinkInfo(blRs.getString(1))
-                        .companyPoid(blRs.getLong(2))
-                        .manifestPoid(blRs.getLong(3))
-                        .manifestDocRef(blRs.getString(4))
-                        .blNumber(blRs.getString(5))
-                        .build());
+        ResultSet blRs = (ResultSet) query.getOutputParameterValue("P_BL_OUTDATA");
+        if (blRs != null) {
+            try {
+                Set<String> columns = columnLabels(blRs);
+                while (blRs.next()) {
+                    blDetails.add(OFOQBlDtlDto.builder()
+                            .drillDownLinkInfo(getString(blRs, columns, "DRILLDOWN_LINK_INFO"))
+                            .companyPoid(getLong(blRs, columns, "COMPANY_POID"))
+                            .manifestPoid(getLong(blRs, columns, "MANIFEST_POID"))
+                            .manifestDocRef(getString(blRs, columns, "MANIFEST_DOC_REF"))
+                            .blNumber(getString(blRs, columns, "BL_NUMBER"))
+                            .build());
+                }
+            } catch (SQLException e) {
+                log.error("Error reading BL cursor", e);
+                throw new ValidationException("Error loading BL details: " + e.getMessage());
             }
-        } catch (Exception e) {
-            log.error("Error reading BL cursor", e);
-            throw new ValidationException("Error loading BL details: " + e.getMessage());
+        }
+
+        if (lineDetails.isEmpty() && blDetails.isEmpty()) {
+            log.warn("No OFOQ details found for vesselPoid: {} arrivalDate: {}",
+                    request.getVesselPoid(), request.getArrivalDate());
         }
 
         return new OFOQLoadItemDetailsResponse(lineDetails, blDetails);
@@ -109,7 +134,7 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
 
 
     @Override
-    public List<OFOQManifestXmlDto> loadOFOQManifestXml(Long transactionPoid,String blNumber,String manifestType,String docRef,Long vesselPoid) {
+    public List<OFOQManifestXmlDto> loadOFOQManifestXml(Long transactionPoid, String blNumber, String manifestType, String docRef) {
         StoredProcedureQuery query =
                 entityManager.createStoredProcedureQuery("PROC_LOAD_OFOQ_API_MANIFEST_XML");
 
@@ -119,7 +144,7 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
         query.registerStoredProcedureParameter("P_DOC_ID", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("P_DOC_REF", String.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("P_VESSEL_VOYAGE_POID", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("P_VESSEL_VOYAGE_POID", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("P_MANIFEST_TYPE", String.class, ParameterMode.IN);
         query.registerStoredProcedureParameter("P_BL_NUMBER", String.class, ParameterMode.IN);
 
@@ -134,7 +159,9 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
         query.setParameter("P_DOC_ID", UserContext.getDocumentId());
         query.setParameter("P_DOC_KEY_POID", transactionPoid);
         query.setParameter("P_DOC_REF", docRef);
-        query.setParameter("P_VESSEL_VOYAGE_POID", vesselPoid);
+        // Legacy passes an empty vessel voyage poid so the procedure picks up every selected line
+        // of the document. Passing the vessel master poid here filters the manifest down to nothing.
+        query.setParameter("P_VESSEL_VOYAGE_POID", "");
         query.setParameter("P_MANIFEST_TYPE", manifestType);
         query.setParameter("P_BL_NUMBER", blNumber);
 
@@ -143,9 +170,9 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
 
         String status = (String) query.getOutputParameterValue("P_STATUS");
 
-        if (status != null && status.startsWith("ERROR")) {
+        if (isProcedureError(status)) {
             log.error("Error from PROC_LOAD_OFOQ_API_MANIFEST_XML: {}", status);
-            throw new ValidationException(status);
+            throw new ValidationException("Some error happened when fetching the XML data: " + status);
         }
 
 
@@ -180,8 +207,8 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
             String docRef,
             String manifestType,
             int responseCode,
-            String responseMessage,
-            String xmlResponse
+            String httpStatusText,
+            String extractedMessage
     ) {
 
         StoredProcedureQuery query =
@@ -209,14 +236,14 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
         query.setParameter("P_DOC_REF", docRef);
         query.setParameter("P_MANIFEST_TYPE", manifestType);
         query.setParameter("P_RESPONSE_CODE", String.valueOf(responseCode));
-        query.setParameter("P_RESPONSE_MSG", responseMessage);
-        query.setParameter("P_RESPONSE", xmlResponse);
+        query.setParameter("P_RESPONSE_MSG", httpStatusText);
+        query.setParameter("P_RESPONSE", extractedMessage);
 
         query.execute();
 
         String status = (String) query.getOutputParameterValue("P_STATUS");
-        if (status != null && status.startsWith("ERROR")) {
-            log.warn("Warning from PROC_SAVE_OFOQ_API_RESPONSE: {}", status);
+        if (isProcedureError(status)) {
+            log.error("Error from PROC_SAVE_OFOQ_API_RESPONSE: {}", status);
         }
 
         String functionalRefId = null;
@@ -234,6 +261,10 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
             );
         }
 
+        if (functionalRefId == null) {
+            log.warn("No functional reference is available for transactionPoid: {}", transactionPoid);
+        }
+
         return functionalRefId;
     }
 
@@ -244,7 +275,7 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
             String docRef,
             String functionalRefId,
             String responseCode,
-            String responseMessage,
+            String httpStatusText,
             String xmlResponse,
             String manifestType,
             String blNumber
@@ -280,8 +311,8 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
         query.setParameter("P_DOC_KEY_POID", transactionPoid);
         query.setParameter("P_DOC_REF", docRef);
         query.setParameter("P_FUNCTIONAL_REF_ID", functionalRefId);
-        query.setParameter("P_RESPONSE_CODE", String.valueOf(responseCode));
-        query.setParameter("P_RESPONSE_MSG", responseMessage);
+        query.setParameter("P_RESPONSE_CODE", responseCode);
+        query.setParameter("P_RESPONSE_MSG", httpStatusText);
         query.setParameter("P_XML_RESPONSE", xmlResponse);
         query.setParameter("P_MANIFEST_TYPE", manifestType);
         query.setParameter("P_BL_NUMBER", blNumber);
@@ -292,9 +323,10 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
 
         String status = (String) query.getOutputParameterValue("P_STATUS");
 
-        if (status != null && status.startsWith("ERROR")) {
+        // The manifest has already been accepted by OFOQ at this point - a failure to persist the
+        // response must not roll back the submission, so mirror the legacy bean and only report it.
+        if (isProcedureError(status)) {
             log.error("Error from PROC_SAVE_OFOQ_API_MANIFEST_RESPONSE: {}", status);
-            throw new ValidationException(status);
         }
 
 
@@ -310,12 +342,43 @@ public class ShippingOFOQProcRepositoryImpl implements ShippingOFOQProcRepositor
                 }
             } catch (Exception e) {
                 log.error("Error reading PROC_SAVE_OFOQ_API_MANIFEST_RESPONSE cursor", e);
-                throw new ValidationException(
-                        "Error reading OFOQ Manifest response cursor: " + e.getMessage()
-                );
             }
         }
         return status;
+    }
+
+    /** Legacy treats a status as failed only when it contains "ERROR". */
+    private boolean isProcedureError(String status) {
+        return status != null && status.toUpperCase(Locale.ENGLISH).contains("ERROR");
+    }
+
+    private Set<String> columnLabels(ResultSet rs) throws SQLException {
+        ResultSetMetaData metaData = rs.getMetaData();
+        Set<String> labels = new HashSet<>();
+        for (int i = 1; i <= metaData.getColumnCount(); i++) {
+            labels.add(metaData.getColumnLabel(i).toUpperCase(Locale.ENGLISH));
+        }
+        return labels;
+    }
+
+    private String getString(ResultSet rs, Set<String> columns, String column) throws SQLException {
+        return columns.contains(column) ? rs.getString(column) : null;
+    }
+
+    private Long getLong(ResultSet rs, Set<String> columns, String column) throws SQLException {
+        if (!columns.contains(column)) {
+            return null;
+        }
+        Object value = rs.getObject(column);
+        return value instanceof Number number ? number.longValue() : null;
+    }
+
+    private LocalDate getLocalDate(ResultSet rs, Set<String> columns, String column) throws SQLException {
+        if (!columns.contains(column)) {
+            return null;
+        }
+        Timestamp timestamp = rs.getTimestamp(column);
+        return timestamp == null ? null : timestamp.toLocalDateTime().toLocalDate();
     }
 
 }

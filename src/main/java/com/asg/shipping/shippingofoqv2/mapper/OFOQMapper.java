@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -13,6 +14,9 @@ import java.util.List;
 public class OFOQMapper {
 
     public OFOQApiDataHdrDto toHeaderDto(OfoqApiDataHdrEntity entity,String functionalReference) {
+        if (entity == null) {
+            return null;
+        }
         return OFOQApiDataHdrDto.builder()
                 .transactionPoid(entity.getTransactionPoid())
                 .docRef(entity.getDocRef())
@@ -21,10 +25,11 @@ public class OFOQMapper {
                 .vesselPoid(entity.getVesselPoid())
                 .arrivalDate(entity.getArrivalDate())
                 .rotationNumber(entity.getRotationNumber())
+                .apiProvisionalMfNo(entity.getApiProvisionalMfNo())
                 .apiProvisionalStatus(entity.getApiProvisionalStatus())
                 .manifestNo(entity.getManifestNo())
                 .manifestStatus(entity.getManifestStatus())
-                .functionalReference(functionalReference)
+                .functionalReference(functionalReference != null ? functionalReference : entity.getFunctionalRef())
                 .remarks(entity.getRemarks())
                 .deleted(entity.getDeleted())
                 .createdBy(entity.getCreatedBy())
@@ -35,6 +40,9 @@ public class OFOQMapper {
     }
 
     public OFOQItemDtlDto toLineDetailDto(OFOQItemDtlEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         return OFOQItemDtlDto.builder()
                 .detRowId(entity.getDetRowId())
                 .vesselVoyagePoid(entity.getVesselVoyagePoid())
@@ -42,8 +50,8 @@ public class OFOQMapper {
                 .vesselName(entity.getVesselName())
                 .voyageNo(entity.getVoyageNo())
                 .jobNo(entity.getJobNo())
-                .arrivalDate(LocalDate.from(entity.getArrivalDate()))
-                .sailDate(LocalDate.from(entity.getSailDate()))
+                .arrivalDate(toLocalDate(entity.getArrivalDate()))
+                .sailDate(toLocalDate(entity.getSailDate()))
                 .checked(entity.getChecked())
                 .drillDownLinkInfo(entity.getDrilldownLinkInfo())
                 .build();
@@ -81,15 +89,22 @@ public class OFOQMapper {
     }
 
     public OFOQCheckStatusManifestResponse toManifestResponseDto(OFOQManifestResponseDtlEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         OFOQCheckStatusManifestResponse dto = new OFOQCheckStatusManifestResponse();
         dto.setTransactionPoid(entity.getTransactionPoid());
         dto.setDetRowId(entity.getDetRowId());
         dto.setDate(entity.getResponseDate());
         dto.setFunctionalReference(entity.getFunctionalRef());
-        dto.setStatusCode(String.valueOf(entity.getStatusCode()));
+        dto.setStatusCode(entity.getStatusCode() != null ? String.valueOf(entity.getStatusCode()) : null);
         dto.setResponseMessage(entity.getResponseMessage());
         dto.setProcessingStatus(entity.getProcessingStatus());
         return dto;
+    }
+
+    private LocalDate toLocalDate(LocalDateTime dateTime) {
+        return dateTime == null ? null : dateTime.toLocalDate();
     }
 
     public OFOQVoyageDataResponse toVoyageDataResponse(OFOQApiDataHdrDto header,

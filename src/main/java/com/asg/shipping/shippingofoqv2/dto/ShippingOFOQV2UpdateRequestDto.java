@@ -1,22 +1,16 @@
 package com.asg.shipping.shippingofoqv2.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.util.List;
-
+/**
+ * Update payload for an OFOQ document. Line details and BL amendment rows live on
+ * {@link ShippingOFOQV2RequestDto} so create and update persist the detail tables the same way the
+ * legacy screen does - the array table rows are saved together with the header and only then posted.
+ */
 @Setter
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor
-public class ShippingOFOQV2UpdateRequestDto extends  ShippingOFOQV2RequestDto {
-
-
-    @Schema(description = "OFOQ line item details")
-    private List<OFOQItemDtlDto> lineDetails;
-
-    @Schema(description = "BL amendment details ")
-    private List<OFOQRequestAmendBlDto> amendBl;
-
-
+public class ShippingOFOQV2UpdateRequestDto extends ShippingOFOQV2RequestDto {
 }
