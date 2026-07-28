@@ -1,6 +1,7 @@
 package com.asg.shipping.demurrageenquiryblwise.dto;
 
 import com.asg.common.lib.dto.LovGetListDto;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -34,8 +35,10 @@ public class DemurrageEnquiryContainerDto {
 	/** Number of days liable for demurrage. */
 	private Long dmDays;
 	/** Demurrage amount after the applied discount. */
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal dmChargeAmt;
 	/** Demurrage amount before the applied discount. */
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal dmChargeAmtBeforeDiscount;
 	/** Date on which the container was returned empty (MTIN move). */
 	private LocalDate emptyIn;

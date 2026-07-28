@@ -16,7 +16,6 @@ import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -383,8 +382,11 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 					.taxApplicable(toString(row[3]))
 					.build();
 		} catch (Exception e) {
+			// Never swallow this: a failure here drops the demurrage charge row and the enquiry would
+			// quietly report a smaller amount than the legacy screen.
 			log.error("Failed to read the demurrage charge configuration for company: {}", companyPoid, e);
-			return null;
+			throw new DataAccessResourceFailureException(
+					"Failed to read the demurrage charge configuration for company " + companyPoid, e);
 		}
 	}
 
@@ -490,8 +492,11 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 							.build())
 					.toList();
 		} catch (Exception e) {
+			// Same reasoning as the demurrage configuration - a swallowed failure here silently hides
+			// the late collection / revalidation charges.
 			log.error("Failed to load port charges for BL POID: {}", blPoid, e);
-			return Collections.emptyList();
+			throw new DataAccessResourceFailureException(
+					"Failed to load the late collection / revalidation charges for BL POID: " + blPoid, e);
 		}
 	}
 

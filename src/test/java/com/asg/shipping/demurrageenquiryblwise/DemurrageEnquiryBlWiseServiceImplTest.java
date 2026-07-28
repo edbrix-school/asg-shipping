@@ -1,6 +1,7 @@
 package com.asg.shipping.demurrageenquiryblwise;
 
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LovDataService;
@@ -168,7 +169,7 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 		when(enquiryRepository.loadContainers(BL_POID))
 				.thenReturn(List.of(container("CONT001", null), container("CONT002", null)));
 		when(enquiryRepository.calculateContainerDemurrage(eq(BL_POID), anyString(), eq(TO_DATE)))
-				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 5L, BigDecimal.ZERO));
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 5L, new BigDecimal("100")));
 		when(enquiryRepository.findManifestCharges(BL_POID)).thenReturn(List.of(ManifestChargeRowDto.builder()
 				.blPoid(BL_POID)
 				.chargePoid(3001L)
@@ -206,6 +207,113 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 		assertEquals(0, new BigDecimal("360").compareTo(response.getReceiptAmount()));
 		assertEquals(0, new BigDecimal("30").compareTo(response.getTotalTaxAmount()));
 		assertEquals(0, new BigDecimal("390").compareTo(response.getTotalAmountWithVat()));
+	}
+
+	@Test
+	void applyDate_perQuantityChargeCountsOnlyContainersCarryingDemurrage() {
+		when(enquiryRepository.loadContainers(BL_POID))
+				.thenReturn(List.of(container("CONT001", null), container("CONT002", null)));
+		// CONT001 is still inside its free days, CONT002 is charged
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 0L, new BigDecimal("100")));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT002", TO_DATE))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 5L, new BigDecimal("100")));
+		when(enquiryRepository.findPortCharges(BL_POID, 100L)).thenReturn(List.of(PortChargeRowDto.builder()
+				.chargeTypeApplicable("REVALIDATEIMP")
+				.chargeApplicable("PERQUENTITY")
+				.chargeCodePoid(4002L)
+				.amount20(new BigDecimal("30"))
+				.amount40(new BigDecimal("60"))
+				.taxApplicable("N")
+				.build()));
+		when(enquiryRepository.getContainerSize("22G1")).thenReturn("20");
+
+		DemurrageEnquiryResponseDto response = service.applyDate(request(TO_DATE, BigDecimal.ZERO));
+
+		DemurrageEnquiryChargeDto perQuantity = response.getCharges().stream()
+				.filter(charge -> "REVALIDATEIMP".equals(charge.getChargeType()))
+				.findFirst()
+				.orElseThrow();
+		// one chargeable container x the 20' rate, not both containers
+		assertEquals(0, new BigDecimal("30").compareTo(perQuantity.getAmount()));
+	}
+
+	/**
+	 * The screen prints amounts with 3 decimals; Oracle hands back whatever scale the column has, so
+	 * the service normalises every monetary figure on the way out.
+	 */
+	@Test
+	void applyDate_returnsAmountsOnTheScaleTheScreenShows() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 10L, new BigDecimal("192080")));
+		when(enquiryRepository.findDemurrageChargeConfig(100L)).thenReturn(DemurrageChargeConfigDto.builder()
+				.chargePoid(94L)
+				.taxPoid(3L)
+				.taxPercentage(BigDecimal.ZERO)
+				.taxApplicable("Y")
+				.build());
+
+		DemurrageEnquiryResponseDto response = service.applyDate(request(TO_DATE, BigDecimal.ZERO));
+
+		DemurrageEnquiryChargeDto charge = response.getCharges().get(0);
+		assertEquals("192080.000", charge.getAmount().toPlainString());
+		assertEquals("0.000", charge.getTaxAmount().toPlainString());
+		assertEquals("192080.000", response.getReceiptAmount().toPlainString());
+		assertEquals("192080.000", response.getTotalAmountWithVat().toPlainString());
+		assertEquals("192080.000", response.getContainers().get(0).getDmChargeAmt().toPlainString());
+		// a zero rate charge still carries its tax master, as the legacy grid shows it
+		assertEquals(3L, charge.getTaxPoid());
+		// the Remarks column exists on the row even though this document never fills it
+		assertNull(charge.getRemarks());
+	}
+
+	/**
+	 * The scale has to survive serialisation even for a value the service did not compute - the
+	 * amounts are written by {@link com.asg.shipping.demurrageenquiryblwise.dto.AmountSerializer}.
+	 */
+	@Test
+	void responseJsonWritesEveryAmountWithThreeDecimals() throws Exception {
+		DemurrageEnquiryResponseDto response = DemurrageEnquiryResponseDto.builder()
+				.blPoid(BL_POID)
+				.receiptAmount(new BigDecimal("192136"))          // unscaled, straight off a NUMBER column
+				.totalTaxAmount(new BigDecimal("2.8"))
+				.totalAmountWithVat(new BigDecimal("192138.8"))
+				.totalDemurrageAmount(new BigDecimal("192080"))
+				.containers(List.of(DemurrageEnquiryContainerDto.builder()
+						.containerNo("CONT001")
+						.dmChargeAmt(new BigDecimal("13720"))
+						.dmChargeAmtBeforeDiscount(new BigDecimal("13720"))
+						.build()))
+				.charges(List.of(DemurrageEnquiryChargeDto.builder()
+						.chargePoid(94L)
+						.amount(new BigDecimal("56"))
+						.taxAmount(new BigDecimal("2.8"))
+						.totalAmount(new BigDecimal("58.8"))
+						.taxPercentage(new BigDecimal("5"))
+						.build()))
+				.build();
+
+		String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(response);
+
+		for (String amount : List.of("\"receiptAmount\":192136.000", "\"totalTaxAmount\":2.800",
+				"\"totalAmountWithVat\":192138.800", "\"totalDemurrageAmount\":192080.000",
+				"\"dmChargeAmt\":13720.000", "\"dmChargeAmtBeforeDiscount\":13720.000",
+				"\"amount\":56.000", "\"taxAmount\":2.800", "\"totalAmount\":58.800")) {
+			assertTrue(json.contains(amount), "missing " + amount + " in " + json);
+		}
+		// percentages are not amounts and keep their own scale, as the legacy AmtColumns did
+		assertTrue(json.contains("\"taxPercentage\":5"), json);
+	}
+
+	@Test
+	void applyDate_withoutCompanyContext_failsInsteadOfDroppingCharges() {
+		userContextMock.when(UserContext::getCompanyPoid).thenReturn(null);
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+
+		// RTN_GLOBAL_PARAMETER raises ORA-01400 on a null company; silently returning fewer charges
+		// than the legacy screen is worse than refusing the request.
+		assertThrows(ValidationException.class, () -> service.applyDate(request(TO_DATE, BigDecimal.ZERO)));
 	}
 
 	@Test

@@ -5,6 +5,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.LovGetListDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LovDataService;
@@ -99,10 +100,10 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.discountPercentage(BigDecimal.ZERO)
 				.containers(containers)
 				.charges(List.of())
-				.totalDemurrageAmount(BigDecimal.ZERO)
-				.receiptAmount(BigDecimal.ZERO)
-				.totalTaxAmount(BigDecimal.ZERO)
-				.totalAmountWithVat(BigDecimal.ZERO)
+				.totalDemurrageAmount(money(BigDecimal.ZERO))
+				.receiptAmount(money(BigDecimal.ZERO))
+				.totalTaxAmount(money(BigDecimal.ZERO))
+				.totalAmountWithVat(money(BigDecimal.ZERO))
 				.build();
 
 		enrichLovDetails(response);
@@ -117,6 +118,11 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		LocalDate toDate = request.getToDate() != null ? request.getToDate() : DateUtil.getCurrentDateInUserTimeZone();
 		BigDecimal discount = request.getDiscountPercentage() != null ? request.getDiscountPercentage() : BigDecimal.ZERO;
 		Long companyPoid = UserContext.getCompanyPoid();
+		if (companyPoid == null) {
+			// RTN_GLOBAL_PARAMETER fails with ORA-01400 on a null company, which would take the
+			// demurrage and the port charges down with it.
+			throw new ValidationException("Company context is missing, the charges cannot be resolved");
+		}
 
 		log.info("Demurrage enquiry for BL: {}, toDate: {}, discount: {}%", blPoid, toDate, discount);
 
@@ -141,10 +147,10 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.discountPercentage(discount)
 				.containers(containers)
 				.charges(charges)
-				.totalDemurrageAmount(totalDemurrage)
-				.receiptAmount(receiptAmount)
-				.totalTaxAmount(totalTaxAmount)
-				.totalAmountWithVat(receiptAmount.add(totalTaxAmount))
+				.totalDemurrageAmount(money(totalDemurrage))
+				.receiptAmount(money(receiptAmount))
+				.totalTaxAmount(money(totalTaxAmount))
+				.totalAmountWithVat(money(receiptAmount.add(totalTaxAmount)))
 				.build();
 
 		enrichLovDetails(response);
@@ -209,8 +215,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 			if (calc == null || calc.getDays() == null || calc.getDays() <= 0) {
 				// Still inside the free days or the container was returned before the period started.
 				container.setDmDays(0L);
-				container.setDmChargeAmt(BigDecimal.ZERO);
-				container.setDmChargeAmtBeforeDiscount(BigDecimal.ZERO);
+				container.setDmChargeAmt(money(BigDecimal.ZERO));
+				container.setDmChargeAmtBeforeDiscount(money(BigDecimal.ZERO));
 				continue;
 			}
 
@@ -219,8 +225,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 			container.setDmFrmDate(calc.getFromDate() != null ? calc.getFromDate() : container.getDmFrmDate());
 			container.setDmDays(calc.getDays());
-			container.setDmChargeAmtBeforeDiscount(grossAmount);
-			container.setDmChargeAmt(netAmount);
+			container.setDmChargeAmtBeforeDiscount(money(grossAmount));
+			container.setDmChargeAmt(money(netAmount));
 
 			totalDemurrage = totalDemurrage.add(netAmount);
 		}
@@ -256,11 +262,11 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 					.chargesDetRowId(manifestCharge.getDetRowId())
 					.chargeType(CHARGE_TYPE_BL)
 					.invoiceType(manifestCharge.getInvoiceType())
-					.amount(amount)
+					.amount(money(amount))
 					.taxPoid(manifestCharge.getTaxPoid())
 					.taxPercentage(manifestCharge.getTaxPercentage())
-					.taxAmount(taxAmount)
-					.totalAmount(amount.add(taxAmount))
+					.taxAmount(money(taxAmount))
+					.totalAmount(money(amount.add(taxAmount)))
 					.build());
 		}
 
@@ -292,6 +298,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 			return null;
 		}
 
+		boolean taxed = isTaxed(config.getTaxPoid(), config.getTaxApplicable());
 		BigDecimal taxAmount = taxOf(totalDemurrage, config.getTaxPoid(), config.getTaxPercentage(),
 				config.getTaxApplicable());
 
@@ -300,11 +307,11 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.chargePoid(config.getChargePoid())
 				.chargesDetRowId(0L)
 				.chargeType(CHARGE_TYPE_DEMURRAGE)
-				.amount(totalDemurrage)
-				.taxPoid(taxAmount.compareTo(BigDecimal.ZERO) != 0 ? config.getTaxPoid() : null)
-				.taxPercentage(taxAmount.compareTo(BigDecimal.ZERO) != 0 ? config.getTaxPercentage() : null)
-				.taxAmount(taxAmount)
-				.totalAmount(totalDemurrage.add(taxAmount))
+				.amount(money(totalDemurrage))
+				.taxPoid(taxed ? config.getTaxPoid() : null)
+				.taxPercentage(taxed ? config.getTaxPercentage() : null)
+				.taxAmount(money(taxAmount))
+				.totalAmount(money(totalDemurrage.add(taxAmount)))
 				.build();
 	}
 
@@ -324,6 +331,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 			return null;
 		}
 
+		boolean taxed = isTaxed(portCharge.getTaxPoid(), portCharge.getTaxApplicable());
 		BigDecimal taxAmount = taxOf(amount, portCharge.getTaxPoid(), portCharge.getTaxPercentage(),
 				portCharge.getTaxApplicable());
 
@@ -332,17 +340,18 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.chargePoid(portCharge.getChargeCodePoid())
 				.chargesDetRowId(0L)
 				.chargeType(portCharge.getChargeTypeApplicable())
-				.amount(amount)
-				.taxPoid(taxAmount.compareTo(BigDecimal.ZERO) != 0 ? portCharge.getTaxPoid() : null)
-				.taxPercentage(taxAmount.compareTo(BigDecimal.ZERO) != 0 ? portCharge.getTaxPercentage() : null)
-				.taxAmount(taxAmount)
-				.totalAmount(amount.add(taxAmount))
+				.amount(money(amount))
+				.taxPoid(taxed ? portCharge.getTaxPoid() : null)
+				.taxPercentage(taxed ? portCharge.getTaxPercentage() : null)
+				.taxAmount(money(taxAmount))
+				.totalAmount(money(amount.add(taxAmount)))
 				.build();
 	}
 
 	/**
 	 * Per quantity charges are billed per container: the 20' rate for every 20' container and the
-	 * 40' rate for every other container of the BL.
+	 * 40' rate for every other container. Like the legacy screen, only the containers that actually
+	 * carry demurrage are counted - a container still inside its free days is not charged.
 	 */
 	private BigDecimal perQuantityAmount(PortChargeRowDto portCharge, List<DemurrageEnquiryContainerDto> containers) {
 		Map<String, String> sizeByIsoType = new HashMap<>();
@@ -350,6 +359,10 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		long count40 = 0;
 
 		for (DemurrageEnquiryContainerDto container : containers) {
+			BigDecimal demurrage = container.getDmChargeAmt();
+			if (demurrage == null || demurrage.compareTo(BigDecimal.ZERO) == 0) {
+				continue;
+			}
 			String isoType = container.getEquipmentIsoType();
 			String size = sizeByIsoType.computeIfAbsent(isoType, enquiryRepository::getContainerSize);
 			if (SIZE_20.equalsIgnoreCase(size)) {
@@ -363,8 +376,16 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.add(nullSafe(portCharge.getAmount40()).multiply(BigDecimal.valueOf(count40)));
 	}
 
+	/**
+	 * A charge carries its tax master even when the rate is zero - the legacy screen shows the tax
+	 * POID and percentage of every taxable charge, not only of the ones that produce an amount.
+	 */
+	private boolean isTaxed(Long taxPoid, String taxApplicable) {
+		return taxPoid != null && "Y".equalsIgnoreCase(taxApplicable);
+	}
+
 	private BigDecimal taxOf(BigDecimal amount, Long taxPoid, BigDecimal taxPercentage, String taxApplicable) {
-		if (taxPoid == null || taxPercentage == null || !"Y".equalsIgnoreCase(taxApplicable)) {
+		if (taxPercentage == null || !isTaxed(taxPoid, taxApplicable)) {
 			return BigDecimal.ZERO;
 		}
 		return amount.multiply(taxPercentage).divide(HUNDRED, AMOUNT_SCALE, RoundingMode.HALF_UP);
@@ -415,5 +436,14 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 	private static BigDecimal nullSafe(BigDecimal value) {
 		return value != null ? value : BigDecimal.ZERO;
+	}
+
+	/**
+	 * Every monetary figure leaves the enquiry on the same scale the screen shows (3 decimals), so
+	 * 56 and 192080 come back as 56.000 and 192080.000 rather than on whatever scale Oracle happened
+	 * to return.
+	 */
+	private static BigDecimal money(BigDecimal value) {
+		return value != null ? value.setScale(AMOUNT_SCALE, RoundingMode.HALF_UP) : null;
 	}
 }

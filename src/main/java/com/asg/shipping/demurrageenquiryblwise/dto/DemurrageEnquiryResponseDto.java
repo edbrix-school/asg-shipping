@@ -1,6 +1,7 @@
 package com.asg.shipping.demurrageenquiryblwise.dto;
 
 import com.asg.common.lib.dto.LovGetListDto;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,11 +34,15 @@ public class DemurrageEnquiryResponseDto {
 	private List<DemurrageEnquiryChargeDto> charges;
 
 	/** Total demurrage of all containers, after discount. */
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal totalDemurrageAmount;
 	/** Receipt amount - sum of all charge amounts, tax excluded. */
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal receiptAmount;
 	/** Sum of the tax of all charges. */
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal totalTaxAmount;
 	/** Total (Receipt + VAT) amount. */
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal totalAmountWithVat;
 }

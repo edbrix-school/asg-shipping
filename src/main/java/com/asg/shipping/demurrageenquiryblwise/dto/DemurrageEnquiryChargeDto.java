@@ -1,6 +1,7 @@
 package com.asg.shipping.demurrageenquiryblwise.dto;
 
 import com.asg.common.lib.dto.LovGetListDto;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,11 +32,21 @@ public class DemurrageEnquiryChargeDto {
 	 */
 	private String chargeType;
 	private String invoiceType;
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal amount;
 	private Long taxPoid;
 	private LovGetListDto taxDet;
 	private BigDecimal taxPercentage;
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal taxAmount;
 	/** amount + taxAmount. */
+	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal totalAmount;
+	/**
+	 * Remarks column of the Charges tab. The legacy grid binds it to
+	 * {@code AR_SH_RECEIPT_CHARGES_DTL.REMARKS}, which this enquiry never populates - the BL manifest
+	 * charges have no remarks column at all - so it always comes back empty and is kept only so the
+	 * screen can render the column.
+	 */
+	private String remarks;
 }
