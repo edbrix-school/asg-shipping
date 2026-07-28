@@ -11,5 +11,5 @@ public interface AddressDetailsRepository extends JpaRepository<AddressDetails, 
     List<AddressDetails> findByAddressMasterPoidAndAddressType(Long addressMasterPoid, String addressType);
 
     List<AddressDetails> findByAddressMasterPoid(Long addressMasterPoid);
-    List<AddressDetails> findByAddressMasterPoidAndAddressType(BigDecimal addressMasterPoid, String addressType);
+    //List<AddressDetails> findByAddressMasterPoidAndAddressType(BigDecimal addressMasterPoid, String addressType);
 }
