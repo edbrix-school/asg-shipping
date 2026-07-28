@@ -251,7 +251,7 @@ class BookingFormControllerTest {
 
         mockMvc.perform(get("/v1/booking-form-sh/excel/vgmCustXLGenerateXL/476"))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", "attachment; filename=VGMCustXLFile_476.xlsx"))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"Vgm-Cust-Xl-476.xlsx\""))
                 .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
 
         verify(excelExportService).generateExcel(eq("100-311"), eq("476"), eq(null), eq("VGMCustXLFile.xlsx"));

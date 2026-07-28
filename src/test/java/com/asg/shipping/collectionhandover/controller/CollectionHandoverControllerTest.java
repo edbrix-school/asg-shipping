@@ -1,5 +1,6 @@
 package com.asg.shipping.collectionhandover.controller;
 
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.collectionhandover.dto.CollectionHandoverCreateDTO;
@@ -12,8 +13,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +36,10 @@ class CollectionHandoverControllerTest {
 
     @Mock
     private CollectionHandoverService collectionHandoverService;
+
+    @Spy
+    private DocumentDownloadHeaderService downloadHeaderService =
+            new DocumentDownloadHeaderService(mock(JdbcTemplate.class));
 
     @InjectMocks
     private CollectionHandoverController controller;
@@ -349,7 +356,7 @@ class CollectionHandoverControllerTest {
 
         assertEquals(200, response.getStatusCode().value());
         assertEquals("application/pdf", response.getHeaders().getContentType().toString());
-        assertEquals("attachment; filename=collection-handover-10.pdf",
+        assertEquals("attachment; filename=\"Collection-Handover-10.pdf\"",
                 response.getHeaders().getFirst("Content-Disposition"));
         assertArrayEquals(pdfBytes, (byte[]) response.getBody());
         verify(collectionHandoverService).print(10L);

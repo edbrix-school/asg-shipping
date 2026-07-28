@@ -6,8 +6,10 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.importmanifestupdate.dto.*;
+import com.asg.shipping.importmanifestupdate.entity.ShipBlManifestHdr;
 import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +47,7 @@ public class ImportManifestController {
 
     private final ImportManifestService importManifestService;
     private final LoggingService loggingService;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     @AllowedAction(UserRolesRightsEnum.CREATE)
     @Operation(
@@ -231,7 +233,7 @@ public class ImportManifestController {
     })
     @GetMapping("/load-email-fax")
     public ResponseEntity<?> loadEmailFax(
-            @RequestParam BigDecimal addressMasterPoid,
+            @RequestParam Long addressMasterPoid,
             @RequestParam String addressType
     ) {
             LoadEmailFaxResponseDto response = importManifestService.loadEmailFax(addressMasterPoid, addressType);
@@ -355,8 +357,9 @@ public class ImportManifestController {
         try {
             byte[] pdf = importManifestService.printUnclearedCargoNotice(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-cargo-notice-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipBlManifestHdr.class, transactionPoid,
+                            "import-manifest-bl-uncleared-cargo-notice", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -379,8 +382,9 @@ public class ImportManifestController {
         try {
             byte[] pdf = importManifestService.printProformaInvoice(transactionPoid,demChargesTill,percentage);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-performa-invoice-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipBlManifestHdr.class, transactionPoid,
+                            "import-manifest-bl-proforma-invoice", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -400,8 +404,9 @@ public class ImportManifestController {
         try {
             byte[] pdf = importManifestService.printCargoArrivalNotice(voyageTransactionPoid,transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-cargo-arrival-notice-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipBlManifestHdr.class, transactionPoid,
+                            "import-manifest-bl-cargo-arrival-notice", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -421,8 +426,9 @@ public class ImportManifestController {
         try {
             byte[] pdf = importManifestService.printCargoManifest(transactionPoid, isCargoManifestPrint);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-cargo-manifest-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipBlManifestHdr.class, transactionPoid,
+                            "import-manifest-bl-cargo-manifest", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
@@ -440,8 +446,9 @@ public class ImportManifestController {
         try {
             byte[] pdf = importManifestService.printCheckPortCharges(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=import-manifest-bl-port-charges-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipBlManifestHdr.class, transactionPoid,
+                            "import-manifest-bl-port-charges", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {
