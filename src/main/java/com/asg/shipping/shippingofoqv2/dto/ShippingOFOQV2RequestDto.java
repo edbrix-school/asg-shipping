@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,4 +36,10 @@ public class ShippingOFOQV2RequestDto {
 
     @Schema(description = "Remarks or comments", example = "Test OFOQ creation")
     private String remarks;
+
+    @Schema(description = "Selected voyage job lines that make up the manifest")
+    private List<OFOQItemDtlDto> lineDetails;
+
+    @Schema(description = "BLs available for amendment")
+    private List<OFOQRequestAmendBlDto> amendBl;
 }
