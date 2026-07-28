@@ -349,7 +349,17 @@ FROM GLOBAL_PARAMETERS
 WHERE PARAMETER_KEYID_TYPE IN ('SHDEMURRAGE')
 ```
 
-Binds: `:companyPoid` (from `UserContext.getCompanyPoid()`)
+Binds: `:companyPoid` (from `UserContext.getCompanyPoid()`, i.e. the `X-Company-Poid` header)
+
+> **`PARAMETER_VALUE` is a VARCHAR2**, so the charge POID arrives as the string `"94"`. Mapping it as
+> a number only yields a config with no charge, and the enquiry then reports the demurrage amount but
+> drops the demurrage charge line - the Charges tab shows one row where the legacy screen shows two.
+> The row mapper parses both numbers and strings, and logs when the parameter is not a POID.
+
+> **`RTN_GLOBAL_PARAMETER` raises ORA-01400 when the company is null** - the function writes into
+> `GLOBAL_PARAMETERS` and the key column is mandatory. Both this query and the port charges query call
+> it, so a request without a company context used to lose *both* derived charge rows. The service now
+> rejects such a request instead, and neither query swallows a failure any more.
 
 Post processing (legacy identical): the row is only added when the total demurrage of the containers
 is non zero; `taxAmount = totalDemurrage * TAX_PERCENTAGE / 100` and only when `TAX_POID` is present
@@ -463,9 +473,13 @@ Post processing in `buildPortCharge`:
 | `PERBL` | `AMOUNT_OTHER` |
 | `PERQUENTITY` | `AMOUNT_20 × count(20' containers)` + `AMOUNT_40 × count(other containers)` |
 
-> The legacy `PERQUENTITY` branch multiplied accumulators that were still zero
-> (`FtotalQtyValidate20.multiply(...)` starting from `0`), so the charge always evaluated to zero and
-> the row was skipped. The intended per container calculation is implemented here.
+Only containers that actually carry demurrage are counted - the legacy fills `FtotalQtyValidate20/40`
+inside `createDemurrageDettention()`, which increments them per container **whose `DmChargeAmt` is
+non zero**, and the port charge loop then multiplies those counts by the slab rates. A container
+still inside its free days is therefore not billed for the per quantity charge.
+
+The container size comes from `GET_CONTAINER_TYPE(iso,'SIZE')`; anything that is not `20` counts
+against the 40' rate, as in the legacy `else` branch.
 
 Tax: `amount * TAX_PERCENTAGE / 100`, only when `TAX_POID` is present and `TAX_APPLICABLE = 'Y'`.
 
@@ -565,6 +579,28 @@ receiptAmount      = Σ charge.amount                 (tax excluded)
 totalTaxAmount     = Σ charge.taxAmount
 totalAmountWithVat = receiptAmount + totalTaxAmount
 ```
+
+Every monetary figure - the container amounts, the charge amounts and taxes, and the four totals -
+is written with **3 decimals**, matching the `maxFractionDigits=3 minFractionDigits=3` of the legacy
+grid, so `56` serialises as `56.000` instead of on whatever scale Oracle returned. This is enforced
+twice: the service scales the values it computes, and `AmountSerializer` scales again on the way to
+JSON, so a value that reaches a DTO by any other route is still written correctly.
+
+| DTO | Amount fields |
+|---|---|
+| `DemurrageEnquiryChargeDto` | `amount`, `taxAmount`, `totalAmount` |
+| `DemurrageEnquiryContainerDto` | `dmChargeAmt`, `dmChargeAmtBeforeDiscount` |
+| `DemurrageEnquiryResponseDto` | `totalDemurrageAmount`, `receiptAmount`, `totalTaxAmount`, `totalAmountWithVat` |
+
+Percentages (`taxPercentage`, `discountPercentage`) keep their own scale - the legacy `AmtColumns`
+listed only the amount columns (`Amount,TaxAmount` on the charges grid, `DmChargeAmt` on the
+containers grid) and left the percentages out. Amounts stay JSON numbers; thousands separators are
+left to the screen.
+
+A charge row also carries a `remarks` field. The legacy Charges grid binds that column to
+`AR_SH_RECEIPT_CHARGES_DTL.REMARKS` - scratch storage this enquiry never writes to, and
+`SHIP_BL_MANIFEST_CHARGES_DTL` has no remarks column at all - so it is always null and exists only so
+the screen can render the column.
 
 > The legacy added *amount + tax* of the BL manifest charges into `FTotalRcpAmount` and then added
 > the VAT again for "Total (Rcpt+Vat)", double counting the tax of those rows. The definition above

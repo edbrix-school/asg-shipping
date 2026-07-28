@@ -375,8 +375,13 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 			}
 
 			Object[] row = rows.get(0);
+			Long chargePoid = toLong(row[0]);
+			if (chargePoid == null) {
+				log.error("SHDEMURRAGE parameter holds '{}', which is not a charge POID - the demurrage "
+						+ "charge line cannot be built", row[0]);
+			}
 			return DemurrageChargeConfigDto.builder()
-					.chargePoid(toLong(row[0]))
+					.chargePoid(chargePoid)
 					.taxPoid(toLong(row[1]))
 					.taxPercentage(toBigDecimal(row[2]))
 					.taxApplicable(toString(row[3]))
@@ -520,8 +525,24 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 		return value != null ? value.toString() : null;
 	}
 
-	private static Long toLong(Object value) {
-		return value instanceof Number number ? number.longValue() : null;
+	/**
+	 * Not every POID arrives as a number: {@code GLOBAL_PARAMETERS.PARAMETER_VALUE} is a VARCHAR2, so
+	 * the demurrage charge POID comes back as the string "94" and dropping it would silently cost the
+	 * enquiry its whole demurrage charge line.
+	 */
+	static Long toLong(Object value) {
+		if (value instanceof Number number) {
+			return number.longValue();
+		}
+		if (value instanceof String text && !text.isBlank()) {
+			try {
+				return new BigDecimal(text.trim()).longValueExact();
+			} catch (NumberFormatException | ArithmeticException e) {
+				log.warn("Value '{}' is not a POID", text);
+				return null;
+			}
+		}
+		return null;
 	}
 
 	private static BigDecimal toBigDecimal(Object value) {
