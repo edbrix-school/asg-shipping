@@ -28,7 +28,6 @@ public class StoredProcedureRepository {
     public String procAttachmentsEdiProcNew(Long groupPoid, Long companyPoid, String docId, Long docKeyPoid, Long jobPoid, Long userPoid) {
         StoredProcedureQuery q = entityManager.createStoredProcedureQuery("PROC_ATTACHMENTS_EDI_PROC_NEW");
         q.setHint("jakarta.persistence.query.timeout", 600000);
-        q.setHint("javax.persistence.query.timeout", 600000);
         q.registerStoredProcedureParameter(1, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(2, Long.class, ParameterMode.IN);
         q.registerStoredProcedureParameter(3, String.class, ParameterMode.IN);
