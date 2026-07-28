@@ -40,10 +40,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.sql.DataSource;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -344,6 +346,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     }
 
     @Override
+    @Transactional(timeout = 600)
     public String reprocessEdi(Long voyagePoid) {
         require(voyagePoid, "Missing voyagePoid");
         Long groupPoid = require(UserContext.getGroupPoid(), MISSING_GROUP_POID);
@@ -363,7 +366,7 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
     }
 
     @Override
-    @Transactional
+    @Transactional(timeout = 600)
     public String uploadAndProcessEdi(Long voyagePoid, MultipartFile file) {
         if (file == null || file.isEmpty()) throw new IllegalArgumentException("EDI file is required");
 
@@ -379,16 +382,8 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         String dbDir = storedProcedureRepository.getEdiUploadDirectory(groupPoid);
         String uploadDir = (dbDir != null && !dbDir.isBlank()) ? dbDir.trim() : ediUploadDir;
 
-        // Save file to the EDI folder
-        try {
-            Path dir = Path.of(uploadDir);
-            Files.createDirectories(dir);
-            Path target = dir.resolve(originalFilename);
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-            log.info("EDI file stored at {}", target.toAbsolutePath());
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Unable to store EDI file: " + e.getMessage());
-        }
+        // Save file to a writable directory (fall back to temp if the configured path is inaccessible)
+        Path target = saveEdiFile(uploadDir, originalFilename, file);
 
         // Insert GLOBAL_ATTACHMENTS record with ACTIVE='N' so EDI_FILE_COPY cursor picks it up.
         // The mapped filename is the original filename — the attachments path + this = full source path.
@@ -396,6 +391,58 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
                 groupPoid, companyPoid, voyagePoid, originalFilename, userId);
 
         return reprocessEdi(voyagePoid);
+    }
+
+    private Path saveEdiFile(String primaryDir, String filename, MultipartFile file) {
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Unable to read uploaded file: " + e.getMessage(), e);
+        }
+
+        // 1. Try primary directory (DB-resolved path)
+        if (primaryDir != null && !primaryDir.isBlank()) {
+            Path target = trySaveToDir(primaryDir, filename, bytes);
+            if (target != null) return target;
+        }
+
+        // 2. Try configured upload directory if different
+        if (ediUploadDir != null && !ediUploadDir.isBlank() && !ediUploadDir.trim().equalsIgnoreCase(primaryDir != null ? primaryDir.trim() : "")) {
+            Path target = trySaveToDir(ediUploadDir, filename, bytes);
+            if (target != null) return target;
+        }
+
+        // 3. Try local relative uploads directory
+        Path localTarget = trySaveToDir("./uploads/edi", filename, bytes);
+        if (localTarget != null) return localTarget;
+
+        // 4. Try system temp sub-directory
+        String tempSubDir = System.getProperty("java.io.tmpdir") + File.separator + "edi_uploads";
+        Path tempSubTarget = trySaveToDir(tempSubDir, filename, bytes);
+        if (tempSubTarget != null) return tempSubTarget;
+
+        // 5. Try system temp root directory
+        Path sysTempTarget = trySaveToDir(System.getProperty("java.io.tmpdir"), filename, bytes);
+        if (sysTempTarget != null) return sysTempTarget;
+
+        throw new IllegalArgumentException("Unable to store EDI file: no writable directory found");
+    }
+
+    private Path trySaveToDir(String dirPath, String filename, byte[] content) {
+        try {
+            Path dir = Path.of(dirPath);
+            if (!Files.exists(dir)) {
+                Files.createDirectories(dir);
+            }
+            Path target = dir.resolve(filename);
+            Files.write(target, content, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            log.info("EDI file stored successfully at {}", target.toAbsolutePath());
+            return target;
+        } catch (Exception e) {
+            log.warn("Could not save EDI file to {}: {}", dirPath, e.getMessage());
+            return null;
+        }
     }
 
     @Override
