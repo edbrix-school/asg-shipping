@@ -191,7 +191,7 @@ class VesselVoyageControllerTest {
                 .detRowIds(List.of(1L, 2L))
                 .build();
         when(vesselVoyageService.transferTranshipments(eq(10L), any(TranshipmentTransferRequest.class)))
-                .thenReturn("transferred");
+                .thenReturn(Map.of("message", "Transfer Assignment Completed (2 rows). Press Save/Refresh.", "loadTransactionPoid", 20L));
         assertEquals(200, controller.transferTranshipments(10L, transferRequest).getStatusCode().value());
 
         when(vesselVoyageService.importHnjnTranshipments(10L)).thenReturn("imported");
