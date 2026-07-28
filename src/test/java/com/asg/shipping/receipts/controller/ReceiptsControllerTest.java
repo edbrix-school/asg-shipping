@@ -1,5 +1,6 @@
 package com.asg.shipping.receipts.controller;
 
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
@@ -14,8 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -36,6 +39,10 @@ public class ReceiptsControllerTest {
 
     @Mock
     private LoggingService loggingService;
+
+    @Spy
+    private DocumentDownloadHeaderService downloadHeaderService =
+            new DocumentDownloadHeaderService(mock(JdbcTemplate.class));
 
     @InjectMocks
     private ReceiptsController receiptsController;

@@ -2,10 +2,12 @@ package com.asg.shipping.collectionhandover.controller;
 
 import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.collectionhandover.dto.CollectionHandoverCreateDTO;
 import com.asg.shipping.collectionhandover.dto.CollectionHandoverDto;
 import com.asg.shipping.collectionhandover.dto.CollectionHandoverUpdateDTO;
+import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
 import com.asg.shipping.collectionhandover.service.CollectionHandoverService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +41,7 @@ public class CollectionHandoverController {
 
     private static final String DOC_ID = "300-106";
     private final CollectionHandoverService collectionHandoverService;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/search")
@@ -172,8 +174,8 @@ public class CollectionHandoverController {
         try {
             byte[] pdf = collectionHandoverService.print(transactionPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=collection-handover-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ArShDayEndCloseHdr.class, transactionPoid, "collection-handover", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {

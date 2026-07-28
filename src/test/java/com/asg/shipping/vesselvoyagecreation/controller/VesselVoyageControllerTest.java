@@ -1,5 +1,6 @@
 package com.asg.shipping.vesselvoyagecreation.controller;
 
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
@@ -15,9 +16,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,6 +45,10 @@ class VesselVoyageControllerTest {
 
     @Mock
     private VesselVoyageService vesselVoyageService;
+
+    @Spy
+    private DocumentDownloadHeaderService downloadHeaderService =
+            new DocumentDownloadHeaderService(mock(JdbcTemplate.class));
 
     @InjectMocks
     private VesselVoyageController controller;
@@ -351,7 +358,7 @@ class VesselVoyageControllerTest {
         ResponseEntity<?> response = controller.print(123L, FreightCargo.FALSE, null);
 
         assertEquals(200, response.getStatusCode().value());
-        assertEquals("attachment; filename=cargo-manifest-123.pdf", response.getHeaders().getFirst("Content-Disposition"));
+        assertEquals("attachment; filename=\"Cargo-Manifest-123.pdf\"", response.getHeaders().getFirst("Content-Disposition"));
         assertEquals(MediaType.APPLICATION_PDF, response.getHeaders().getContentType());
         assertArrayEquals(pdfBytes, (byte[]) response.getBody());
     }
@@ -365,7 +372,7 @@ class VesselVoyageControllerTest {
         ResponseEntity<?> response = controller.print(123L, FreightCargo.TRUE, ImportExport.EXPORT);
 
         assertEquals(200, response.getStatusCode().value());
-        assertEquals("attachment; filename=freight-manifest-123.pdf", response.getHeaders().getFirst("Content-Disposition"));
+        assertEquals("attachment; filename=\"Freight-Manifest-123.pdf\"", response.getHeaders().getFirst("Content-Disposition"));
         assertEquals(MediaType.APPLICATION_PDF, response.getHeaders().getContentType());
         assertArrayEquals(pdfBytes, (byte[]) response.getBody());
     }
