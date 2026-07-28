@@ -573,9 +573,9 @@ class ImportManifestServiceImplTest {
         address.setAddressPoid("1");
         address.setEmail("test@test.com");
         
-        when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(BigDecimal.valueOf(1L), "CAN")).thenReturn(List.of(address));
+        when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(Long.valueOf(1L), "CAN")).thenReturn(List.of(address));
 
-        LoadEmailFaxResponseDto result = service.loadEmailFax(BigDecimal.valueOf(1L), req.getAddressType());
+        LoadEmailFaxResponseDto result = service.loadEmailFax(Long.valueOf(1L), req.getAddressType());
         assertNotNull(result);
         assertFalse(result.getEmailFaxDetails().isEmpty());
     }

@@ -23,7 +23,7 @@ public interface ImportManifestService {
 
     SendEdiEmailsResponseDto sendEdiEmails(Long transactionPoId);
 
-    LoadEmailFaxResponseDto loadEmailFax(BigDecimal addressMasterPoid, String addressType);
+    LoadEmailFaxResponseDto loadEmailFax(Long addressMasterPoid, String addressType);
 
     BlStatusResponseDto getBlStatus(Long transactionPoId);
 
