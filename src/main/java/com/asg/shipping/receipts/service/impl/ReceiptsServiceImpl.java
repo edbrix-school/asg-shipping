@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -117,15 +118,70 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		List<Long> ttBankPoids = pymtDtos.stream().map(ReceiptPaymentDetailDto::getTtBankPoid)
 				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-		// --- Single batch fetch per LOV name ---
-		Map<Long, LovGetListDto> blMap = lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER");
-		Map<Long, LovGetListDto> chargeMap = lovService.getDetailsByPoidsAndLovName(allChargePoids, "CHARGE_MASTER");
-		Map<Long, LovGetListDto> taxMap = lovService.getDetailsByPoidsAndLovName(allTaxPoids, "TAX_MASTER");
-		Map<Long, LovGetListDto> companyMap = lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY");
-		Map<Long, LovGetListDto> printCustomerMap = lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT");
-		Map<Long, LovGetListDto> chequeCompanyMap = lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT");
-		Map<Long, LovGetListDto> bankMap = lovService.getDetailsByPoidsAndLovName(bankPoids, "ARCUSTBANKRCPT");
-		Map<Long, LovGetListDto> ttBankMap = lovService.getDetailsByPoidsAndLovName(ttBankPoids, "SHIP_REC_BANK_MASTER_ALL_COMPANY");
+		CompletableFuture<Map<Long, LovGetListDto>> blFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER")
+				);
+
+		CompletableFuture<Map<Long, LovGetListDto>> chargeFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(allChargePoids, "CHARGE_MASTER")
+				);
+
+		CompletableFuture<Map<Long, LovGetListDto>> taxFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(allTaxPoids, "TAX_MASTER")
+				);
+
+		CompletableFuture<Map<Long, LovGetListDto>> companyFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY")
+				);
+
+		CompletableFuture<Map<Long, LovGetListDto>> printCustomerFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT")
+				);
+
+		CompletableFuture<Map<Long, LovGetListDto>> chequeCompanyFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT")
+				);
+
+		CompletableFuture<Map<Long, LovGetListDto>> bankFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(bankPoids, "ARCUSTBANKRCPT")
+				);
+
+		CompletableFuture<Map<Long, LovGetListDto>> ttBankFuture =
+				CompletableFuture.supplyAsync(() ->
+						lovService.getDetailsByPoidsAndLovName(ttBankPoids, "SHIP_REC_BANK_MASTER_ALL_COMPANY")
+				);
+
+		try {
+			CompletableFuture.allOf(
+					blFuture,
+					chargeFuture,
+					taxFuture,
+					companyFuture,
+					printCustomerFuture,
+					chequeCompanyFuture,
+					bankFuture,
+					ttBankFuture
+			).join();
+		} catch (CompletionException e) {
+			Throwable cause = e.getCause();
+			throw (cause instanceof RuntimeException) ? (RuntimeException) cause : new RuntimeException(cause);
+		}
+
+		Map<Long, LovGetListDto> blMap = blFuture.join();
+		Map<Long, LovGetListDto> chargeMap = chargeFuture.join();
+		Map<Long, LovGetListDto> taxMap = taxFuture.join();
+		Map<Long, LovGetListDto> companyMap = companyFuture.join();
+		Map<Long, LovGetListDto> printCustomerMap = printCustomerFuture.join();
+		Map<Long, LovGetListDto> chequeCompanyMap = chequeCompanyFuture.join();
+		Map<Long, LovGetListDto> bankMap = bankFuture.join();
+		Map<Long, LovGetListDto> ttBankMap = ttBankFuture.join();
 
 		// --- Apply from maps ---
 		dto.setBlDet(blMap.get(dto.getBlPoid()));
