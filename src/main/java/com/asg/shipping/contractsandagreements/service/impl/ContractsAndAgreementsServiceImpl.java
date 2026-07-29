@@ -1,6 +1,7 @@
 package com.asg.shipping.contractsandagreements.service.impl;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.DiffObject;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -13,6 +14,7 @@ import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.DateUtil;
+import com.asg.common.lib.utility.DiffUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementHdrDto;
 import com.asg.shipping.contractsandagreements.dto.AdminContractsAgreementPicDtlDto;
@@ -28,8 +30,10 @@ import com.asg.shipping.contractsandagreements.repository.AdminContractsAgreemen
 import com.asg.shipping.contractsandagreements.service.ContractsAndAgreementsService;
 import com.asg.shipping.contractsandagreements.service.ContractsAndAgreementsValidationService;
 import com.asg.shipping.contractsandagreements.util.mapper.ContractsAndAgreementsMapper;
+import jakarta.persistence.Column;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Table;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -39,9 +43,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -87,8 +93,9 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 entityManager.refresh(entity);
                 log.info("Created new Contracts and Agreements with ID: {}", saved.getTransactionPoid());
 
+                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getTransactionPoid().toString(),
+                                String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), entity.getDocRef()));
                 saveAgreementContentDetails(dto.getAgreementContentDetails(), saved.getTransactionPoid());
-                loggingService.createLogSummaryEntry(UserContext.getDocumentId(), saved.getTransactionPoid().toString(), String.format("%s %s", LogDetailsEnum.CREATED.getDescription(), entity.getDocRef()));
 
                 return getContractsAndAgreementsById(saved.getTransactionPoid());
         }
@@ -114,8 +121,7 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
 
                 AdminContractsAgreementHdr entity = findByHeaderId(transactionPoid);
 
-                AdminContractsAgreementHdr oldEntity = new AdminContractsAgreementHdr();
-                BeanUtils.copyProperties(entity, oldEntity);
+                AdminContractsAgreementHdr oldEntity = snapshotHeader(entity);
 
                 if (!entity.getAgreementName().equals(dto.getAgreementName()) &&
                                 validationService.checkForDuplicateAgreementName(dto.getAgreementName(), transactionPoid)) {
@@ -124,15 +130,16 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                 }
 
                 validationService.partyValidation(dto.getPartyType(), dto.getPartyPoid());
-                validationService.expiryDateValidation(dto.getExpiryDate(), dto.getEffectiveDate(), dto.getTerminationDate());
+                validationService.expiryDateValidation(
+                                dto.getExpiryDate() != null ? dto.getExpiryDate() : entity.getExpiryDate(),
+                                dto.getEffectiveDate() != null ? dto.getEffectiveDate() : entity.getEffectiveDate(),
+                                dto.getTerminationDate() != null ? dto.getTerminationDate() : entity.getTerminationDate());
 
                 ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
 
                 headerRepo.save(entity);
 
-                loggingService.logChanges(oldEntity, entity, AdminContractsAgreementHdr.class, UserContext.getDocumentId(),
-                        transactionPoid.toString(), LogDetailsEnum.MODIFIED,
-                                TRANSACTION_POID_STR);
+                logHeaderChanges(oldEntity, entity, transactionPoid);
 
                 updateAgreementContentDetails(dto.getAgreementContentDetails(), transactionPoid);
                 return getContractsAndAgreementsById(transactionPoid);
@@ -323,6 +330,92 @@ public class ContractsAndAgreementsServiceImpl implements ContractsAndAgreements
                                                 "Contracts and Agreements",
                                                 "transactionPoid",
                                                 transactionPoid));
+        }
+
+       
+        private void logHeaderChanges(
+                        AdminContractsAgreementHdr oldEntity,
+                        AdminContractsAgreementHdr newEntity,
+                        Long transactionPoid) {
+
+                List<DiffObject> diffs = DiffUtil.createDiffList(oldEntity, newEntity, AdminContractsAgreementHdr.class);
+
+                loggingService.createLogSummaryEntry(
+                                LogDetailsEnum.MODIFIED,
+                                UserContext.getDocumentId(),
+                                transactionPoid.toString());
+
+                if (diffs == null || diffs.isEmpty()) {
+                        return;
+                }
+
+                Map<String, DiffObject> uniqueByColumn = new LinkedHashMap<>();
+                for (DiffObject diff : diffs) {
+                        if (isUnchangedDateDiff(oldEntity, newEntity, diff.getFieldName())) {
+                                continue;
+                        }
+                        String columnName = resolveColumnName(AdminContractsAgreementHdr.class, diff.getFieldName());
+                        uniqueByColumn.putIfAbsent(columnName.toUpperCase(), diff);
+                }
+
+                String docId = UserContext.getDocumentId();
+                String docKey = transactionPoid.toString();
+                String logDetail = String.format("KeyId = %s:%s", TRANSACTION_POID_STR, transactionPoid);
+                String tableName = AdminContractsAgreementHdr.class.getAnnotation(Table.class).name();
+
+                for (Map.Entry<String, DiffObject> entry : uniqueByColumn.entrySet()) {
+                        DiffObject diff = entry.getValue();
+                        loggingService.createLogDetailsEntry(
+                                        docId,
+                                        docKey,
+                                        entry.getKey(),
+                                        diff.getOldValue(),
+                                        diff.getNewValue(),
+                                        logDetail,
+                                        tableName);
+                }
+        }
+
+        private AdminContractsAgreementHdr snapshotHeader(AdminContractsAgreementHdr source) {
+                AdminContractsAgreementHdr snapshot = new AdminContractsAgreementHdr();
+                BeanUtils.copyProperties(source, snapshot);
+                snapshot.setTransactionDate(source.getTransactionDate());
+                snapshot.setReferenceDate(source.getReferenceDate());
+                snapshot.setEffectiveDate(source.getEffectiveDate());
+                snapshot.setExpiryDate(source.getExpiryDate());
+                snapshot.setRenewalDueDate(source.getRenewalDueDate());
+                snapshot.setLastRenewalDate(source.getLastRenewalDate());
+                snapshot.setTerminationDate(source.getTerminationDate());
+                return snapshot;
+        }
+
+        private static boolean isUnchangedDateDiff(
+                        AdminContractsAgreementHdr oldEntity,
+                        AdminContractsAgreementHdr newEntity,
+                        String fieldName) {
+                try {
+                        Field field = AdminContractsAgreementHdr.class.getDeclaredField(fieldName);
+                        if (!LocalDate.class.equals(field.getType())) {
+                                return false;
+                        }
+                        field.setAccessible(true);
+                        return java.util.Objects.equals(field.get(oldEntity), field.get(newEntity));
+                } catch (ReflectiveOperationException ex) {
+                        return false;
+                }
+        }
+
+        private static String resolveColumnName(Class<?> clazz, String propertyName) {
+                try {
+                        Field field = clazz.getDeclaredField(propertyName);
+                        Column column = field.getAnnotation(Column.class);
+                        if (column != null && column.name() != null && !column.name().isBlank()) {
+                                return column.name();
+                        }
+                } catch (NoSuchFieldException ignored) {
+                       
+                }
+                return propertyName;
         }
 
         private String resolveAction(String rawAction) {
