@@ -669,7 +669,7 @@ public class ImportManifestMapper {
             entity.setId(id);
         }
 
-        entity.setAddressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid().longValue() : 1L);
+        entity.setAddressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid() : java.math.BigDecimal.ONE);
         entity.setEmail1(dto.getEmail1());
         entity.setEmail2(dto.getEmail2());
         entity.setSendYesNo(dto.getSendYesNo());

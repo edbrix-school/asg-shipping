@@ -7,6 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(
         name = "SHIP_BL_MANIFEST_EMAIL_FAX_DTL")
@@ -21,7 +23,7 @@ public class ShipBlManifestEmailFaxDtl extends BaseEntity {
     private ShipBlManifestEmailFaxId id;
 
     @Column(name = "ADDRESS_POID", nullable = false)
-    private Long addressPoid;
+    private BigDecimal addressPoid;
 
     @Column(name = "FAX", length = 25)
     private String fax;

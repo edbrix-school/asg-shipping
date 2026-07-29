@@ -252,7 +252,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             var emailFaxDetails = addressDetails.stream()
                     .map(ad -> EmailFaxDetailDto.builder()
                             .actionType("isCreated")
-                            .addressPoid(ad.getAddressMasterPoid() != null ? java.math.BigDecimal.valueOf(ad.getAddressMasterPoid()) : null)
+                            .addressPoid(ad.getAddressPoid() != null ? new java.math.BigDecimal(ad.getAddressPoid()) : null)
                             .addressType(addressType)
                             .email1(ad.getEmail())
                             .email2(ad.getEmail2())
@@ -1398,8 +1398,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                             updateDoBlStatus(transactionPoid, groupPoid, companyPoid);
                         }
 
-                        // TEMP DIAGNOSTIC: skipped to test whether PROC_SHIP_BL_PAGE_SAVE_AFTER is deleting/reverting notify-party rows saved in the same request
-                        if (false && !hasManualTotals) {
+                        if (!hasManualTotals) {
                             callAfterSaveProcedure(
                                     saved,
                                     groupPoid,
