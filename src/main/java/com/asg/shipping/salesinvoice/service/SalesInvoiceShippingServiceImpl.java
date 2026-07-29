@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.asg.shipping.annotation.PerformGlPosting;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
@@ -162,6 +163,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
     @Override
     @Transactional
+    @PerformGlPosting
     public SalesInvoiceShippingDto createSalesInvoice(SalesInvoiceShippingCreateDTO createDTO) {
         log.info("Creating Sales Invoice");
 
@@ -211,6 +213,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
 
     @Override
     @Transactional
+    @PerformGlPosting
     public SalesInvoiceShippingDto updateSalesInvoice(Long id, SalesInvoiceShippingUpdateDTO updateDTO) {
         log.info("Updating Sales Invoice with id: {}", id);
 
