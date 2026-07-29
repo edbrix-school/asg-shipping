@@ -511,7 +511,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                     }
                     case ACTION_ISCREATED -> {
                         ShipBlManifestGeneralDtl entity = mapper.mapGeneralDtlFromDto(detailDto, transactionPoid);
-                        entity.setId(new ShipBlManifestDtlId(transactionPoid, maxDetRowId++));
+                        entity.setId(new ShipBlManifestDtlId(transactionPoid, ++maxDetRowId));
                         toSave.add(entity);
                     }
                     case ACTION_ISUPDATED -> {
