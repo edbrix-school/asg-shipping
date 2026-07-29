@@ -3,7 +3,9 @@ package com.asg.shipping.vesselvoyagecreation.controller;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.shipping.vesselvoyagecreation.dto.*;
+import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
 import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageTranshipDtlEntity;
 import com.asg.shipping.vesselvoyagecreation.entity.VwShipEdiExceptionUploadEntity;
 import com.asg.shipping.vesselvoyagecreation.service.VesselVoyageService;
@@ -23,10 +25,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -49,6 +53,9 @@ class VesselVoyageControllerTest {
     private MockedStatic<UserContext> mockedUserContext;
 
     private final Pageable pageable = PageRequest.of(0, 20);
+
+    @Mock
+    private DocumentDownloadHeaderService downloadHeaderService;
 
     @BeforeEach
     void setUp() {
@@ -191,7 +198,7 @@ class VesselVoyageControllerTest {
                 .detRowIds(List.of(1L, 2L))
                 .build();
         when(vesselVoyageService.transferTranshipments(eq(10L), any(TranshipmentTransferRequest.class)))
-                .thenReturn("transferred");
+                .thenReturn(Map.of("message", "Transfer Assignment Completed (2 rows). Press Save/Refresh.", "loadTransactionPoid", 20L));
         assertEquals(200, controller.transferTranshipments(10L, transferRequest).getStatusCode().value());
 
         when(vesselVoyageService.importHnjnTranshipments(10L)).thenReturn("imported");
@@ -344,28 +351,52 @@ class VesselVoyageControllerTest {
 
     @Test
     void print_success_freightCargoFalse_importExportNull() throws Exception {
-        byte[] pdfBytes = new byte[] {9, 9, 9};
+        byte[] pdfBytes = new byte[]{9, 9, 9};
 
-        when(vesselVoyageService.print(123L, "FALSE", null)).thenReturn(pdfBytes);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=cargo-manifest-123.pdf");
+
+        when(vesselVoyageService.print(123L, "FALSE", null))
+                .thenReturn(pdfBytes);
+
+        when(downloadHeaderService.buildAttachmentHeaders(
+                eq(ShipVoyageHdrEntity.class),
+                eq(123L),
+                eq("cargo-manifest"),
+                eq("pdf")))
+                .thenReturn(headers);
 
         ResponseEntity<?> response = controller.print(123L, FreightCargo.FALSE, null);
 
         assertEquals(200, response.getStatusCode().value());
-        assertEquals("attachment; filename=cargo-manifest-123.pdf", response.getHeaders().getFirst("Content-Disposition"));
+        assertEquals("attachment; filename=cargo-manifest-123.pdf",
+                response.getHeaders().getFirst("Content-Disposition"));
         assertEquals(MediaType.APPLICATION_PDF, response.getHeaders().getContentType());
         assertArrayEquals(pdfBytes, (byte[]) response.getBody());
     }
 
     @Test
     void print_success_freightCargoTrue_importExportExport() throws Exception {
-        byte[] pdfBytes = new byte[] {7, 7, 7};
+        byte[] pdfBytes = new byte[]{7, 7, 7};
 
-        when(vesselVoyageService.print(123L, "TRUE", "EXPORT")).thenReturn(pdfBytes);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=freight-manifest-123.pdf");
+
+        when(vesselVoyageService.print(123L, "TRUE", "EXPORT"))
+                .thenReturn(pdfBytes);
+
+        when(downloadHeaderService.buildAttachmentHeaders(
+                eq(ShipVoyageHdrEntity.class),
+                eq(123L),
+                eq("freight-manifest"),
+                eq("pdf")))
+                .thenReturn(headers);
 
         ResponseEntity<?> response = controller.print(123L, FreightCargo.TRUE, ImportExport.EXPORT);
 
         assertEquals(200, response.getStatusCode().value());
-        assertEquals("attachment; filename=freight-manifest-123.pdf", response.getHeaders().getFirst("Content-Disposition"));
+        assertEquals("attachment; filename=freight-manifest-123.pdf",
+                response.getHeaders().getFirst("Content-Disposition"));
         assertEquals(MediaType.APPLICATION_PDF, response.getHeaders().getContentType());
         assertArrayEquals(pdfBytes, (byte[]) response.getBody());
     }

@@ -179,9 +179,9 @@ public class BookingFormController {
 
             ExcelFileData data = excelExportService.generateExcel("100-311", String.valueOf(transactionPoid), null,
                     "VGMCustXLFile.xlsx");
-            String fileName = "VGMCustXLFile_" + transactionPoid + ".xlsx";
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ShipMateHdr.class, transactionPoid, "vgm-cust-xl", "xlsx"))
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(data.getContent());
         } catch (Exception e) {

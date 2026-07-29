@@ -44,7 +44,7 @@ public interface VesselVoyageService {
 
     List<ShipVoyageTranshipDtlEntity> updateTranshipments(Long voyagePoid, TranshipmentUpdateRequest request);
 
-    String transferTranshipments(Long voyagePoid, TranshipmentTransferRequest request);
+    Map<String, Object> transferTranshipments(Long voyagePoid, TranshipmentTransferRequest request);
 
     String importHnjnTranshipments(Long voyagePoid);
 

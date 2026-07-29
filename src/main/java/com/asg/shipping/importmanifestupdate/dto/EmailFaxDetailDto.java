@@ -5,14 +5,18 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class EmailFaxDetailDto {
-    private String addressPoid;
+    private String actionType;
+    private BigDecimal addressPoid;
+    private String addressType;
     private String email1;
     private String email2;
-    private String fax;
-    private String addressType;
+    private String sendYesNo;
+    private String sendEmailFax;
 }

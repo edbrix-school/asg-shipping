@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="LINE_DEMURRAGE_MASTER" language="groovy" pageWidth="780" pageHeight="595" orientation="Landscape" columnWidth="740" leftMargin="20" rightMargin="20" topMargin="10" bottomMargin="2" uuid="51f26c1c-332c-43f0-beb9-5722768520c7">
+	<property name="ireport.zoom" value="1.4641000000000006"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<style name="Title" fontName="Times New Roman" fontSize="50" isBold="true" pdfFontName="Times-Bold"/>
+	<style name="SubTitle" forecolor="#736343" fontName="Arial" fontSize="18"/>
+	<style name="Column header" forecolor="#666666" fontName="Arial" fontSize="12" isBold="true"/>
+	<style name="Detail" fontName="Arial" fontSize="12"/>
+	<style name="Row" mode="Transparent">
+		<conditionalStyle>
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}%2 == 0]]></conditionExpression>
+			<style backcolor="#E6DAC3"/>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGIN_GROUP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_COMP_POID" class="java.lang.String">
+		<defaultValueExpression><![CDATA[1]]></defaultValueExpression>
+	</parameter>
+	<parameter name="LOGIN_USER_POID" class="java.lang.String"/>
+	<parameter name="DOC_ID" class="java.lang.String">
+		<defaultValueExpression><![CDATA["000-000"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="DOC_KEY_POID" class="java.lang.String"/>
+	<parameter name="SUBREPORT_DIR" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["\\\\shippingbahrain.com\\data\\ERP_REPORTS\\Reports\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="P_TILL_DATE" class="java.lang.String"/>
+	<queryString>
+		<![CDATA[SELECT
+DISTINCT GET_LINE_NAME(VHDR.LINE_POID) LINE, BLHDR.BL_NUMBER, CTM.CONTAINER_TYPE_CODE || '|' || CTM.CONTAINER_TYPE_NAME CONTAINER_TYPE, EQUIPMENT_ISO_TYPE,
+CONTAINERTRIFIMP.FREE_DAYS,
+CONTAINERTRIFIMP.SLAB1_TILLDAYS,
+CONTAINERTRIFIMP.SLAB1_RATE,
+NVL(CONTAINERTRIFIMP.SLAB2_TILLDAYS, 0) - NVL (CONTAINERTRIFIMP.SLAB1_TILLDAYS, 0) SLAB2_TILLDAYS,
+CONTAINERTRIFIMP.SLAB2_RATE,
+NVL(CONTAINERTRIFIMP.SLAB3_TILLDAYS, 0) - NVL (CONTAINERTRIFIMP.SLAB2_TILLDAYS, 0) SLAB3_TILLDAYS,
+CONTAINERTRIFIMP.SLAB3_RATE,
+NVL(CONTAINERTRIFIMP.SLAB4_TILLDAYS, 0) - NVL (CONTAINERTRIFIMP.SLAB3_TILLDAYS, 0) SLAB4_TILLDAYS,
+CONTAINERTRIFIMP.SLAB4_RATE,
+NVL(CONTAINERTRIFIMP.SLAB5_TILLDAYS, 0) - NVL (CONTAINERTRIFIMP.SLAB4_TILLDAYS, 0) SLAB5_TILLDAYS,
+CONTAINERTRIFIMP.SLAB5_RATE,
+NVL(CONTAINERTRIFIMP.SLAB6_TILLDAYS, 0) - NVL (CONTAINERTRIFIMP.SLAB5_TILLDAYS, 0) SLAB6_TILLDAYS,
+CONTAINERTRIFIMP.SLAB6_RATE,
+NVL(CONTAINERTRIFIMP.SLAB7_TILLDAYS, 0) - NVL (CONTAINERTRIFIMP.SLAB6_TILLDAYS, 0) SLAB7_TILLDAYS,
+CONTAINERTRIFIMP.SLAB7_RATE
+FROM SHIP_VOYAGE_HDR VHDR
+INNER JOIN  SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID
+INNER JOIN  SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL ON CONTAINERDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID
+INNER JOIN  SHIP_LINE_TARIFF_HDR SHLNTFHDR ON SHLNTFHDR.LINE_POID=VHDR.LINE_POID AND to_date(TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
+INNER JOIN SHIP_LINE_TARIFF_IMP_DTL CONTAINERTRIFIMP ON SHLNTFHDR.TRANSACTION_POID=CONTAINERTRIFIMP.TRANSACTION_POID AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID= GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE)
+INNER JOIN SHIP_CONTAINER_TYPE_MASTER CTM ON CONTAINERDTL.EQUIPMENT_ISO_TYPE=CTM.CONTAINER_TYPE_CODE
+WHERE BLHDR.TRANSACTION_POID=$P{DOC_KEY_POID}]]>
+	</queryString>
+	<field name="LINE" class="java.lang.String"/>
+	<field name="BL_NUMBER" class="java.lang.String"/>
+	<field name="CONTAINER_TYPE" class="java.lang.String"/>
+	<field name="EQUIPMENT_ISO_TYPE" class="java.lang.String"/>
+	<field name="FREE_DAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB1_TILLDAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB1_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB2_TILLDAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB2_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB3_TILLDAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB3_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB4_TILLDAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB4_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB5_TILLDAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB5_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB6_TILLDAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB6_RATE" class="java.math.BigDecimal"/>
+	<field name="SLAB7_TILLDAYS" class="java.math.BigDecimal"/>
+	<field name="SLAB7_RATE" class="java.math.BigDecimal"/>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band splitType="Stretch"/>
+	</title>
+	<pageHeader>
+		<band height="1" splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="59" splitType="Stretch">
+			<line>
+				<reportElement positionType="FixRelativeToBottom" x="4" y="26" width="735" height="1" uuid="9ec55f57-eda0-48ce-a06e-ffab81edbcc6"/>
+				<graphicElement>
+					<pen lineWidth="0.5" lineColor="#999999"/>
+				</graphicElement>
+			</line>
+			<textField>
+				<reportElement x="44" y="5" width="281" height="20" uuid="cddaf982-841b-430b-bf51-772f283bc960"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="true" isUnderline="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{LINE}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="5" y="39" width="84" height="20" uuid="89044db6-448c-4629-88d7-670f94dc87db"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[CONTAINER]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="89" y="39" width="50" height="20" uuid="b8794504-1a20-45ae-b44d-62512044cc72"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[FREE DAYS]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="140" y="39" width="42" height="20" uuid="acd8595c-0a73-4744-9c3f-7dfeca857842"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[SLAB 1]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="182" y="39" width="42" height="20" uuid="399e7148-8113-4878-ad25-5147c8f684f0"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[RATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="225" y="39" width="42" height="20" uuid="5ea444df-c9d4-4588-b777-cf73cc4fe800"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[SLAB 2]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="268" y="39" width="42" height="20" uuid="09d814a0-c976-4931-93b3-3bc3c8d170f0"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[RATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="352" y="39" width="42" height="20" uuid="76999d61-997c-4d24-b16b-f2d3bd9f3ecc"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[RATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="310" y="39" width="42" height="20" uuid="236df049-0214-4917-b55d-bf53f159efc9"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[SLAB 3]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="5" y="5" width="37" height="20" uuid="9ed54024-39b5-463c-9930-1b37bf0ba27e"/>
+				<textElement verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Line :]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="342" y="5" width="84" height="20" uuid="7ae28152-e2c9-40c9-a01a-3deb00807833"/>
+				<textElement verticalAlignment="Middle">
+					<font isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[B/L Number :]]></text>
+			</staticText>
+			<textField>
+				<reportElement x="426" y="5" width="306" height="20" uuid="bb181a13-7de9-4519-904c-b2fc33ca5c34"/>
+				<textElement verticalAlignment="Middle">
+					<font size="12" isBold="true" isUnderline="false" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{BL_NUMBER}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement x="479" y="39" width="42" height="20" uuid="55f9acb6-c74b-44d2-9b1c-12ecdd5fc68e"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[SLAB 5]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="521" y="39" width="42" height="20" uuid="a87e9bdd-0fbf-47f7-b43e-336640df0aed"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[RATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="394" y="39" width="42" height="20" uuid="5f887913-9f05-413b-a02a-24df472792bc"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[SLAB 4]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="437" y="39" width="42" height="20" uuid="8a08462d-3629-429b-92c8-b29da79fc3c4"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[RATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="606" y="39" width="42" height="20" uuid="e20bcb52-6ad4-4543-b0ea-f964cc8dd6d0"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[RATE]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="564" y="39" width="42" height="20" uuid="27515949-b951-441b-96b8-8ac0d63d09af"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[SLAB 6]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="648" y="39" width="42" height="20" uuid="617a4e91-60a0-44f7-90cc-442aa9463680"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[SLAB 7]]></text>
+			</staticText>
+			<staticText>
+				<reportElement x="690" y="39" width="42" height="20" uuid="325b2c80-ba9b-4032-976c-66d2b2ab77dd"/>
+				<box leftPadding="0">
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<text><![CDATA[RATE]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="23" splitType="Stretch">
+			<textField>
+				<reportElement x="5" y="2" width="84" height="20" uuid="a11c2392-efb6-4bc0-9cfc-70495e59685b"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CONTAINER_TYPE}]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="89" y="2" width="50" height="20" uuid="7ccfd1bb-4793-419f-87c8-e8921a78d3e4"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{FREE_DAYS} <= 0 ? 0 : $F{FREE_DAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="140" y="2" width="42" height="20" uuid="ca1c1d98-bd3c-4d52-a146-65f1a4d8f487"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{SLAB1_TILLDAYS} <= 0 ? 0 : $F{SLAB1_TILLDAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="182" y="2" width="42" height="20" uuid="8a4a91b8-b073-4a88-9493-5a06f2f8dd05"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB1_RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="225" y="2" width="42" height="20" uuid="03ff090f-ae99-4b3a-bf40-7e47eb28203b"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{SLAB2_TILLDAYS} <= 0 ? 0 : $F{SLAB2_TILLDAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="268" y="2" width="42" height="20" uuid="41898694-f264-410c-a87d-0822f6d8828e"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB2_RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="352" y="2" width="42" height="20" uuid="fc410352-5288-4c7d-a44f-07a76779ac88"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB3_RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="310" y="2" width="42" height="20" uuid="62847cff-ee69-4f30-a4d5-4d4325f561ed"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{SLAB3_TILLDAYS} <= 0 ? 0 : $F{SLAB3_TILLDAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="394" y="2" width="42" height="20" uuid="b1e9b59f-879d-42ac-96e9-818436ee69e0"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{SLAB4_TILLDAYS} <= 0 ? 0 : $F{SLAB4_TILLDAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="437" y="2" width="42" height="20" uuid="0169bb45-1310-425e-815d-2edf27840741"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB4_RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="521" y="2" width="42" height="20" uuid="9def8d61-ead6-4ab8-af29-fe9754f1bd69"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB5_RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="479" y="2" width="42" height="20" uuid="a1a3f84b-3601-4e72-8cb4-897cf5866553"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{SLAB5_TILLDAYS} <= 0 ? 0 : $F{SLAB5_TILLDAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="606" y="2" width="42" height="20" uuid="d8427a76-7d31-4e28-9ad2-64c7081acceb"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB6_RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="563" y="2" width="42" height="20" uuid="21c00345-b544-47f2-b2b5-c71283d87582"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{SLAB6_TILLDAYS} <= 0 ? 0 : $F{SLAB6_TILLDAYS})]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##,##0.000" isBlankWhenNull="true">
+				<reportElement x="690" y="2" width="42" height="20" uuid="2606cdd4-df34-4df6-9bb5-50b53ef68ff9"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph leftIndent="2" rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{SLAB7_RATE}]]></textFieldExpression>
+			</textField>
+			<textField pattern="#,##0" isBlankWhenNull="true">
+				<reportElement x="647" y="2" width="42" height="20" uuid="87c4217f-7b3d-41d7-8343-aaa3d01ac225"/>
+				<box>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+				</box>
+				<textElement textAlignment="Right" verticalAlignment="Middle">
+					<font size="8"/>
+					<paragraph rightIndent="3"/>
+				</textElement>
+				<textFieldExpression><![CDATA[($F{SLAB7_TILLDAYS} <= 0 ? 0 : $F{SLAB7_TILLDAYS})]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+</jasperReport>

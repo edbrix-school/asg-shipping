@@ -3,7 +3,6 @@ package com.asg.shipping.vesselvoyagecreation.controller;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +25,8 @@ import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
+import org.springframework.http.HttpHeaders;
 import com.asg.shipping.common.ApiResponse;
 import com.asg.shipping.vesselvoyagecreation.dto.CurrencyUpdateRequest;
 import com.asg.shipping.vesselvoyagecreation.dto.TranshipmentTransferRequest;
@@ -33,6 +34,7 @@ import com.asg.shipping.vesselvoyagecreation.dto.TranshipmentUpdateRequest;
 import com.asg.shipping.vesselvoyagecreation.dto.VoyageBlFilter;
 import com.asg.shipping.vesselvoyagecreation.dto.VoyageBlTab;
 import com.asg.shipping.vesselvoyagecreation.dto.VoyageUpsertRequest;
+import com.asg.shipping.vesselvoyagecreation.entity.ShipVoyageHdrEntity;
 import com.asg.shipping.vesselvoyagecreation.service.VesselVoyageService;
 import com.asg.shipping.vesselvoyagecreation.util.FreightCargo;
 import com.asg.shipping.vesselvoyagecreation.util.ImportExport;
@@ -52,6 +54,7 @@ import java.time.LocalDate;
 public class VesselVoyageController {
 
 	private final VesselVoyageService vesselVoyageService;
+	private final DocumentDownloadHeaderService downloadHeaderService;
 
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @PostMapping("/list")
@@ -318,10 +321,10 @@ public class VesselVoyageController {
 		try {
 			byte[] pdf = vesselVoyageService.print(transactionPoid, freightCargo.name(),
 					importExport != null ? importExport.name() : null);
-			String fileName = freightCargo.name().equalsIgnoreCase("FALSE") ? "cargo-manifest-" : "freight-manifest-";
+			String filePrefix = freightCargo.name().equalsIgnoreCase("FALSE") ? "cargo-manifest" : "freight-manifest";
 			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=" + fileName + transactionPoid + ".pdf")
+					.headers(downloadHeaderService.buildAttachmentHeaders(
+							ShipVoyageHdrEntity.class, transactionPoid, filePrefix, "pdf"))
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
 			log.error("Failed to generate PDF for Manifest PDF: {}", transactionPoid, e);

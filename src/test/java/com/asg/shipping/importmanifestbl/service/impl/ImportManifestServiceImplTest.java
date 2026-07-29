@@ -396,8 +396,8 @@ class ImportManifestServiceImplTest {
         ShipBlManifestHdr header = createHeader();
         when(headerRepository.findById(1L)).thenReturn(Optional.of(header));
         when(updateService.getImportManifestBl(1L)).thenReturn(new ImportManifestBlRequestDto());
-        when(lovService.getLovItemsByPoids(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
-        when(lovService.getLovItemsByCodes(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
+        lenient().when(lovService.getLovItemsByPoids(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
+        lenient().when(lovService.getLovItemsByCodes(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
         try (MockedStatic<UserContext> mocked = mockStatic(UserContext.class)) {
             mockUserContext(mocked);
             ImportManifestBlDto result = service.getImportManifest(1L);
@@ -573,9 +573,9 @@ class ImportManifestServiceImplTest {
         address.setAddressPoid("1");
         address.setEmail("test@test.com");
         
-        when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(1L, "CAN")).thenReturn(List.of(address));
-        
-        LoadEmailFaxResponseDto result = service.loadEmailFax(1L, req.toString());
+        when(addressDetailsRepository.findByAddressMasterPoidAndAddressType(Long.valueOf(1L), "CAN")).thenReturn(List.of(address));
+
+        LoadEmailFaxResponseDto result = service.loadEmailFax(Long.valueOf(1L), req.getAddressType());
         assertNotNull(result);
         assertFalse(result.getEmailFaxDetails().isEmpty());
     }

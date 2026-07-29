@@ -7,8 +7,10 @@ import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.shipping.receipts.dto.*;
+import com.asg.shipping.receipts.entity.ArShReceiptHdr;
 import com.asg.shipping.receipts.enums.ButtonType;
 import com.asg.shipping.receipts.service.ReceiptsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +45,7 @@ public class ReceiptsController {
 
 	private final ReceiptsService receiptsService;
 	private final LoggingService loggingService;
+	private final DocumentDownloadHeaderService downloadHeaderService;
 
 	@AllowedAction(UserRolesRightsEnum.VIEW)
 	@GetMapping("/{transactionPoid}")
@@ -436,8 +438,9 @@ public class ReceiptsController {
 		try {
 			byte[] pdf = receiptsService.receiptAndInvoicePrint(transactionPoid, blPoid,buttonType);
 			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=receipts(shipping)" + buttonType.name().toLowerCase() + "-" +  transactionPoid + ".pdf")
+					.headers(downloadHeaderService.buildAttachmentHeaders(
+							ArShReceiptHdr.class, transactionPoid,
+							"receipts-shipping-" + buttonType.name().toLowerCase(), "pdf"))
 					.contentType(MediaType.APPLICATION_PDF)
 					.body(pdf);
 		} catch (Exception e) {

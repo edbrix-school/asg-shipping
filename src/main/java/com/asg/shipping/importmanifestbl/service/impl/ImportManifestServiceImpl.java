@@ -105,9 +105,8 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         ShipBlManifestHdr entity = findEntityById(transactionPoId);
         log.info("Getting Import Manifest BL with id: {}", transactionPoId);
 
-        if (entity.getBlType() != null && !"IMPORT".equalsIgnoreCase(entity.getBlType())) {
-            throw new ResourceNotFoundException("Import Manifest BL", "transactionPoid", transactionPoId.toString());
-        }
+
+
 
         ImportManifestBlDto dto = ImportManifestMapper.mapToDto(entity);
 
@@ -124,7 +123,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         dto.setPartBls(ImportManifestMapper.mapToPartBls(updateDto.getPartBls()));
         dto.setMafiDetails(ImportManifestMapper.mapToMafiDetails(updateDto.getMafiDetails()));
         dto.setAddressDetails(ImportManifestMapper.mapToAddressDetails(updateDto.getNotifyParties()));
-        enrichLovData(dto);
+       enrichLovData(dto);
 
         log.info("Successfully retrieved Import Manifest BL with id: {}", transactionPoId);
         return dto;
@@ -339,11 +338,13 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                     addressMasterPoid, "CAN");
             var emailFaxDetails = addressDetails.stream()
                     .map(ad -> EmailFaxDetailDto.builder()
-                            .addressPoid(ad.getAddressPoid())
+                            .actionType("isCreated")
+                            .addressPoid(toBigDecimal(ad.getAddressMasterPoid()))
+                            .addressType(addressType)
                             .email1(ad.getEmail())
                             .email2(ad.getEmail2())
-                            .fax(ad.getFax())
-                            .addressType(addressType)
+                            .sendYesNo("N")
+                            .sendEmailFax("EMAIL")
                             .build())
                     .toList();
             log.info("Loaded email/fax data for addressMasterPoid: {}, count: {}", addressMasterPoid, emailFaxDetails.size());
@@ -748,7 +749,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
             return false;
 
         return dto.getAddressDetails().stream()
-                .anyMatch(address -> "Y".equals(address.getSendYesNo()));
+                .anyMatch(address -> "Y".equalsIgnoreCase(address.getSendYesNo()));
     }
 
     private void saveGeneralCargoDetails(List<GeneralCargoDto> details, Long transactionPoid, List<String> logEntries) {
@@ -1251,6 +1252,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         if (details == null) return;
 
         List<String> logEntries = new ArrayList<>();
+        List<PartBlDto> toCreate = new ArrayList<>();
         List<ShipBlManifestPartBL> toUpdate = new ArrayList<>();
         List<ShipBlManifestDtlId> toDelete = new ArrayList<>();
         List<LogRequestDto<ShipBlManifestPartBL>> logRequests = new ArrayList<>();
@@ -1258,7 +1260,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         for (PartBlDto detailDto : details) {
             String action = resolveAction(detailDto.getActionType());
             switch (action) {
-                case ACTION_ISCREATED -> savePartBls(List.of(detailDto), transactionPoid, logEntries);
+                case ACTION_ISCREATED -> toCreate.add(detailDto);
                 case ACTION_ISUPDATED -> {
                     ShipBlManifestPartBL existing = containerPrtRepository.findById(new ShipBlManifestDtlId(transactionPoid, detailDto.getDetRowId()))
                             .orElseThrow(() -> new ResourceNotFoundException("Part BL Detail", "detRowId", detailDto.getDetRowId()));
@@ -1277,6 +1279,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 default -> {}
             }
         }
+        savePartBls(toCreate, transactionPoid, logEntries);
         processUpdates(containerPrtRepository, toUpdate, logRequests);
         logSummaryEntries(logEntries, docId, docKeyPoid);
 
@@ -1291,6 +1294,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         if (details == null) return;
 
         List<String> logEntries = new ArrayList<>();
+        List<AddressDetailsDto> toCreate = new ArrayList<>();
         List<ShipBlManifestEmailFaxDtl> toUpdate = new ArrayList<>();
         List<ShipBlManifestEmailFaxId> toDelete = new ArrayList<>();
         List<LogRequestDto<ShipBlManifestEmailFaxDtl>> logRequests = new ArrayList<>();
@@ -1298,7 +1302,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         for (AddressDetailsDto detailDto : details) {
             String action = resolveAction(detailDto.getActionType());
             switch (action) {
-                case ACTION_ISCREATED -> saveNotifyParties(List.of(detailDto), transactionPoid, logEntries, headerDto);
+                case ACTION_ISCREATED -> toCreate.add(detailDto);
                 case ACTION_ISUPDATED -> {
                     ShipBlManifestEmailFaxDtl existing = emailFaxDtlRepository.findById(new ShipBlManifestEmailFaxId(transactionPoid, detailDto.getDetRowId(), detailDto.getAddressType()))
                             .orElseThrow(() -> new ResourceNotFoundException("Notify Party Detail", "detRowId", detailDto.getDetRowId()));
@@ -1320,6 +1324,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 default -> {}
             }
         }
+        saveNotifyParties(toCreate, transactionPoid, logEntries, headerDto);
         processUpdates(emailFaxDtlRepository, toUpdate, logRequests);
         logSummaryEntries(logEntries, docId, docKeyPoid);
 
@@ -1421,16 +1426,21 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }
     }
 
+    private static BigDecimal toBigDecimal(Long value) {
+        return value != null ? BigDecimal.valueOf(value) : null;
+    }
+
     private void populateMissingAddressInfo(AddressDetailsDto detailDto, ImportManifestBlDto headerDto) {
         if (detailDto.getAddressPoid() == null) {
-            if ("CONSIGNEE".equalsIgnoreCase(detailDto.getAddressType())) {
-                detailDto.setAddressPoid(headerDto.getConsigneePoid());
-            } else if ("NOTIFY1".equalsIgnoreCase(detailDto.getAddressType())) {
-                detailDto.setAddressPoid(headerDto.getNotify1Poid());
-            } else if ("NOTIFY2".equalsIgnoreCase(detailDto.getAddressType()) && headerDto.getOtherNotifies() != null) {
-                detailDto.setAddressPoid(headerDto.getOtherNotifies().getNotify2Poid());
-            } else if ("NOTIFY3".equalsIgnoreCase(detailDto.getAddressType()) && headerDto.getOtherNotifies() != null) {
-                detailDto.setAddressPoid(headerDto.getOtherNotifies().getNotify3Poid());
+            String type = detailDto.getAddressType();
+            if ("CONSIGNEE".equalsIgnoreCase(type)) {
+                detailDto.setAddressPoid(toBigDecimal(headerDto.getConsigneePoid()));
+            } else if ("NOTIFY1".equalsIgnoreCase(type) || "N1".equalsIgnoreCase(type)) {
+                detailDto.setAddressPoid(toBigDecimal(headerDto.getNotify1Poid()));
+            } else if (("NOTIFY2".equalsIgnoreCase(type) || "N2".equalsIgnoreCase(type)) && headerDto.getOtherNotifies() != null) {
+                detailDto.setAddressPoid(toBigDecimal(headerDto.getOtherNotifies().getNotify2Poid()));
+            } else if (("NOTIFY3".equalsIgnoreCase(type) || "N3".equalsIgnoreCase(type)) && headerDto.getOtherNotifies() != null) {
+                detailDto.setAddressPoid(toBigDecimal(headerDto.getOtherNotifies().getNotify3Poid()));
             }
         }
     }
@@ -1449,7 +1459,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                     .send("Y".equalsIgnoreCase(r.getSendYesNo()))
                     .select(false)
                     .detRowId(r.getId().getDetRowId())
-                    .addressPoid(r.getAddressPoid())
+                    .addressPoid(toBigDecimal(r.getAddressPoid()))
                     .email1(r.getEmail1())
                     .email2(r.getEmail2())
                     .addressType(r.getId().getAddressType())

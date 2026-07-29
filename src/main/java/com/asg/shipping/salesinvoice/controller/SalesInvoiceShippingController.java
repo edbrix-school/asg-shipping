@@ -28,6 +28,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -201,7 +202,8 @@ public class SalesInvoiceShippingController {
             }
             ExcelFileData data = excelExportService.generateExcel(docId, null, parameters, fileName);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + data.getFileName())
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            ContentDisposition.attachment().filename(data.getFileName()).build().toString())
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(data.getContent());
         } catch (Exception e) {
@@ -765,8 +767,8 @@ public class SalesInvoiceShippingController {
         try {
             byte[] pdf = service.printInvoice(transactionPoid,blPoid);
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=sales-invoice-shipping-" + transactionPoid + ".pdf")
+                    .headers(downloadHeaderService.buildAttachmentHeaders(
+                            ArShSalesInvoiceHdr.class, transactionPoid, "sales-invoice-shipping", "pdf"))
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
         } catch (Exception e) {

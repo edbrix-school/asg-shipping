@@ -1,5 +1,6 @@
 package com.asg.shipping.importmanifestbl.controller;
 
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.security.util.UserContext;
@@ -13,18 +14,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -43,6 +48,10 @@ class ImportManifestControllerTest {
 
     @Mock
     private LoggingService loggingService;
+
+    @Spy
+    private DocumentDownloadHeaderService downloadHeaderService =
+            new DocumentDownloadHeaderService(mock(JdbcTemplate.class));
 
     @InjectMocks
     private ImportManifestController controller;
@@ -200,7 +209,7 @@ class ImportManifestControllerTest {
     void testLoadEmailFax() throws Exception {
         LoadEmailFaxResponseDto response = LoadEmailFaxResponseDto.builder().build();
 
-        when(service.loadEmailFax(eq(1L), eq("CONSIGNEE"))).thenReturn(response);
+        when(service.loadEmailFax(eq(Long.valueOf(1L)), eq("CONSIGNEE"))).thenReturn(response);
 
         mockMvc.perform(get("/v1/import-manifest-bl/load-email-fax")
                         .param("addressMasterPoid", "1")

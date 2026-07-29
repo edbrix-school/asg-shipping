@@ -7,7 +7,9 @@ import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.common.lib.service.DocumentDownloadHeaderService;
 import com.asg.shipping.exportManifestBl.dto.*;
+import com.asg.shipping.exportManifestBl.entity.ExportManifestBlHdr;
 import com.asg.shipping.exportManifestBl.service.ExportManifestBlService;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateBlPrintRequest;
 import com.asg.shipping.exportManifestUpdate.dto.GenerateManifestRequest;
@@ -28,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -50,6 +51,7 @@ import static com.asg.common.lib.security.util.UserContext.getGroupPoid;
 public class ExportManifestBlController {
 
     private final ExportManifestBlService service;
+    private final DocumentDownloadHeaderService downloadHeaderService;
 
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
             required = true,
@@ -417,8 +419,8 @@ public class ExportManifestBlController {
 			String docId = UserContext.getDocumentId();
 			byte[] pdf = service.generateBlPrint(transactionPoid, request, docId);
 			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=bl-print-" + transactionPoid + ".pdf")
+					.headers(downloadHeaderService.buildAttachmentHeaders(
+							ExportManifestBlHdr.class, transactionPoid, "bl-print", "pdf"))
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (ValidationException e) {
 			log.warn("Validation failed for BL Print {}: {}", transactionPoid, e.getMessage());
@@ -441,10 +443,10 @@ public class ExportManifestBlController {
 		try {
 			String docId = UserContext.getDocumentId();
 			byte[] pdf = service.generateManifest(transactionPoid, request, docId);
-			String fileName = request.isCargoManifest() ? "cargo-manifest-" : "freight-manifest-";
+			String filePrefix = request.isCargoManifest() ? "cargo-manifest" : "freight-manifest";
 			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=" + fileName + transactionPoid + ".pdf")
+					.headers(downloadHeaderService.buildAttachmentHeaders(
+							ExportManifestBlHdr.class, transactionPoid, filePrefix, "pdf"))
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
 			log.error("Failed to generate PDF for Day Close Shipping: {}", transactionPoid, e);
@@ -464,8 +466,8 @@ public class ExportManifestBlController {
 			String docId = UserContext.getDocumentId();
 			byte[] pdf = service.generateDetentionStorage(transactionPoid, docId);
 			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=detention-storage-" + transactionPoid + ".pdf")
+					.headers(downloadHeaderService.buildAttachmentHeaders(
+							ExportManifestBlHdr.class, transactionPoid, "detention-storage", "pdf"))
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
 			log.error("Failed to generate PDF for detention or port storage: {}", transactionPoid, e);
@@ -480,8 +482,8 @@ public class ExportManifestBlController {
 		try {
 			byte[] pdf = service.exportDraftPrint(transactionPoid);
 			return ResponseEntity.ok()
-					.header(HttpHeaders.CONTENT_DISPOSITION,
-							"attachment; filename=" + "draft-invoice-em-" + transactionPoid + ".pdf")
+					.headers(downloadHeaderService.buildAttachmentHeaders(
+							ExportManifestBlHdr.class, transactionPoid, "draft-invoice-em", "pdf"))
 					.contentType(MediaType.APPLICATION_PDF).body(pdf);
 		} catch (Exception e) {
 			log.error("Failed to generate PDF for Draft Invoice: {}", transactionPoid, e);

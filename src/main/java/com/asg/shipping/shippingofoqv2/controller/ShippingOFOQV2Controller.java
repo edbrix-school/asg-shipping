@@ -42,7 +42,9 @@ public class ShippingOFOQV2Controller {
 			description = "Create and save a new  document, then submit it to OFOQ API"
 	)
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(
-			description = "OFOQ document request details",
+			description = "OFOQ document request details, including the voyage job lines selected on the "
+					+ "load-details screen. The lines are saved before the manifest XML is built, so a "
+					+ "document created without them is posted as an empty manifest.",
 			required = true,
 			content = @Content(
 					mediaType = "application/json",
@@ -50,11 +52,32 @@ public class ShippingOFOQV2Controller {
 							name = "OFOQ Request Example",
 							value = """
                                 {
+                                  "docRef": "ASG00001",
                                   "voyageNo": "2445",
                                   "vesselPoid": 9542,
                                   "arrivalDate": "2024-12-02",
                                   "rotationNumber": 2600005410,
-                                  "remarks": "Test OFOQ creation"
+                                  "remarks": "Test OFOQ creation",
+                                  "lineDetails": [
+                                    {
+                                      "vesselVoyagePoid": 406973,
+                                      "lineName": "DOLPHIN SHIPPING LINE",
+                                      "vesselName": "MV BORKUM",
+                                      "voyageNo": "2445",
+                                      "jobNo": "ASG7017",
+                                      "arrivalDate": "2024-12-02",
+                                      "sailDate": "2024-12-02",
+                                      "checked": "Y",
+                                      "drillDownLinkInfo": "TARGET_DOC_ID=100-101,DOC_KEY_POID=406973",
+                                      "linePoid": 103,
+                                      "actionType": "ISCREATED"
+                                    }
+                                  ],
+                                  "amendBl": [
+                                    {
+                                      "blNumber": "25130504"
+                                    }
+                                  ]
                                 }
                                 """
 					)
