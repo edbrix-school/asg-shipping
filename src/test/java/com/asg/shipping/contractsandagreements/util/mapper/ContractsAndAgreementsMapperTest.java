@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -73,6 +74,51 @@ class ContractsAndAgreementsMapperTest {
     }
 
     @Test
+    void testMapToExportDto_RenewalDueDateMatchesExpiry_WhenNoticePeriodNullOrZero() {
+        LocalDate expiry = LocalDate.of(2027, 1, 1);
+        LocalDate storedRenewalDue = LocalDate.of(2026, 12, 1);
+
+        AdminContractsAgreementHdr nullNoticeHdr = new AdminContractsAgreementHdr();
+        nullNoticeHdr.setTransactionPoid(100L);
+        nullNoticeHdr.setNoticePeriodDays(null);
+        nullNoticeHdr.setExpiryDate(expiry);
+        nullNoticeHdr.setRenewalDueDate(storedRenewalDue);
+
+        AdminContractsAgreementHdrDto nullNoticeDto = ContractsAndAgreementsMapper.mapToExportDto(
+                nullNoticeHdr, null, null);
+        assertEquals(expiry, nullNoticeDto.getExpiryDate());
+        assertEquals(expiry, nullNoticeDto.getRenewalDueDate());
+
+        AdminContractsAgreementHdr zeroNoticeHdr = new AdminContractsAgreementHdr();
+        zeroNoticeHdr.setTransactionPoid(101L);
+        zeroNoticeHdr.setNoticePeriodDays(0);
+        zeroNoticeHdr.setExpiryDate(expiry);
+        zeroNoticeHdr.setRenewalDueDate(storedRenewalDue);
+
+        AdminContractsAgreementHdrDto zeroNoticeDto = ContractsAndAgreementsMapper.mapToExportDto(
+                zeroNoticeHdr, null, null);
+        assertEquals(expiry, zeroNoticeDto.getExpiryDate());
+        assertEquals(expiry, zeroNoticeDto.getRenewalDueDate());
+    }
+
+    @Test
+    void testMapToExportDto_KeepsRenewalDueDate_WhenNoticePeriodPositive() {
+        LocalDate expiry = LocalDate.of(2027, 1, 1);
+        LocalDate renewalDue = LocalDate.of(2026, 12, 1);
+
+        AdminContractsAgreementHdr hdr = new AdminContractsAgreementHdr();
+        hdr.setTransactionPoid(100L);
+        hdr.setNoticePeriodDays(30);
+        hdr.setExpiryDate(expiry);
+        hdr.setRenewalDueDate(renewalDue);
+
+        AdminContractsAgreementHdrDto dto = ContractsAndAgreementsMapper.mapToExportDto(hdr, null, null);
+
+        assertEquals(expiry, dto.getExpiryDate());
+        assertEquals(renewalDue, dto.getRenewalDueDate());
+    }
+
+    @Test
     void testUpdateHdrEntity() {
         AdminContractsAgreementHdrDto dto = new AdminContractsAgreementHdrDto();
         dto.setAgreementName("AgName");
@@ -82,6 +128,47 @@ class ContractsAndAgreementsMapperTest {
         assertEquals(1L, entity.getCompanyPoid());
         assertEquals("AgName", entity.getAgreementName());
         assertEquals("N", entity.getDeleted());
+    }
+
+    @Test
+    void testUpdateHdrEntity_SetsRenewalDueDateToExpiry_WhenNoticePeriodNullOrZero() {
+        LocalDate expiry = LocalDate.of(2027, 1, 1);
+
+        AdminContractsAgreementHdrDto nullNoticeDto = new AdminContractsAgreementHdrDto();
+        nullNoticeDto.setExpiryDate(expiry);
+        nullNoticeDto.setNoticePeriodDays(null);
+        nullNoticeDto.setRenewalDueDate(LocalDate.of(2026, 12, 1));
+        AdminContractsAgreementHdr nullNoticeEntity = new AdminContractsAgreementHdr();
+
+        ContractsAndAgreementsMapper.updateHdrEntity(nullNoticeDto, nullNoticeEntity);
+        assertEquals(expiry, nullNoticeEntity.getExpiryDate());
+        assertEquals(expiry, nullNoticeEntity.getRenewalDueDate());
+
+        AdminContractsAgreementHdrDto zeroNoticeDto = new AdminContractsAgreementHdrDto();
+        zeroNoticeDto.setExpiryDate(expiry);
+        zeroNoticeDto.setNoticePeriodDays(0);
+        zeroNoticeDto.setRenewalDueDate(LocalDate.of(2026, 12, 1));
+        AdminContractsAgreementHdr zeroNoticeEntity = new AdminContractsAgreementHdr();
+
+        ContractsAndAgreementsMapper.updateHdrEntity(zeroNoticeDto, zeroNoticeEntity);
+        assertEquals(expiry, zeroNoticeEntity.getExpiryDate());
+        assertEquals(expiry, zeroNoticeEntity.getRenewalDueDate());
+    }
+
+    @Test
+    void testUpdateHdrEntity_SavesProvidedRenewalDueDate_WhenNoticePeriodPositive() {
+        LocalDate expiry = LocalDate.of(2027, 1, 1);
+        LocalDate renewalDue = LocalDate.of(2026, 12, 1);
+
+        AdminContractsAgreementHdrDto dto = new AdminContractsAgreementHdrDto();
+        dto.setExpiryDate(expiry);
+        dto.setNoticePeriodDays(30);
+        dto.setRenewalDueDate(renewalDue);
+        AdminContractsAgreementHdr entity = new AdminContractsAgreementHdr();
+
+        ContractsAndAgreementsMapper.updateHdrEntity(dto, entity);
+        assertEquals(expiry, entity.getExpiryDate());
+        assertEquals(renewalDue, entity.getRenewalDueDate());
     }
     
     @Test

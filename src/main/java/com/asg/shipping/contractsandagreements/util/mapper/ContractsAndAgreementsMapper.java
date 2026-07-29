@@ -53,7 +53,10 @@ public class ContractsAndAgreementsMapper {
                 .noticePeriodDays(hdr.getNoticePeriodDays())
                 .renewalType(hdr.getRenewalType())
                 .renewalCycle(hdr.getRenewalCycle())
-                .renewalDueDate(hdr.getRenewalDueDate())
+                .renewalDueDate(resolveRenewalDueDate(
+                        hdr.getNoticePeriodDays(),
+                        hdr.getRenewalDueDate(),
+                        hdr.getExpiryDate()))
                 .lastRenewalDate(hdr.getLastRenewalDate())
                 .totalContractValue(hdr.getTotalContractValue())
                 .annualValue(hdr.getAnnualValue())
@@ -72,6 +75,16 @@ public class ContractsAndAgreementsMapper {
                 .agreementContentDetails(mapPicDtlList(picDtls))
                 .renewalDetails(mapRenewalDtlList(renewalDtls))
                 .build();
+    }
+
+    private static LocalDate resolveRenewalDueDate(
+            Integer noticePeriodDays,
+            LocalDate renewalDueDate,
+            LocalDate expiryDate) {
+        if (noticePeriodDays == null || noticePeriodDays == 0) {
+            return expiryDate;
+        }
+        return renewalDueDate;
     }
 
     private static List<AdminContractsAgreementPicDtlDto> mapPicDtlList(
@@ -150,7 +163,11 @@ public class ContractsAndAgreementsMapper {
         entity.setNoticePeriodDays(dto.getNoticePeriodDays());
         entity.setRenewalType(dto.getRenewalType());
         entity.setRenewalCycle(dto.getRenewalCycle());
-        applyDate(dto.getRenewalDueDate(), entity.getRenewalDueDate(), entity::setRenewalDueDate);
+        if (dto.getNoticePeriodDays() == null || dto.getNoticePeriodDays() == 0) {
+            entity.setRenewalDueDate(entity.getExpiryDate());
+        } else {
+            applyDate(dto.getRenewalDueDate(), entity.getRenewalDueDate(), entity::setRenewalDueDate);
+        }
         applyDate(dto.getLastRenewalDate(), entity.getLastRenewalDate(), entity::setLastRenewalDate);
         entity.setTotalContractValue(dto.getTotalContractValue());
         entity.setAnnualValue(dto.getAnnualValue());

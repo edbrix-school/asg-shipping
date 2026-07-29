@@ -213,6 +213,7 @@ class ContractsAndAgreementsServiceImplTest {
         existing.setEffectiveDate(LocalDate.of(2026, 2, 5));
         existing.setExpiryDate(LocalDate.of(2027, 2, 5));
         existing.setRenewalDueDate(LocalDate.of(2027, 1, 5));
+        existing.setNoticePeriodDays(30);
         existing.setRenewalType("AUTO");
         existing.setRenewalCycle("YEARLY");
         existing.setAgreementType("SERVICE");
@@ -228,6 +229,7 @@ class ContractsAndAgreementsServiceImplTest {
         updateDto.setEffectiveDate(LocalDate.of(2026, 3, 1));
         updateDto.setExpiryDate(LocalDate.of(2027, 3, 1));
         updateDto.setRenewalDueDate(LocalDate.of(2027, 2, 1));
+        updateDto.setNoticePeriodDays(30);
         updateDto.setRenewalType("AUTO");
         updateDto.setRenewalCycle("YEARLY");
         updateDto.setAgreementType("SERVICE");
@@ -261,6 +263,7 @@ class ContractsAndAgreementsServiceImplTest {
         existing.setEffectiveDate(LocalDate.of(2026, 2, 5));
         existing.setExpiryDate(LocalDate.of(2027, 2, 5));
         existing.setRenewalDueDate(LocalDate.of(2027, 1, 5));
+        existing.setNoticePeriodDays(30);
         existing.setRenewalType("AUTO");
         existing.setRenewalCycle("YEARLY");
         existing.setAgreementType("SERVICE");
@@ -277,6 +280,7 @@ class ContractsAndAgreementsServiceImplTest {
         updateDto.setEffectiveDate(LocalDate.of(2026, 2, 5));
         updateDto.setExpiryDate(LocalDate.of(2027, 2, 5));
         updateDto.setRenewalDueDate(LocalDate.of(2027, 1, 5));
+        updateDto.setNoticePeriodDays(30);
         updateDto.setRenewalType("AUTO");
         updateDto.setRenewalCycle("YEARLY");
         updateDto.setAgreementType("SERVICE");
