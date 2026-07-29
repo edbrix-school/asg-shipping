@@ -9,7 +9,10 @@ import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementHdr
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementPicDtl;
 import com.asg.shipping.contractsandagreements.entity.AdminContractsAgreementRenewalEntity;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 public class ContractsAndAgreementsMapper {
     private ContractsAndAgreementsMapper() {
@@ -136,29 +139,37 @@ public class ContractsAndAgreementsMapper {
         entity.setNewPartyName(dto.getNewPartyName());
         entity.setLinePoid(dto.getLinePoid());
         entity.setDeleted("N");
-        entity.setTransactionDate(dto.getTransactionDate());
+        applyDate(dto.getTransactionDate(), entity.getTransactionDate(), entity::setTransactionDate);
         entity.setPartyContactPerson(dto.getPartyContactPerson());
         entity.setPartyContactEmail(dto.getPartyContactEmail());
         entity.setPartyContactPhone(dto.getPartyContactPhone());
         entity.setPartyAddress(dto.getPartyAddress());
-        entity.setReferenceDate(dto.getReferenceDate());
-        entity.setEffectiveDate(dto.getEffectiveDate());
-        entity.setExpiryDate(dto.getExpiryDate());
+        applyDate(dto.getReferenceDate(), entity.getReferenceDate(), entity::setReferenceDate);
+        applyDate(dto.getEffectiveDate(), entity.getEffectiveDate(), entity::setEffectiveDate);
+        applyDate(dto.getExpiryDate(), entity.getExpiryDate(), entity::setExpiryDate);
         entity.setNoticePeriodDays(dto.getNoticePeriodDays());
         entity.setRenewalType(dto.getRenewalType());
         entity.setRenewalCycle(dto.getRenewalCycle());
-        entity.setRenewalDueDate(dto.getRenewalDueDate());
-        entity.setLastRenewalDate(dto.getLastRenewalDate());
+        applyDate(dto.getRenewalDueDate(), entity.getRenewalDueDate(), entity::setRenewalDueDate);
+        applyDate(dto.getLastRenewalDate(), entity.getLastRenewalDate(), entity::setLastRenewalDate);
         entity.setTotalContractValue(dto.getTotalContractValue());
         entity.setAnnualValue(dto.getAnnualValue());
         entity.setPaymentTerms(dto.getPaymentTerms());
         entity.setPaymentFrequency(dto.getPaymentFrequency());
         entity.setTerminated(dto.getTerminated());
-        entity.setTerminationDate(dto.getTerminationDate());
+        applyDate(dto.getTerminationDate(), entity.getTerminationDate(), entity::setTerminationDate);
         entity.setTerminationReason(dto.getTerminationReason());
         entity.setAgreementCaption(dto.getAgreementCaption());
         entity.setAgreementContent(dto.getAgreementContent());
         entity.setSignatory(dto.getSignatory());
+    }
+
+   
+    private static void applyDate(LocalDate incoming, LocalDate current, Consumer<LocalDate> setter) {
+        if (incoming == null || Objects.equals(incoming, current)) {
+            return;
+        }
+        setter.accept(incoming);
     }
 
     /* ---------------- PIC DETAILS ---------------- */

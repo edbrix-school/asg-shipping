@@ -145,5 +145,6 @@ public class AdminContractsAgreementHdr extends BaseEntity {
     private String signatory;
 
     @Column(name = "DELETED", length = 1)
+    @AuditIgnore
     private String deleted;
 }
