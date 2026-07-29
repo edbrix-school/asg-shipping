@@ -48,4 +48,5 @@ public class DeliveryOrderIssueToCustomerDto {
     private String remarks;
     private String receiptsDocRef;
     private Long receiptsPoid;
+    private String isEnableAutoSend;
 }
