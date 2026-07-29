@@ -890,7 +890,7 @@ public class ImportManifestBlMapper {
             return null;
         return NotifyPartyRequestDto.builder()
                 .detRowId(entity.getId() != null ? entity.getId().getDetRowId() : null)
-                .addressPoid(entity.getAddressPoid() != null ? BigDecimal.valueOf(entity.getAddressPoid()) : null)
+                .addressPoid(entity.getAddressPoid())
                 .fax(entity.getFax())
                 .email1(entity.getEmail1())
                 .email2(entity.getEmail2())
@@ -912,7 +912,7 @@ public class ImportManifestBlMapper {
                 dto.getAddressType());
         return ShipBlManifestEmailFaxDtl.builder()
                 .id(id)
-                .addressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid().longValue() : 1L)
+                .addressPoid(dto.getAddressPoid() != null ? dto.getAddressPoid() : BigDecimal.ONE)
                 .fax(dto.getFax())
                 .email1(dto.getEmail1())
                 .email2(dto.getEmail2())
@@ -1089,7 +1089,7 @@ public class ImportManifestBlMapper {
 
     public void updateEmailFaxFromDto(NotifyPartyRequestDto dto, ShipBlManifestEmailFaxDtl entity) {
         if (dto.getAddressPoid() != null) {
-            entity.setAddressPoid(dto.getAddressPoid().longValue());
+            entity.setAddressPoid(dto.getAddressPoid());
         }
         entity.setFax(dto.getFax());
         entity.setEmail1(dto.getEmail1());
