@@ -1,6 +1,7 @@
 package com.asg.shipping.customerinvoicechargemapmaster.service.impl;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.common.lib.dto.DiffObject;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -9,6 +10,7 @@ import com.asg.common.lib.security.util.UserContext;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
+import com.asg.common.lib.utility.DiffUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapDetailDto;
 import com.asg.shipping.customerinvoicechargemapmaster.dto.CustomerInvoiceChargeMapMasterRequest;
@@ -21,11 +23,10 @@ import com.asg.shipping.customerinvoicechargemapmaster.repository.CustomerInvoic
 import com.asg.shipping.customerinvoicechargemapmaster.service.CustomerInvoiceChargeMapMasterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import org.springframework.beans.BeanUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -96,13 +97,25 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                     "At least one charge mapping detail is required");
         }
 
-        // If customer was changed, delete old master + details first
+        String docId = UserContext.getDocumentId();
+        String key = request.getCustomerPoid().toString();
+
+        // If customer was changed, delete old master + details first and log Customer change
         if (request.getOldCustomerPoid() != null
                 && !request.getOldCustomerPoid().equals(request.getCustomerPoid())) {
-            String docId = UserContext.getDocumentId();
             String oldKey = request.getOldCustomerPoid().toString();
-            loggingService.createLogSummaryEntry(docId, oldKey,
-                    String.format("Customer changed from %s to %s", request.getOldCustomerPoid(), request.getCustomerPoid()));
+            String changeMsg = String.format("Customer changed from %s to %s", request.getOldCustomerPoid(), request.getCustomerPoid());
+            loggingService.createLogSummaryEntry(docId, oldKey, changeMsg);
+            loggingService.createLogSummaryEntry(docId, key, changeMsg);
+            loggingService.logSimpleFieldChange(
+                    CustomerInvoicePrtMasterEntity.class,
+                    docId,
+                    key,
+                    "customerPoid",
+                    oldKey,
+                    key,
+                    String.format("KeyId = CUSTOMER_POID:%s", key)
+            );
             detailRepo.deleteAll(detailRepo.findByIdCustomerPoid(request.getOldCustomerPoid()));
             masterRepo.findById(request.getOldCustomerPoid()).ifPresent(masterRepo::delete);
         }
@@ -115,17 +128,16 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
                         .orElseGet(() -> createMaster(request.getCustomerPoid(), groupPoid));
         log.debug("Master record ensured for customerPoid: {}", master.getCustomerPoid());
 
-        String docId = UserContext.getDocumentId();
-        String key = request.getCustomerPoid().toString();
-        // Note: docId/key for old customer already used above if customer changed
-
         if (isNewRecord) {
             loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, docId, key);
         } else {
             CustomerInvoicePrtMasterEntity oldMaster = new CustomerInvoicePrtMasterEntity();
             BeanUtils.copyProperties(master, oldMaster);
-            loggingService.logChanges(oldMaster, master, CustomerInvoicePrtMasterEntity.class, docId, key,
-                    LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
+            List<DiffObject> diffs = DiffUtil.createDiffList(oldMaster, master, CustomerInvoicePrtMasterEntity.class);
+            if (!diffs.isEmpty()) {
+                loggingService.logChanges(oldMaster, master, CustomerInvoicePrtMasterEntity.class, docId, key,
+                        LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
+            }
         }
 
         Long maxDetRowIdResult = detailRepo.findMaxDetRowId(request.getCustomerPoid());
@@ -147,7 +159,7 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
         }
         return getByCustomer(request.getCustomerPoid(), groupPoid);
 
-}
+    }
 
     // ========================= DELETE DETAIL =========================
 
@@ -256,8 +268,8 @@ public class CustomerInvoiceChargeMapMasterServiceImpl
             loggingService.createLogSummaryEntry(docId, key,
                     String.format("Row Created on Charge Detail with detRowId: %s", id.getDetRowId()));
         } else {
-            loggingService.logChanges(oldDetail, entity, CustomerInvoicePrtDtlEntity.class, docId, key,
-                    LogDetailsEnum.MODIFIED, "CUSTOMER_POID");
+            String logDetail = String.format("KeyId = CUSTOMER_POID: %s DET_ROW_ID: %s", key, id.getDetRowId());
+            loggingService.createLog(oldDetail, entity, CustomerInvoicePrtDtlEntity.class, docId, key, logDetail);
         }
     }
 

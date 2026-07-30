@@ -1146,7 +1146,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
             return jdbcTemplate.execute(sql, (CallableStatement cs) -> {
                 cs.setLong(1, groupPoid);
                 cs.setLong(2, transactionPoid);
-                cs.setLong(3, ffJobPoid);
+                cs.setLong(3, (ffJobPoid != null) ? ffJobPoid : Types.NUMERIC);
                 cs.setString(4, username);
                 cs.registerOutParameter(5, Types.VARCHAR);
                 cs.registerOutParameter(6, Types.VARCHAR);

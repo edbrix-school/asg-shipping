@@ -374,7 +374,7 @@ class ShipCommissionTransferServiceImplTest {
     void testInsertPdaCommission_Success() {
         try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class);
              var mockedHelperUtils = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
-            
+
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
             mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
             mockedHelperUtils.when(com.asg.common.lib.utility.ASGHelperUtils::getCurrentUser).thenReturn("testuser");
@@ -383,13 +383,14 @@ class ShipCommissionTransferServiceImplTest {
 
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
                     .thenReturn(Optional.of(hdrEntity));
-            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class))).thenReturn("Success");
+            when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
+                    .thenReturn("SUCESS commission posted to FDA, ");
 
             Map<String, Object> result = service.insertPdaCommission(1L);
 
             assertNotNull(result);
             assertEquals(1L, result.get("transactionPoid"));
-            assertEquals("SUCCESS", result.get("pdaStatus"));
+            assertTrue(result.get("message").toString().startsWith("Records imported..."));
         }
     }
 
@@ -404,8 +405,11 @@ class ShipCommissionTransferServiceImplTest {
             when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
                     .thenReturn(Optional.of(hdrEntity));
 
-            assertThrows(com.asg.common.lib.exception.ValidationException.class, 
-                () -> service.insertPdaCommission(1L));
+            Map<String, Object> result = service.insertPdaCommission(1L);
+
+            assertNotNull(result);
+            assertEquals(1L, result.get("transactionPoid"));
+            assertEquals("Select Fda number ...", result.get("message"));
         }
     }
 

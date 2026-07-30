@@ -55,7 +55,12 @@ public class LovServiceImpl implements LovService {
         Map<String, Object> result = lovDataService.getLovList(
                 "", groupPoid, companyPoid, userPoid,
                 lovName, 0, 0, "", "", List.of(code), null);
-        return findByCode(code, result);
+        LovItem item = findByCode(code, result);
+        if (isIncomplete(item)) {
+            LovItem viaFilter = findByCodeUsingFilter(code, lovName, groupPoid, companyPoid, userPoid);
+            if (viaFilter != null) return viaFilter;
+        }
+        return item;
     }
 
     @Override
@@ -91,6 +96,15 @@ public class LovServiceImpl implements LovService {
         Map<String, LovItem> map = new java.util.HashMap<>();
         if (data != null) data.forEach(x -> { if (x.getCode() != null) map.put(x.getCode().toUpperCase(), toItem(x)); });
         if (defaults != null) defaults.forEach(x -> { if (x.getCode() != null) map.putIfAbsent(x.getCode().toUpperCase(), toItem(x)); });
+
+        for (String code : distinctCodes) {
+            String key = code.toUpperCase();
+            LovItem existing = map.get(key);
+            if (existing == null || isIncomplete(existing)) {
+                LovItem viaFilter = findByCodeUsingFilter(code, lovName, groupPoid, companyPoid, userPoid);
+                if (viaFilter != null) map.put(key, viaFilter);
+            }
+        }
         return map;
     }
 
@@ -128,6 +142,30 @@ public class LovServiceImpl implements LovService {
                     .orElse(new LovItem(null, code, null, null, null, null));
         }
         return new LovItem(null, code, null, null, null, null);
+    }
+
+    /**
+     * A code-based lookup can resolve to a bare stub (code set, everything else null) when the
+     * underlying LOV_GETLIST/full-list match fails upstream even though the item genuinely exists.
+     * Text-filter search (used for LOV browsing) reaches the same data via a different query path
+     * and reliably returns full details, so it's used here as a fallback.
+     */
+    private boolean isIncomplete(LovItem item) {
+        return item != null && item.getCode() != null
+                && item.getDescription() == null && item.getLabel() == null && item.getValue() == null;
+    }
+
+    private LovItem findByCodeUsingFilter(String code, String lovName, Long groupPoid, Long companyPoid, Long userPoid) {
+        Map<String, Object> result = lovDataService.getLovList(
+                code, groupPoid, companyPoid, userPoid,
+                lovName, 0, 0, "", "");
+        List<LovGetListDto> data = (List<LovGetListDto>) result.get("data");
+        if (data == null) return null;
+        return data.stream()
+                .filter(x -> code.equalsIgnoreCase(x.getCode()))
+                .findFirst()
+                .map(this::toItem)
+                .orElse(null);
     }
 
     private LovItem toItem(LovGetListDto dto) {

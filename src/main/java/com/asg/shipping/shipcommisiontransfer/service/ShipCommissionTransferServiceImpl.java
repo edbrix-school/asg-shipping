@@ -331,18 +331,18 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
             throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString());
         }
 
-        // Validate required data exists
         if (entity.getFdaTransactionPoid() == null) {
-            throw new ValidationException("FDA Transaction POID is required to insert PDA commission");
+            Map<String, Object> response = new HashMap<>();
+            response.put(TRANSACTION_POID, transactionPoid);
+            response.put("message", "Select Fda number ...");
+            return response;
         }
 
-        // Call PROC_INSERT_PDA_COMMISSION to insert data into PDA
         String result = callProcInsertPdaCommission(transactionPoid, entity.getFdaTransactionPoid(), getCurrentUser());
 
         Map<String, Object> response = new HashMap<>();
         response.put(TRANSACTION_POID, transactionPoid);
-        response.put("pdaStatus", result != null && !result.contains("ERROR") ? "SUCCESS" : "FAILED");
-        response.put("message", result);
+        response.put("message", "Records imported..." + result);
 
         return response;
     }
@@ -479,7 +479,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                     .buyPercharge(row[14] != null ? new BigDecimal(row[14].toString()) : null)
                     .commissionOnAmount(row[15] != null ? new BigDecimal(row[15].toString()) : null)
                     .thcAmount(row[16] != null ? new BigDecimal(row[16].toString()) : null)
-                    .selected(row[17] != null ? row[17].toString() : null)
+                    .freightType(row[17] != null ? row[17].toString() : null)
                     .build();
         }).toList();
     }
@@ -642,27 +642,18 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
      */
     private String callProcInsertPdaCommission(Long transactionPoid, Long fdaTransactionPoid, String userCode) {
         try {
-            String sql = "{call PROC_INSERT_PDA_COMMISSION(?, ?, ?, ?)}";
+            String sql = "{call PROC_insert_pda_commission(?, ?, ?, ?)}";
             return jdbcTemplate.execute(sql, (CallableStatement cs) -> {
-                cs.setLong(1, transactionPoid);
+                cs.setBigDecimal(1, BigDecimal.valueOf(transactionPoid));
                 cs.setString(2, userCode);
-                cs.setObject(3, fdaTransactionPoid, Types.NUMERIC);
-                cs.registerOutParameter(4, Types.VARCHAR);
-                cs.execute();
+                cs.setBigDecimal(3, BigDecimal.valueOf(fdaTransactionPoid));
+                cs.registerOutParameter(4, OracleTypes.VARCHAR);
+                cs.executeUpdate();
                 return cs.getString(4);
             });
         } catch (Exception e) {
-            log.error("Error calling PROC_INSERT_PDA_COMMISSION for transaction: {}", transactionPoid, e);
-            String errorMsg = e.getMessage();
-            if (errorMsg != null) {
-                if (errorMsg.contains("Financial Period")) {
-                    throw new ValidationException("Changes allowed only within current Financial Period");
-                }
-                if (errorMsg.contains("ORA-01403") || errorMsg.contains("no data found")) {
-                    throw new ValidationException("Required commission data not found. Please ensure commission details are calculated before inserting to PDA");
-                }
-            }
-            throw new ValidationException("Error inserting commission into PDA: " + errorMsg);
+            log.error("Error calling PROC_insert_pda_commission for transaction: {}", transactionPoid, e);
+            return "ERROR: " + e.getMessage();
         }
     }
 
