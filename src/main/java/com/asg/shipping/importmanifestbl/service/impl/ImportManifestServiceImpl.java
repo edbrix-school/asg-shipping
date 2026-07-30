@@ -123,7 +123,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         dto.setPartBls(ImportManifestMapper.mapToPartBls(updateDto.getPartBls()));
         dto.setMafiDetails(ImportManifestMapper.mapToMafiDetails(updateDto.getMafiDetails()));
         dto.setAddressDetails(ImportManifestMapper.mapToAddressDetails(updateDto.getNotifyParties()));
-       enrichLovData(dto);
+        enrichLovData(dto);
 
         log.info("Successfully retrieved Import Manifest BL with id: {}", transactionPoId);
         return dto;
@@ -339,7 +339,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
             var emailFaxDetails = addressDetails.stream()
                     .map(ad -> EmailFaxDetailDto.builder()
                             .actionType("isCreated")
-                            .addressPoid(toBigDecimal(ad.getAddressMasterPoid()))
+                            .addressPoid(ad.getAddressPoid() != null ? new BigDecimal(ad.getAddressPoid()) : null)
                             .addressType(addressType)
                             .email1(ad.getEmail())
                             .email2(ad.getEmail2())
@@ -1459,7 +1459,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                     .send("Y".equalsIgnoreCase(r.getSendYesNo()))
                     .select(false)
                     .detRowId(r.getId().getDetRowId())
-                    .addressPoid(toBigDecimal(r.getAddressPoid()))
+                    .addressPoid(r.getAddressPoid())
                     .email1(r.getEmail1())
                     .email2(r.getEmail2())
                     .addressType(r.getId().getAddressType())

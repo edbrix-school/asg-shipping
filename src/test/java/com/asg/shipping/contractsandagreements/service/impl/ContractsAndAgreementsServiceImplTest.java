@@ -3,6 +3,7 @@ package com.asg.shipping.contractsandagreements.service.impl;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
+import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -39,7 +41,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,6 +77,7 @@ class ContractsAndAgreementsServiceImplTest {
         userContextMockedStatic.when(UserContext::getCompanyPoid).thenReturn(1L);
         userContextMockedStatic.when(UserContext::getGroupPoid).thenReturn(2L);
         userContextMockedStatic.when(UserContext::getUserName).thenReturn("testUser");
+        userContextMockedStatic.when(UserContext::getTimeZoneCode).thenReturn("Asia/Kolkata");
     }
 
     @AfterEach
@@ -108,6 +111,7 @@ class ContractsAndAgreementsServiceImplTest {
         
         AdminContractsAgreementHdr savedEntity = new AdminContractsAgreementHdr();
         savedEntity.setTransactionPoid(10L);
+        savedEntity.setDocRef("CA-001");
         when(headerRepo.saveAndFlush(any())).thenReturn(savedEntity);
         when(headerRepo.findById(10L)).thenReturn(Optional.of(savedEntity));
         when(picDtlRepository.findMaxDetRowId(10L)).thenReturn(0L);
@@ -117,6 +121,11 @@ class ContractsAndAgreementsServiceImplTest {
         assertNotNull(result);
         verify(headerRepo).saveAndFlush(any());
         verify(picDtlRepository).save(any());
+
+        InOrder inOrder = inOrder(loggingService, picDtlRepository);
+        inOrder.verify(loggingService).createLogSummaryEntry(eq("1001"), eq("10"), contains("Created"));
+        inOrder.verify(picDtlRepository).save(any());
+        inOrder.verify(loggingService).createLogSummaryEntry(eq("1001"), eq("10"), contains("Row Created"));
     }
 
     @Test
@@ -184,6 +193,119 @@ class ContractsAndAgreementsServiceImplTest {
         verify(headerRepo).save(any());
         verify(picDtlRepository).deleteByIdTransactionPoidAndIdDetRowId(10L, 1L);
         verify(picDtlRepository).saveAll(anyList());
+        verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.MODIFIED), eq("1001"), eq("10"));
+        verify(loggingService, atLeastOnce()).createLogDetailsEntry(
+                eq("1001"),
+                eq("10"),
+                eq("AGREEMENT_NAME"),
+                any(),
+                any(),
+                anyString(),
+                eq("ADMIN_CONTRACTS_AGREEMENT_HDR"));
+    }
+
+    @Test
+    void testUpdate_DateFieldsLoggedOnceWithColumnNames() {
+        AdminContractsAgreementHdr existing = new AdminContractsAgreementHdr();
+        existing.setTransactionPoid(10L);
+        existing.setAgreementName("SameName");
+        existing.setReferenceDate(LocalDate.of(2026, 2, 5));
+        existing.setEffectiveDate(LocalDate.of(2026, 2, 5));
+        existing.setExpiryDate(LocalDate.of(2027, 2, 5));
+        existing.setRenewalDueDate(LocalDate.of(2027, 1, 5));
+        existing.setNoticePeriodDays(30);
+        existing.setRenewalType("AUTO");
+        existing.setRenewalCycle("YEARLY");
+        existing.setAgreementType("SERVICE");
+        existing.setAgreementStatus("ACTIVE");
+        existing.setAgreementSource("MANUAL");
+        existing.setPartyType("CUSTOMER");
+        existing.setPartyPoid(1L);
+        existing.setPartyContactPhone("123");
+
+        AdminContractsAgreementHdrDto updateDto = new AdminContractsAgreementHdrDto();
+        updateDto.setAgreementName("SameName");
+        updateDto.setReferenceDate(LocalDate.of(2026, 3, 1));
+        updateDto.setEffectiveDate(LocalDate.of(2026, 3, 1));
+        updateDto.setExpiryDate(LocalDate.of(2027, 3, 1));
+        updateDto.setRenewalDueDate(LocalDate.of(2027, 2, 1));
+        updateDto.setNoticePeriodDays(30);
+        updateDto.setRenewalType("AUTO");
+        updateDto.setRenewalCycle("YEARLY");
+        updateDto.setAgreementType("SERVICE");
+        updateDto.setAgreementStatus("ACTIVE");
+        updateDto.setAgreementSource("MANUAL");
+        updateDto.setPartyType("CUSTOMER");
+        updateDto.setPartyPoid(1L);
+        updateDto.setPartyContactPhone("123");
+
+        when(headerRepo.findById(10L)).thenReturn(Optional.of(existing));
+
+        service.updateContractsAndAgreements(10L, updateDto);
+
+        verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.MODIFIED), eq("1001"), eq("10"));
+        verify(loggingService, times(1)).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("REFERENCE_DATE"), any(), any(), anyString(), eq("ADMIN_CONTRACTS_AGREEMENT_HDR"));
+        verify(loggingService, times(1)).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("EFFECTIVE_DATE"), any(), any(), anyString(), eq("ADMIN_CONTRACTS_AGREEMENT_HDR"));
+        verify(loggingService, times(1)).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("EXPIRY_DATE"), any(), any(), anyString(), eq("ADMIN_CONTRACTS_AGREEMENT_HDR"));
+        verify(loggingService, times(1)).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("RENEWAL_DUE_DATE"), any(), any(), anyString(), eq("ADMIN_CONTRACTS_AGREEMENT_HDR"));
+    }
+
+    @Test
+    void testUpdate_UnchangedDatesNotLoggedWhenOtherFieldChanges() {
+        AdminContractsAgreementHdr existing = new AdminContractsAgreementHdr();
+        existing.setTransactionPoid(10L);
+        existing.setAgreementName("OldName");
+        existing.setReferenceDate(LocalDate.of(2026, 2, 5));
+        existing.setEffectiveDate(LocalDate.of(2026, 2, 5));
+        existing.setExpiryDate(LocalDate.of(2027, 2, 5));
+        existing.setRenewalDueDate(LocalDate.of(2027, 1, 5));
+        existing.setNoticePeriodDays(30);
+        existing.setRenewalType("AUTO");
+        existing.setRenewalCycle("YEARLY");
+        existing.setAgreementType("SERVICE");
+        existing.setAgreementStatus("ACTIVE");
+        existing.setAgreementSource("MANUAL");
+        existing.setPartyType("CUSTOMER");
+        existing.setPartyPoid(1L);
+        existing.setPartyContactPhone("123");
+
+        AdminContractsAgreementHdrDto updateDto = new AdminContractsAgreementHdrDto();
+        updateDto.setAgreementName("NewName");
+        // Same dates (and datetime-style round-trip equivalents would still map to same LocalDate)
+        updateDto.setReferenceDate(LocalDate.of(2026, 2, 5));
+        updateDto.setEffectiveDate(LocalDate.of(2026, 2, 5));
+        updateDto.setExpiryDate(LocalDate.of(2027, 2, 5));
+        updateDto.setRenewalDueDate(LocalDate.of(2027, 1, 5));
+        updateDto.setNoticePeriodDays(30);
+        updateDto.setRenewalType("AUTO");
+        updateDto.setRenewalCycle("YEARLY");
+        updateDto.setAgreementType("SERVICE");
+        updateDto.setAgreementStatus("ACTIVE");
+        updateDto.setAgreementSource("MANUAL");
+        updateDto.setPartyType("CUSTOMER");
+        updateDto.setPartyPoid(1L);
+        updateDto.setPartyContactPhone("123");
+
+        when(headerRepo.findById(10L)).thenReturn(Optional.of(existing));
+        when(validationService.checkForDuplicateAgreementName("NewName", 10L)).thenReturn(false);
+
+        service.updateContractsAndAgreements(10L, updateDto);
+
+        verify(loggingService).createLogSummaryEntry(eq(LogDetailsEnum.MODIFIED), eq("1001"), eq("10"));
+        verify(loggingService, times(1)).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("AGREEMENT_NAME"), any(), any(), anyString(), eq("ADMIN_CONTRACTS_AGREEMENT_HDR"));
+        verify(loggingService, never()).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("REFERENCE_DATE"), any(), any(), anyString(), anyString());
+        verify(loggingService, never()).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("EFFECTIVE_DATE"), any(), any(), anyString(), anyString());
+        verify(loggingService, never()).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("EXPIRY_DATE"), any(), any(), anyString(), anyString());
+        verify(loggingService, never()).createLogDetailsEntry(
+                eq("1001"), eq("10"), eq("RENEWAL_DUE_DATE"), any(), any(), anyString(), anyString());
     }
     
     @Test

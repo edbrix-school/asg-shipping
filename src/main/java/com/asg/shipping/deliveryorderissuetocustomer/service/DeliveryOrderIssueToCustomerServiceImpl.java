@@ -79,6 +79,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
         viewRepository.findRemarksByTransactionPoid(transactionPoid).ifPresent(dto::setRemarks);
         enrichWithLovData(dto);
+        dto.setIsEnableAutoSend(viewRepository.getGlobalParameterValue("START_DO_CNT_DIRECT_CUST", "START_DO_CNT_CUST", "1", "N"));
         receiptHdrRepository.findByBlPoid(transactionPoid).ifPresent(receipt -> {
             dto.setReceiptsDocRef(receipt.getDocRef());
             dto.setReceiptsPoid(receipt.getTransactionPoid());
@@ -113,7 +114,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                 request.getDoReleasedToPerson(), request.getDoReleasedAddressPerson(),
                 request.getOriginalBlReleaseCr(), request.getDoPriority(), request.getDoCntToConsignee(),
                 request.getDoCntToNotify(), request.getDoCntToOthers(), request.getDoCntToOthersMails(),
-                request.getEmailsDo(), request.getDeliverySentTo(), request.getPrincipalDoNumber());
+                request.getEmailsDo(), request.getDeliverySentTo(), request.getPrincipalDoNumber(), null);
         loggingService.createLogSummaryEntry(LogDetailsEnum.CREATED, UserContext.getDocumentId(), transactionPoid.toString());
     }
 
@@ -178,7 +179,8 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                 request.getDoCntToOthersMails(),
                 null,                              // P_DO_CNT_TO_REGS_MAILS: computed internally by procedure
                 deliverySentToCode,
-                request.getPrincipalDoNumber()
+                request.getPrincipalDoNumber(),
+                request.getRemarks()
         );
 
         // refresh AFTER procedure runs — evict from JPA cache first so we get fresh DB values
@@ -330,7 +332,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
             callProcShipDoCntPrintAfter(groupPoid, companyPoid, transactionPoid, null, buttonType.name(),
                     username, dtl.getDoReleasedIdPerson(), dtl.getDoReleasedToPerson(),
                     dtl.getDoReleasedAddrsPerson(), dtl.getOrignalBlReleaseCr(),
-                    null, null, null, null, null, null, null, null);
+                    null, null, null, null, null, null, null, null, null);
             return result;
         }
 
@@ -583,10 +585,10 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                                              String actionType, String user, String doReleasedIdPerson, String doReleasedToPerson,
                                              String doReleasedAddressPerson, String originalBlReleaseCr, String doPriority,
                                              String doCntToConsignee, String doCntToNotify, String doCntToOthers, String doCntToOthersMails,
-                                             String doCntToRegsMails, String deliverySentTo, String principalDoNumber) {
+                                             String doCntToRegsMails, String deliverySentTo, String principalDoNumber, String remarks) {
 
         try {
-            String sql = "{call PROC_SHIP_DO_CNT_PRINT_AFTER(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}";
+            String sql = "{call PROC_SHIP_DO_CNT_PRINT_AFTER(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}";
 
             jdbcTemplate.execute((Connection connection) -> {
                 try (CallableStatement cs = connection.prepareCall(sql)) {
@@ -615,6 +617,8 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                     cs.setString(17, StringUtils.defaultIfBlank(deliverySentTo, "C"));
 
                     cs.setString(18, StringUtils.defaultIfBlank(principalDoNumber, null));
+
+                    cs.setString(19, StringUtils.defaultIfBlank(remarks, null));
 
                     cs.execute();
                 }
