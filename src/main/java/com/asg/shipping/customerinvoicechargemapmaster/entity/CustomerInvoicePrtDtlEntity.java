@@ -1,5 +1,6 @@
 package com.asg.shipping.customerinvoicechargemapmaster.entity;
 
+import com.asg.common.lib.annotation.AuditIgnore;
 import com.asg.common.lib.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -16,6 +17,7 @@ import java.time.LocalDate;
 @Setter
 public class CustomerInvoicePrtDtlEntity extends BaseEntity {
 
+    @AuditIgnore
     @EmbeddedId
     private CustomerInvoicePrtDtlId id;
 
