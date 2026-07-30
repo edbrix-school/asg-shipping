@@ -207,14 +207,13 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
             service.saveOrUpdate(request, 2L);
         }
 
-        verify(loggingService).logChanges(
-                any(CustomerInvoicePrtMasterEntity.class),
-                any(CustomerInvoicePrtMasterEntity.class),
-                eq(CustomerInvoicePrtMasterEntity.class),
+        verify(loggingService).createLog(
+                any(CustomerInvoicePrtDtlEntity.class),
+                any(CustomerInvoicePrtDtlEntity.class),
+                eq(CustomerInvoicePrtDtlEntity.class),
                 eq("DOC123"),
                 eq("1"),
-                eq(LogDetailsEnum.MODIFIED),
-                eq("CUSTOMER_POID"));
+                eq("KeyId = CUSTOMER_POID: 1 DET_ROW_ID: 5"));
     }
 
     @Test
@@ -353,6 +352,15 @@ class CustomerInvoiceChargeMapMasterServiceImplTest {
         verify(detailRepo).deleteAll(List.of(oldDetail));
         verify(masterRepo).delete(oldMaster);
         verify(masterRepo).save(argThat(m -> m.getCustomerPoid().equals(newCustomerPoid)));
+        verify(loggingService).logSimpleFieldChange(
+                eq(CustomerInvoicePrtMasterEntity.class),
+                eq("DOC123"),
+                eq("5928"),
+                eq("customerPoid"),
+                eq("5933"),
+                eq("5928"),
+                eq("KeyId = CUSTOMER_POID:5928")
+        );
     }
 
     @Test
