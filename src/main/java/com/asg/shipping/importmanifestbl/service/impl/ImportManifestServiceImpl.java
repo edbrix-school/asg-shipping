@@ -21,6 +21,7 @@ import com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper;
 import com.asg.shipping.importmanifestbl.dto.*;
 import com.asg.shipping.importmanifestbl.repository.ContainerDropdownRepository;
 import com.asg.shipping.importmanifestbl.service.ImportManifestService;
+import com.asg.shipping.address.entity.AddressDetails;
 import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.importmanifestupdate.service.ImportManifestBlServiceImpl;
 import com.asg.shipping.importmanifestbl.util.ImportManifestDropdownMapper;
@@ -49,8 +50,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.asg.common.lib.dto.FilterRequestDto;
@@ -176,6 +179,13 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         List<PartBlDto> partBls = dto.getPartBls() != null ? dto.getPartBls() : List.of();
         List<Long> partBlCommodityPoids = partBls.stream().map(PartBlDto::getCommodityPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
         List<String> containerNos = partBls.stream().map(PartBlDto::getContainerNo).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
+        List<Long> partBlContainerPoids = new ArrayList<>();
+        partBls.forEach(pb -> {
+            if (pb.getContainerPoid() != null) partBlContainerPoids.add(pb.getContainerPoid());
+            String containerNo = pb.getContainerNo() != null ? pb.getContainerNo().trim() : null;
+            if (containerNo != null && containerNo.matches("\\d+")) partBlContainerPoids.add(Long.parseLong(containerNo));
+        });
+        List<Long> distinctPartBlContainerPoids = partBlContainerPoids.stream().distinct().collect(Collectors.toList());
 
         // Merge port poids across sections
         List<Long> allPortPoids = new ArrayList<>();
@@ -218,6 +228,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Map<Long, LovItem> receiptInvoiceMap = lovService.getLovItemsByPoids(receiptInvoicePoids, "MANIFEST_RECEIPT_INVOICE", groupPoid, companyPoid, userPoid);
         Map<Long, LovItem> taxMap = lovService.getLovItemsByPoids(taxPoids, "TAX_MASTER", groupPoid, companyPoid, userPoid);
         Map<String, LovItem> containerPartMap = lovService.getLovItemsByCodes(containerNos, "SH_CONTAINER_PART", groupPoid, companyPoid, userPoid);
+        Map<Long, LovItem> containerPartByPoidMap = lovService.getLovItemsByPoids(distinctPartBlContainerPoids, "SH_CONTAINER_PART", groupPoid, companyPoid, userPoid);
 
         // --- Apply from maps ---
         if (dto.getQuotationPoid() != null)
@@ -257,8 +268,21 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
         for (PartBlDto pb : partBls) {
             if (pb.getCommodityPoid() != null) pb.setCommodityDet(commodityMap.get(pb.getCommodityPoid()));
-            if (pb.getContainerNo() != null && !pb.getContainerNo().isBlank())
-                pb.setContainerNoDet(containerPartMap.get(pb.getContainerNo().trim().toUpperCase()));
+
+            LovItem containerDet = pb.getContainerPoid() != null ? containerPartByPoidMap.get(pb.getContainerPoid()) : null;
+            if (containerDet == null && pb.getContainerNo() != null && !pb.getContainerNo().isBlank()) {
+                String containerNo = pb.getContainerNo().trim();
+                if (containerNo.matches("\\d+")) {
+                    containerDet = containerPartByPoidMap.get(Long.parseLong(containerNo));
+                }
+                if (containerDet == null) {
+                    containerDet = containerPartMap.get(containerNo.toUpperCase());
+                }
+            }
+            if (containerDet != null && containerDet.getCode() != null) {
+                pb.setContainerNo(containerDet.getCode());
+            }
+            pb.setContainerNoDet(containerDet);
         }
     }
 
@@ -1451,9 +1475,29 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         List<ShipBlManifestEmailFaxDtl> rows = emailFaxDtlRepository
                 .findByIdTransactionPoidOrderByIdDetRowId(transactionPoId);
 
+        List<String> addressPoidIds = rows.stream()
+                .map(ShipBlManifestEmailFaxDtl::getAddressPoid)
+                .filter(Objects::nonNull)
+                .map(p -> p.stripTrailingZeros().toPlainString())
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<String, AddressDetails> masterByAddressPoid = new HashMap<>();
+        if (!addressPoidIds.isEmpty()) {
+            addressDetailsRepository.findAllById(addressPoidIds)
+                    .forEach(ad -> masterByAddressPoid.put(ad.getAddressPoid(), ad));
+        }
+
         List<ConsigneeEmailDto> result = new ArrayList<>();
         for (int i = 0; i < rows.size(); i++) {
             ShipBlManifestEmailFaxDtl r = rows.get(i);
+            AddressDetails master = r.getAddressPoid() != null
+                    ? masterByAddressPoid.get(r.getAddressPoid().stripTrailingZeros().toPlainString())
+                    : null;
+            boolean fromMaster = master != null
+                    && normalizeEmail(r.getEmail1()).equals(normalizeEmail(master.getEmail()))
+                    && normalizeEmail(r.getEmail2()).equals(normalizeEmail(master.getEmail2()));
+
             result.add(ConsigneeEmailDto.builder()
                     .sn((long) (i + 1))
                     .send("Y".equalsIgnoreCase(r.getSendYesNo()))
@@ -1466,9 +1510,14 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                     .sendYesNo(r.getSendYesNo())
                     .sendEmailFax(r.getSendEmailFax())
                     .actionType(null)
+                    .fromMaster(fromMaster)
                     .build());
         }
         return result;
+    }
+
+    private static String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
     }
 
     @Override

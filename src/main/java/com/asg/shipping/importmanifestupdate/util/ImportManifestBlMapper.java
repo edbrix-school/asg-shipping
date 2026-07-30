@@ -1,8 +1,10 @@
 package com.asg.shipping.importmanifestupdate.util;
 
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.shipping.address.entity.AddressDetailsRepository;
 import com.asg.shipping.importmanifestupdate.dto.*;
 import com.asg.shipping.importmanifestupdate.entity.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -17,6 +19,9 @@ public class ImportManifestBlMapper {
 
     private static final String CONTAINER_OWN_CUSTOMER = "C";
     private static final String CONTAINER_OWN_SHIPPER = "S";
+
+    @Autowired
+    private AddressDetailsRepository addressDetailsRepository;
 
     /** Matches the NUMBER(25,3) precision of the charge amount columns. */
     private static final int AMOUNT_SCALE = 3;
@@ -900,7 +905,22 @@ public class ImportManifestBlMapper {
                 .addressType(entity.getId().getAddressType())
                 .faxLog(entity.getFaxLog())
                 .emailLog(entity.getEmailLog())
+                .fromMaster(isFromMaster(entity))
                 .build();
+    }
+
+    private boolean isFromMaster(ShipBlManifestEmailFaxDtl entity) {
+        if (entity.getAddressPoid() == null) {
+            return false;
+        }
+        return addressDetailsRepository.findById(entity.getAddressPoid().stripTrailingZeros().toPlainString())
+                .map(master -> normalizeEmail(entity.getEmail1()).equals(normalizeEmail(master.getEmail()))
+                        && normalizeEmail(entity.getEmail2()).equals(normalizeEmail(master.getEmail2())))
+                .orElse(false);
+    }
+
+    private static String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
     }
 
     public ShipBlManifestEmailFaxDtl mapEmailFaxDtlFromDto(NotifyPartyRequestDto dto, Long transactionPoid) {
