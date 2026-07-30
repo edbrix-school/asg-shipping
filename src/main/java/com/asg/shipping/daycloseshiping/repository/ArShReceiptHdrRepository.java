@@ -22,21 +22,25 @@ public class ArShReceiptHdrRepository {
     public Optional<DayCloseSummaryProjection> fetchNewDayCloseSummary(Long groupPoid, Long companyPoid,
                                                                        String txnDate) {
 
+        // Pending day-close date must be resolved independently of the cash/cheque join below —
+        // if that day's receipts are all SPLIT or zero-amount, the join returns no rows and the
+        // date must not be lost along with the (legitimately empty) amounts.
+        String pendingDateSql = """
+                select distinct min(to_date(transaction_date)) l_pending_dayclose
+                from AR_SH_RECEIPT_HDR
+                where to_date(transaction_date) not in ( select to_date(transaction_date) from AR_SH_DAY_END_CLOSE_HDR
+                where nvl(total_amount,0)>=0 )
+                """;
+
         String sql = """
                 SELECT
                 	SUM(DECODE(PYMT_TYPE,'CASH',AMOUNT,'IMCOCASH',AMOUNT,0)) CASH_AMOUNT,
                 	SUM(DECODE(PYMT_TYPE,'CASH',0,'IMCOCASH',0,'ROUNDOFF',0,'TT',0,AMOUNT)) CHQ_AMOUNT,
-                	SUM(DECODE(PYMT_TYPE,'CASH',AMOUNT,'IMCOCASH',AMOUNT,0))
-                	+ SUM(DECODE(PYMT_TYPE,'CASH',0,'IMCOCASH',0,'ROUNDOFF',0,'TT',0,AMOUNT)) TOTAL_AMOUNT,
-                	SUM(DECODE(PYMT_TYPE,'CASH',0,'TT',0,1)) CHEQUE_COUNT,
-                	MAX(TRANSACTION_DATE) TRANSACTION_DATE
+                	SUM(DECODE(PYMT_TYPE,'CASH',0,'TT',0,1)) CHEQUE_COUNT
                 	FROM AR_SH_RECEIPT_HDR ARSPHDR, AR_SH_RECEIPT_PYMT_DETAILS ARSPDTL
                 	WHERE ARSPDTL.TRANSACTION_POID=ARSPHDR.TRANSACTION_POID
-                	AND PYMT_TYPE NOT IN('SPLIT') AND AMOUNT<>0 AND
-                	TO_DATE(TRANSACTION_DATE) IN (select distinct min(to_date(transaction_date)) l_pending_dayclose
-                	from AR_SH_RECEIPT_HDR
-                	where to_date(transaction_date) not in ( select to_date(transaction_date) from AR_SH_DAY_END_CLOSE_HDR
-                	where nvl(total_amount,0)>=0 ))
+                	AND PYMT_TYPE NOT IN('SPLIT') AND AMOUNT<>0
+                	AND TRUNC(TRANSACTION_DATE) = :txnDate
                 """;
 
         String totalAmountSql = """
@@ -77,37 +81,48 @@ public class ArShReceiptHdrRepository {
                 """;
 
         @SuppressWarnings("unchecked")
-        List<Object[]> result = entityManager.createNativeQuery(sql).getResultList();
+        List<Object> pendingDateResult = entityManager.createNativeQuery(pendingDateSql).getResultList();
 
-        if (result.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Object[] row = result.get(0);
         LocalDate transactionDate = null;
-        if (row[4] != null) {
-            if (row[4] instanceof java.time.LocalDateTime ldt) {
+        if (!pendingDateResult.isEmpty() && pendingDateResult.get(0) != null) {
+            Object dateVal = pendingDateResult.get(0);
+            if (dateVal instanceof java.time.LocalDateTime ldt) {
                 transactionDate = ldt.toLocalDate();
-            } else if (row[4] instanceof java.sql.Date d) {
+            } else if (dateVal instanceof java.sql.Date d) {
                 transactionDate = d.toLocalDate();
-            } else if (row[4] instanceof java.sql.Timestamp ts) {
+            } else if (dateVal instanceof java.sql.Timestamp ts) {
                 transactionDate = ts.toLocalDateTime().toLocalDate();
             }
         }
 
-        // Use the pending date derived from DB result, not the frontend-supplied txnDate
+        if (transactionDate == null) {
+            return Optional.empty();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> result = entityManager.createNativeQuery(sql).setParameter("txnDate", transactionDate)
+                .getResultList();
+
+        BigDecimal cashAmount = BigDecimal.ZERO;
+        BigDecimal chequeAmount = BigDecimal.ZERO;
+        Long chequeCount = 0L;
+        if (!result.isEmpty()) {
+            Object[] row = result.get(0);
+            if (row[0] != null) cashAmount = (BigDecimal) row[0];
+            if (row[1] != null) chequeAmount = (BigDecimal) row[1];
+            if (row[2] != null) chequeCount = ((Number) row[2]).longValue();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Object> totalAmountResult = entityManager.createNativeQuery(totalAmountSql)
+                .setParameter("txnDate", transactionDate).getResultList();
         BigDecimal totalAmount = BigDecimal.ZERO;
-        if (transactionDate != null) {
-            @SuppressWarnings("unchecked")
-            List<Object> totalAmountResult = entityManager.createNativeQuery(totalAmountSql)
-                    .setParameter("txnDate", transactionDate).getResultList();
-            if (!totalAmountResult.isEmpty() && totalAmountResult.get(0) != null) {
-                totalAmount = (BigDecimal) totalAmountResult.get(0);
-            }
+        if (!totalAmountResult.isEmpty() && totalAmountResult.get(0) != null) {
+            totalAmount = (BigDecimal) totalAmountResult.get(0);
         }
 
         return Optional.of(DayCloseSummaryProjectionImpl.builder().transactionDate(transactionDate)
-                .chequeAmount((BigDecimal) row[1]).cashAmount((BigDecimal) row[0]).totalAmount(totalAmount)
-                .chequeCount(row[3] != null ? ((Number) row[3]).longValue() : 0L).build());
+                .chequeAmount(chequeAmount).cashAmount(cashAmount).totalAmount(totalAmount)
+                .chequeCount(chequeCount).build());
     }
 }
