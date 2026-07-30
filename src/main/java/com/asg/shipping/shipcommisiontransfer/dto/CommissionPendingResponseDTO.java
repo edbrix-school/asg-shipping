@@ -27,5 +27,5 @@ public class CommissionPendingResponseDTO {
     private BigDecimal buyPercharge;
     private BigDecimal commissionOnAmount;
     private BigDecimal thcAmount;
-    private String selected;
+    private String freightType;
 }
