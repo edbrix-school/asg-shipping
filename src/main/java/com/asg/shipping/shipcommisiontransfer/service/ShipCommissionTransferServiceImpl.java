@@ -479,7 +479,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                     .buyPercharge(row[14] != null ? new BigDecimal(row[14].toString()) : null)
                     .commissionOnAmount(row[15] != null ? new BigDecimal(row[15].toString()) : null)
                     .thcAmount(row[16] != null ? new BigDecimal(row[16].toString()) : null)
-                    .selected(row[17] != null ? row[17].toString() : null)
+                    .freightType(row[17] != null ? row[17].toString() : null)
                     .build();
         }).toList();
     }
