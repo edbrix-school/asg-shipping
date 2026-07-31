@@ -19,6 +19,6 @@ public class AddressDetailsDto {
     private String sendYesNo;
     private String sendEmailFax;
     private String actionType;
-    private boolean fromMaster;
+    private Boolean fromMaster;
 
 }

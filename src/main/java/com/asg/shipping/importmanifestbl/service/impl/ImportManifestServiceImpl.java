@@ -467,6 +467,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         String existingDocRef = existingEntity.getDocRef();
         ShipBlManifestHdr entity = ImportManifestMapper.mapToEntity(dto, existingEntity);
         entity.setDocRef(existingDocRef); // DOC_REF is DB-generated on INSERT, must never change on UPDATE
+        entity.setTransactionPoid(id); // TRANSACTION_POID is the path identifier; the request body may omit it and must never override it
         if (hasAnyEdiChange(dto)) {
             updateService.formatEdiFields(entity);
         }
