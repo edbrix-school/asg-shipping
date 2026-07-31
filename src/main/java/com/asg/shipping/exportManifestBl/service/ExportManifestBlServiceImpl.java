@@ -917,48 +917,18 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
     private Map<String, Object> fetchChargeDetailsMap(Long transactionPoid) {
         List<ChargeRequestDto> chargeDetails = chargesDtlRepository.findById_TransactionPoid(transactionPoid)
                 .stream()
-                .map(entity -> ChargeRequestDto.builder()
-                        .detRowId(entity.getId().getDetRowId())
-                        .chargePoid(entity.getChargePoid())
-                        .currencyExchange(entity.getCurrencyExchange())
-                        .quantity(entity.getQuantity())
-                        .buyPercharge(entity.getBuyPercharge())
-                        .perQuantityAmount(entity.getPerQuantityAmount())
-                        .paidAtPortPoid(entity.getPaidAtPortPoid())
-                        .chargeType(entity.getChargeType())
-                        .currencyCode(entity.getCurrencyCode())
-                        .freightType(entity.getFreightType())
-                        .ediChargeCode(entity.getEdiChargeCode())
-                        .arShReceiptTransactionPoid(entity.getArShReceiptTransactionPoid())
-                        .chargeBasisOn(entity.getChargeBasisOn())
-                        .printGroup(entity.getPrintGroup())
-                        .receiptInvoicePoid(entity.getReceiptInvoicePoid())
-                        .docRefLinkNo(entity.getDocRefLinkNo())
-                        .reprintDetRowId(entity.getReprintDetRowId())
-                        .reprintTransactionPoid(entity.getReprintTransactionPoid())
-                        .invoiceType(entity.getInvoiceType())
-                        .autoCanInvoiceNo(entity.getAutoCanInvoiceNo())
-                        .chargeDescription(entity.getChargeDescription())
-                        .taxPoid(entity.getTaxPoid())
-                        .taxPercentage(entity.getTaxPercentage())
-                        .taxAmount(entity.getTaxAmount())
-                        .cnRefDocId(entity.getCnRefDocId())
-                        .cnRefDocPoid(entity.getCnRefDocPoid())
-                        .cnRefDetRowId(entity.getCnRefDetRowId())
-                        .cnIssueInvoice(entity.getCnIssueInvoice())
-                        .selectRow(entity.getSelectRow())
-                        .build())
+                .map(this::mapChargeEntityToDto)
                 .toList();
         enrichChargeLovData(chargeDetails);
 
         BigDecimal totalBuyAmount = BigDecimal.ZERO;
         BigDecimal totalSaleAmount = BigDecimal.ZERO;
         for (ChargeRequestDto charge : chargeDetails) {
-            if (charge.getQuantity() != null && charge.getBuyPercharge() != null) {
-                totalBuyAmount = totalBuyAmount.add(charge.getQuantity().multiply(charge.getBuyPercharge()));
+            if (charge.getBuyAmount() != null) {
+                totalBuyAmount = totalBuyAmount.add(charge.getBuyAmount());
             }
-            if (charge.getQuantity() != null && charge.getPerQuantityAmount() != null) {
-                totalSaleAmount = totalSaleAmount.add(charge.getQuantity().multiply(charge.getPerQuantityAmount()));
+            if (charge.getSaleAmount() != null) {
+                totalSaleAmount = totalSaleAmount.add(charge.getSaleAmount());
             }
         }
 
@@ -967,6 +937,51 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         response.put("totalBuyAmount", totalBuyAmount);
         response.put("totalSaleAmount", totalSaleAmount);
         return response;
+    }
+
+ 
+    private ChargeRequestDto mapChargeEntityToDto(ExportManifestBlChargesDtl entity) {
+        BigDecimal qty = entity.getQuantity();
+        BigDecimal buyPer = entity.getBuyPercharge();
+        BigDecimal sellPer = entity.getPerQuantityAmount();
+        BigDecimal buyAmt = (qty != null && buyPer != null) ? qty.multiply(buyPer) : null;
+        BigDecimal saleAmt = (qty != null && sellPer != null) ? qty.multiply(sellPer) : null;
+
+        return ChargeRequestDto.builder()
+                .detRowId(entity.getId().getDetRowId())
+                .chargePoid(entity.getChargePoid())
+                .currencyExchange(entity.getCurrencyExchange())
+                .quantity(qty)
+                .buyPercharge(buyPer)
+                .perQuantityAmount(sellPer)
+                .buy(buyPer)
+                .sell(sellPer)
+                .buyAmount(buyAmt)
+                .saleAmount(saleAmt)
+                .paidAtPortPoid(entity.getPaidAtPortPoid())
+                .chargeType(entity.getChargeType())
+                .currencyCode(entity.getCurrencyCode())
+                .freightType(entity.getFreightType())
+                .ediChargeCode(entity.getEdiChargeCode())
+                .arShReceiptTransactionPoid(entity.getArShReceiptTransactionPoid())
+                .chargeBasisOn(entity.getChargeBasisOn())
+                .printGroup(entity.getPrintGroup())
+                .receiptInvoicePoid(entity.getReceiptInvoicePoid())
+                .docRefLinkNo(entity.getDocRefLinkNo())
+                .reprintDetRowId(entity.getReprintDetRowId())
+                .reprintTransactionPoid(entity.getReprintTransactionPoid())
+                .invoiceType(entity.getInvoiceType())
+                .autoCanInvoiceNo(entity.getAutoCanInvoiceNo())
+                .chargeDescription(entity.getChargeDescription())
+                .taxPoid(entity.getTaxPoid())
+                .taxPercentage(entity.getTaxPercentage())
+                .taxAmount(entity.getTaxAmount())
+                .cnRefDocId(entity.getCnRefDocId())
+                .cnRefDocPoid(entity.getCnRefDocPoid())
+                .cnRefDetRowId(entity.getCnRefDetRowId())
+                .cnIssueInvoice(entity.getCnIssueInvoice())
+                .selectRow(entity.getSelectRow())
+                .build();
     }
 
     // ==================== Helper Methods ====================
@@ -1772,37 +1787,7 @@ public class ExportManifestBlServiceImpl implements ExportManifestBlService {
         // Load Charges Details
         List<ChargeRequestDto> chargeDetails = chargesDtlRepository.findById_TransactionPoid(transactionPoid)
                 .stream()
-                .map(entity -> ChargeRequestDto.builder()
-                        .detRowId(entity.getId().getDetRowId())
-                        .chargePoid(entity.getChargePoid())
-                        .currencyExchange(entity.getCurrencyExchange())
-                        .quantity(entity.getQuantity())
-                        .buyPercharge(entity.getBuyPercharge())
-                        .perQuantityAmount(entity.getPerQuantityAmount())
-                        .paidAtPortPoid(entity.getPaidAtPortPoid())
-                        .chargeType(entity.getChargeType())
-                        .currencyCode(entity.getCurrencyCode())
-                        .freightType(entity.getFreightType())
-                        .ediChargeCode(entity.getEdiChargeCode())
-                        .arShReceiptTransactionPoid(entity.getArShReceiptTransactionPoid())
-                        .chargeBasisOn(entity.getChargeBasisOn())
-                        .printGroup(entity.getPrintGroup())
-                        .receiptInvoicePoid(entity.getReceiptInvoicePoid())
-                        .docRefLinkNo(entity.getDocRefLinkNo())
-                        .reprintDetRowId(entity.getReprintDetRowId())
-                        .reprintTransactionPoid(entity.getReprintTransactionPoid())
-                        .invoiceType(entity.getInvoiceType())
-                        .autoCanInvoiceNo(entity.getAutoCanInvoiceNo())
-                        .chargeDescription(entity.getChargeDescription())
-                        .taxPoid(entity.getTaxPoid())
-                        .taxPercentage(entity.getTaxPercentage())
-                        .taxAmount(entity.getTaxAmount())
-                        .cnRefDocId(entity.getCnRefDocId())
-                        .cnRefDocPoid(entity.getCnRefDocPoid())
-                        .cnRefDetRowId(entity.getCnRefDetRowId())
-                        .cnIssueInvoice(entity.getCnIssueInvoice())
-                        .selectRow(entity.getSelectRow())
-                        .build())
+                .map(this::mapChargeEntityToDto)
                 .toList();
         dto.setChargeDetails(chargeDetails);
         enrichChargeLovData(chargeDetails);

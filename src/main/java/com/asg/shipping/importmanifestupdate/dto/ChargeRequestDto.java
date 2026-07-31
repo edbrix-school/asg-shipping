@@ -49,6 +49,9 @@ public class ChargeRequestDto implements BlManifestValidationService.ChargeValid
     private BigDecimal taxPercentage;
     private BigDecimal taxAmount;
 
+    private BigDecimal buy;
+    private BigDecimal sell;
+
     // Computed display fields (buyPercharge * quantity, perQuantityAmount * quantity)
     private BigDecimal buyAmount;
     private BigDecimal saleAmount;
