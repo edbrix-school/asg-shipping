@@ -421,7 +421,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		CompletableFuture<Map<Long, LovGetListDto>> printCustomerLovFuture =
 				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT"); });
 		CompletableFuture<Map<Long, LovGetListDto>> chequeCompanyLovFuture =
-				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT"); });
+				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "COMPANY"); });
 		CompletableFuture<Map<Long, LovGetListDto>> chargeLovFuture =
 				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(chargePoids, "CHARGE_MASTER"); });
 		CompletableFuture<Map<Long, LovGetListDto>> taxLovFuture =
