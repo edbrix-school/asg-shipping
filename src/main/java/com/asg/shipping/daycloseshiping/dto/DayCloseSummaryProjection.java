@@ -12,5 +12,9 @@ public interface DayCloseSummaryProjection {
 
 	BigDecimal getTotalAmount();
 
-	Long getChequeCount();
+	Long getNoOfCheques();
+
+	String getVerifiedRcvd();
+
+	String getMainOfcRemarks();
 }

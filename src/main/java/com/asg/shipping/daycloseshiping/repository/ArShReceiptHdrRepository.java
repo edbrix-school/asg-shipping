@@ -123,6 +123,6 @@ public class ArShReceiptHdrRepository {
 
         return Optional.of(DayCloseSummaryProjectionImpl.builder().transactionDate(transactionDate)
                 .chequeAmount(chequeAmount).cashAmount(cashAmount).totalAmount(totalAmount)
-                .chequeCount(chequeCount).build());
+                .noOfCheques(chequeCount).verifiedRcvd("N").mainOfcRemarks(".").build());
     }
 }

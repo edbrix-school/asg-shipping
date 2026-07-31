@@ -239,9 +239,9 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 
 			query.registerStoredProcedureParameter("OUTDATA", ResultSet.class, ParameterMode.REF_CURSOR);
 
-			query.setParameter("P_LOGIN_GROUP_POID", 1L);
-			query.setParameter("P_LOGIN_COMPANY_POID", 1L);
-			query.setParameter("P_LOGIN_USER_POID", 1L);
+			query.setParameter("P_LOGIN_GROUP_POID", UserContext.getGroupPoid());
+			query.setParameter("P_LOGIN_COMPANY_POID", UserContext.getCompanyPoid());
+			query.setParameter("P_LOGIN_USER_POID", UserContext.getUserPoid());
 			query.setParameter("P_DOC_ID", "300-103");
 			query.setParameter("P_DOC_KEY_POID", null);
 			query.setParameter("P_LOV_NAME", "IMPORTBLNUMBER");

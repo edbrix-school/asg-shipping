@@ -110,7 +110,7 @@ class DayCloseControllerTest {
                         .cashAmount(BigDecimal.valueOf(1000))
                         .chequeAmount(BigDecimal.valueOf(500))
                         .totalAmount(BigDecimal.valueOf(1500))
-                        .chequeCount(2L)
+                        .noOfCheques(2L)
                         .build();
 
         when(dayCloseService.getNewDayCloseData(1001L, 2001L, "2025-07-06"))

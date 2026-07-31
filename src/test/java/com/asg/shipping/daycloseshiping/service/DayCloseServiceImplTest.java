@@ -133,7 +133,7 @@ class DayCloseServiceImplTest {
                         .cashAmount(BigDecimal.TEN)
                         .chequeAmount(BigDecimal.ONE)
                         .totalAmount(BigDecimal.valueOf(11))
-                        .chequeCount(1L)
+                        .noOfCheques(1L)
                         .build();
 
         when(receiptHdrRepository.fetchNewDayCloseSummary(1L, 1L, "2024-01-01"))
