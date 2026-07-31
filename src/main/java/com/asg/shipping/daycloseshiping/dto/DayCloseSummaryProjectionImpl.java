@@ -16,5 +16,7 @@ public class DayCloseSummaryProjectionImpl implements DayCloseSummaryProjection 
 	private BigDecimal cashAmount;
 	private BigDecimal chequeAmount;
 	private BigDecimal totalAmount;
-	private Long chequeCount;
+	private Long noOfCheques;
+	private String verifiedRcvd;
+	private String mainOfcRemarks;
 }
