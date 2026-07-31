@@ -21,5 +21,5 @@ public class NotifyPartyRequestDto {
     private String faxLog;
     private String emailLog;
     private String actionType;
-    private boolean fromMaster;
+    private Boolean fromMaster;
 }

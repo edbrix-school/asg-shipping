@@ -240,7 +240,7 @@ public class ImportManifestMapper {
                         .sendYesNo(party.getSendYesNo())
                         .sendEmailFax(party.getSendEmailFax())
                         .actionType(party.getActionType())
-                        .fromMaster(party.isFromMaster())
+                        .fromMaster(party.getFromMaster())
                         .build())
                 .toList();
     }
