@@ -1,6 +1,7 @@
 package com.asg.shipping.linetariffs.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -24,6 +25,7 @@ public class LineTariffCreateDTO {
     @NotNull(message = "Line is required")
     private Long linePoid;
 
+    @NotBlank(message = "Description is required")
     @Size(max = 100, message = "Description must not exceed 100 characters")
     private String description;
 
