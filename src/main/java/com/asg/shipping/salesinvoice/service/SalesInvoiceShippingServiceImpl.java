@@ -194,7 +194,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         // Re-fetch the entity to get the actual database values after trigger execution
         saved = hdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
 
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "INVSHRCPTPRINTUPDATE");
+        callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "ARSHRCPTPRINTUPDATE");
 
         SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
@@ -242,7 +242,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         // Re-fetch the entity to get the actual database values after trigger execution
         saved = hdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
 
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "INVSHRCPTPRINTUPDATE");
+        callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "ARSHRCPTPRINTUPDATE");
 
         SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
 
