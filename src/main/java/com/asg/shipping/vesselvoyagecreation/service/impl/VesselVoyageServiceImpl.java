@@ -390,6 +390,38 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
         storedProcedureRepository.insertEdiAttachment(
                 groupPoid, companyPoid, voyagePoid, originalFilename, userId);
 
+        String ext = originalFilename.toLowerCase();
+        if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
+            // Clean up any pre-existing corrupted dummy rows (e.g. containerNo="AS") for this voyage
+            List<ShipVoyageTranshipDtlEntity> existingRows = transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
+            for (ShipVoyageTranshipDtlEntity row : existingRows) {
+                if (row.getContainerNo() != null && (row.getContainerNo().equalsIgnoreCase("AS") || "Q".equalsIgnoreCase(row.getStatus()) || row.getContainerNo().length() < 4)) {
+                    transhipDtlRepository.delete(row);
+                }
+            }
+
+            try (java.io.InputStream in = file.getInputStream()) {
+                Long maxDetRowId = transhipDtlRepository.findMaxDetRowId(voyagePoid);
+                long startDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
+
+                List<ShipVoyageTranshipDtlEntity> parsedEntities = com.asg.shipping.vesselvoyagecreation.util.TranshipmentExcelParser.parseTranshipmentExcel(in, voyagePoid, startDetRowId);
+                if (!parsedEntities.isEmpty()) {
+                    transhipDtlRepository.saveAll(parsedEntities);
+                    log.info("Saved {} transhipment rows directly from Excel file: {}", parsedEntities.size(), originalFilename);
+                }
+            } catch (Exception e) {
+                log.warn("Could not parse Excel file directly in Java: {}", e.getMessage(), e);
+            }
+
+            try {
+                storedProcedureRepository.procLoadEdiXlTemplate(voyagePoid);
+            } catch (Exception e) {
+                log.warn("procLoadEdiXlTemplate notice: {}", e.getMessage());
+            }
+
+            return "EDI Excel upload processed successfully";
+        }
+
         return reprocessEdi(voyagePoid);
     }
 
@@ -447,7 +479,10 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
     @Override
     public List<ShipVoyageTranshipDtlEntity> listTranshipments(Long voyagePoid) {
-        return transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
+        List<ShipVoyageTranshipDtlEntity> rows = transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
+        return rows.stream()
+                .filter(r -> r.getContainerNo() != null && !r.getContainerNo().equalsIgnoreCase("AS") && !"Q".equalsIgnoreCase(r.getStatus()) && r.getContainerNo().length() >= 4)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
