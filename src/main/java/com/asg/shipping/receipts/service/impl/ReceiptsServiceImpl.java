@@ -450,6 +450,11 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 			charge.setTaxDet(taxLovMap.get(charge.getTaxPoid()));
 		});
 
+		if(blAutoPopulateDto.getPrintCustomerPoid() != null && blAutoPopulateDto.getPrintCustomerPoid().longValue() == 0L) {
+			blAutoPopulateDto.setPrintCustomerDet(null);
+			blAutoPopulateDto.setPrintCustomerPoid(null);
+		}
+
 		return ReceiptAutoPopulateDto.builder()
 				.blDetails(blAutoPopulateDto)
 				.container(containers)

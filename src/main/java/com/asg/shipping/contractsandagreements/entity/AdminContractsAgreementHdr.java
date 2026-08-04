@@ -139,6 +139,7 @@ public class AdminContractsAgreementHdr extends BaseEntity {
 
     @Lob
     @Column(name = "AGREEMENT_CONTENT")
+    @AuditIgnore
     private String agreementContent;
 
     @Column(name = "SIGNATORY", length = 500)
