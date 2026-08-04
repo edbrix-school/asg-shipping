@@ -11,6 +11,8 @@ import java.util.List;
 public interface ShipVoyageTranshipDtlRepository extends JpaRepository<ShipVoyageTranshipDtlEntity, ShipVoyageTranshipDtlId> {
     List<ShipVoyageTranshipDtlEntity> findByTransactionPoidOrderByDetRowIdAsc(Long transactionPoid);
 
+    void deleteByTransactionPoid(Long transactionPoid);
+
     @Query("SELECT COALESCE(MAX(e.detRowId), 0) FROM ShipVoyageTranshipDtlEntity e WHERE e.transactionPoid = :transactionPoid")
     Long findMaxDetRowId(@Param("transactionPoid") Long transactionPoid);
 }
