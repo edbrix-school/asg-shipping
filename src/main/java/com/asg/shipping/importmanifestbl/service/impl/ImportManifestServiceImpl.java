@@ -329,7 +329,10 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     public ResendCanResponseDto resendCan(Long transactionPoId, String updateDemurrage) {
         try {
             ShipBlManifestHdr entity = findEntityById(transactionPoId);
-            return procRepository.resendCan(entity.getVoyageTransactionPoid(), transactionPoId, updateDemurrage);
+            ResendCanResponseDto response = procRepository.resendCan(entity.getVoyageTransactionPoid(), transactionPoId, updateDemurrage);
+            loggingService.createLogSummaryEntry(UserContext.getDocumentId(), transactionPoId.toString(),
+                    String.format("%s %s", LogDetailsEnum.PREVIEWED_OR_PRINTED_OR_DOWNLOADED.getDescription(), entity.getDocRef()));
+            return response;
         } catch (ResourceNotFoundException e) {
             log.error("Failed to resend CAN: Entity not found for transactionPoId: {}", transactionPoId);
             throw e;

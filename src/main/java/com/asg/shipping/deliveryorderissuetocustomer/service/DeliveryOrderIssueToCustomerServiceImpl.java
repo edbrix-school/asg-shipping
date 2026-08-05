@@ -391,11 +391,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     private byte[] generateDeliveryOrderPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
         log.info("[DELIVERYORDERPRINT] Starting for transactionPoid={}", transactionPoid);
-        boolean canPrint = validatePrintDocument(transactionPoid, "DO");
-        log.info("[DELIVERYORDERPRINT] validatePrintDocument result={}", canPrint);
-        if (!canPrint) {
-            throw new ValidationException("Delivery order print is not enabled for this shipping line");
-        }
+        validatePrintDocument(transactionPoid, "DO");
         String templatePath = "Shipping/SH/DO_SH.jrxml";
         log.info("[DELIVERYORDERPRINT] Loading template={}", templatePath);
         JasperReport mainReport = printService.load(templatePath);
@@ -412,12 +408,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     private byte[] generateContainerFormPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
         log.info("[CONTAINERFORMPRINT] Starting for transactionPoid={}", transactionPoid);
-
-        boolean canPrint = validatePrintDocument(transactionPoid, "DLVCNT");
-        log.info("[CONTAINERFORMPRINT] validatePrintDocument result={}", canPrint);
-        if (!canPrint) {
-            throw new ValidationException("Container delivery form print is not enabled for this shipping line");
-        }
+        validatePrintDocument(transactionPoid, "DELIVERYFORM");
 
         String pLineCode = viewRepository.getPlineCode(transactionPoid);
         log.info("[CONTAINERFORMPRINT] pLineCode={}", pLineCode);
@@ -471,12 +462,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
 
     private byte[] generateReturnFormPrint(Long transactionPoid, Map<String, Object> params) throws Exception {
         log.info("[RETURNFORMPRINT] Starting for transactionPoid={}", transactionPoid);
-
-        boolean canPrint = validatePrintDocument(transactionPoid, "RTNCNT");
-        log.info("[RETURNFORMPRINT] validatePrintDocument result={}", canPrint);
-        if (!canPrint) {
-            throw new ValidationException("Container return form print is not enabled for this shipping line");
-        }
+        validatePrintDocument(transactionPoid, "RETURNFORM");
 
         String templatePath = "Shipping/SH/Container_Return_Validity.jrxml";
         log.info("[RETURNFORMPRINT] Loading template={}", templatePath);
@@ -494,30 +480,19 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         return pdf;
     }
 
-    private boolean validatePrintDocument(Long transactionPoid, String docType) {
-        log.info("[validatePrintDocument] START transactionPoid={}, docType={}", transactionPoid, docType);
+    private void validatePrintDocument(Long transactionPoid, String printDocument) {
+        log.info("[validatePrintDocument] START transactionPoid={}, printDocument={}", transactionPoid, printDocument);
 
-        String printCheck = checkPrintDocumentData(transactionPoid, docType);
-        log.info("[validatePrintDocument] SHIP_LINE_MASTER check: docType={}, lineEnabled={}, transactionPoid={}",
-                docType, printCheck, transactionPoid);
-        if ("N".equalsIgnoreCase(printCheck)) {
-            log.warn("[validatePrintDocument] BLOCKED — print not enabled in SHIP_LINE_MASTER for docType={}, transactionPoid={}",
-                    docType, transactionPoid);
-            return false;
+        String result = viewRepository.callFuncPrintDoCntRtnForm(
+                getGroupPoid(), getCompanyPoid(), getUserPoid(),
+                UserContext.getDocumentId(), transactionPoid, printDocument);
+
+        log.info("[validatePrintDocument] FUNC_PRINT_DO_CNT_RTN_FORM result={}, transactionPoid={}, printDocument={}",
+                result, transactionPoid, printDocument);
+
+        if (!"N".equalsIgnoreCase(result)) {
+            throw new ValidationException(result);
         }
-
-        String alreadyPrinted = viewRepository.printDocumentAlreadyPrinted(docType, transactionPoid);
-        log.info("[validatePrintDocument] alreadyPrinted check: docType={}, alreadyPrinted={}, transactionPoid={}",
-                docType, alreadyPrinted, transactionPoid);
-        if ("Y".equalsIgnoreCase(alreadyPrinted)) {
-            log.warn("[validatePrintDocument] BLOCKED — document already printed for docType={}, transactionPoid={}",
-                    docType, transactionPoid);
-            return false;
-        }
-
-        log.info("[validatePrintDocument] PASSED — proceeding to fill report for docType={}, transactionPoid={}",
-                docType, transactionPoid);
-        return true;
     }
 
     private void validateAllFields(Long transactionPoid, DeliveryOrderIssueToCustomerDto dto, IssueDeliveryOrderRequestDto request) {
