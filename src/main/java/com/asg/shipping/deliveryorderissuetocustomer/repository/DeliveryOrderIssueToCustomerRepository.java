@@ -51,10 +51,12 @@ public class DeliveryOrderIssueToCustomerRepository {
                 "DO_CNT_TO_OTHERS, DO_CNT_TO_OTHERS_MAILS, DO_EMAILS, DELIVERY_SENT_TO, " +
                 "PRINCIPAL_DO_NUMBER, PRINCIPAL_DO_REQUIRED " +
                 "FROM VW_CREDIT_DELIVERY_ORDER_PEND " +
-                "WHERE TRANSACTION_POID = ?";
+                "WHERE TRANSACTION_POID = ? " +
+                "AND NVL(DELETED, 'N') = 'N' " +
+                "AND COMPANY_POID = ?";
 
         try {
-            List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid);
+            List<DeliveryOrderIssueToCustomerDto> results = jdbcTemplate.query(sql, new DeliveryOrderRowMapper(), transactionPoid, UserContext.getCompanyPoid());
             return results.isEmpty() ? Optional.empty() : Optional.of(results.getFirst());
         } catch (Exception e) {
             log.error("Error fetching delivery order for transactionPoid={}: {}", transactionPoid, e.getMessage(), e);
@@ -219,6 +221,17 @@ public class DeliveryOrderIssueToCustomerRepository {
             return "ALL";
         }
 
+    }
+
+    public String callFuncPrintDoCntRtnForm(Long groupPoid, Long companyPoid, Long userPoid,
+                                             String docId, Long blPoid, String printDocument) {
+        String sql = "SELECT QA_DB_USER.FUNC_PRINT_DO_CNT_RTN_FORM(?, ?, ?, ?, ?, ?) FROM DUAL";
+        try {
+            return jdbcTemplate.queryForObject(sql, String.class, groupPoid, companyPoid, userPoid, docId, blPoid, printDocument);
+        } catch (Exception e) {
+            log.error("[FUNC_PRINT_DO_CNT_RTN_FORM] Error for blPoid={}, printDocument={}", blPoid, printDocument, e);
+            return "Error while checking record:-" + e.getMessage();
+        }
     }
 
     public String getGlobalParameterValue(String parameterName, String parameterKeyIdType, String parameterKeyId, String defaultValue) {
