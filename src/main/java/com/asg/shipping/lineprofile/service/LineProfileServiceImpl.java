@@ -278,6 +278,36 @@ public class LineProfileServiceImpl implements LineProfileService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public String fetchDrilldownForm(Long groupPoid, Long companyPoid, Long userPoid,
+                                     String docId, Long linePoid, String returnRecord) {
+        if (linePoid == null)     throw new ValidationException("linePoid is required");
+        if (returnRecord == null) throw new ValidationException("returnRecord is required");
+
+        log.info("fetchDrilldownForm | groupPoid={}, companyPoid={}, userPoid={}, docId={}, linePoid={}, returnRecord={}",
+                groupPoid, companyPoid, userPoid, docId, linePoid, returnRecord);
+
+        try {
+            String sql = "SELECT QA_DB_USER.FUNC_LINE_PROFILE_DRILLDOWN_FORM(" +
+                         ":groupPoid, :companyPoid, :userPoid, :docId, :linePoid, :returnRecord) FROM DUAL";
+
+            Query query = entityManager.createNativeQuery(sql);
+            query.setParameter("groupPoid",   groupPoid);
+            query.setParameter("companyPoid", companyPoid);
+            query.setParameter("userPoid",    userPoid);
+            query.setParameter("docId",       docId);
+            query.setParameter("linePoid",    linePoid);
+            query.setParameter("returnRecord", returnRecord);
+
+            Object result = query.getSingleResult();
+            return result != null ? result.toString() : null;
+        } catch (Exception e) {
+            log.error("Error executing FUNC_LINE_PROFILE_DRILLDOWN_FORM", e);
+            throw new ValidationException("Error executing FUNC_LINE_PROFILE_DRILLDOWN_FORM: " + e.getMessage());
+        }
+    }
+
     private void upsertContactDetails(Long lineProfilePoid, List<LineProfileContactDto> detailDtos, String userId, String docId) {
         String docKeyPoid = lineProfilePoid.toString();
         List<ShipLineProfileContactDtlEntity> existing =

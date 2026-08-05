@@ -334,7 +334,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
         if (entity.getFdaTransactionPoid() == null) {
             Map<String, Object> response = new HashMap<>();
             response.put(TRANSACTION_POID, transactionPoid);
-            response.put("message", "Select Fda number ...");
+            response.put("message", "Please save and proceed");
             return response;
         }
 
