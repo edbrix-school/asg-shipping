@@ -4,6 +4,7 @@ import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -11,6 +12,8 @@ public interface ShipChargeMasterRepository extends JpaRepository<ShipChargeMast
 
 
     Optional<ShipChargeMaster> findByChargePoid(Long chargePoid);
+
+    List<ShipChargeMaster> findByChargePoidIn(List<Long> chargePoids);
 
     boolean existsByChargeCodeAndDivisionCode(String chargeCode, String divisionCode);
 

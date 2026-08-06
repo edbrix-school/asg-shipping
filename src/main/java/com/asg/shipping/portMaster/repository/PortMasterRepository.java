@@ -28,4 +28,6 @@ public interface PortMasterRepository extends JpaRepository<PortMaster, PortMast
 	@Query("SELECT p FROM PortMaster p WHERE LOWER(p.portName) = LOWER(:portName)")
 	Optional<PortMaster> findByPortNameIgnoreCase(@Param("portName") String portName);
 
+	List<PortMaster> findByPortPoidIn(List<Long> portPoids);
+
 }
