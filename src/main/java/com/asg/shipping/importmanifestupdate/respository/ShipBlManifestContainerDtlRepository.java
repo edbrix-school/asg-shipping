@@ -47,9 +47,19 @@ public interface ShipBlManifestContainerDtlRepository extends JpaRepository<Ship
      * This bypasses any JPA caching to ensure we get the latest EXTRA_FREE_DAYS_PRNPLS values
      */
     @Query(value = """
-        SELECT * FROM SHIP_BL_MANIFEST_CONTAINER_DTL 
-        WHERE TRANSACTION_POID = :transactionPoid 
+        SELECT * FROM SHIP_BL_MANIFEST_CONTAINER_DTL
+        WHERE TRANSACTION_POID = :transactionPoid
         ORDER BY DET_ROW_ID
         """, nativeQuery = true)
     List<ShipBlManifestContainerDtl> findByTransactionPoidWithFreshData(@Param("transactionPoid") Long transactionPoid);
+
+    /**
+     * Replaces the SH_CONTAINER_PART LOV lookup by POID with a direct query against the source table.
+     */
+    @Query(value = """
+        SELECT TRANSACTION_POID AS POID, CONTAINER_NO AS CODE, CONTAINER_NO AS DESCRIPTION
+        FROM SHIP_BL_MANIFEST_CONTAINER_DTL
+        WHERE TRANSACTION_POID IN (:poids)
+        """, nativeQuery = true)
+    List<Object[]> findContainerPartLovByPoids(@Param("poids") List<Long> poids);
 }
