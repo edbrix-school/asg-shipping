@@ -34,11 +34,15 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+
 import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -73,9 +77,17 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 	private final DocumentDeleteService documentDeleteService;
 	private final LoggingService loggingService;
 	private final com.asg.common.lib.service.LovDataService lovService;
+	private final JdbcTemplate jdbcTemplate;
 
 	@PersistenceContext
 	private final EntityManager entityManager;
+
+	private static final RowMapper<LovGetListDto> AUTO_POPULATE_LOV_ROW_MAPPER = (rs, rowNum) -> {
+		Long poid = rs.getLong("POID");
+		String code = rs.getString("CODE");
+		String description = rs.getString("DESCRIPTION");
+		return new LovGetListDto(poid, code, description, poid, description, 0, null);
+	};
 
 	@Override
 	public ReceiptsBlDetailsDto getReceipt(Long transactionPoid) {
@@ -119,44 +131,28 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
 		CompletableFuture<Map<Long, LovGetListDto>> blFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER")
-				);
+				CompletableFuture.supplyAsync(() -> getBlNumberByPoidMap(allBlPoids));
 
 		CompletableFuture<Map<Long, LovGetListDto>> chargeFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(allChargePoids, "CHARGE_MASTER")
-				);
+				CompletableFuture.supplyAsync(() -> getChargeMasterByPoidMap(allChargePoids));
 
 		CompletableFuture<Map<Long, LovGetListDto>> taxFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(allTaxPoids, "TAX_MASTER")
-				);
+				CompletableFuture.supplyAsync(() -> getTaxByPoidMap(allTaxPoids));
 
 		CompletableFuture<Map<Long, LovGetListDto>> companyFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY")
-				);
+				CompletableFuture.supplyAsync(() -> getCompanyByPoidMap(companyPoids));
 
 		CompletableFuture<Map<Long, LovGetListDto>> printCustomerFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT")
-				);
+				CompletableFuture.supplyAsync(() -> getPrintCustomerByPoidMap(printCustomerPoids));
 
 		CompletableFuture<Map<Long, LovGetListDto>> chequeCompanyFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "SHIP_DIVISION_PRINT")
-				);
+				CompletableFuture.supplyAsync(() -> getDivisionByPoidMap(chequeCompanyPoids));
 
 		CompletableFuture<Map<Long, LovGetListDto>> bankFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(bankPoids, "ARCUSTBANKRCPT")
-				);
+				CompletableFuture.supplyAsync(() -> getBankByPoidMap(bankPoids));
 
 		CompletableFuture<Map<Long, LovGetListDto>> ttBankFuture =
-				CompletableFuture.supplyAsync(() ->
-						lovService.getDetailsByPoidsAndLovName(ttBankPoids, "SHIP_REC_BANK_MASTER_ALL_COMPANY")
-				);
+				CompletableFuture.supplyAsync(() -> getTtBankByPoidMap(ttBankPoids));
 
 		try {
 			CompletableFuture.allOf(
@@ -374,6 +370,103 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		return PaginationUtil.wrapPage(page, raw.displayFields());
 	}
 
+	private static String inPlaceholders(int count) {
+		return String.join(",", Collections.nCopies(count, "?"));
+	}
+
+	private Map<Long, LovGetListDto> getBlNumberByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT HDR.TRANSACTION_POID AS POID,
+			       HDR.BL_NUMBER AS CODE,
+			       TO_CHAR(NVL(VOYAGE.ARRIVAL_DATE, VOYAGE.EXPECTED_DATE), 'DD-Mon-RRRR') || '/' || GET_LINE_CODE(VOYAGE.LINE_POID) || '/' || VESSEL.VESSEL_NAME || '/' || HDR.BL_NUMBER || ' / ' || HDR.DOC_REF AS DESCRIPTION
+			FROM SHIP_BL_MANIFEST_HDR HDR, SHIP_VOYAGE_HDR VOYAGE, SHIP_VESSEL_MASTER VESSEL
+			WHERE HDR.VOYAGE_TRANSACTION_POID = VOYAGE.TRANSACTION_POID
+			  AND VOYAGE.VESSEL_POID = VESSEL.VESSEL_POID
+			  AND HDR.TRANSACTION_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
+	private Map<Long, LovGetListDto> getCompanyByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT COMPANY_POID AS POID, COMPANY_CODE AS CODE, COMPANY_NAME AS DESCRIPTION
+			FROM GLOBAL_COMPANY_MASTER
+			WHERE COMPANY_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
+	private Map<Long, LovGetListDto> getPrintCustomerByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT ADDRESS_MASTER_POID AS POID, ADDRESS_MASTER_POID AS CODE, ADDRESS_NAME AS DESCRIPTION
+			FROM GLOBAL_ADDRESS_MASTER
+			WHERE ADDRESS_MASTER_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
+	private Map<Long, LovGetListDto> getChargeMasterByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT CHARGE_POID AS POID, CHARGE_CODE AS CODE, CHARGE_NAME AS DESCRIPTION
+			FROM SHIP_CHARGE_MASTER
+			WHERE CHARGE_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
+	private Map<Long, LovGetListDto> getTaxByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT TAX_POID AS POID, TAX_CODE AS CODE,
+			       TAX_NAME || ', PERCENTAGE=' || PERCENTAGE || ', CREDIT/DEBIT=' || GL_CREDIT_DEBIT AS DESCRIPTION
+			FROM GLOBAL_TAX_MASTER
+			WHERE TAX_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
+	private Map<Long, LovGetListDto> getBankByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT BANK_POID AS POID, BANK_CODE AS CODE, BANK_DESCRIPTION AS DESCRIPTION
+			FROM GLOBAL_CUSTOMER_BANK_MASTER
+			WHERE BANK_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
+	private Map<Long, LovGetListDto> getDivisionByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT DIVISION_POID AS POID, DIVISION_CODE AS CODE, DIVISION_NAME AS DESCRIPTION
+			FROM GLOBAL_DIVISION_MASTER
+			WHERE DIVISION_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
+	private Map<Long, LovGetListDto> getTtBankByPoidMap(List<Long> poids) {
+		if (poids == null || poids.isEmpty()) return Collections.emptyMap();
+		String sql = """
+			SELECT BANK_POID AS POID, BANK_CODE AS CODE, BANK_DESCRIPTION AS DESCRIPTION
+			FROM GL_BANK_MASTER
+			WHERE BANK_POID IN (%s)
+			""".formatted(inPlaceholders(poids.size()));
+		return jdbcTemplate.query(sql, AUTO_POPULATE_LOV_ROW_MAPPER, poids.toArray())
+				.stream().collect(Collectors.toMap(LovGetListDto::getPoid, dto -> dto, (a, b) -> a));
+	}
+
 	@Override
 	public ReceiptAutoPopulateDto autoPopulateFields(Long blPoid, Long transactionPoid) {
 		// Step 1: Fetch BL header, containers, and charges on the main thread
@@ -409,23 +502,19 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 		List<Long> taxPoids = charges.stream().map(ReceiptAutoPopulateChargeDto::getTaxPoid)
 				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-		// Step 3: Capture UserContext (ThreadLocal) on the calling thread before spawning async threads
-		com.asg.common.lib.security.model.CustomAuthDetails authDetails = UserContext.getCurrentUser();
-
-		// Step 4: Batch fetch all LOV maps in parallel using JdbcTemplate (thread-safe)
-		// Each async task propagates the captured auth context into its thread
+		// Step 3: Batch fetch all LOV maps in parallel via direct native queries (JdbcTemplate is thread-safe)
 		CompletableFuture<Map<Long, LovGetListDto>> blLovFuture =
-				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(allBlPoids, "IMPORTBLNUMBER"); });
+				CompletableFuture.supplyAsync(() -> getBlNumberByPoidMap(allBlPoids));
 		CompletableFuture<Map<Long, LovGetListDto>> companyLovFuture =
-				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(companyPoids, "COMPANY"); });
+				CompletableFuture.supplyAsync(() -> getCompanyByPoidMap(companyPoids));
 		CompletableFuture<Map<Long, LovGetListDto>> printCustomerLovFuture =
-				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(printCustomerPoids, "IMPORT_RECEIPT_CUSTOMER_PRINT"); });
+				CompletableFuture.supplyAsync(() -> getPrintCustomerByPoidMap(printCustomerPoids));
 		CompletableFuture<Map<Long, LovGetListDto>> chequeCompanyLovFuture =
-				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(chequeCompanyPoids, "COMPANY"); });
+				CompletableFuture.supplyAsync(() -> getCompanyByPoidMap(chequeCompanyPoids));
 		CompletableFuture<Map<Long, LovGetListDto>> chargeLovFuture =
-				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(chargePoids, "CHARGE_MASTER"); });
+				CompletableFuture.supplyAsync(() -> getChargeMasterByPoidMap(chargePoids));
 		CompletableFuture<Map<Long, LovGetListDto>> taxLovFuture =
-				CompletableFuture.supplyAsync(() -> { UserContext.setCurrentUser(authDetails); return lovService.getDetailsByPoidsAndLovName(taxPoids, "TAX_MASTER"); });
+				CompletableFuture.supplyAsync(() -> getTaxByPoidMap(taxPoids));
 
 		CompletableFuture.allOf(blLovFuture, companyLovFuture, printCustomerLovFuture, chequeCompanyLovFuture, chargeLovFuture, taxLovFuture).join();
 

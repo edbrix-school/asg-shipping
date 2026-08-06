@@ -226,31 +226,28 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 	@Override
 	public ReceiptBlAutoPopulateDto autoPopulateFields(Long blPoid) {
 		try {
-			StoredProcedureQuery query =
-					entityManager.createStoredProcedureQuery("PROC_LOV_AFTER_BRWS_300_103");
-
-			query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
-			query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);
-			query.registerStoredProcedureParameter("P_LOGIN_USER_POID", Long.class, ParameterMode.IN);
-			query.registerStoredProcedureParameter("P_DOC_ID", String.class, ParameterMode.IN);
-			query.registerStoredProcedureParameter("P_DOC_KEY_POID", Long.class, ParameterMode.IN);
-			query.registerStoredProcedureParameter("P_LOV_NAME", String.class, ParameterMode.IN);
-			query.registerStoredProcedureParameter("P_LOV_VALUE", String.class, ParameterMode.IN);
-
-			query.registerStoredProcedureParameter("OUTDATA", ResultSet.class, ParameterMode.REF_CURSOR);
-
-			query.setParameter("P_LOGIN_GROUP_POID", UserContext.getGroupPoid());
-			query.setParameter("P_LOGIN_COMPANY_POID", UserContext.getCompanyPoid());
-			query.setParameter("P_LOGIN_USER_POID", UserContext.getUserPoid());
-			query.setParameter("P_DOC_ID", "300-103");
-			query.setParameter("P_DOC_KEY_POID", null);
-			query.setParameter("P_LOV_NAME", "IMPORTBLNUMBER");
-			query.setParameter("P_LOV_VALUE", String.valueOf(blPoid));
-
-			query.execute();
+			// Mirrors the "unlocked" branch of PROC_LOV_AFTER_BRWS_300_103 (P_DOC_ID='300-103',
+			// P_LOV_NAME='IMPORTBLNUMBER') directly against the table, bypassing that procedure's
+			// GLOBAL_DOC_LOCKING side effect (LOCK_RECORD_IMPORT), which never releases the lock it
+			// takes on a successful call — every call after the first for the same blPoid would
+			// otherwise fall into the procedure's locked-BL branch and return zeroed/garbage fields.
+			String sql = """
+				SELECT COMPANY_POID AS COMPANY_POID,
+				       BL_ISSUE_TYPE AS BL_RELEASE_TYPE_OFFICE,
+				       BL_ISSUE_TYPE AS ORIGNAL_BL_RELEASE_TYPE,
+				       NOTIFY_POID_1 AS PRINT_CUSTOMER_POID,
+				       DOCUMENT_COMPANY_POID AS DOCUMENT_CMP_POID,
+				       DOCUMENT_COMPANY_DIVISION_POID AS DOCUMENT_CMP_DIVISION_POID,
+				       REMARKS
+				FROM SHIP_BL_MANIFEST_HDR
+				WHERE TRANSACTION_POID = :blPoid
+				  AND HOLD_REASON NOT IN ('1', '3')
+				""";
 
 			@SuppressWarnings("unchecked")
-			List<Object[]> results = query.getResultList();
+			List<Object[]> results = entityManager.createNativeQuery(sql)
+					.setParameter("blPoid", blPoid)
+					.getResultList();
 
 			if (results == null || results.isEmpty()) {
 				return null;
@@ -258,7 +255,6 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 
 			Object[] row = results.get(0);
 			log.info("Row data - Total columns: {}", row.length);
-
 
 			return ReceiptBlAutoPopulateDto.builder()
 					.blPoid(blPoid)
