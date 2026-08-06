@@ -24,5 +24,20 @@ public interface LineProfileService {
     LineProfileLineDetailsResponse fetchLineDetails(Long linePoid, Long groupPoid, Long companyPoid, Long userPoid);
 
     LineProfileAgreementDetailsResponse fetchAgreementDetails(Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid);
+
+    /**
+     * Calls FUNC_LINE_PROFILE_DRILLDOWN_FORM to resolve the TRANSACTION_POID
+     * for the active tariff / local charges / commission record linked to the given line.
+     *
+     * @param groupPoid   login group poid
+     * @param companyPoid login company poid
+     * @param userPoid    login user poid
+     * @param docId       document id (P_DOC_ID)
+     * @param linePoid    line poid (LINE_POID)
+     * @param returnRecord one of: TARIFF, LOCAL, COMMISSION
+     * @return TRANSACTION_POID as String, or an error message prefixed with "ERROR :"
+     */
+    String fetchDrilldownForm(Long groupPoid, Long companyPoid, Long userPoid,
+                              String docId, Long linePoid, String returnRecord);
 }
 

@@ -174,6 +174,40 @@ public class LineProfileController {
         return success("Agreement details fetched successfully", response);
     }
 
+    @GetMapping(value = "/lines/{linePoid}/drilldown-form", produces = MediaType.APPLICATION_JSON_VALUE)
+    @AllowedAction(UserRolesRightsEnum.VIEW)
+    @Operation(
+            summary = "Fetch Drilldown Form Transaction POID using FUNC_LINE_PROFILE_DRILLDOWN_FORM",
+            description = """
+                    Resolves the active TRANSACTION_POID for the given line and record type.
+                    Pass returnRecord as one of: TARIFF, LOCAL, COMMISSION.
+                    Returns the TRANSACTION_POID as a string, or an error message prefixed with 'ERROR :'.
+                    """,
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    public ResponseEntity<?> fetchDrilldownForm(
+            @PathVariable @NotNull @Positive Long linePoid,
+            @RequestParam(value = "returnRecord") String returnRecord,
+            @RequestHeader(value = "X-Document-Id", required = false) String docId,
+            @RequestHeader(value = "X-Group-Poid", required = false) Long groupPoid,
+            @RequestHeader(value = "X-Company-Poid", required = false) Long companyPoid,
+            @RequestHeader(value = "X-User-Poid", required = false) Long userPoid) {
+        try {
+            Long resolvedGroupPoid   = resolveGroupPoid(groupPoid);
+            Long resolvedCompanyPoid = resolveCompanyPoid(companyPoid);
+            Long resolvedUserPoid    = resolveUserPoid(userPoid);
+            String resolvedDocId     = resolveDocId(docId);
+            log.info("fetchDrilldownForm | linePoid={}, returnRecord={}, groupPoid={}, companyPoid={}, userPoid={}, docId={}",
+                    linePoid, returnRecord, resolvedGroupPoid, resolvedCompanyPoid, resolvedUserPoid, resolvedDocId);
+            String result = service.fetchDrilldownForm(
+                    resolvedGroupPoid, resolvedCompanyPoid, resolvedUserPoid,
+                    resolvedDocId, linePoid, returnRecord);
+            return success("Drilldown form transaction poid fetched successfully", result);
+        } catch (Exception e) {
+            return internalServerError("Unable to fetch drilldown form: " + e.getMessage());
+        }
+    }
+
     private Long resolveGroupPoid(Long groupPoid) {
         return groupPoid != null ? groupPoid : UserContext.getGroupPoid();
     }

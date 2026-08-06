@@ -409,7 +409,7 @@ class ShipCommissionTransferServiceImplTest {
 
             assertNotNull(result);
             assertEquals(1L, result.get("transactionPoid"));
-            assertEquals("Select Fda number ...", result.get("message"));
+            assertEquals("Please save and proceed", result.get("message"));
         }
     }
 
