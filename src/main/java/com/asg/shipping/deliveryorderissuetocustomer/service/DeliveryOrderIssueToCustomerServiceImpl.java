@@ -580,7 +580,8 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
                     cs.setString(8, StringUtils.defaultIfBlank(doReleasedToPerson, null));
                     cs.setString(9, StringUtils.defaultIfBlank(doReleasedAddressPerson, null));
                     cs.setString(10, StringUtils.defaultIfBlank(originalBlReleaseCr, "0"));
-                    cs.setString(11, StringUtils.defaultIfBlank(doPriority, "C"));
+//                    cs.setString(11, StringUtils.defaultIfBlank(doPriority, "C"));
+                    cs.setString(11, (doPriority));
 
                     cs.setString(12, StringUtils.defaultIfBlank(doCntToConsignee, "N"));
                     cs.setString(13, StringUtils.defaultIfBlank(doCntToNotify, "N"));
