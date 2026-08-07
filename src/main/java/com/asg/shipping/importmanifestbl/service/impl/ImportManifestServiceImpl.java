@@ -831,15 +831,6 @@ public class ImportManifestServiceImpl implements ImportManifestService {
             throws Exception {
         String demDate = (demChargesTill != null ? demChargesTill : LocalDate.now()).format(java.time.format.DateTimeFormatter.ofPattern("dd-MMM-yyyy"));
         log.info("printProformaInvoice: transactionPoid={}, demDate={}, discount={}", transactionPoid, demDate, percentage);
-        try (java.sql.Connection conn = dataSource.getConnection()) {
-            conn.createStatement().execute("ALTER SESSION SET CURRENT_SCHEMA = QA_DB_USER");
-            String sql = "SELECT COUNT(*) FROM SHIP_BL_MANIFEST_HDR WHERE TRANSACTION_POID = ?";
-            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setLong(1, transactionPoid);
-                java.sql.ResultSet rs = ps.executeQuery();
-                if (rs.next()) log.info("printProformaInvoice: HDR row count={}", rs.getInt(1));
-            }
-        }
         Map<String, Object> params = printService.buildBaseParams(transactionPoid, "100-102");
         params.put("P_DEMURRAGE_DATE", demDate);
         params.put("P_DISCOUNT", String.valueOf(percentage != null ? percentage : 0));
