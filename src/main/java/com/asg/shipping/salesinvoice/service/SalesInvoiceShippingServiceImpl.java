@@ -842,7 +842,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 .collect(Collectors.toList()));
 
         List<SalesInvoiceChargesDtlDto> demurrageCharges = loadDemurrageCharges(
-                BigDecimal.ZERO,
+                BigDecimal.ONE,
                 dto.getBlTypeInvoice(),
                 dto.getCompanyPoid()
         );
