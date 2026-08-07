@@ -225,7 +225,7 @@ public class DeliveryOrderIssueToCustomerRepository {
 
     public String callFuncPrintDoCntRtnForm(Long groupPoid, Long companyPoid, Long userPoid,
                                              String docId, Long blPoid, String printDocument) {
-        String sql = "SELECT QA_DB_USER.FUNC_PRINT_DO_CNT_RTN_FORM(?, ?, ?, ?, ?, ?) FROM DUAL";
+        String sql = "SELECT FUNC_PRINT_DO_CNT_RTN_FORM(?, ?, ?, ?, ?, ?) FROM DUAL";
         try {
             return jdbcTemplate.queryForObject(sql, String.class, groupPoid, companyPoid, userPoid, docId, blPoid, printDocument);
         } catch (Exception e) {
