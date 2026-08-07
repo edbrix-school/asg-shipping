@@ -43,6 +43,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.Collections;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -80,7 +81,8 @@ class ImportManifestServiceImplTest {
     @Mock private AddressDetailsRepository addressDetailsRepository;
     @Mock private EntityManager entityManager;
     @Mock private com.asg.shipping.common.service.LovService lovService;
-    
+    @Mock private Executor lovLookupExecutor;
+
     @InjectMocks
     private ImportManifestServiceImpl service;
 
@@ -398,6 +400,8 @@ class ImportManifestServiceImplTest {
         when(updateService.getImportManifestBl(1L)).thenReturn(new ImportManifestBlRequestDto());
         lenient().when(lovService.getLovItemsByPoids(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
         lenient().when(lovService.getLovItemsByCodes(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
+        lenient().doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
+                .when(lovLookupExecutor).execute(any());
         try (MockedStatic<UserContext> mocked = mockStatic(UserContext.class)) {
             mockUserContext(mocked);
             ImportManifestBlDto result = service.getImportManifest(1L);
