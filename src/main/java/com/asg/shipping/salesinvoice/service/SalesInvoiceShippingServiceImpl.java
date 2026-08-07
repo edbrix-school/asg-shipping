@@ -840,6 +840,23 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         dto.setChargesDetails(chargesDetails.stream()
                 .map(SalesInvoiceMapper::mapChargesDtlToDto)
                 .collect(Collectors.toList()));
+
+        List<SalesInvoiceChargesDtlDto> demurrageCharges = loadDemurrageCharges(
+                BigDecimal.ZERO,
+                dto.getBlTypeInvoice(),
+                dto.getCompanyPoid()
+        );
+
+        if (demurrageCharges != null && !demurrageCharges.isEmpty()) {
+            Long dChargePoid = demurrageCharges.get(0).getChargePoid();
+            for (SalesInvoiceChargesDtlDto charge : dto.getChargesDetails()) {
+                if (charge.getChargePoid() != null && charge.getChargePoid().equals(dChargePoid)) {
+                    charge.setDemurrageCharge("Y");
+                }
+            }
+        }
+        
+        
     }
 
     /**
@@ -1641,6 +1658,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                         .taxPoid(taxPoid)
                         .taxPercentage(taxPercentage)
                         .taxAmount(taxAmount)
+                        .demurrageCharge("Y")
                         .build();
             }, companyPoid, parameterType);
         } catch (Exception e) {
