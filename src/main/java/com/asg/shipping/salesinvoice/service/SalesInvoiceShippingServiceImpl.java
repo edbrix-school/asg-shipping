@@ -1641,6 +1641,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                         .taxPoid(taxPoid)
                         .taxPercentage(taxPercentage)
                         .taxAmount(taxAmount)
+                        .demurrageCharge("Y")
                         .build();
             }, companyPoid, parameterType);
         } catch (Exception e) {

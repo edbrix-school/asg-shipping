@@ -49,6 +49,7 @@ public class SalesInvoiceChargesDtlDto {
     private LovGetListDto printCurrencyDet;
     private BigDecimal printCurrencyExchange;
     private BigDecimal printRateAmt;
+    private String demurrageCharge;
 
     private String actionType;  // "isCreated", "isUpdated", "isDeleted", "noChanges"
 }
