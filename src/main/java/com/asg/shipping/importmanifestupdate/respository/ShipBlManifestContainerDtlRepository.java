@@ -62,4 +62,14 @@ public interface ShipBlManifestContainerDtlRepository extends JpaRepository<Ship
         WHERE TRANSACTION_POID IN (:poids)
         """, nativeQuery = true)
     List<Object[]> findContainerPartLovByPoids(@Param("poids") List<Long> poids);
+
+    /**
+     * Replaces the SH_CONTAINER_PART LOV lookup by CODE with a direct query against the source table.
+     */
+    @Query(value = """
+        SELECT TRANSACTION_POID AS POID, CONTAINER_NO AS CODE, CONTAINER_NO AS DESCRIPTION
+        FROM SHIP_BL_MANIFEST_CONTAINER_DTL
+        WHERE UPPER(CONTAINER_NO) = UPPER(:code)
+        """, nativeQuery = true)
+    List<Object[]> findContainerPartLovByCode(@Param("code") String code);
 }
