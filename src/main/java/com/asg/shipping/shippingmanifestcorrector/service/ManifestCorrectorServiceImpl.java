@@ -9,10 +9,10 @@ import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
+import com.asg.common.lib.security.model.CustomAuthDetails;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.shippingmanifestcorrector.dto.*;
 import com.asg.shipping.shippingmanifestcorrector.entity.*;
@@ -28,6 +28,7 @@ import com.asg.shipping.shippingmanifestcorrector.repository.ShipBlReprintHdrRep
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -42,11 +43,17 @@ import java.sql.ResultSet;
 import java.sql.Types;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 import static com.asg.common.lib.security.util.UserContext.*;
+import com.asg.common.lib.security.util.UserContext;
 
 /**
  * Service implementation for Shipping Manifest Corrector operations
@@ -66,10 +73,11 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     private final DocumentSearchService documentSearchService;
     private final DocumentDeleteService documentDeleteService;
     private final LoggingService loggingService;
-    private final LovDataService lovService;
     private final JdbcTemplate jdbcTemplate;
     private final ManifestCorrectorMapper mapper;
     private final ApplicationEventPublisher eventPublisher;
+    @Qualifier("lovLookupExecutor")
+    private final Executor lovLookupExecutor;
 
     @Override
     @Transactional(readOnly = true)
@@ -389,11 +397,10 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
             throw new ValidationException("At least one BL poid is required");
         }
 
-        String inClause = poids.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
         String findPoidSql = "SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_HDR " +
-                "WHERE TRANSACTION_POID IN (" + inClause + ") AND (DELETED = 'N' OR DELETED IS NULL) " +
+                "WHERE TRANSACTION_POID IN (" + inClausePlaceholders(poids.size()) + ") AND (DELETED = 'N' OR DELETED IS NULL) " +
                 "AND ROWNUM = 1";
-        List<Long> found = jdbcTemplate.queryForList(findPoidSql, Long.class);
+        List<Long> found = jdbcTemplate.queryForList(findPoidSql, Long.class, poids.toArray());
         if (found.isEmpty()) {
             log.info("No valid BL poid found for BL: {}", blNumber);
             return null;
@@ -498,6 +505,8 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     private void enrichLovData(ManifestCorrectorDto dto) {
         if (dto == null) return;
 
+        CustomAuthDetails caller = UserContext.getCurrentUser();
+
         List<ManifestCorrectorChargeDtlDto> charges = dto.getChargesDetails() != null ? dto.getChargesDetails() : List.of();
 
         // Collect all poids per LOV name
@@ -507,25 +516,38 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         charges.forEach(c -> { if (c.getPaidAtPortPoid() != null) portPoids.add(c.getPaidAtPortPoid()); });
 
         List<Long> chargePoids = charges.stream().map(ManifestCorrectorChargeDtlDto::getChargePoid).filter(java.util.Objects::nonNull).toList();
-
-        // Batch fetch — one DB call per LOV name
-        Map<Long, LovGetListDto> blMap       = lovService.getDetailsByPoidsAndLovName(filterNonNull(parseLongSafely(dto.getBlNumber())), "SHIP_BL_REPRINT");
-        Map<Long, LovGetListDto> addressMap  = lovService.getDetailsByPoidsAndLovName(filterNonNull(dto.getConsigneePoid(), dto.getNotifyPoid()), "ADDRESS_MASTER");
-        Map<Long, LovGetListDto> portMap     = lovService.getDetailsByPoidsAndLovName(portPoids, "PORT_MASTER");
-        Map<Long, LovGetListDto> voyageMap   = lovService.getDetailsByPoidsAndLovName(filterNonNull(dto.getVoyageTransactionPoid()), "VESSAL_VOYAGE");
-        Map<Long, LovGetListDto> chargeMap   = lovService.getDetailsByPoidsAndLovName(chargePoids, "CHARGE_MASTER");
+        List<Long> blPoids = filterNonNull(parseLongSafely(dto.getBlNumber()));
+        List<Long> addressPoids = filterNonNull(dto.getConsigneePoid(), dto.getNotifyPoid());
+        List<Long> voyagePoids = filterNonNull(dto.getVoyageTransactionPoid());
 
         List<String> currencyCodes   = charges.stream().map(ManifestCorrectorChargeDtlDto::getCurrencyCode).filter(c -> c != null && !c.isBlank()).distinct().toList();
         List<String> chargeTypeCodes = charges.stream().map(ManifestCorrectorChargeDtlDto::getChargeType).filter(c -> c != null && !c.isBlank()).distinct().toList();
         List<String> freightCodes    = charges.stream().map(ManifestCorrectorChargeDtlDto::getFreightType).filter(c -> c != null && !c.isBlank()).distinct().toList();
         List<String> basisCodes      = charges.stream().map(ManifestCorrectorChargeDtlDto::getChargeBasisOn).filter(c -> c != null && !c.isBlank()).distinct().toList();
 
-        Map<String, LovGetListDto> issueTypeMap   = lovService.getDetailsByCodesAndLovName(filterNonNullStr(dto.getIssueType()), "BL_ISSUE_TYPE");
-        Map<String, LovGetListDto> holdReasonMap  = lovService.getDetailsByCodesAndLovName(filterNonNullStr(dto.getHoldReason()), "SHIP_DO_ANOTICE_HOLD");
-        Map<String, LovGetListDto> currencyMap    = lovService.getDetailsByCodesAndLovName(currencyCodes, "CURRENCY");
-        Map<String, LovGetListDto> chargeTypeMap  = lovService.getDetailsByCodesAndLovName(chargeTypeCodes, "CHARGE_TYPE");
-        Map<String, LovGetListDto> freightMap     = lovService.getDetailsByCodesAndLovName(freightCodes, "SHIP_FREIGHT_TYPE");
-        Map<String, LovGetListDto> basisMap       = lovService.getDetailsByCodesAndLovName(basisCodes, "CONTAINER_TYPE_MASTER");
+        // Each of these is an independent DB round trip — fan them out concurrently instead of paying for them one at a time.
+        CompletableFuture<Map<Long, LovGetListDto>> blFuture       = supplyLovAsync(caller, () -> fetchBlReprintMap(blPoids));
+        CompletableFuture<Map<Long, LovGetListDto>> addressFuture  = supplyLovAsync(caller, () -> fetchAddressMasterMap(addressPoids));
+        CompletableFuture<Map<Long, LovGetListDto>> portFuture     = supplyLovAsync(caller, () -> fetchPortMasterMap(portPoids));
+        CompletableFuture<Map<Long, LovGetListDto>> voyageFuture   = supplyLovAsync(caller, () -> fetchVoyageMap(voyagePoids));
+        CompletableFuture<Map<Long, LovGetListDto>> chargeFuture   = supplyLovAsync(caller, () -> fetchChargeMasterMap(chargePoids));
+        CompletableFuture<Map<String, LovGetListDto>> currencyFuture = supplyLovAsync(caller, () -> fetchCurrencyMap(currencyCodes));
+        CompletableFuture<Map<String, LovGetListDto>> basisFuture    = supplyLovAsync(caller, () -> fetchContainerBasisMap(basisCodes));
+
+        joinAllLovFutures(blFuture, addressFuture, portFuture, voyageFuture, chargeFuture, currencyFuture, basisFuture);
+
+        Map<Long, LovGetListDto> blMap       = blFuture.join();
+        Map<Long, LovGetListDto> addressMap  = addressFuture.join();
+        Map<Long, LovGetListDto> portMap     = portFuture.join();
+        Map<Long, LovGetListDto> voyageMap   = voyageFuture.join();
+        Map<Long, LovGetListDto> chargeMap   = chargeFuture.join();
+        Map<String, LovGetListDto> currencyMap = currencyFuture.join();
+        Map<String, LovGetListDto> basisMap    = basisFuture.join();
+
+        Map<String, LovGetListDto> issueTypeMap   = mapByCode(BL_ISSUE_TYPE_LOV, filterNonNullStr(dto.getIssueType()));
+        Map<String, LovGetListDto> holdReasonMap  = mapByCode(SHIP_DO_ANOTICE_HOLD_LOV, filterNonNullStr(dto.getHoldReason()));
+        Map<String, LovGetListDto> chargeTypeMap  = mapByCode(CHARGE_TYPE_LOV, chargeTypeCodes);
+        Map<String, LovGetListDto> freightMap     = mapByCode(SHIP_FREIGHT_TYPE_LOV, freightCodes);
 
         // Resolve header fields
         dto.setBlNumberDet(blMap.get(parseLongSafely(dto.getBlNumber())));
@@ -553,26 +575,35 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     private void enrichLovData(ManifestCorrectorBlAutoPopulateDto dto) {
         if (dto == null) return;
 
-        // Batch fetch by LOV name — one DB call per LOV name instead of one per field
-        Map<Long, LovGetListDto> blMap = lovService.getDetailsByPoidsAndLovName(
-                filterNonNull(dto.getBlPoid()), "SHIP_BL_REPRINT");
+        CustomAuthDetails caller = UserContext.getCurrentUser();
+
         Long notifyPoid = dto.getNotifyPoid() != null && dto.getNotifyPoid() > 1 ? dto.getNotifyPoid() : null;
-        Map<Long, LovGetListDto> addressMap = lovService.getDetailsByPoidsAndLovName(
-                filterNonNull(dto.getConsigneePoid(), notifyPoid), "ADDRESS_MASTER");
-        Map<Long, LovGetListDto> glMap = lovService.getDetailsByPoidsAndLovName(
-                filterNonNull(dto.getPayableGlPoid(), dto.getIncomeGlPoid()), "GL_MASTER_LEDGERS");
-        Map<Long, LovGetListDto> portMap = lovService.getDetailsByPoidsAndLovName(
-                filterNonNull(dto.getPlaceOfDeliveryPoid(), dto.getPlaceOfReceiptPoid(),
-                        dto.getPortOfLoadingPoid(), dto.getPortOfDischargePoid()), "PORT_MASTER");
-        Map<Long, LovGetListDto> voyageMap = lovService.getDetailsByPoidsAndLovName(
-                filterNonNull(dto.getVoyageTransactionPoid()), "VESSAL_VOYAGE");
+        List<Long> blPoids = filterNonNull(dto.getBlPoid());
+        List<Long> addressPoids = filterNonNull(dto.getConsigneePoid(), notifyPoid);
+        List<Long> glPoids = filterNonNull(dto.getPayableGlPoid(), dto.getIncomeGlPoid());
+        List<Long> portPoids = filterNonNull(dto.getPlaceOfDeliveryPoid(), dto.getPlaceOfReceiptPoid(),
+                dto.getPortOfLoadingPoid(), dto.getPortOfDischargePoid());
+        List<Long> voyagePoids = filterNonNull(dto.getVoyageTransactionPoid());
+
+        // Each of these is an independent DB round trip — fan them out concurrently instead of paying for them one at a time.
+        CompletableFuture<Map<Long, LovGetListDto>> blFuture      = supplyLovAsync(caller, () -> fetchBlReprintMap(blPoids));
+        CompletableFuture<Map<Long, LovGetListDto>> addressFuture = supplyLovAsync(caller, () -> fetchAddressMasterMap(addressPoids));
+        CompletableFuture<Map<Long, LovGetListDto>> glFuture      = supplyLovAsync(caller, () -> fetchGlMasterLedgersMap(glPoids));
+        CompletableFuture<Map<Long, LovGetListDto>> portFuture    = supplyLovAsync(caller, () -> fetchPortMasterMap(portPoids));
+        CompletableFuture<Map<Long, LovGetListDto>> voyageFuture  = supplyLovAsync(caller, () -> fetchVoyageMap(voyagePoids));
+
+        joinAllLovFutures(blFuture, addressFuture, glFuture, portFuture, voyageFuture);
+
+        Map<Long, LovGetListDto> blMap      = blFuture.join();
+        Map<Long, LovGetListDto> addressMap = addressFuture.join();
+        Map<Long, LovGetListDto> glMap      = glFuture.join();
+        Map<Long, LovGetListDto> portMap    = portFuture.join();
+        Map<Long, LovGetListDto> voyageMap  = voyageFuture.join();
+
         Long issueTypePoid = parseLongSafely(dto.getIssueType());
-        Map<Long, LovGetListDto> issueTypeMap = lovService.getDetailsByPoidsAndLovName(
-                filterNonNull(issueTypePoid), "BL_ISSUE_TYPE");
-        Map<String, LovGetListDto> blTypeMap = lovService.getDetailsByCodesAndLovName(
-                filterNonNullStr(dto.getBlType()), "BL_TYPE");
-        Map<String, LovGetListDto> holdReasonMap = lovService.getDetailsByCodesAndLovName(
-                filterNonNullStr(dto.getHoldReason()), "SHIP_DO_ANOTICE_HOLD");
+        Map<Long, LovGetListDto> issueTypeMap = mapByPoid(BL_ISSUE_TYPE_LOV, filterNonNull(issueTypePoid));
+        Map<String, LovGetListDto> blTypeMap = mapByCode(BL_TYPE_LOV, filterNonNullStr(dto.getBlType()));
+        Map<String, LovGetListDto> holdReasonMap = mapByCode(SHIP_DO_ANOTICE_HOLD_LOV, filterNonNullStr(dto.getHoldReason()));
 
         dto.setBlDet(blMap.get(dto.getBlPoid()));
         dto.setConsigneeDet(addressMap.get(dto.getConsigneePoid()));
@@ -587,6 +618,215 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         dto.setIssueTypeDet(issueTypeMap.get(issueTypePoid));
         dto.setBlTypeDet(blTypeMap.get(dto.getBlType()));
         dto.setHoldReasonDet(holdReasonMap.get(dto.getHoldReason()));
+    }
+
+    /**
+     * Each fetch*Map lookup below pulls its own pooled Connection per call via {@code jdbcTemplate}
+     * and doesn't rely on the request-bound EntityManager/Session, so it's safe to fan out across
+     * worker threads. UserContext is a plain ThreadLocal a pooled thread can't see, so the caller's
+     * auth details are carried onto the worker and cleared again once the lookup is done — same
+     * convention as ImportManifestServiceImpl#supplyLovAsync.
+     */
+    private <T> CompletableFuture<T> supplyLovAsync(CustomAuthDetails caller, Supplier<T> supplier) {
+        return CompletableFuture.supplyAsync(() -> {
+            UserContext.setCurrentUser(caller);
+            try {
+                return supplier.get();
+            } finally {
+                UserContext.clear();
+            }
+        }, lovLookupExecutor);
+    }
+
+    private void joinAllLovFutures(CompletableFuture<?>... futures) {
+        try {
+            CompletableFuture.allOf(futures).join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof RuntimeException re) {
+                throw re;
+            }
+            throw e;
+        }
+    }
+
+    private static String inClausePlaceholders(int size) {
+        return String.join(",", Collections.nCopies(size, "?"));
+    }
+
+    // Static LOVs — hardcoded SELECT ... FROM DUAL UNION lists in PROC_LOV_GETLIST; no DB round trip needed.
+    private static final List<LovGetListDto> BL_ISSUE_TYPE_LOV = List.of(
+            staticLov(1L, "OBL", "ORIGINAL BL REQUIRED"),
+            staticLov(2L, "EXPRESS", "EXPRESS RELEASED"),
+            staticLov(3L, "SEAWAY", "SEAWAY BILL"),
+            staticLov(4L, "OTHER", "OTHER"));
+
+    private static final List<LovGetListDto> SHIP_DO_ANOTICE_HOLD_LOV = List.of(
+            staticLov(1L, "1", "HOLD DO"),
+            staticLov(4L, "4", "VERIFIED"),
+            staticLov(5L, "5", "NOTVERIFIED"),
+            staticLov(6L, "6", "VERIFIED-ELSEWHERE"));
+
+    private static final List<LovGetListDto> CHARGE_TYPE_LOV = List.of(
+            staticLov(1L, "MANIFEST", "MANIFESTED PRINCIPAL PAYABLE"),
+            staticLov(2L, "LOCAL", "LOCAL CHARGE"),
+            staticLov(3L, "BOTH", "BOTH"));
+
+    private static final List<LovGetListDto> SHIP_FREIGHT_TYPE_LOV = List.of(
+            staticLov(1L, "P", "PREPAID"),
+            staticLov(2L, "C", "COLLECT"),
+            staticLov(3L, "E", "ELSEWHERE"));
+
+    private static final List<LovGetListDto> CONTAINER_BASIS_STATIC_LOV = List.of(
+            staticLov(273L, "AUTOBASIS", "AUTOBASIS"),
+            staticLov(253L, "NOBASIS", "NOBASIS"));
+
+    private static final List<LovGetListDto> BL_TYPE_LOV = List.of(
+            staticLov(1L, "IMPORT", "IMPORT"),
+            staticLov(2L, "EXPORT", "EXPORT"),
+            staticLov(3L, "SWITCH", "SWITCH"),
+            staticLov(4L, "CROSSTRADE", "CROSSTRADE"));
+
+    private static LovGetListDto staticLov(Long poid, String code, String description) {
+        LovGetListDto dto = new LovGetListDto();
+        dto.setPoid(poid);
+        dto.setCode(code);
+        dto.setDescription(description);
+        dto.setLabel(description);
+        dto.setValue(poid);
+        return dto;
+    }
+
+    private Map<String, LovGetListDto> mapByCode(List<LovGetListDto> lov, List<String> codes) {
+        if (codes.isEmpty()) return Collections.emptyMap();
+        return lov.stream()
+                .filter(d -> codes.stream().anyMatch(c -> c.equalsIgnoreCase(d.getCode())))
+                .collect(java.util.stream.Collectors.toMap(LovGetListDto::getCode, d -> d));
+    }
+
+    private Map<Long, LovGetListDto> mapByPoid(List<LovGetListDto> lov, List<Long> poids) {
+        if (poids.isEmpty()) return Collections.emptyMap();
+        return lov.stream()
+                .filter(d -> poids.contains(d.getPoid()))
+                .collect(java.util.stream.Collectors.toMap(LovGetListDto::getPoid, d -> d));
+    }
+
+    private Map<Long, LovGetListDto> fetchChargeMasterMap(List<Long> poids) {
+        if (poids.isEmpty()) return Collections.emptyMap();
+        String sql = "SELECT charge_poid AS POID, charge_code AS CODE, charge_name AS DESCRIPTION " +
+                "FROM ship_charge_master " +
+                "WHERE NVL(active, 'N') = 'Y' AND division_code IN ('SH', 'ALL') AND charge_poid IN (" + inClausePlaceholders(poids.size()) + ")";
+        return mapLovRowsByPoid(sql, poids.toArray());
+    }
+
+    private Map<String, LovGetListDto> fetchCurrencyMap(List<String> codes) {
+        if (codes.isEmpty()) return Collections.emptyMap();
+        String sql = "SELECT currency_poid AS POID, currency_code AS CODE, currency_name AS DESCRIPTION " +
+                "FROM global_currency_master " +
+                "WHERE NVL(active, 'Y') = 'Y' AND NVL(deleted, 'N') = 'N' AND currency_code IN (" + inClausePlaceholders(codes.size()) + ")";
+        return mapLovRowsByCode(sql, codes.toArray());
+    }
+
+    private Map<String, LovGetListDto> fetchContainerBasisMap(List<String> codes) {
+        if (codes.isEmpty()) return Collections.emptyMap();
+        Map<String, LovGetListDto> result = new HashMap<>();
+        CONTAINER_BASIS_STATIC_LOV.stream()
+                .filter(d -> codes.stream().anyMatch(c -> c.equalsIgnoreCase(d.getCode())))
+                .forEach(d -> result.put(d.getCode(), d));
+
+        List<String> remaining = codes.stream()
+                .filter(c -> result.keySet().stream().noneMatch(k -> k.equalsIgnoreCase(c)))
+                .toList();
+        if (!remaining.isEmpty()) {
+            String sql = "SELECT container_type_poid AS POID, container_type_code AS CODE, " +
+                    "container_type_code || '-' || container_type_name AS DESCRIPTION " +
+                    "FROM ship_container_type_master " +
+                    "WHERE active = 'Y' AND container_type_code IN (" + inClausePlaceholders(remaining.size()) + ")";
+            result.putAll(mapLovRowsByCode(sql, remaining.toArray()));
+        }
+        return result;
+    }
+
+    private Map<String, LovGetListDto> mapLovRowsByCode(String sql, Object... args) {
+        List<LovGetListDto> rows = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Long poid = rs.getLong("POID");
+            String code = rs.getString("CODE");
+            String description = rs.getString("DESCRIPTION");
+            LovGetListDto dto = new LovGetListDto();
+            dto.setPoid(poid);
+            dto.setCode(code);
+            dto.setDescription(description);
+            dto.setLabel(description);
+            dto.setValue(poid);
+            return dto;
+        }, args);
+        Map<String, LovGetListDto> result = new HashMap<>();
+        rows.forEach(d -> result.put(d.getCode(), d));
+        return result;
+    }
+
+    private Map<Long, LovGetListDto> fetchGlMasterLedgersMap(List<Long> poids) {
+        if (poids.isEmpty()) return Collections.emptyMap();
+        String sql = "SELECT gl_poid AS POID, gl_code AS CODE, gl_description || '(' || gl_ac_type || ')' AS DESCRIPTION " +
+                "FROM gl_master " +
+                "WHERE gl_type = 'LEDGER' AND NVL(deleted, 'N') = 'N' AND NVL(active, 'Y') = 'Y' " +
+                "AND gl_poid IN (" + inClausePlaceholders(poids.size()) + ")";
+        return mapLovRowsByPoid(sql, poids.toArray());
+    }
+
+    private Map<Long, LovGetListDto> fetchBlReprintMap(List<Long> poids) {
+        if (poids.isEmpty()) return Collections.emptyMap();
+        String sql = "SELECT hdr.transaction_poid AS POID, hdr.bl_number AS CODE, hdr.bl_number AS DESCRIPTION " +
+                "FROM ship_bl_manifest_hdr hdr " +
+                "WHERE NVL(hdr.deleted, 'N') = 'N' AND hdr.transaction_poid IN (" + inClausePlaceholders(poids.size()) + ")";
+        return mapLovRowsByPoid(sql, poids.toArray());
+    }
+
+    private Map<Long, LovGetListDto> fetchAddressMasterMap(List<Long> poids) {
+        if (poids.isEmpty()) return Collections.emptyMap();
+        String sql = "SELECT am.address_master_poid AS POID, am.address_master_poid AS CODE, am.address_name AS DESCRIPTION " +
+                "FROM global_address_master am " +
+                "WHERE am.address_master_poid IN (" + inClausePlaceholders(poids.size()) + ") " +
+                "AND NVL(am.active, 'Y') = 'Y' AND NVL(am.deleted, 'N') = 'N'";
+        return mapLovRowsByPoid(sql, poids.toArray());
+    }
+
+    private Map<Long, LovGetListDto> fetchPortMasterMap(List<Long> poids) {
+        if (poids.isEmpty()) return Collections.emptyMap();
+        String sql = "SELECT port_poid AS POID, port_code AS CODE, port_name AS DESCRIPTION " +
+                "FROM ship_port_master " +
+                "WHERE active = 'Y' AND port_poid IN (" + inClausePlaceholders(poids.size()) + ")";
+        return mapLovRowsByPoid(sql, poids.toArray());
+    }
+
+    private Map<Long, LovGetListDto> fetchVoyageMap(List<Long> poids) {
+        if (poids.isEmpty()) return Collections.emptyMap();
+        String sql = "SELECT voyage.transaction_poid AS POID, voyage.job_no AS CODE, " +
+                "'VESSEL/VOYAGE/LINE :' || vessel.vessel_name || '/' || voyage.voyage_no || '/' || mline.line_code AS DESCRIPTION " +
+                "FROM ship_voyage_hdr voyage " +
+                "INNER JOIN ship_line_master mline ON voyage.line_poid = mline.line_poid " +
+                "INNER JOIN ship_vessel_master vessel ON vessel.vessel_poid = voyage.vessel_poid " +
+                "WHERE voyage.company_poid = ? AND voyage.transaction_poid IN (" + inClausePlaceholders(poids.size()) + ")";
+        Object[] args = new Object[poids.size() + 1];
+        args[0] = getCompanyPoid();
+        for (int i = 0; i < poids.size(); i++) args[i + 1] = poids.get(i);
+        return mapLovRowsByPoid(sql, args);
+    }
+
+    private Map<Long, LovGetListDto> mapLovRowsByPoid(String sql, Object... args) {
+        List<LovGetListDto> rows = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Long poid = rs.getLong("POID");
+            String description = rs.getString("DESCRIPTION");
+            LovGetListDto dto = new LovGetListDto();
+            dto.setPoid(poid);
+            dto.setCode(rs.getString("CODE"));
+            dto.setDescription(description);
+            dto.setLabel(description);
+            dto.setValue(poid);
+            return dto;
+        }, args);
+        Map<Long, LovGetListDto> result = new HashMap<>();
+        rows.forEach(d -> result.put(d.getPoid(), d));
+        return result;
     }
 
     private List<Long> filterNonNull(Long... poids) {
