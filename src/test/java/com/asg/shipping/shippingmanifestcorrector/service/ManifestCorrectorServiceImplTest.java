@@ -8,7 +8,6 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
-import com.asg.common.lib.service.LovDataService;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorCreateDTO;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateDto;
 import com.asg.shipping.shippingmanifestcorrector.dto.ManifestCorrectorBlAutoPopulateRequest;
@@ -40,6 +39,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -61,13 +61,13 @@ class ManifestCorrectorServiceImplTest {
     @Mock
     private LoggingService loggingService;
     @Mock
-    private LovDataService lovService;
-    @Mock
     private JdbcTemplate jdbcTemplate;
     @Mock
     private ManifestCorrectorMapper mapper;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private Executor lovLookupExecutor;
 
     @InjectMocks
     private ManifestCorrectorServiceImpl service;
@@ -94,6 +94,9 @@ class ManifestCorrectorServiceImplTest {
 
         responseDTO = new ManifestCorrectorDto();
         responseDTO.setTransactionPoid(1L);
+
+        lenient().doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
+                .when(lovLookupExecutor).execute(any());
     }
 
     @Test
@@ -127,12 +130,8 @@ class ManifestCorrectorServiceImplTest {
         when(chargeDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(containerDtlRepository.findByTransactionPoid(1L)).thenReturn(List.of());
         when(mapper.mapToDto(any())).thenReturn(responseDTO);
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), any()))
-                .thenReturn(new java.util.HashMap<>());
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("SHIP_BL_REPRINT")))
-                .thenReturn(Map.of(12345L, new LovGetListDto(12345L, "240988", "240988", 12345L, "240988", null, null)));
-        when(lovService.getDetailsByCodesAndLovName(anyList(), any()))
-                .thenReturn(new java.util.HashMap<>());
+        when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of(new LovGetListDto(12345L, "240988", "240988", 12345L, "240988", null, null)));
 
         responseDTO.setBlNumber("12345");
 
@@ -296,26 +295,10 @@ class ManifestCorrectorServiceImplTest {
         LovGetListDto loadingDet = new LovGetListDto(707L, "P707", "Loading Port", 707L, "Loading Port", null, null);
         LovGetListDto dischargeDet = new LovGetListDto(808L, "P808", "Discharge Port", 808L, "Discharge Port", null, null);
         LovGetListDto voyageDet = new LovGetListDto(909L, "V909", "Voyage", 909L, "Voyage", null, null);
-        LovGetListDto issueTypeDet = new LovGetListDto(1L, "ORIGINAL", "Original", 1L, "Original", null, null);
-        LovGetListDto blTypeDet = new LovGetListDto(1L, "IMPORT", "Import", 1L, "Import", null, null);
-        LovGetListDto holdReasonDet = new LovGetListDto(1L, "NONE", "None", 1L, "None", null, null);
 
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("SHIP_BL_REPRINT")))
-                .thenReturn(Map.of(12345L, blDet));
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("ADDRESS_MASTER")))
-                .thenReturn(Map.of(101L, consigneeDet, 202L, notifyDet));
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("GL_MASTER_LEDGERS")))
-                .thenReturn(Map.of(303L, payableGlDet, 404L, incomeGlDet));
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("PORT_MASTER")))
-                .thenReturn(Map.of(505L, deliveryDet, 606L, receiptDet, 707L, loadingDet, 808L, dischargeDet));
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("VESSAL_VOYAGE")))
-                .thenReturn(Map.of(909L, voyageDet));
-        when(lovService.getDetailsByPoidsAndLovName(anyList(), eq("BL_ISSUE_TYPE")))
-                .thenReturn(new java.util.HashMap<>());
-        when(lovService.getDetailsByCodesAndLovName(anyList(), eq("BL_TYPE")))
-                .thenReturn(Map.of("IMPORT", blTypeDet));
-        when(lovService.getDetailsByCodesAndLovName(anyList(), eq("SHIP_DO_ANOTICE_HOLD")))
-                .thenReturn(Map.of("NONE", holdReasonDet));
+        when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class), any(Object[].class)))
+                .thenReturn(List.of(blDet, consigneeDet, notifyDet, payableGlDet, incomeGlDet,
+                        deliveryDet, receiptDet, loadingDet, dischargeDet, voyageDet));
 
         try (MockedStatic<UserContext> userContext = mockStatic(UserContext.class)) {
             userContext.when(UserContext::getGroupPoid).thenReturn(10L);
@@ -323,7 +306,7 @@ class ManifestCorrectorServiceImplTest {
             userContext.when(UserContext::getUserPoid).thenReturn(30L);
             userContext.when(UserContext::getDocumentId).thenReturn("100-143");
 
-            when(jdbcTemplate.queryForList(anyString(), eq(Long.class)))
+            when(jdbcTemplate.queryForList(anyString(), eq(Long.class), any(Object[].class)))
                     .thenReturn(List.of(12345L));
 
             when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class)))
