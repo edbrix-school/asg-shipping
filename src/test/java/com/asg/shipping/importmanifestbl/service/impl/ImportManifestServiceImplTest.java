@@ -635,11 +635,11 @@ class ImportManifestServiceImplTest {
         Statement mockStmt = mock(Statement.class);
         java.sql.PreparedStatement mockPs = mock(java.sql.PreparedStatement.class);
         java.sql.ResultSet mockRs = mock(java.sql.ResultSet.class);
-        when(dataSource.getConnection()).thenReturn(mockConn);
-        when(mockConn.createStatement()).thenReturn(mockStmt);
-        when(mockConn.prepareStatement(anyString())).thenReturn(mockPs);
-        when(mockPs.executeQuery()).thenReturn(mockRs);
-        when(mockRs.next()).thenReturn(false);
+        lenient().when(dataSource.getConnection()).thenReturn(mockConn);
+        lenient().when(mockConn.createStatement()).thenReturn(mockStmt);
+        lenient().when(mockConn.prepareStatement(anyString())).thenReturn(mockPs);
+        lenient().when(mockPs.executeQuery()).thenReturn(mockRs);
+        lenient().when(mockRs.next()).thenReturn(false);
 
         assertNotNull(service.printUnclearedCargoNotice(1L));
         assertNotNull(service.printProformaInvoice(1L, LocalDate.now(), 0L));

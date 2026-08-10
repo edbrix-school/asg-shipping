@@ -14,6 +14,7 @@ import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIss
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
 import com.asg.shipping.receipts.repository.ReceiptHdrRepository;
+import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceHdrRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.validation.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +59,9 @@ public class DeliveryOrderIssueToCustomerServiceImplTest {
 
     @Mock
     private ReceiptHdrRepository receiptHdrRepository;
+
+    @Mock
+    private ArShSalesInvoiceHdrRepository salesInvoiceHdrRepository;
 
     @Mock
     private EntityManager entityManager;
