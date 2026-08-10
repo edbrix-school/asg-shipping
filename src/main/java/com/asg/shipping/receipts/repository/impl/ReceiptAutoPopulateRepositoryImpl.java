@@ -85,7 +85,7 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
                          AR_SH_RECEIPT_CHARGES_DTL ARSHRCPCHD
                     WHERE ARSHRCP.TRANSACTION_POID = ARSHRCPCHD.TRANSACTION_POID
                       AND NVL(ARSHRCP.DELETED,'N') = 'N'
-                      AND ARSHRCP.TRANSACTION_POID <> :currentDocKeyPoid
+                      AND ARSHRCP.TRANSACTION_POID <> NVL(:currentDocKeyPoid, 0)
 
                     UNION ALL
 
