@@ -318,7 +318,7 @@ public class ImportManifestBlProcRepositoryImpl implements ImportManifestBlProcR
     public DefaultValueDto callDefaultGetValue(Long loginGroupPoid, Long loginCompanyPoid, Long loginUserPoid, String docId) {
 
             StoredProcedureQuery query = entityManager
-                    .createStoredProcedureQuery("PRODUCTION.PROC_DEFAULT_GETVALUE");
+                    .createStoredProcedureQuery("PROC_DEFAULT_GETVALUE");
 
             query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, ParameterMode.IN);
             query.registerStoredProcedureParameter("P_LOGIN_COMPANY_POID", Long.class, ParameterMode.IN);
