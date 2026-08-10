@@ -21,6 +21,7 @@ import com.asg.shipping.deliveryorderissuetocustomer.repository.DeliveryOrderIss
 import com.asg.shipping.deliveryorderissuetocustomer.repository.DoShPrintingDtlRepository;
 import com.asg.shipping.deliveryorderissuetocustomer.repository.ShipBlManifestHDRRepository;
 import com.asg.shipping.receipts.repository.ReceiptHdrRepository;
+import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceHdrRepository;
 import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,7 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
     private final LoggingService loggingService;
     private final DocumentSearchService documentSearchService;
     private final ReceiptHdrRepository receiptHdrRepository;
+    private final ArShSalesInvoiceHdrRepository salesInvoiceHdrRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -83,6 +85,10 @@ public class DeliveryOrderIssueToCustomerServiceImpl implements DeliveryOrderIss
         receiptHdrRepository.findByBlPoid(transactionPoid).ifPresent(receipt -> {
             dto.setReceiptsDocRef(receipt.getDocRef());
             dto.setReceiptsPoid(receipt.getTransactionPoid());
+        });
+        salesInvoiceHdrRepository.findByBlPoid(transactionPoid).stream().findFirst().ifPresent(invoice -> {
+            dto.setInvoiceDocRef(invoice.getDocRef());
+            dto.setInvoicePoid(invoice.getTransactionPoid());
         });
         return dto;
     }

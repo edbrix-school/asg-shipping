@@ -190,7 +190,6 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         List<String> freightTypes = charges.stream().map(ChargeDto::getFreightType).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
         List<String> basisCodes = charges.stream().map(ChargeDto::getBasisPoid).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
         List<Long> paidAtPortPoids = charges.stream().map(ChargeDto::getPaidAtPortPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
-        List<Long> receiptInvoicePoids = charges.stream().map(ChargeDto::getReceiptInvoicePoid).filter(p -> p != null).distinct().collect(Collectors.toList());
         List<Long> taxPoids = charges.stream().map(ChargeDto::getTaxPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
 
         // Other charges
@@ -253,12 +252,11 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         CompletableFuture<Map<Long, LovItem>> chargeMasterFuture = supplyLovAsync(caller, () -> getChargeMasterByPoidMap(allChargePoids));
         CompletableFuture<Map<String, LovItem>> currencyFuture = supplyLovAsync(caller, () -> getCurrencyByCodeMap(distinctCurrencyCodes));
         CompletableFuture<Map<String, LovItem>> basisFuture = supplyLovAsync(caller, () -> getBasisByCodeMap(distinctBasisCodes));
-        CompletableFuture<Map<Long, LovItem>> receiptInvoiceFuture = supplyLovAsync(caller, () -> getReceiptInvoiceByPoidMap(receiptInvoicePoids));
         CompletableFuture<Map<Long, LovItem>> taxFuture = supplyLovAsync(caller, () -> getTaxByPoidMap(taxPoids));
         CompletableFuture<Map<Long, LovItem>> containerPartFuture = supplyLovAsync(caller, () -> getContainerPartByPoidMap(distinctPartBlContainerPoids));
 
         joinAllLovFutures(quotationFuture, commodityFuture, portFuture, isoTypeFuture, imcoTypeFuture, oogTypeFuture,
-                chargeMasterFuture, currencyFuture, basisFuture, receiptInvoiceFuture, taxFuture, containerPartFuture);
+                chargeMasterFuture, currencyFuture, basisFuture, taxFuture, containerPartFuture);
 
         Map<Long, LovItem> quotationMap = quotationFuture.join();
         Map<Long, LovItem> commodityMap = commodityFuture.join();
@@ -271,7 +269,6 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Map<String, LovItem> currencyMap = currencyFuture.join();
         Map<String, LovItem> freightTypeMap = SHIP_FREIGHT_TYPE_LOV;
         Map<String, LovItem> basisMap = basisFuture.join();
-        Map<Long, LovItem> receiptInvoiceMap = receiptInvoiceFuture.join();
         Map<Long, LovItem> taxMap = taxFuture.join();
         Map<Long, LovItem> containerPartByPoidMap = containerPartFuture.join();
 
@@ -298,7 +295,11 @@ public class ImportManifestServiceImpl implements ImportManifestService {
             if (ch.getFreightType() != null) ch.setFreightTypeDet(freightTypeMap.get(ch.getFreightType().toUpperCase()));
             if (ch.getBasisPoid() != null) ch.setBasisDet(basisMap.get(ch.getBasisPoid().toUpperCase()));
             if (ch.getPaidAtPortPoid() != null) ch.setPaidAtPortDet(portMap.get(ch.getPaidAtPortPoid()));
-            if (ch.getReceiptInvoicePoid() != null) ch.setReceiptInvoiceDet(receiptInvoiceMap.get(ch.getReceiptInvoicePoid()));
+            if (ch.getReceiptInvoicePoid() != null) {
+                ch.setReceiptInvoiceDet(
+                        lovService.getLovItemByPoid(ch.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE",
+                                caller.getGroupPoid(), caller.getCompanyPoid(), caller.getUserPoid()));
+            }
             if (ch.getTaxPoid() != null) ch.setTaxDet(taxMap.get(ch.getTaxPoid()));
         }
 
@@ -377,18 +378,6 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         if (poids == null || poids.isEmpty()) return Collections.emptyMap();
         Map<Long, LovItem> map = new HashMap<>();
         containerDtlRepository.findContainerPartLovByPoids(poids).forEach(row -> {
-            Long poid = ((Number) row[0]).longValue();
-            String code = (String) row[1];
-            String description = (String) row[2];
-            map.put(poid, new LovItem(poid, code, description, description, poid, 0));
-        });
-        return map;
-    }
-
-    private Map<Long, LovItem> getReceiptInvoiceByPoidMap(List<Long> poids) {
-        if (poids == null || poids.isEmpty()) return Collections.emptyMap();
-        Map<Long, LovItem> map = new HashMap<>();
-        chargesDtlRepository.findReceiptInvoiceLovByPoids(poids).forEach(row -> {
             Long poid = ((Number) row[0]).longValue();
             String code = (String) row[1];
             String description = (String) row[2];
