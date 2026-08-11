@@ -514,7 +514,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     ) {
 
         StoredProcedureQuery query = entityManager
-                .createStoredProcedureQuery("QA_DB_USER.PROC_SHIP_COMMISSION_RECORD_FETCH");
+                .createStoredProcedureQuery("PROC_SHIP_COMMISSION_RECORD_FETCH");
 
         // Register IN params
         query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, jakarta.persistence.ParameterMode.IN);

@@ -3,6 +3,7 @@ package com.asg.shipping.lineprofile.service;
 import com.asg.common.lib.dto.DeleteReasonDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.shipping.lineprofile.dto.LineProfileAgreementDetailsResponse;
+import com.asg.shipping.lineprofile.dto.LineProfileDrilldownResponse;
 import com.asg.shipping.lineprofile.dto.LineProfileLineDetailsResponse;
 import com.asg.shipping.lineprofile.dto.LineProfileRequest;
 import com.asg.shipping.lineprofile.dto.LineProfileResponse;
@@ -26,18 +27,21 @@ public interface LineProfileService {
     LineProfileAgreementDetailsResponse fetchAgreementDetails(Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid);
 
     /**
-     * Calls PROC_LINE_PROFILE_DRILLDOWN_FORM to resolve the TRANSACTION_POID
-     * for the active tariff / local charges / commission record linked to the given line.
+     * Calls PROC_LINE_PROFILE_DRILLDOWN_FORM and returns both:
+     * <ul>
+     *   <li>P_STATUS  – "Success", a warning, or an "ERROR :" message</li>
+     *   <li>OUTDATA   – list of rows with TRANSACTION_POID, COMPANY_POID, RECORD_FETCH_TYPE</li>
+     * </ul>
      *
-     * @param groupPoid   login group poid
-     * @param companyPoid login company poid
-     * @param userPoid    login user poid
-     * @param docId       document id (P_DOC_ID)
-     * @param linePoid    line poid (LINE_POID)
+     * @param groupPoid    login group poid
+     * @param companyPoid  login company poid
+     * @param userPoid     login user poid
+     * @param docId        document id (P_DOC_ID)
+     * @param linePoid     line poid (LINE_POID)
      * @param returnRecord one of: TARIFF, LOCAL, COMMISSION
-     * @return TRANSACTION_POID as String, or an error message prefixed with "ERROR :"
+     * @return {@link LineProfileDrilldownResponse} containing status and cursor data
      */
-    String fetchDrilldownForm(Long groupPoid, Long companyPoid, Long userPoid,
-                              String docId, Long linePoid, String returnRecord);
+    LineProfileDrilldownResponse fetchDrilldownForm(Long groupPoid, Long companyPoid, Long userPoid,
+                                                    String docId, Long linePoid, String returnRecord);
 }
 

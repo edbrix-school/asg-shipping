@@ -6,6 +6,7 @@ import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.lineprofile.dto.LineProfileAgreementDetailsResponse;
+import com.asg.shipping.lineprofile.dto.LineProfileDrilldownResponse;
 import com.asg.shipping.lineprofile.dto.LineProfileLineDetailsResponse;
 import com.asg.shipping.lineprofile.dto.LineProfileRequest;
 import com.asg.shipping.lineprofile.dto.LineProfileResponse;
@@ -177,11 +178,12 @@ public class LineProfileController {
     @GetMapping(value = "/lines/{linePoid}/drilldown-form", produces = MediaType.APPLICATION_JSON_VALUE)
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
-            summary = "Fetch Drilldown Form Transaction POID using PROC_LINE_PROFILE_DRILLDOWN_FORM",
+            summary = "Fetch Drilldown Form data using PROC_LINE_PROFILE_DRILLDOWN_FORM",
             description = """
-                    Resolves the active TRANSACTION_POID for the given line and record type.
+                    Calls PROC_LINE_PROFILE_DRILLDOWN_FORM and returns:
+                    - status: P_STATUS OUT param ("Success", a warning, or "ERROR : …")
+                    - data:   rows from the OUTDATA SYS_REFCURSOR (TRANSACTION_POID, COMPANY_POID, RECORD_FETCH_TYPE)
                     Pass returnRecord as one of: TARIFF, LOCAL, COMMISSION.
-                    Returns the TRANSACTION_POID as a string, or an error message prefixed with 'ERROR :'.
                     """,
             security = @SecurityRequirement(name = "bearerAuth")
     )
@@ -199,10 +201,10 @@ public class LineProfileController {
             String resolvedDocId     = resolveDocId(docId);
             log.info("fetchDrilldownForm | linePoid={}, returnRecord={}, groupPoid={}, companyPoid={}, userPoid={}, docId={}",
                     linePoid, returnRecord, resolvedGroupPoid, resolvedCompanyPoid, resolvedUserPoid, resolvedDocId);
-            String result = service.fetchDrilldownForm(
+            LineProfileDrilldownResponse result = service.fetchDrilldownForm(
                     resolvedGroupPoid, resolvedCompanyPoid, resolvedUserPoid,
                     resolvedDocId, linePoid, returnRecord);
-            return success("Drilldown form transaction poid fetched successfully", result);
+            return success("Drilldown form fetched successfully", result);
         } catch (Exception e) {
             return internalServerError("Unable to fetch drilldown form: " + e.getMessage());
         }

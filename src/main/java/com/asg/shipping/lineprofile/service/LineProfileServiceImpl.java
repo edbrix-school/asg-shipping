@@ -11,6 +11,8 @@ import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.lineprofile.dto.LineProfileAgreementDetailsResponse;
 import com.asg.shipping.lineprofile.dto.LineProfileContactDto;
+import com.asg.shipping.lineprofile.dto.LineProfileDrilldownResponse;
+import com.asg.shipping.lineprofile.dto.LineProfileDrilldownRow;
 import com.asg.shipping.lineprofile.dto.LineProfileLineDetailsResponse;
 import com.asg.shipping.lineprofile.dto.LineProfileRequest;
 import com.asg.shipping.lineprofile.dto.LineProfileResponse;
@@ -287,8 +289,8 @@ public class LineProfileServiceImpl implements LineProfileService {
 
     @Override
     @Transactional(readOnly = true)
-    public String fetchDrilldownForm(Long groupPoid, Long companyPoid, Long userPoid,
-                                     String docId, Long linePoid, String returnRecord) {
+    public LineProfileDrilldownResponse fetchDrilldownForm(Long groupPoid, Long companyPoid, Long userPoid,
+                                                           String docId, Long linePoid, String returnRecord) {
         if (linePoid == null)     throw new ValidationException("linePoid is required");
         if (returnRecord == null) throw new ValidationException("returnRecord is required");
 
@@ -297,33 +299,51 @@ public class LineProfileServiceImpl implements LineProfileService {
 
         try {
             SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
-                    .withSchemaName("QA_DB_USER")
                     .withProcedureName("PROC_LINE_PROFILE_DRILLDOWN_FORM")
                     .declareParameters(
-                            new SqlParameter("P_LOGIN_GROUP_POID",    Types.NUMERIC),
-                            new SqlParameter("P_LOGIN_COMPANY_POID",  Types.NUMERIC),
-                            new SqlParameter("P_LOGIN_USER_POID",     Types.NUMERIC),
-                            new SqlParameter("P_DOC_ID",              Types.VARCHAR),
-                            new SqlParameter("P_LINE_POID",           Types.NUMERIC),
-                            new SqlParameter("P_RETURN_RECORD",       Types.VARCHAR),
-                            new SqlOutParameter("OUTDATA",            OracleTypes.CURSOR),
-                            new SqlOutParameter("P_STATUS",           Types.VARCHAR)
+                            new SqlParameter("P_LOGIN_GROUP_POID",   Types.NUMERIC),
+                            new SqlParameter("P_LOGIN_COMPANY_POID", Types.NUMERIC),
+                            new SqlParameter("P_LOGIN_USER_POID",    Types.NUMERIC),
+                            new SqlParameter("P_DOC_ID",             Types.VARCHAR),
+                            new SqlParameter("P_LINE_POID",          Types.NUMERIC),
+                            new SqlParameter("P_RETURN_RECORD",      Types.VARCHAR),
+                            new SqlOutParameter("OUTDATA",           OracleTypes.CURSOR),
+                            new SqlOutParameter("P_STATUS",          Types.VARCHAR)
                     );
 
             Map<String, Object> inParams = new HashMap<>();
-            inParams.put("P_LOGIN_GROUP_POID",   groupPoid);
-            inParams.put("P_LOGIN_COMPANY_POID",  companyPoid);
-            inParams.put("P_LOGIN_USER_POID",     userPoid);
-            inParams.put("P_DOC_ID",              docId);
-            inParams.put("P_LINE_POID",           linePoid);
-            inParams.put("P_RETURN_RECORD",       returnRecord);
+            inParams.put("P_LOGIN_GROUP_POID",  groupPoid);
+            inParams.put("P_LOGIN_COMPANY_POID", companyPoid);
+            inParams.put("P_LOGIN_USER_POID",   userPoid);
+            inParams.put("P_DOC_ID",            docId);
+            inParams.put("P_LINE_POID",         linePoid);
+            inParams.put("P_RETURN_RECORD",     returnRecord);
 
             Map<String, Object> result = jdbcCall.execute(inParams);
 
+            // --- P_STATUS ---
             String status = (String) result.get("P_STATUS");
             log.info("PROC_LINE_PROFILE_DRILLDOWN_FORM status={}", status);
 
-            return status;
+            // --- OUTDATA cursor ---
+            // SimpleJdbcCall maps SYS_REFCURSOR OUT params to List<Map<String, Object>>,
+            // NOT a raw ResultSet — so we cast accordingly.
+            List<LineProfileDrilldownRow> rows = new ArrayList<>();
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> cursorRows = (List<Map<String, Object>>) result.get("OUTDATA");
+            if (cursorRows != null) {
+                for (Map<String, Object> rowMap : cursorRows) {
+                    LineProfileDrilldownRow row = new LineProfileDrilldownRow();
+                    row.setTransactionPoid(toLong(rowMap.get("TRANSACTION_POID")));
+                    row.setCompanyPoid(toLong(rowMap.get("COMPANY_POID")));
+                    row.setRecordFetchType(rowMap.get("RECORD_FETCH_TYPE") != null
+                            ? rowMap.get("RECORD_FETCH_TYPE").toString() : null);
+                    rows.add(row);
+                }
+            }
+
+            return new LineProfileDrilldownResponse(status, rows);
+
         } catch (Exception e) {
             log.error("Error executing PROC_LINE_PROFILE_DRILLDOWN_FORM", e);
             throw new ValidationException("Error executing PROC_LINE_PROFILE_DRILLDOWN_FORM: " + e.getMessage());
