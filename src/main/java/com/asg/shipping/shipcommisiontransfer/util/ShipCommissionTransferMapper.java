@@ -91,9 +91,7 @@ public class ShipCommissionTransferMapper {
         if (dto.getCurrencyCode() != null) {
             entity.setCurrencyCode(dto.getCurrencyCode());
         }
-        if (dto.getFdaTransactionPoid() != null) {
-            entity.setFdaTransactionPoid(dto.getFdaTransactionPoid());
-        }
+        entity.setFdaTransactionPoid(dto.getFdaTransactionPoid());
 
     }
 
