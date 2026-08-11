@@ -108,6 +108,7 @@ public class ReceiptsMapper {
 				.taxAmount(dto.getTaxAmount())
 				.taxPoid(dto.getTaxPoid())
 				.amountSelect(dto.getAmountSelect())
+				.chargesDetRowId(dto.getDetRowId())
 				.build();
 	}
 
