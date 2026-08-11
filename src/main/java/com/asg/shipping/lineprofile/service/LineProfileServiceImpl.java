@@ -23,6 +23,12 @@ import com.asg.shipping.tradelanemaster.entity.ShipTradelaneMaster;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.Query;
+import oracle.jdbc.internal.OracleTypes;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlParameter;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
+import org.springframework.jdbc.core.SqlOutParameter;
+import java.sql.Types;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -61,6 +67,7 @@ public class LineProfileServiceImpl implements LineProfileService {
     private final LineProfileMapper mapper;
     private final EntityManager entityManager;
     private final LoggingService loggingService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -289,22 +296,37 @@ public class LineProfileServiceImpl implements LineProfileService {
                 groupPoid, companyPoid, userPoid, docId, linePoid, returnRecord);
 
         try {
-            String sql = "SELECT QA_DB_USER.FUNC_LINE_PROFILE_DRILLDOWN_FORM(" +
-                         ":groupPoid, :companyPoid, :userPoid, :docId, :linePoid, :returnRecord) FROM DUAL";
+            SimpleJdbcCall jdbcCall = new SimpleJdbcCall(jdbcTemplate)
+                    .withSchemaName("QA_DB_USER")
+                    .withProcedureName("PROC_LINE_PROFILE_DRILLDOWN_FORM")
+                    .declareParameters(
+                            new SqlParameter("P_LOGIN_GROUP_POID",    Types.NUMERIC),
+                            new SqlParameter("P_LOGIN_COMPANY_POID",  Types.NUMERIC),
+                            new SqlParameter("P_LOGIN_USER_POID",     Types.NUMERIC),
+                            new SqlParameter("P_DOC_ID",              Types.VARCHAR),
+                            new SqlParameter("P_LINE_POID",           Types.NUMERIC),
+                            new SqlParameter("P_RETURN_RECORD",       Types.VARCHAR),
+                            new SqlOutParameter("OUTDATA",            OracleTypes.CURSOR),
+                            new SqlOutParameter("P_STATUS",           Types.VARCHAR)
+                    );
 
-            Query query = entityManager.createNativeQuery(sql);
-            query.setParameter("groupPoid",   groupPoid);
-            query.setParameter("companyPoid", companyPoid);
-            query.setParameter("userPoid",    userPoid);
-            query.setParameter("docId",       docId);
-            query.setParameter("linePoid",    linePoid);
-            query.setParameter("returnRecord", returnRecord);
+            Map<String, Object> inParams = new HashMap<>();
+            inParams.put("P_LOGIN_GROUP_POID",   groupPoid);
+            inParams.put("P_LOGIN_COMPANY_POID",  companyPoid);
+            inParams.put("P_LOGIN_USER_POID",     userPoid);
+            inParams.put("P_DOC_ID",              docId);
+            inParams.put("P_LINE_POID",           linePoid);
+            inParams.put("P_RETURN_RECORD",       returnRecord);
 
-            Object result = query.getSingleResult();
-            return result != null ? result.toString() : null;
+            Map<String, Object> result = jdbcCall.execute(inParams);
+
+            String status = (String) result.get("P_STATUS");
+            log.info("PROC_LINE_PROFILE_DRILLDOWN_FORM status={}", status);
+
+            return status;
         } catch (Exception e) {
-            log.error("Error executing FUNC_LINE_PROFILE_DRILLDOWN_FORM", e);
-            throw new ValidationException("Error executing FUNC_LINE_PROFILE_DRILLDOWN_FORM: " + e.getMessage());
+            log.error("Error executing PROC_LINE_PROFILE_DRILLDOWN_FORM", e);
+            throw new ValidationException("Error executing PROC_LINE_PROFILE_DRILLDOWN_FORM: " + e.getMessage());
         }
     }
 

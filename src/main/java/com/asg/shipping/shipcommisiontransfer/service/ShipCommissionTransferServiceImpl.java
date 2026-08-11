@@ -374,7 +374,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
                 ResultSet rs = (ResultSet) cs.getObject(8);
 
-                if (rs != null && rs.next()) { // 👈 only first row
+                if (rs != null && rs.next()) { //  only first row
                     result.put("currencyCode", rs.getString("CURRENCY_CODE"));
                     result.put("exchangeRate", rs.getString("CURRENCY_EXCHANGE"));
                 }

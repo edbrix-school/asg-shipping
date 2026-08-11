@@ -177,7 +177,7 @@ public class LineProfileController {
     @GetMapping(value = "/lines/{linePoid}/drilldown-form", produces = MediaType.APPLICATION_JSON_VALUE)
     @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
-            summary = "Fetch Drilldown Form Transaction POID using FUNC_LINE_PROFILE_DRILLDOWN_FORM",
+            summary = "Fetch Drilldown Form Transaction POID using PROC_LINE_PROFILE_DRILLDOWN_FORM",
             description = """
                     Resolves the active TRANSACTION_POID for the given line and record type.
                     Pass returnRecord as one of: TARIFF, LOCAL, COMMISSION.

@@ -26,7 +26,7 @@ public interface LineProfileService {
     LineProfileAgreementDetailsResponse fetchAgreementDetails(Long transactionPoid, Long groupPoid, Long companyPoid, Long userPoid);
 
     /**
-     * Calls FUNC_LINE_PROFILE_DRILLDOWN_FORM to resolve the TRANSACTION_POID
+     * Calls PROC_LINE_PROFILE_DRILLDOWN_FORM to resolve the TRANSACTION_POID
      * for the active tariff / local charges / commission record linked to the given line.
      *
      * @param groupPoid   login group poid
