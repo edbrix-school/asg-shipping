@@ -374,7 +374,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
                 ResultSet rs = (ResultSet) cs.getObject(8);
 
-                if (rs != null && rs.next()) { // 👈 only first row
+                if (rs != null && rs.next()) { //  only first row
                     result.put("currencyCode", rs.getString("CURRENCY_CODE"));
                     result.put("exchangeRate", rs.getString("CURRENCY_EXCHANGE"));
                 }
@@ -514,7 +514,7 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     ) {
 
         StoredProcedureQuery query = entityManager
-                .createStoredProcedureQuery("QA_DB_USER.PROC_SHIP_COMMISSION_RECORD_FETCH");
+                .createStoredProcedureQuery("PROC_SHIP_COMMISSION_RECORD_FETCH");
 
         // Register IN params
         query.registerStoredProcedureParameter("P_LOGIN_GROUP_POID", Long.class, jakarta.persistence.ParameterMode.IN);
