@@ -52,4 +52,6 @@ public interface ShipReceiptProcRepository {
     String getGlobalParameter(String paramName, String paramKeyIdType, Long companyPoid, String defaultValue);
 
 	String validateDuplicatePaymentRef(Long blPoid, String paymentReference);
+
+	Long getDemurrageChargePoid();
 }

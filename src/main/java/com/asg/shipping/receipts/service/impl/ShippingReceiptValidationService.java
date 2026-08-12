@@ -311,9 +311,11 @@ public class ShippingReceiptValidationService {
 		BigDecimal totalDemChargeAdded = BigDecimal.ZERO;
 		BigDecimal totalDemBlRcptCollected = BigDecimal.ZERO;
 
+		Long demChargePoid = procRepository.getDemurrageChargePoid();
+
 		if (charges != null) {
 			for (ReceiptCharges charge : charges) {
-				if (charge.getAmount() != null) {
+				if (charge.getAmount() != null && charge.getChargePoid() != null && charge.getChargePoid().equals(demChargePoid)) {
 					totalDemChargeAdded = totalDemChargeAdded.add(charge.getAmount());
 				}
 			}
