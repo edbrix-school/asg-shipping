@@ -33,7 +33,7 @@ public interface ShipReceiptProcRepository {
 
 
 	 BigDecimal calculateDemurrageAmount(Long currentTransactionPoid, Long blPoid, String containerNo, String containerType,
-	 	 	 	 	 	 	 	 	 	 Long linePoid, LocalDate fromDate, LocalDate toDate, Long extraFreeDays);
+	 	 	 	 	 	 	 	 	 	 Long linePoid, LocalDate fromDate, LocalDate toDate, Long extraFreeDays, Long companyPoid);
 
 	TaxConfig getDemurrageTaxInfo(Long companyPoid);
 
@@ -52,4 +52,6 @@ public interface ShipReceiptProcRepository {
     String getGlobalParameter(String paramName, String paramKeyIdType, Long companyPoid, String defaultValue);
 
 	String validateDuplicatePaymentRef(Long blPoid, String paymentReference);
+
+	Long getDemurrageChargePoid();
 }

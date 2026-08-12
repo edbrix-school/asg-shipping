@@ -10,6 +10,10 @@ import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
 import com.asg.shipping.common.dto.LovItem;
+import com.asg.shipping.common.lov.MasterLovLookup;
+import com.asg.common.lib.security.model.CustomAuthDetails;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import com.asg.shipping.common.service.LovService;
 import com.asg.common.lib.service.DocumentDeleteService;
 import com.asg.common.lib.service.DocumentSearchService;
@@ -38,8 +42,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -63,6 +74,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     private final AddressDetailsRepository addressDetailsRepository;
     private final LoggingService loggingService;
     private final LovService lovService;
+    private final MasterLovLookup masterLovLookup;
+    @Qualifier("lovLookupExecutor")
+    private final Executor lovLookupExecutor;
     private final DocumentDeleteService documentDeleteService;
     private final BlManifestValidationService blManifestValidationService;
 
@@ -137,7 +151,9 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     }
 
     @Override
-    @Transactional
+    // Intentionally not @Transactional: this is a pure read, and leaving the thread free of a
+    // transaction is what lets loadDetailTables fetch the detail tables concurrently. Every
+    // repository call here is self-transactional on its own.
     public ImportManifestBlRequestDto getImportManifestBl(Long id) {
         log.info("Getting Import Manifest BL with id: {}", id);
 
@@ -172,7 +188,7 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     }
 
     @Override
-    @Transactional
+    // Read-only wrapper around getImportManifestBl — see the note there on why it stays untransacted.
     public ImportManifestUpdateOpsDto getImportManifestUpdateOps(Long id) {
         log.info("Getting Import Manifest Update Ops with id: {}", id);
         
@@ -1014,13 +1030,30 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     /**
      * Load all detail tables for a transaction
      */
+    /**
+     * The seven detail tables are independent, so on a plain read they are fetched concurrently.
+     *
+     * That is only safe with no transaction bound to the calling thread: each repository call then
+     * opens and closes its own EntityManager. Inside a transaction — {@code updateImportManifestBl}
+     * re-reads the document through here after saving — the EntityManager is shared and must not be
+     * touched from another thread, so that path stays sequential.
+     */
     public ImportManifestBlRequestDto loadDetailTables(ImportManifestBlRequestDto dto, Long transactionPoid) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            loadDetailTablesSequentially(dto, transactionPoid);
+        } else {
+            loadDetailTablesInParallel(dto, transactionPoid);
+        }
+        dto.setSimpleCargoDescription(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "DESC", "DESCRIPTION"));
+        dto.setSimpleCargoMarks(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "MARK", "MARKS"));
+        return dto;
+    }
+
+    private void loadDetailTablesSequentially(ImportManifestBlRequestDto dto, Long transactionPoid) {
         dto.setGeneralCargoDetails(mapper.mapGeneralDtlListToDto(
                 generalDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setCargoDescriptions(mapper.mapCargoDtlListToDto(
                 cargoDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
-        dto.setSimpleCargoDescription(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "DESC", "DESCRIPTION"));
-        dto.setSimpleCargoMarks(joinCargoDescriptionsByType(dto.getCargoDescriptions(), "MARK", "MARKS"));
         dto.setContainers(mapper.mapContainerDtlListToDto(
                 containerDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setChargeDetails(mapper.mapChargesDtlListToDto(
@@ -1031,7 +1064,65 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
                 emailFaxDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
         dto.setMafiDetails(mapper.mapMafiDtlListToDto(
                 mafiDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
-        return dto;
+    }
+
+    private void loadDetailTablesInParallel(ImportManifestBlRequestDto dto, Long transactionPoid) {
+        CustomAuthDetails caller = UserContext.getCurrentUser();
+
+        CompletableFuture<List<GeneralCargoRequestDto>> generalCargoFuture = supplyWithUserContext(caller,
+                () -> mapper.mapGeneralDtlListToDto(
+                        generalDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<CargoDescriptionRequestDto>> cargoFuture = supplyWithUserContext(caller,
+                () -> mapper.mapCargoDtlListToDto(
+                        cargoDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<ContainerRequestDto>> containerFuture = supplyWithUserContext(caller,
+                () -> mapper.mapContainerDtlListToDto(
+                        containerDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<ChargeRequestDto>> chargesFuture = supplyWithUserContext(caller,
+                () -> mapper.mapChargesDtlListToDto(
+                        chargesDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<PartBlRequestDto>> partBlFuture = supplyWithUserContext(caller,
+                () -> mapper.mapContainerPrtListToDto(
+                        containerPrtRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<NotifyPartyRequestDto>> notifyPartyFuture = supplyWithUserContext(caller,
+                () -> mapper.mapEmailFaxDtlListToDto(
+                        emailFaxDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<MafiRequestDto>> mafiFuture = supplyWithUserContext(caller,
+                () -> mapper.mapMafiDtlListToDto(
+                        mafiDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+
+        try {
+            CompletableFuture.allOf(generalCargoFuture, cargoFuture, containerFuture, chargesFuture,
+                    partBlFuture, notifyPartyFuture, mafiFuture).join();
+        } catch (CompletionException e) {
+            if (e.getCause() instanceof RuntimeException re) {
+                throw re;
+            }
+            throw e;
+        }
+
+        dto.setGeneralCargoDetails(generalCargoFuture.join());
+        dto.setCargoDescriptions(cargoFuture.join());
+        dto.setContainers(containerFuture.join());
+        dto.setChargeDetails(chargesFuture.join());
+        dto.setPartBls(partBlFuture.join());
+        dto.setNotifyParties(notifyPartyFuture.join());
+        dto.setMafiDetails(mafiFuture.join());
+    }
+
+    /**
+     * UserContext is a plain ThreadLocal a pooled thread cannot see, so the caller's auth details
+     * are carried onto the worker and cleared again once the task is done.
+     */
+    private <T> CompletableFuture<T> supplyWithUserContext(CustomAuthDetails caller, Supplier<T> supplier) {
+        return CompletableFuture.supplyAsync(() -> {
+            UserContext.setCurrentUser(caller);
+            try {
+                return supplier.get();
+            } finally {
+                UserContext.clear();
+            }
+        }, lovLookupExecutor);
     }
 
     private LovItem getVoyageByPoid(Long voyagePoid) {
@@ -1188,96 +1279,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             """, "poid", poid);
     }
 
-    private LovItem getContainerTypeByCode(String code) {
-        if (code == null || code.isBlank()) return null;
-        return singleRowLovItem("""
-            SELECT CONTAINER_TYPE_POID AS POID, CONTAINER_TYPE_CODE AS CODE, CONTAINER_TYPE_NAME AS DESCRIPTION
-            FROM SHIP_CONTAINER_TYPE_MASTER
-            WHERE ACTIVE = 'Y'
-              AND UPPER(CONTAINER_TYPE_CODE) = UPPER(:code)
-            """, "code", code);
-    }
-
-    private LovItem getBasisByCode(String code) {
-        if (code == null || code.isBlank()) return null;
-        String upperCode = code.toUpperCase();
-        if ("AUTOBASIS".equals(upperCode)) {
-            return new LovItem(273L, "AUTOBASIS", "AUTOBASIS", "AUTOBASIS", 273L, 0);
-        }
-        if ("NOBASIS".equals(upperCode)) {
-            return new LovItem(253L, "NOBASIS", "NOBASIS", "NOBASIS", 253L, 0);
-        }
-        return getContainerTypeByCode(code);
-    }
-
-    private LovItem getImcoClassByCode(String code) {
-        if (code == null || code.isBlank()) return null;
-        return singleRowLovItem("""
-            SELECT IMCO_CLASS_TYPE_POID AS POID, IMCO_CLASS_TYPE_CODE AS CODE, IMCO_CLASS_TYPE_NAME AS DESCRIPTION
-            FROM SHIP_IMCO_CLASS_TYPE_MASTER
-            WHERE UPPER(IMCO_CLASS_TYPE_CODE) = UPPER(:code)
-            """, "code", code);
-    }
-
-    private LovItem getOogTypeByCode(String code) {
-        if (code == null || code.isBlank()) return null;
-        return singleRowLovItem("""
-            SELECT OOG_TYPE_POID AS POID, OOG_TYPE_CODE AS CODE, OOG_TYPE_NAME AS DESCRIPTION
-            FROM SHIP_OOG_TYPE_MASTER
-            WHERE UPPER(OOG_TYPE_CODE) = UPPER(:code)
-            """, "code", code);
-    }
-
-    private LovItem getChargeMasterByPoid(Long poid) {
-        if (poid == null) return null;
-        return singleRowLovItem("""
-            SELECT CHARGE_POID AS POID, CHARGE_CODE AS CODE, CHARGE_NAME AS DESCRIPTION
-            FROM SHIP_CHARGE_MASTER
-            WHERE CHARGE_POID = :poid
-            """, "poid", poid);
-    }
-
-    private LovItem getCurrencyByCode(String code) {
-        if (code == null || code.isBlank()) return null;
-        return singleRowLovItem("""
-            SELECT CURRENCY_POID AS POID, CURRENCY_CODE AS CODE, CURRENCY_NAME AS DESCRIPTION
-            FROM GLOBAL_CURRENCY_MASTER
-            WHERE UPPER(CURRENCY_CODE) = UPPER(:code)
-            """, "code", code);
-    }
-
-    private LovItem getTaxByPoid(Long poid) {
-        if (poid == null) return null;
-        return singleRowLovItem("""
-            SELECT TAX_POID AS POID, TAX_CODE AS CODE,
-                   TAX_NAME || ', PERCENTAGE=' || PERCENTAGE || ', CREDIT/DEBIT=' || GL_CREDIT_DEBIT AS DESCRIPTION
-            FROM GLOBAL_TAX_MASTER
-            WHERE TAX_POID = :poid
-            """, "poid", poid);
-    }
-
-    private LovItem getReceiptInvoiceByPoid(Long poid) {
-        if (poid == null) return null;
-        List<Object[]> rows = chargesDtlRepository.findReceiptInvoiceLovByPoids(List.of(poid));
-        if (rows.isEmpty()) return null;
-        Object[] row = rows.get(0);
-        Long rowPoid = ((Number) row[0]).longValue();
-        String code = (String) row[1];
-        String description = (String) row[2];
-        return new LovItem(rowPoid, code, description, description, rowPoid, 0);
-    }
-
-    private LovItem getContainerPartByCode(String code) {
-        if (code == null || code.isBlank()) return null;
-        List<Object[]> rows = containerDtlRepository.findContainerPartLovByCode(code);
-        if (rows.isEmpty()) return null;
-        Object[] row = rows.get(0);
-        Long poid = ((Number) row[0]).longValue();
-        String rowCode = (String) row[1];
-        String description = (String) row[2];
-        return new LovItem(poid, rowCode, description, description, poid, 0);
-    }
-
     private void enrichLovData(ImportManifestBlRequestDto dto) {
         if (dto == null) {
             return;
@@ -1354,17 +1355,17 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         if (dtos == null || dtos.isEmpty()) {
             return;
         }
-        for (GeneralCargoRequestDto dto : dtos) {
-            try {
-                if (dto.getComodityPoid() != null) {
-                    dto.setComodityDet(getCommodityByPoid(dto.getComodityPoid()));
-                }
-                if (dto.getDestinationPortPoid() != null) {
-                    dto.setDestinationPortDet(getPortByPoid(dto.getDestinationPortPoid()));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for general cargo detail with detRowId: {}", dto.getDetRowId(), e);
+        try {
+            Map<Long, LovItem> commodities = masterLovLookup.commoditiesByPoid(
+                    poids(dtos, GeneralCargoRequestDto::getComodityPoid));
+            Map<Long, LovItem> ports = masterLovLookup.portsByPoid(
+                    poids(dtos, GeneralCargoRequestDto::getDestinationPortPoid));
+            for (GeneralCargoRequestDto dto : dtos) {
+                dto.setComodityDet(commodities.get(dto.getComodityPoid()));
+                dto.setDestinationPortDet(ports.get(dto.getDestinationPortPoid()));
             }
+        } catch (Exception e) {
+            log.warn("Failed to fetch LOV data for general cargo details", e);
         }
     }
 
@@ -1373,26 +1374,26 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         if (dtos == null || dtos.isEmpty()) {
             return;
         }
-        for (ContainerRequestDto dto : dtos) {
-            try {
-                if (dto.getComodityPoid() != null) {
-                    dto.setComodityDet(getCommodityByPoid(dto.getComodityPoid()));
-                }
-                if (dto.getDestinationPortPoid() != null) {
-                    dto.setDestinationPortDet(getPortByPoid(dto.getDestinationPortPoid()));
-                }
-                if (dto.getEquipmentIsoType() != null) {
-                    dto.setEquipmentIsoTypeDet(getContainerTypeByCode(dto.getEquipmentIsoType()));
-                }
-                if (dto.getImcoClassType() != null) {
-                    dto.setImcoClassTypeDet(getImcoClassByCode(dto.getImcoClassType()));
-                }
-                if (dto.getOogType() != null) {
-                    dto.setOogTypeDet(getOogTypeByCode(dto.getOogType()));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for container detail with detRowId: {}", dto.getDetRowId(), e);
+        try {
+            Map<Long, LovItem> commodities = masterLovLookup.commoditiesByPoid(
+                    poids(dtos, ContainerRequestDto::getComodityPoid));
+            Map<Long, LovItem> ports = masterLovLookup.portsByPoid(
+                    poids(dtos, ContainerRequestDto::getDestinationPortPoid));
+            Map<String, LovItem> isoTypes = masterLovLookup.containerTypesByCode(
+                    codes(dtos, ContainerRequestDto::getEquipmentIsoType));
+            Map<String, LovItem> imcoClasses = masterLovLookup.imcoClassesByCode(
+                    codes(dtos, ContainerRequestDto::getImcoClassType));
+            Map<String, LovItem> oogTypes = masterLovLookup.oogTypesByCode(
+                    codes(dtos, ContainerRequestDto::getOogType));
+            for (ContainerRequestDto dto : dtos) {
+                dto.setComodityDet(commodities.get(dto.getComodityPoid()));
+                dto.setDestinationPortDet(ports.get(dto.getDestinationPortPoid()));
+                dto.setEquipmentIsoTypeDet(lookupByCode(isoTypes, dto.getEquipmentIsoType()));
+                dto.setImcoClassTypeDet(lookupByCode(imcoClasses, dto.getImcoClassType()));
+                dto.setOogTypeDet(lookupByCode(oogTypes, dto.getOogType()));
             }
+        } catch (Exception e) {
+            log.warn("Failed to fetch LOV data for container details", e);
         }
     }
 
@@ -1401,37 +1402,43 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         if (dtos == null || dtos.isEmpty()) {
             return;
         }
-        for (ChargeRequestDto dto : dtos) {
-            try {
-                if (dto.getChargePoid() != null) {
-                    dto.setChargeDet(getChargeMasterByPoid(dto.getChargePoid()));
-                }
+        try {
+            Map<Long, LovItem> chargeMasters = masterLovLookup.chargeMastersByPoid(
+                    poids(dtos, ChargeRequestDto::getChargePoid));
+            Map<String, LovItem> currencies = masterLovLookup.currenciesByCode(
+                    codes(dtos, ChargeRequestDto::getCurrencyCode));
+            Map<String, LovItem> bases = masterLovLookup.basisByCode(
+                    codes(dtos, ChargeRequestDto::getChargeBasisOn));
+            Map<Long, LovItem> ports = masterLovLookup.portsByPoid(
+                    poids(dtos, ChargeRequestDto::getPaidAtPortPoid));
+            Map<Long, LovItem> taxes = masterLovLookup.taxesByPoid(
+                    poids(dtos, ChargeRequestDto::getTaxPoid));
+            Map<Long, LovItem> receiptInvoices = lovService.getLovItemsByPoids(
+                    poids(dtos, ChargeRequestDto::getReceiptInvoicePoid), "MANIFEST_RECEIPT_INVOICE",
+                    groupPoid, companyPoid, userPoid);
+
+            for (ChargeRequestDto dto : dtos) {
+                dto.setChargeDet(chargeMasters.get(dto.getChargePoid()));
+                dto.setCurrencyCodeDet(lookupByCode(currencies, dto.getCurrencyCode()));
+                dto.setBasisDet(lookupByCode(bases, dto.getChargeBasisOn()));
+                dto.setPaidAtPortDet(ports.get(dto.getPaidAtPortPoid()));
+                dto.setTaxDet(taxes.get(dto.getTaxPoid()));
                 if (dto.getChargeType() != null) {
                     dto.setChargeTypeDet(CHARGE_TYPE_LOV.get(dto.getChargeType().toUpperCase()));
-                }
-                if (dto.getCurrencyCode() != null) {
-                    dto.setCurrencyCodeDet(getCurrencyByCode(dto.getCurrencyCode()));
                 }
                 if (dto.getFreightType() != null) {
                     dto.setFreightTypeDet(SHIP_FREIGHT_TYPE_LOV.get(dto.getFreightType().toUpperCase()));
                 }
-                if (dto.getChargeBasisOn() != null) {
-                    dto.setBasisDet(getBasisByCode(dto.getChargeBasisOn()));
-                }
-                if (dto.getPaidAtPortPoid() != null) {
-                    dto.setPaidAtPortDet(getPortByPoid(dto.getPaidAtPortPoid()));
-                }
                 if (dto.getReceiptInvoicePoid() != null) {
-                    dto.setReceiptInvoiceDet(
-                            lovService.getLovItemByPoid(dto.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE",
-                                    groupPoid, companyPoid, userPoid));
+                    // getLovItemByPoid used to return a poid-only stub when the LOV had no matching
+                    // row; the batch form simply omits the key, so keep the stub for an equal shape.
+                    LovItem receiptInvoiceDet = receiptInvoices.get(dto.getReceiptInvoicePoid());
+                    dto.setReceiptInvoiceDet(receiptInvoiceDet != null ? receiptInvoiceDet
+                            : new LovItem(dto.getReceiptInvoicePoid(), null, null, null, null, null));
                 }
-                if (dto.getTaxPoid() != null) {
-                    dto.setTaxDet(getTaxByPoid(dto.getTaxPoid()));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for charge detail with detRowId: {}", dto.getDetRowId(), e);
             }
+        } catch (Exception e) {
+            log.warn("Failed to fetch LOV data for charge details", e);
         }
     }
 
@@ -1440,18 +1447,49 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         if (dtos == null || dtos.isEmpty()) {
             return;
         }
-        for (PartBlRequestDto dto : dtos) {
-            try {
-                if (dto.getComodityPoid() != null) {
-                    dto.setComodityDet(getCommodityByPoid(dto.getComodityPoid()));
-                }
-                if (dto.getContainerNo() != null && !dto.getContainerNo().trim().isEmpty()) {
-                    dto.setContainerNoDet(getContainerPartByCode(dto.getContainerNo()));
-                }
-            } catch (Exception e) {
-                log.warn("Failed to fetch LOV data for part BL detail with detRowId: {}", dto.getDetRowId(), e);
+        try {
+            Map<Long, LovItem> commodities = masterLovLookup.commoditiesByPoid(
+                    poids(dtos, PartBlRequestDto::getComodityPoid));
+            Map<String, LovItem> containerParts = containerPartsByCode(
+                    codes(dtos, PartBlRequestDto::getContainerNo));
+            for (PartBlRequestDto dto : dtos) {
+                dto.setComodityDet(commodities.get(dto.getComodityPoid()));
+                dto.setContainerNoDet(lookupByCode(containerParts, dto.getContainerNo()));
             }
+        } catch (Exception e) {
+            log.warn("Failed to fetch LOV data for part BL details", e);
         }
+    }
+
+    /** Not master data — these are container rows of live manifests, so they are never cached. */
+    private Map<String, LovItem> containerPartsByCode(List<String> codes) {
+        if (codes.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, LovItem> map = new HashMap<>();
+        containerDtlRepository.findContainerPartLovByCodes(codes).forEach(row -> {
+            Long poid = ((Number) row[0]).longValue();
+            String code = (String) row[1];
+            String description = (String) row[2];
+            map.putIfAbsent(code.toUpperCase(), new LovItem(poid, code, description, description, poid, 0));
+        });
+        return map;
+    }
+
+    /** Distinct, non-null poids for one column across a detail list — the key set for a batch lookup. */
+    private static <T> List<Long> poids(List<T> rows, java.util.function.Function<T, Long> getter) {
+        return rows.stream().map(getter).filter(Objects::nonNull).distinct().collect(Collectors.toList());
+    }
+
+    /** Distinct, non-blank codes for one column across a detail list. */
+    private static <T> List<String> codes(List<T> rows, java.util.function.Function<T, String> getter) {
+        return rows.stream().map(getter).filter(c -> c != null && !c.isBlank())
+                .map(String::trim).distinct().collect(Collectors.toList());
+    }
+
+    /** Batched code lookups are keyed by uppercase code; rows keep whatever casing they were saved with. */
+    private static LovItem lookupByCode(Map<String, LovItem> map, String code) {
+        return code == null || code.isBlank() ? null : map.get(code.trim().toUpperCase());
     }
 
     private void validateMandatoryFieldsForUpdate(ImportManifestBlUpdateDTO dto) {

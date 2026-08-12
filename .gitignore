@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### graphify ###
+# Local lifecycle state — must never be committed (per project graphify rules).
+.graphify/branch.json
+.graphify/worktree.json
+.graphify/needs_update
+.graphify/.graphify_detect.json
+# Scratch AST cache written next to sources by hook-rebuild.
+**/.graphify/cache/

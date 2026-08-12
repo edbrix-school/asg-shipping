@@ -79,6 +79,10 @@ class ImportManifestServiceImplTest {
     private DocumentDeleteService documentDeleteService;
     @Mock
     private BlManifestValidationService blManifestValidationService;
+    @Mock
+    private com.asg.shipping.common.lov.MasterLovLookup masterLovLookup;
+    @Mock
+    private java.util.concurrent.Executor lovLookupExecutor;
 
     @InjectMocks
     private ImportManifestBlServiceImpl service;
@@ -171,6 +175,10 @@ class ImportManifestServiceImplTest {
     void getImportManifestBl_Success() {
         // Given
         Long id = 1L;
+        // No transaction is active in the test, so the detail tables load through the parallel
+        // branch; run those tasks inline so the assertions stay deterministic.
+        doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
+                .when(lovLookupExecutor).execute(any());
         when(repository.findByTransactionPoid(id)).thenReturn(Optional.of(mockEntity));
         when(mapper.mapToDto(mockEntity)).thenReturn(mockRequestDto);
         when(generalDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(id)).thenReturn(Collections.emptyList());

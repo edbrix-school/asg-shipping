@@ -187,6 +187,7 @@ import static org.mockito.Mockito.*;
         void validateDemurrageAmounts_Mismatch() {
                 createDto.setCharges(Collections.singletonList(ReceiptCharges.builder()
                                 .amount(new BigDecimal("100.00"))
+                                .chargePoid(94L)
                                 .amountSelect("Y")
                                 .build()));
                 createDto.setContainer(Collections.singletonList(ReceiptContainerDto.builder()
@@ -198,6 +199,7 @@ import static org.mockito.Mockito.*;
                                 .build()));
 
                 when(manifestHdrRepository.existsById(anyLong())).thenReturn(true);
+                when(procRepository.getDemurrageChargePoid()).thenReturn(94L);
                 assertThrows(ValidationException.class, () -> validationService.validateReceiptCreation(createDto));
         }
 

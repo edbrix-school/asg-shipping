@@ -82,6 +82,7 @@ class ImportManifestServiceImplTest {
     @Mock private EntityManager entityManager;
     @Mock private com.asg.shipping.common.service.LovService lovService;
     @Mock private com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper mapper;
+    @Mock private com.asg.shipping.common.lov.MasterLovLookup masterLovLookup;
     @Mock private Executor lovLookupExecutor;
 
     @InjectMocks

@@ -6,6 +6,7 @@ import com.asg.shipping.receipts.dto.ReceiptBlAutoPopulateDto;
 import com.asg.shipping.receipts.dto.TaxConfig;
 import com.asg.shipping.receipts.repository.ShipReceiptProcRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
@@ -124,12 +125,13 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 			Long linePoid,
 			LocalDate fromDate,
 			LocalDate toDate,
-			Long extraFreeDays) {
+			Long extraFreeDays,
+			Long companyPoid) {
 
 		log.info(
 				"Demurrage inputs → groupPoid={}, companyPoid={}, blPoid={}, containerNo={}, isoType={}, linePoid={}, fromDate={}, toDate={}, extraFreeDays={}",
 				UserContext.getGroupPoid(),
-				UserContext.getCompanyPoid(),
+				companyPoid,
 				blPoid,
 				containerNo,
 				containerIsoType,
@@ -159,7 +161,7 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
                 FROM DUAL
             """)
 					.setParameter("groupPoid", UserContext.getGroupPoid())
-					.setParameter("companyPoid", UserContext.getCompanyPoid())
+					.setParameter("companyPoid", companyPoid)
 					.setParameter("currentTransactionPoid",
 							currentTransactionPoid != null ? currentTransactionPoid : 0)
 					.setParameter("blPoid", blPoid)
@@ -619,6 +621,29 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 		} catch (Exception e) {
 			log.error("Error in validateDuplicatePaymentRef", e);
 			return "FALSE";
+		}
+	}
+
+	@Override
+	public Long getDemurrageChargePoid() {
+		try {
+			String sql = """
+					SELECT PARAMETER_VALUE
+					FROM GLOBAL_PARAMETERS
+					WHERE PARAMETER_KEYID_TYPE = :parameterKey
+					""";
+
+			Object result = entityManager
+					.createNativeQuery(sql)
+					.setParameter("parameterKey", "SHDEMURRAGE")
+					.getSingleResult();
+
+			return result != null ? Long.valueOf(result.toString()) : null;
+		} catch (NoResultException ex) {
+			return null;
+		} catch (Exception e) {
+			log.error("Error fetching SHDEMURRAGE charge POID", e);
+			throw new DataAccessResourceFailureException("Unable to fetch demurrage charge POID", e);
 		}
 	}
 }

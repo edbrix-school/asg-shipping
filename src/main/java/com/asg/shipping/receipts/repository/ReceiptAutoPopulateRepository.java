@@ -26,4 +26,6 @@ public interface ReceiptAutoPopulateRepository {
 
     LocalDate findArrivalDate(Long blPoid, String containerNo);
 
+    Long findCompanyPoidByBlPoid(Long blPoid);
+
 }

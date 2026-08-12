@@ -6,6 +6,7 @@ import com.asg.common.lib.dto.request.LogRequestDto;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.model.CustomAuthDetails;
+import com.asg.shipping.common.lov.MasterLovLookup;
 import com.asg.shipping.common.dto.LovItem;
 import com.asg.shipping.common.service.LovService;
 import com.asg.common.lib.service.PrintService;
@@ -29,10 +30,6 @@ import com.asg.shipping.importmanifestbl.util.ImportManifestDropdownMapper;
 import com.asg.shipping.importmanifestbl.util.ImportManifestMapper;
 import com.asg.shipping.shippingffchargemaster.repository.ShipChargeMasterRepository;
 import com.asg.shipping.shippingffchargemaster.entity.ShipChargeMaster;
-import com.asg.shipping.portMaster.repository.PortMasterRepository;
-import com.asg.shipping.portMaster.entity.PortMaster;
-import com.asg.shipping.common.repository.GlobalCurrencyMasterRepository;
-import com.asg.shipping.common.entity.GlobalCurrencyMaster;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -103,9 +100,8 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     private final ApplicationEventPublisher eventPublisher;
     private final BlManifestValidationService blManifestValidationService;
     private final ShipChargeMasterRepository chargeMasterRepository;
-    private final PortMasterRepository portMasterRepository;
-    private final GlobalCurrencyMasterRepository globalCurrencyMasterRepository;
     private final LovService lovService;
+    private final MasterLovLookup masterLovLookup;
     private final JdbcTemplate jdbcTemplate;
     @Qualifier("lovLookupExecutor")
     private final Executor lovLookupExecutor;
@@ -292,15 +288,15 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         List<String> distinctCurrencyCodes = allCurrencyCodes.stream().distinct().collect(Collectors.toList());
         List<String> distinctBasisCodes = allBasisCodes.stream().distinct().collect(Collectors.toList());
 
-        CompletableFuture<Map<Long, LovItem>> commodityFuture = supplyWithUserContext(caller, () -> getCommodityByPoidMap(distinctCommodityPoids));
-        CompletableFuture<Map<Long, LovItem>> portFuture = supplyWithUserContext(caller, () -> getPortByPoidMap(distinctPortPoids));
-        CompletableFuture<Map<String, LovItem>> isoTypeFuture = supplyWithUserContext(caller, () -> getContainerTypeByCodeMap(isoTypes));
-        CompletableFuture<Map<String, LovItem>> imcoTypeFuture = supplyWithUserContext(caller, () -> getImcoClassByCodeMap(imcoTypes));
-        CompletableFuture<Map<String, LovItem>> oogTypeFuture = supplyWithUserContext(caller, () -> getOogTypeByCodeMap(oogTypes));
-        CompletableFuture<Map<Long, LovItem>> chargeMasterFuture = supplyWithUserContext(caller, () -> getChargeMasterByPoidMap(allChargePoids));
-        CompletableFuture<Map<String, LovItem>> currencyFuture = supplyWithUserContext(caller, () -> getCurrencyByCodeMap(distinctCurrencyCodes));
-        CompletableFuture<Map<String, LovItem>> basisFuture = supplyWithUserContext(caller, () -> getBasisByCodeMap(distinctBasisCodes));
-        CompletableFuture<Map<Long, LovItem>> taxFuture = supplyWithUserContext(caller, () -> getTaxByPoidMap(taxPoids));
+        CompletableFuture<Map<Long, LovItem>> commodityFuture = supplyWithUserContext(caller, () -> masterLovLookup.commoditiesByPoid(distinctCommodityPoids));
+        CompletableFuture<Map<Long, LovItem>> portFuture = supplyWithUserContext(caller, () -> masterLovLookup.portsByPoid(distinctPortPoids));
+        CompletableFuture<Map<String, LovItem>> isoTypeFuture = supplyWithUserContext(caller, () -> masterLovLookup.containerTypesByCode(isoTypes));
+        CompletableFuture<Map<String, LovItem>> imcoTypeFuture = supplyWithUserContext(caller, () -> masterLovLookup.imcoClassesByCode(imcoTypes));
+        CompletableFuture<Map<String, LovItem>> oogTypeFuture = supplyWithUserContext(caller, () -> masterLovLookup.oogTypesByCode(oogTypes));
+        CompletableFuture<Map<Long, LovItem>> chargeMasterFuture = supplyWithUserContext(caller, () -> masterLovLookup.chargeMastersByPoid(allChargePoids));
+        CompletableFuture<Map<String, LovItem>> currencyFuture = supplyWithUserContext(caller, () -> masterLovLookup.currenciesByCode(distinctCurrencyCodes));
+        CompletableFuture<Map<String, LovItem>> basisFuture = supplyWithUserContext(caller, () -> masterLovLookup.basisByCode(distinctBasisCodes));
+        CompletableFuture<Map<Long, LovItem>> taxFuture = supplyWithUserContext(caller, () -> masterLovLookup.taxesByPoid(taxPoids));
         CompletableFuture<Map<Long, LovItem>> containerPartFuture = supplyWithUserContext(caller, () -> getContainerPartByPoidMap(distinctPartBlContainerPoids));
         CompletableFuture<Map<Long, LovItem>> receiptInvoiceFuture = receiptInvoicePoids.isEmpty()
                 ? CompletableFuture.completedFuture(Collections.<Long, LovItem>emptyMap())
@@ -442,52 +438,6 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         return map;
     }
 
-    private Map<String, LovItem> getContainerTypeByCodeMap(List<String> codes) {
-        List<String> upperCodes = codes == null ? List.of() : codes.stream().map(String::toUpperCase).distinct().collect(Collectors.toList());
-        if (upperCodes.isEmpty()) return Collections.emptyMap();
-        String sql = "SELECT CONTAINER_TYPE_POID AS POID, CONTAINER_TYPE_CODE AS CODE, CONTAINER_TYPE_NAME AS DESCRIPTION "
-                + "FROM SHIP_CONTAINER_TYPE_MASTER "
-                + "WHERE ACTIVE = 'Y' AND UPPER(CONTAINER_TYPE_CODE) IN (" + inClausePlaceholders(upperCodes.size()) + ")";
-        Map<String, LovItem> map = new HashMap<>();
-        fetchLovRows(sql, upperCodes).forEach(row -> {
-            Long poid = ((Number) row[0]).longValue();
-            String code = (String) row[1];
-            String description = (String) row[2];
-            map.put(code.toUpperCase(), new LovItem(poid, code, description, description, poid, 0));
-        });
-        return map;
-    }
-
-    private Map<String, LovItem> getBasisByCodeMap(List<String> codes) {
-        List<String> upperCodes = codes == null ? List.of() : codes.stream().map(String::toUpperCase).distinct().collect(Collectors.toList());
-        if (upperCodes.isEmpty()) return Collections.emptyMap();
-
-        Map<String, LovItem> map = new HashMap<>();
-        // Static rows the original CONTAINER_TYPE_MASTER LOV UNION ALLs in alongside real container types.
-        if (upperCodes.contains("AUTOBASIS")) {
-            map.put("AUTOBASIS", new LovItem(273L, "AUTOBASIS", "AUTOBASIS", "AUTOBASIS", 273L, 0));
-        }
-        if (upperCodes.contains("NOBASIS")) {
-            map.put("NOBASIS", new LovItem(253L, "NOBASIS", "NOBASIS", "NOBASIS", 253L, 0));
-        }
-
-        List<String> dbCodes = upperCodes.stream()
-                .filter(c -> !c.equals("AUTOBASIS") && !c.equals("NOBASIS"))
-                .collect(Collectors.toList());
-        if (!dbCodes.isEmpty()) {
-            String sql = "SELECT CONTAINER_TYPE_POID AS POID, CONTAINER_TYPE_CODE AS CODE, CONTAINER_TYPE_NAME AS DESCRIPTION "
-                    + "FROM SHIP_CONTAINER_TYPE_MASTER "
-                    + "WHERE ACTIVE = 'Y' AND UPPER(CONTAINER_TYPE_CODE) IN (" + inClausePlaceholders(dbCodes.size()) + ")";
-            fetchLovRows(sql, dbCodes).forEach(row -> {
-                Long poid = ((Number) row[0]).longValue();
-                String code = (String) row[1];
-                String description = (String) row[2];
-                map.put(code.toUpperCase(), new LovItem(poid, code, description, description, poid, 0));
-            });
-        }
-        return map;
-    }
-
     private Map<Long, LovItem> getQuotationByPoidMap(List<Long> poids) {
         if (poids == null || poids.isEmpty()) return Collections.emptyMap();
         String sql = "SELECT TRANSACTION_POID AS POID, "
@@ -502,94 +452,6 @@ public class ImportManifestServiceImpl implements ImportManifestService {
                 + "         || ',Comodity ' || COMMODITY_TYPE AS DESCRIPTION "
                 + "FROM SALES_QUOTATION_SHIP_HDR "
                 + "WHERE TRANSACTION_POID IN (" + inClausePlaceholders(poids.size()) + ")";
-        Map<Long, LovItem> map = new HashMap<>();
-        fetchLovRows(sql, poids).forEach(row -> {
-            Long poid = ((Number) row[0]).longValue();
-            String description = (String) row[2];
-            map.put(poid, new LovItem(poid, (String) row[1], description, description, poid, 0));
-        });
-        return map;
-    }
-
-    private Map<Long, LovItem> getCommodityByPoidMap(List<Long> poids) {
-        if (poids == null || poids.isEmpty()) return Collections.emptyMap();
-        String sql = "SELECT COMODITY_POID AS POID, COMODITY_CODE AS CODE, COMODITY_NAME AS DESCRIPTION "
-                + "FROM SHIP_COMODITY_MASTER "
-                + "WHERE COMODITY_POID IN (" + inClausePlaceholders(poids.size()) + ")";
-        Map<Long, LovItem> map = new HashMap<>();
-        fetchLovRows(sql, poids).forEach(row -> {
-            Long poid = ((Number) row[0]).longValue();
-            String description = (String) row[2];
-            map.put(poid, new LovItem(poid, (String) row[1], description, description, poid, 0));
-        });
-        return map;
-    }
-
-    private Map<Long, LovItem> getPortByPoidMap(List<Long> poids) {
-        if (poids == null || poids.isEmpty()) return Collections.emptyMap();
-        Map<Long, LovItem> map = new HashMap<>();
-        portMasterRepository.findByPortPoidIn(poids).forEach(p ->
-                map.put(p.getPortPoid(), new LovItem(p.getPortPoid(), p.getPortCode(), p.getPortName(), p.getPortName(), p.getPortPoid(), 0)));
-        return map;
-    }
-
-    private Map<String, LovItem> getImcoClassByCodeMap(List<String> codes) {
-        List<String> upperCodes = codes == null ? List.of() : codes.stream().map(String::toUpperCase).distinct().collect(Collectors.toList());
-        if (upperCodes.isEmpty()) return Collections.emptyMap();
-        String sql = "SELECT IMCO_CLASS_TYPE_POID AS POID, IMCO_CLASS_TYPE_CODE AS CODE, IMCO_CLASS_TYPE_NAME AS DESCRIPTION "
-                + "FROM SHIP_IMCO_CLASS_TYPE_MASTER "
-                + "WHERE UPPER(IMCO_CLASS_TYPE_CODE) IN (" + inClausePlaceholders(upperCodes.size()) + ")";
-        Map<String, LovItem> map = new HashMap<>();
-        fetchLovRows(sql, upperCodes).forEach(row -> {
-            Long poid = ((Number) row[0]).longValue();
-            String code = (String) row[1];
-            String description = (String) row[2];
-            map.put(code.toUpperCase(), new LovItem(poid, code, description, description, poid, 0));
-        });
-        return map;
-    }
-
-    private Map<String, LovItem> getOogTypeByCodeMap(List<String> codes) {
-        List<String> upperCodes = codes == null ? List.of() : codes.stream().map(String::toUpperCase).distinct().collect(Collectors.toList());
-        if (upperCodes.isEmpty()) return Collections.emptyMap();
-        String sql = "SELECT OOG_TYPE_POID AS POID, OOG_TYPE_CODE AS CODE, OOG_TYPE_NAME AS DESCRIPTION "
-                + "FROM SHIP_OOG_TYPE_MASTER "
-                + "WHERE UPPER(OOG_TYPE_CODE) IN (" + inClausePlaceholders(upperCodes.size()) + ")";
-        Map<String, LovItem> map = new HashMap<>();
-        fetchLovRows(sql, upperCodes).forEach(row -> {
-            Long poid = ((Number) row[0]).longValue();
-            String code = (String) row[1];
-            String description = (String) row[2];
-            map.put(code.toUpperCase(), new LovItem(poid, code, description, description, poid, 0));
-        });
-        return map;
-    }
-
-    private Map<Long, LovItem> getChargeMasterByPoidMap(List<Long> poids) {
-        if (poids == null || poids.isEmpty()) return Collections.emptyMap();
-        Map<Long, LovItem> map = new HashMap<>();
-        chargeMasterRepository.findByChargePoidIn(poids).forEach(c ->
-                map.put(c.getChargePoid(), new LovItem(c.getChargePoid(), c.getChargeCode(), c.getChargeName(), c.getChargeName(), c.getChargePoid(), 0)));
-        return map;
-    }
-
-    private Map<String, LovItem> getCurrencyByCodeMap(List<String> codes) {
-        if (codes == null || codes.isEmpty()) return Collections.emptyMap();
-        Map<String, LovItem> map = new HashMap<>();
-        globalCurrencyMasterRepository.findByCurrencyCodeIgnoreCaseIn(codes).forEach(c -> {
-            Long poid = c.getCurrencyPoid().longValue();
-            map.put(c.getCurrencyCode().toUpperCase(),
-                    new LovItem(poid, c.getCurrencyCode(), c.getCurrencyName(), c.getCurrencyName(), poid, 0));
-        });
-        return map;
-    }
-
-    private Map<Long, LovItem> getTaxByPoidMap(List<Long> poids) {
-        if (poids == null || poids.isEmpty()) return Collections.emptyMap();
-        String sql = "SELECT TAX_POID AS POID, TAX_CODE AS CODE, "
-                + "       TAX_NAME || ', PERCENTAGE=' || PERCENTAGE || ', CREDIT/DEBIT=' || GL_CREDIT_DEBIT AS DESCRIPTION "
-                + "FROM GLOBAL_TAX_MASTER "
-                + "WHERE TAX_POID IN (" + inClausePlaceholders(poids.size()) + ")";
         Map<Long, LovItem> map = new HashMap<>();
         fetchLovRows(sql, poids).forEach(row -> {
             Long poid = ((Number) row[0]).longValue();

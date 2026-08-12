@@ -231,6 +231,7 @@ public class ReceiptsMapper {
 				.remarks(dto.getRemarks())
 				.tokenNumber(dto.getToken())
 				.rcptAmount(dto.getAmount() != null ? BigDecimal.valueOf(dto.getAmount()) : null)
+				.rcptType("CASHCHEQUESPLIT")
 				.build();
 	}
 }
