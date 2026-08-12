@@ -6,6 +6,7 @@ import com.asg.shipping.receipts.dto.ReceiptBlAutoPopulateDto;
 import com.asg.shipping.receipts.dto.TaxConfig;
 import com.asg.shipping.receipts.repository.ShipReceiptProcRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.ParameterMode;
 import jakarta.persistence.StoredProcedureQuery;
 import lombok.RequiredArgsConstructor;
@@ -620,6 +621,29 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 		} catch (Exception e) {
 			log.error("Error in validateDuplicatePaymentRef", e);
 			return "FALSE";
+		}
+	}
+
+	@Override
+	public Long getDemurrageChargePoid() {
+		try {
+			String sql = """
+					SELECT PARAMETER_VALUE
+					FROM GLOBAL_PARAMETERS
+					WHERE PARAMETER_KEYID_TYPE = :parameterKey
+					""";
+
+			Object result = entityManager
+					.createNativeQuery(sql)
+					.setParameter("parameterKey", "SHDEMURRAGE")
+					.getSingleResult();
+
+			return result != null ? Long.valueOf(result.toString()) : null;
+		} catch (NoResultException ex) {
+			return null;
+		} catch (Exception e) {
+			log.error("Error fetching SHDEMURRAGE charge POID", e);
+			throw new DataAccessResourceFailureException("Unable to fetch demurrage charge POID", e);
 		}
 	}
 }
