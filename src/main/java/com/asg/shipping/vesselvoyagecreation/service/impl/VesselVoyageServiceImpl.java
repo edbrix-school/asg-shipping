@@ -392,19 +392,11 @@ public class VesselVoyageServiceImpl implements VesselVoyageService {
 
         String ext = originalFilename.toLowerCase();
         if (ext.endsWith(".xlsx") || ext.endsWith(".xls")) {
-            // Clean up any pre-existing corrupted dummy rows (e.g. containerNo="AS") for this voyage
-            List<ShipVoyageTranshipDtlEntity> existingRows = transhipDtlRepository.findByTransactionPoidOrderByDetRowIdAsc(voyagePoid);
-            for (ShipVoyageTranshipDtlEntity row : existingRows) {
-                if (row.getContainerNo() != null && (row.getContainerNo().equalsIgnoreCase("AS") || "Q".equalsIgnoreCase(row.getStatus()) || row.getContainerNo().length() < 4)) {
-                    transhipDtlRepository.delete(row);
-                }
-            }
+            // Delete pre-existing transhipment rows for this voyage before loading fresh Excel template rows to avoid duplicates on re-upload
+            transhipDtlRepository.deleteByTransactionPoid(voyagePoid);
 
             try (java.io.InputStream in = file.getInputStream()) {
-                Long maxDetRowId = transhipDtlRepository.findMaxDetRowId(voyagePoid);
-                long startDetRowId = maxDetRowId != null ? maxDetRowId : 0L;
-
-                List<ShipVoyageTranshipDtlEntity> parsedEntities = com.asg.shipping.vesselvoyagecreation.util.TranshipmentExcelParser.parseTranshipmentExcel(in, voyagePoid, startDetRowId);
+                List<ShipVoyageTranshipDtlEntity> parsedEntities = com.asg.shipping.vesselvoyagecreation.util.TranshipmentExcelParser.parseTranshipmentExcel(in, voyagePoid, 0L);
                 if (!parsedEntities.isEmpty()) {
                     transhipDtlRepository.saveAll(parsedEntities);
                     log.info("Saved {} transhipment rows directly from Excel file: {}", parsedEntities.size(), originalFilename);
