@@ -1,6 +1,8 @@
 package com.asg.shipping.commoditymaster.service;
 
 import com.asg.common.lib.dto.FilterDto;
+import com.asg.shipping.common.cache.MasterDataCache;
+import org.springframework.cache.annotation.CacheEvict;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
 import com.asg.common.lib.dto.DeleteReasonDto;
@@ -102,6 +104,7 @@ public class CommodityMasterService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = MasterDataCache.COMMODITIES, key = "#commodityPoid")
     public CommodityMasterResponse updateCommodity(Long commodityPoid, CommodityMasterRequest request) {
         log.info(UPDATING_COMMODITY_MSG, commodityPoid);
         CommodityMaster existing = commodityMasterRepository.findByCommodityPoid(commodityPoid)
@@ -120,6 +123,7 @@ public class CommodityMasterService {
     }
 
     @Transactional
+    @CacheEvict(cacheNames = MasterDataCache.COMMODITIES, key = "#commodityPoid")
     public void softDeleteCommodity(Long commodityPoid, DeleteReasonDto deleteReasonDto) {
         log.info(DELETING_COMMODITY_MSG, commodityPoid);
 

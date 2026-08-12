@@ -1,6 +1,8 @@
 package com.asg.shipping.containertypes.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.shipping.common.cache.MasterDataCache;
+import org.springframework.cache.annotation.CacheEvict;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -129,6 +131,9 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
 
     @Override
     @Transactional
+    // Keyed by container-type CODE rather than poid, and an update can rename the code, which would
+    // strand the entry under the old key — so clear the whole (small, rarely written) cache.
+    @CacheEvict(cacheNames = MasterDataCache.CONTAINER_TYPES, allEntries = true)
     public ContainerTypeDto updateContainerType(Long id, ContainerTypeUpdateDTO dto, Long groupPoid, Long userPoid) {
         log.info("Updating container type with id: {}, groupId: {}, userPoid: {}", id, groupPoid, userPoid);
 
@@ -190,6 +195,7 @@ public class ContainerTypeServiceImpl implements ContainerTypeService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = MasterDataCache.CONTAINER_TYPES, allEntries = true)
     public void deleteContainerType(Long id, DeleteReasonDto deleteReasonDto) {
         log.info("Deleting container type with id: {}", id);
 

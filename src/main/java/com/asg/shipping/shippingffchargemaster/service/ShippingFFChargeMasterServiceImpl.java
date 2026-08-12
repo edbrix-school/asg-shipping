@@ -2,6 +2,8 @@ package com.asg.shipping.shippingffchargemaster.service;
 
 
 import com.asg.common.lib.dto.*;
+import com.asg.shipping.common.cache.MasterDataCache;
+import org.springframework.cache.annotation.CacheEvict;
 import com.asg.common.lib.enums.LogDetailsEnum;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
@@ -74,6 +76,7 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = MasterDataCache.CHARGE_MASTERS, key = "#id")
     public ChargeDto updateCharge(Long id, ChargeUpdateDTO dto, Long groupPoid, Long userPoid) {
         log.info("Updating charge with id: {}, groupId: {}, userPoid: {}", id, groupPoid, userPoid);
 
@@ -129,6 +132,7 @@ public class ShippingFFChargeMasterServiceImpl implements ShippingFFChargeMaster
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = MasterDataCache.CHARGE_MASTERS, key = "#id")
     public void deleteCharge(Long id, DeleteReasonDto deleteReasonDto) {
 
 
