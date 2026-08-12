@@ -5,6 +5,7 @@ import com.asg.shipping.receipts.dto.ReceiptAutoPopulateContainerDto;
 import com.asg.shipping.receipts.dto.TaxConfig;
 import com.asg.shipping.receipts.repository.ReceiptAutoPopulateRepository;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -341,6 +342,34 @@ public class ReceiptAutoPopulateRepositoryImpl implements ReceiptAutoPopulateRep
             return convertToLocalDate(result);
         } catch (Exception e) {
             return null;
+        }
+    }
+    @Override
+    public Long findCompanyPoidByBlPoid(Long blPoid) {
+        try {
+            String sql = """
+            SELECT COMPANY_POID
+            FROM SHIP_BL_MANIFEST_HDR
+            WHERE TRANSACTION_POID = :blPoid
+            """;
+
+            Object result = entityManager
+                    .createNativeQuery(sql)
+                    .setParameter("blPoid", blPoid)
+                    .getSingleResult();
+
+            return result != null
+                    ? ((Number) result).longValue()
+                    : null;
+
+        } catch (NoResultException e) {
+            log.warn("No company POID found for BL POID: {}", blPoid);
+            return null;
+
+        } catch (Exception e) {
+            log.error("Error finding company POID for BL POID: {}", blPoid, e);
+            throw new DataAccessResourceFailureException(
+                    "Unable to find company POID for BL: " + blPoid, e);
         }
     }
 

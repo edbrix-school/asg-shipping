@@ -254,7 +254,7 @@ public class ReceiptsServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
             when(autoPopulateRepository.findLinePoidByBlPoid(1001L)).thenReturn(new java.math.BigDecimal("50"));
-            when(procRepository.calculateDemurrageAmount(any(), any(), any(), any(), any(), any(), any(), any()))
+            when(procRepository.calculateDemurrageAmount(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(new java.math.BigDecimal("500"));
             when(procRepository.getDemurrageTaxInfo(anyLong())).thenReturn(taxConfig);
             when(procRepository.getCombinedCharges(anyLong(), anyLong()))
@@ -314,7 +314,7 @@ public class ReceiptsServiceImplTest {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getCompanyPoid).thenReturn(100L);
             when(autoPopulateRepository.findLinePoidByBlPoid(1001L)).thenReturn(new java.math.BigDecimal("50"));
-            when(procRepository.calculateDemurrageAmount(any(), any(), any(), any(), any(), any(), any(), any()))
+            when(procRepository.calculateDemurrageAmount(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(new java.math.BigDecimal("500"));
             when(procRepository.getDemurrageTaxInfo(anyLong())).thenReturn(null);
             when(procRepository.getCombinedCharges(anyLong(), anyLong())).thenReturn(null);

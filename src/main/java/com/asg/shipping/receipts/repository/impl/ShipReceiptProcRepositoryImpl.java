@@ -124,12 +124,13 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
 			Long linePoid,
 			LocalDate fromDate,
 			LocalDate toDate,
-			Long extraFreeDays) {
+			Long extraFreeDays,
+			Long companyPoid) {
 
 		log.info(
 				"Demurrage inputs → groupPoid={}, companyPoid={}, blPoid={}, containerNo={}, isoType={}, linePoid={}, fromDate={}, toDate={}, extraFreeDays={}",
 				UserContext.getGroupPoid(),
-				UserContext.getCompanyPoid(),
+				companyPoid,
 				blPoid,
 				containerNo,
 				containerIsoType,
@@ -159,7 +160,7 @@ public class ShipReceiptProcRepositoryImpl implements ShipReceiptProcRepository 
                 FROM DUAL
             """)
 					.setParameter("groupPoid", UserContext.getGroupPoid())
-					.setParameter("companyPoid", UserContext.getCompanyPoid())
+					.setParameter("companyPoid", companyPoid)
 					.setParameter("currentTransactionPoid",
 							currentTransactionPoid != null ? currentTransactionPoid : 0)
 					.setParameter("blPoid", blPoid)

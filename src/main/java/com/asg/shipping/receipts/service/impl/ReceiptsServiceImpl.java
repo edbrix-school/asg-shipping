@@ -573,6 +573,7 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 				// Legacy logic: fetch Arrival Date for the stored procedure
 				LocalDate arrivalDate = autoPopulateRepository.findArrivalDate(requestDto.getBlPoid(), container.getContainerNo());
 				BigDecimal linePoid = autoPopulateRepository.findLinePoidByBlPoid(requestDto.getBlPoid());
+				Long companyPoidByBlPoid = autoPopulateRepository.findCompanyPoidByBlPoid(requestDto.getBlPoid());
 
 				containerDemurrage = procRepository.calculateDemurrageAmount(
 						requestDto.getTransactionPoid(),
@@ -582,7 +583,8 @@ public class ReceiptsServiceImpl implements ReceiptsService {
 						linePoid != null ? linePoid.longValue() : null,
 						arrivalDate, 
 						container.getToDate(),
-						container.getExtraFreeDays()
+						container.getExtraFreeDays(),
+						companyPoidByBlPoid
 				);
 
 				if (container.getFromDate() != null) {
