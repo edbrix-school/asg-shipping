@@ -72,4 +72,15 @@ public interface ShipBlManifestContainerDtlRepository extends JpaRepository<Ship
         WHERE UPPER(CONTAINER_NO) = UPPER(:code)
         """, nativeQuery = true)
     List<Object[]> findContainerPartLovByCode(@Param("code") String code);
+
+    /**
+     * Batch form of {@link #findContainerPartLovByCode}, so a document with many part BLs resolves
+     * every container number in one query instead of one per row.
+     */
+    @Query(value = """
+        SELECT TRANSACTION_POID AS POID, CONTAINER_NO AS CODE, CONTAINER_NO AS DESCRIPTION
+        FROM SHIP_BL_MANIFEST_CONTAINER_DTL
+        WHERE UPPER(CONTAINER_NO) IN (:codes)
+        """, nativeQuery = true)
+    List<Object[]> findContainerPartLovByCodes(@Param("codes") List<String> codes);
 }

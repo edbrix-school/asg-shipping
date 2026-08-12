@@ -82,7 +82,7 @@ class ImportManifestServiceImplTest {
     @Mock private EntityManager entityManager;
     @Mock private com.asg.shipping.common.service.LovService lovService;
     @Mock private com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper mapper;
-    @Mock private com.asg.shipping.common.cache.MasterDataCache masterDataCache;
+    @Mock private com.asg.shipping.common.lov.MasterLovLookup masterLovLookup;
     @Mock private Executor lovLookupExecutor;
 
     @InjectMocks
@@ -401,15 +401,6 @@ class ImportManifestServiceImplTest {
         when(headerRepository.findById(1L)).thenReturn(Optional.of(header));
         // The header is mapped straight across now — no second read through updateService.
         when(mapper.mapToDto(header)).thenReturn(new ImportManifestBlRequestDto());
-        // Behave like a cold cache: every key misses, so the underlying loader still runs.
-        lenient().when(masterDataCache.getAll(any(), any(), any())).thenAnswer(inv -> {
-            Collection<Object> keys = inv.getArgument(1);
-            if (keys == null || keys.isEmpty()) {
-                return Collections.emptyMap();
-            }
-            java.util.function.Function<List<Object>, Map<Object, Object>> loader = inv.getArgument(2);
-            return loader.apply(new ArrayList<>(keys));
-        });
         lenient().when(lovService.getLovItemsByPoids(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
         lenient().when(lovService.getLovItemsByCodes(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
         lenient().doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
