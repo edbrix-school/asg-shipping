@@ -1,6 +1,8 @@
 package com.asg.shipping.portMaster.service;
 
 import com.asg.common.lib.dto.DeleteReasonDto;
+import com.asg.shipping.common.cache.MasterDataCache;
+import org.springframework.cache.annotation.CacheEvict;
 import com.asg.common.lib.dto.FilterDto;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.dto.RawSearchResult;
@@ -81,6 +83,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = MasterDataCache.PORTS, key = "#portPoid")
 	public PortMasterResponse updatePort( Long portPoid, PortMasterRequest request) {
 
         Long groupPoid = UserContext.getGroupPoid();
@@ -144,6 +147,7 @@ public class PortMasterServiceImpl implements PortMasterService {
 	}
 
 	@Override
+	@CacheEvict(cacheNames = MasterDataCache.PORTS, key = "#portPoid")
 	public void deletePort( Long portPoid, @Valid DeleteReasonDto deleteReasonDto) {
         Long groupPoid = UserContext.getGroupPoid();
 		PortMaster entity = repository.findById(new PortMasterId(groupPoid, portPoid))
