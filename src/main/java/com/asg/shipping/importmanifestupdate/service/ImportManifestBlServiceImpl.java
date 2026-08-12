@@ -1125,52 +1125,50 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
         }, lovLookupExecutor);
     }
 
-    private LovItem getVoyageByPoid(Long voyagePoid) {
-        if (voyagePoid == null) return null;
-        String sql = """
-            SELECT VOYAGE.TRANSACTION_POID AS POID,
-                   VOYAGE.JOB_NO AS CODE,
-                   'VESSEL/VOYAGE/LINE :' || VESSEL.VESSEL_NAME || '/' || VOYAGE.VOYAGE_NO || '/' || MLINE.LINE_CODE AS DESCRIPTION
-            FROM SHIP_VOYAGE_HDR VOYAGE
-            LEFT JOIN SHIP_LINE_MASTER MLINE ON VOYAGE.LINE_POID = MLINE.LINE_POID
-            LEFT JOIN SHIP_VESSEL_MASTER VESSEL ON VESSEL.VESSEL_POID = VOYAGE.VESSEL_POID
-            WHERE VOYAGE.TRANSACTION_POID = :poid
+    /**
+     * Every header LOV that resolves through plain SQL, joined onto the header row in one shot.
+     *
+     * These were eleven separate single-row round-trips. They all hang off primary keys of the one
+     * header row, so a LEFT JOIN returns exactly one row with no multiplication — unlike the detail
+     * tables, where joining the master data would both defeat the LOV cache and repeat every master
+     * name once per detail row.
+     *
+     * The column list, the join keys and the quotation description expression are lifted verbatim
+     * from the per-field queries this replaces, so a row resolves here exactly as it did before.
+     * Ports deliberately join on PORT_POID alone, matching the query that was here previously.
+     */
+    private static final String HEADER_LOV_PROJECTION_SQL = """
+            SELECT QTN.TRANSACTION_POID, QTN.DOC_REF,
+                   'Vld_DT-' || TO_CHAR(QTN.VALIDITY_FROM_DATE, 'DD-MON-RRRR') || ' BTW ' || TO_CHAR(QTN.VALIDITY_TO_DATE, 'DD-MON-RRRR')
+                     || ', Cust- ' || QTN.CUSTOMER_POID || ' ' || GET_ADDRESS_NAME(SUBSTR(QTN.CUSTOMER_POID, 1, INSTR(QTN.CUSTOMER_POID, '.') - 1))
+                     || ', Line- ' || QTN.LINE_POID || ' ' || GET_LINE_CODE(QTN.LINE_POID)
+                     || ', SalesMan-' || QTN.SALESMAN_POID || ' ' || GET_SALESMAN_NAME(QTN.SALESMAN_POID)
+                     || ', Load-' || GET_PORT_NAME(QTN.LOADING_PORT_POID)
+                     || ', Discharge-' || GET_PORT_NAME(QTN.DISCHARGE_PORT_POID)
+                     || ', Company-' || GET_COMPANY_CODE(QTN.QTN_COMPANY)
+                     || ',Comodity ' || QTN.COMMODITY_TYPE,
+                   SLM.SALESMAN_POID, SLM.SALESMAN_CODE, SLM.SALESMAN_NAME,
+                   CMD.COMODITY_POID, CMD.COMODITY_CODE, CMD.COMODITY_NAME,
+                   CNS.ADDRESS_MASTER_POID, CNS.ADDRESS_MASTER_POID, CNS.ADDRESS_NAME,
+                   NF1.ADDRESS_MASTER_POID, NF1.ADDRESS_MASTER_POID, NF1.ADDRESS_NAME,
+                   CUS.CUSTOMER_POID, CUS.CUSTOMER_CODE, CUS.CUSTOMER_NAME,
+                   RCP.PORT_POID, RCP.PORT_CODE, RCP.PORT_NAME,
+                   DLV.PORT_POID, DLV.PORT_CODE, DLV.PORT_NAME,
+                   LOD.PORT_POID, LOD.PORT_CODE, LOD.PORT_NAME,
+                   DIS.PORT_POID, DIS.PORT_CODE, DIS.PORT_NAME
+            FROM SHIP_BL_MANIFEST_HDR HDR
+            LEFT JOIN SALES_QUOTATION_SHIP_HDR QTN ON QTN.TRANSACTION_POID  = HDR.QUOTATION_TRANSACTION_POID
+            LEFT JOIN SALES_SALESMAN_MASTER    SLM ON SLM.SALESMAN_POID     = HDR.SALESMAN_POID
+            LEFT JOIN SHIP_COMODITY_MASTER     CMD ON CMD.COMODITY_POID     = HDR.COMODITY_POID
+            LEFT JOIN GLOBAL_ADDRESS_MASTER    CNS ON CNS.ADDRESS_MASTER_POID = HDR.CONSIGNEE_POID
+            LEFT JOIN GLOBAL_ADDRESS_MASTER    NF1 ON NF1.ADDRESS_MASTER_POID = HDR.NOTIFY_POID_1
+            LEFT JOIN SALES_CUSTOMER_MASTER    CUS ON CUS.CUSTOMER_POID     = HDR.BOOKING_PARTY_POID
+            LEFT JOIN SHIP_PORT_MASTER         RCP ON RCP.PORT_POID         = HDR.PLACE_OF_RECIEPT_POID
+            LEFT JOIN SHIP_PORT_MASTER         DLV ON DLV.PORT_POID         = HDR.PLACE_OF_DELIEVERY_POID
+            LEFT JOIN SHIP_PORT_MASTER         LOD ON LOD.PORT_POID         = HDR.PORT_OF_LOADING_POID
+            LEFT JOIN SHIP_PORT_MASTER         DIS ON DIS.PORT_POID         = HDR.PORT_OF_DISCHARGE_POID
+            WHERE HDR.TRANSACTION_POID = :poid
             """;
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = entityManager.createNativeQuery(sql).setParameter("poid", voyagePoid).getResultList();
-        if (rows.isEmpty()) return null;
-        Object[] row = rows.get(0);
-        Long poid = ((Number) row[0]).longValue();
-        String code = row[1] != null ? row[1].toString() : null;
-        String description = row[2] != null ? row[2].toString() : null;
-        return new LovItem(poid, code, description, description, poid, 0);
-    }
-
-    private LovItem getQuotationByPoid(Long quotationPoid) {
-        if (quotationPoid == null) return null;
-        String sql = """
-            SELECT TRANSACTION_POID AS POID,
-                   DOC_REF AS CODE,
-                   'Vld_DT-' || TO_CHAR(VALIDITY_FROM_DATE, 'DD-MON-RRRR') || ' BTW ' || TO_CHAR(VALIDITY_TO_DATE, 'DD-MON-RRRR')
-                     || ', Cust- ' || CUSTOMER_POID || ' ' || GET_ADDRESS_NAME(SUBSTR(CUSTOMER_POID, 1, INSTR(CUSTOMER_POID, '.') - 1))
-                     || ', Line- ' || LINE_POID || ' ' || GET_LINE_CODE(LINE_POID)
-                     || ', SalesMan-' || SALESMAN_POID || ' ' || GET_SALESMAN_NAME(SALESMAN_POID)
-                     || ', Load-' || GET_PORT_NAME(LOADING_PORT_POID)
-                     || ', Discharge-' || GET_PORT_NAME(DISCHARGE_PORT_POID)
-                     || ', Company-' || GET_COMPANY_CODE(QTN_COMPANY)
-                     || ',Comodity ' || COMMODITY_TYPE AS DESCRIPTION
-            FROM SALES_QUOTATION_SHIP_HDR
-            WHERE TRANSACTION_POID = :poid
-            """;
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = entityManager.createNativeQuery(sql).setParameter("poid", quotationPoid).getResultList();
-        if (rows.isEmpty()) return null;
-        Object[] row = rows.get(0);
-        Long poid = ((Number) row[0]).longValue();
-        String code = row[1] != null ? row[1].toString() : null;
-        String description = row[2] != null ? row[2].toString() : null;
-        return new LovItem(poid, code, description, description, poid, 0);
-    }
 
     private static final Map<String, LovItem> CHARGE_TYPE_LOV = Map.of(
             "MANIFEST", new LovItem(1L, "MANIFEST", "MANIFESTED PRINCIPAL PAYABLE", "MANIFESTED PRINCIPAL PAYABLE", 1L, 0),
@@ -1223,62 +1221,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             "6", new LovItem(6L, "6", "VERIFIED-ELSEWHERE", "VERIFIED-ELSEWHERE", 6L, 0)
     );
 
-    private LovItem singleRowLovItem(String sql, String paramName, Object paramValue) {
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = entityManager.createNativeQuery(sql).setParameter(paramName, paramValue).getResultList();
-        if (rows.isEmpty()) return null;
-        Object[] row = rows.get(0);
-        Long poid = ((Number) row[0]).longValue();
-        String code = row[1] != null ? row[1].toString() : null;
-        String description = row[2] != null ? row[2].toString() : null;
-        return new LovItem(poid, code, description, description, poid, 0);
-    }
-
-    private LovItem getCommodityByPoid(Long poid) {
-        if (poid == null) return null;
-        return singleRowLovItem("""
-            SELECT COMODITY_POID AS POID, COMODITY_CODE AS CODE, COMODITY_NAME AS DESCRIPTION
-            FROM SHIP_COMODITY_MASTER
-            WHERE COMODITY_POID = :poid
-            """, "poid", poid);
-    }
-
-    private LovItem getSalesmanByPoid(Long poid) {
-        if (poid == null) return null;
-        return singleRowLovItem("""
-            SELECT SALESMAN_POID AS POID, SALESMAN_CODE AS CODE, SALESMAN_NAME AS DESCRIPTION
-            FROM SALES_SALESMAN_MASTER
-            WHERE SALESMAN_POID = :poid
-            """, "poid", poid);
-    }
-
-    private LovItem getAddressByPoid(Long poid) {
-        if (poid == null) return null;
-        return singleRowLovItem("""
-            SELECT ADDRESS_MASTER_POID AS POID, ADDRESS_MASTER_POID AS CODE, ADDRESS_NAME AS DESCRIPTION
-            FROM GLOBAL_ADDRESS_MASTER
-            WHERE ADDRESS_MASTER_POID = :poid
-            """, "poid", poid);
-    }
-
-    private LovItem getCustomerByPoid(Long poid) {
-        if (poid == null) return null;
-        return singleRowLovItem("""
-            SELECT CUSTOMER_POID AS POID, CUSTOMER_CODE AS CODE, CUSTOMER_NAME AS DESCRIPTION
-            FROM SALES_CUSTOMER_MASTER
-            WHERE CUSTOMER_POID = :poid
-            """, "poid", poid);
-    }
-
-    private LovItem getPortByPoid(Long poid) {
-        if (poid == null) return null;
-        return singleRowLovItem("""
-            SELECT PORT_POID AS POID, PORT_CODE AS CODE, PORT_NAME AS DESCRIPTION
-            FROM SHIP_PORT_MASTER
-            WHERE PORT_POID = :poid
-            """, "poid", poid);
-    }
-
     private void enrichLovData(ImportManifestBlRequestDto dto) {
         if (dto == null) {
             return;
@@ -1297,20 +1239,16 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
     private void enrichHeaderLovData(ImportManifestBlRequestDto dto, Long groupPoid, Long companyPoid,
             Long userPoid) {
         try {
+            // Voyage stays on the LOV framework: VESSAL_VOYAGE applies group/company/user scoping
+            // that a direct join would silently drop.
             if (dto.getVoyageTransactionPoid() != null) {
                 dto.setVoyageTransactionPoidDet(
                         lovService.getLovItemByPoid(dto.getVoyageTransactionPoid(), "VESSAL_VOYAGE", groupPoid,
                                 companyPoid, userPoid));
             }
-            if (dto.getQuotationTransactionPoid() != null) {
-                dto.setQuotationTransactionDet(getQuotationByPoid(dto.getQuotationTransactionPoid()));
-            }
-            if (dto.getSalesmanPoid() != null) {
-                dto.setSalesmanDet(getSalesmanByPoid(dto.getSalesmanPoid()));
-            }
-            if (dto.getComodityPoid() != null) {
-                dto.setComodityDet(getCommodityByPoid(dto.getComodityPoid()));
-            }
+
+            applyHeaderLovProjection(dto);
+
             if (dto.getCargoType() != null) {
                 dto.setCargoTypeDet(CARGO_TYPE_LOV.get(dto.getCargoType().trim().toUpperCase()));
             }
@@ -1320,27 +1258,6 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             if (dto.getBlIssueType() != null) {
                 dto.setBlIssueTypeDet(BL_ISSUE_TYPE_LOV.get(dto.getBlIssueType().trim().toUpperCase()));
             }
-            if (dto.getConsigneePoid() != null) {
-                dto.setConsigneeDet(getAddressByPoid(dto.getConsigneePoid()));
-            }
-            if (dto.getNotifyPoid1() != null) {
-                dto.setNotifyPoid1Det(getAddressByPoid(dto.getNotifyPoid1()));
-            }
-            if (dto.getBookingPartyPoid() != null) {
-                dto.setBookingPartyDet(getCustomerByPoid(dto.getBookingPartyPoid()));
-            }
-            if (dto.getPlaceOfRecieptPoid() != null) {
-                dto.setPlaceOfRecieptDet(getPortByPoid(dto.getPlaceOfRecieptPoid()));
-            }
-            if (dto.getPlaceOfDelieveryPoid() != null) {
-                dto.setPlaceOfDelieveryDet(getPortByPoid(dto.getPlaceOfDelieveryPoid()));
-            }
-            if (dto.getPortOfLoadingPoid() != null) {
-                dto.setPortOfLoadingDet(getPortByPoid(dto.getPortOfLoadingPoid()));
-            }
-            if (dto.getPortOfDischargePoid() != null) {
-                dto.setPortOfDischargeDet(getPortByPoid(dto.getPortOfDischargePoid()));
-            }
             if (dto.getHoldReason() != null) {
                 dto.setHoldReasonDet(SHIP_DO_ANOTICE_HOLD_LOV.get(dto.getHoldReason().trim().toUpperCase()));
             }
@@ -1348,6 +1265,41 @@ public class ImportManifestBlServiceImpl implements ImportManifestBlService {
             log.warn("Failed to fetch LOV data for header detail with transactionPoid: {}", dto.getTransactionPoid(),
                     e);
         }
+    }
+
+    private void applyHeaderLovProjection(ImportManifestBlRequestDto dto) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = entityManager.createNativeQuery(HEADER_LOV_PROJECTION_SQL)
+                .setParameter("poid", dto.getTransactionPoid()).getResultList();
+        if (rows.isEmpty()) {
+            return;
+        }
+        Object[] row = rows.get(0);
+        dto.setQuotationTransactionDet(lovAt(row, 0));
+        dto.setSalesmanDet(lovAt(row, 3));
+        dto.setComodityDet(lovAt(row, 6));
+        dto.setConsigneeDet(lovAt(row, 9));
+        dto.setNotifyPoid1Det(lovAt(row, 12));
+        dto.setBookingPartyDet(lovAt(row, 15));
+        dto.setPlaceOfRecieptDet(lovAt(row, 18));
+        dto.setPlaceOfDelieveryDet(lovAt(row, 21));
+        dto.setPortOfLoadingDet(lovAt(row, 24));
+        dto.setPortOfDischargeDet(lovAt(row, 27));
+    }
+
+    /**
+     * Reads one (POID, CODE, DESCRIPTION) triple out of the projected row. A null poid means the
+     * header column was null or the joined row is missing — both produced a null det before.
+     */
+    private static LovItem lovAt(Object[] row, int offset) {
+        Object poid = row[offset];
+        if (poid == null) {
+            return null;
+        }
+        Long id = ((Number) poid).longValue();
+        String code = row[offset + 1] != null ? row[offset + 1].toString() : null;
+        String description = row[offset + 2] != null ? row[offset + 2].toString() : null;
+        return new LovItem(id, code, description, description, id, 0);
     }
 
     private void enrichGeneralCargoLovData(List<GeneralCargoRequestDto> dtos,
