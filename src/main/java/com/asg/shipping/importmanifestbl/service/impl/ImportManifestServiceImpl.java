@@ -134,15 +134,24 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
     @Override
     public ImportManifestBlDto getImportManifest(Long transactionPoId) {
-        ShipBlManifestHdr entity = findEntityById(transactionPoId);
         log.info("Getting Import Manifest BL with id: {}", transactionPoId);
 
-
-
-
+        ShipBlManifestHdr entity = findEntityById(transactionPoId);
         ImportManifestBlDto dto = ImportManifestMapper.mapToDto(entity);
 
-        ImportManifestBlRequestDto updateDto = updateService.getImportManifestBl(transactionPoId);
+        CustomAuthDetails caller = UserContext.getCurrentUser();
+
+        // Quotation is the only header LOV resolved on this screen and it depends solely on the
+        // header, so it runs alongside the detail loads instead of queueing behind them.
+        List<Long> quotationPoids = dto.getQuotationPoid() != null ? List.of(dto.getQuotationPoid()) : List.of();
+        CompletableFuture<Map<Long, LovItem>> quotationFuture =
+                supplyWithUserContext(caller, () -> getQuotationByPoidMap(quotationPoids));
+
+        // The header is already in hand, so map it straight across instead of going through
+        // updateService.getImportManifestBl() — that re-reads the header and runs a per-row LOV
+        // pass whose every result enrichLovData below overwrites.
+        ImportManifestBlRequestDto updateDto = mapper.mapToDto(entity);
+        loadDetailTablesInParallel(updateDto, transactionPoId, caller);
 
         dto.setSimpleCargoDescription(getCargoDescriptionByType(updateDto.getCargoDescriptions(), CARGO_TYPE_DESCRIPTION, "DESCRIPTION"));
         dto.setSimpleCargoMarks(getCargoDescriptionByType(updateDto.getCargoDescriptions(), CARGO_TYPE_MARKS, "MARKS"));
@@ -155,21 +164,60 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         dto.setPartBls(ImportManifestMapper.mapToPartBls(updateDto.getPartBls()));
         dto.setMafiDetails(ImportManifestMapper.mapToMafiDetails(updateDto.getMafiDetails()));
         dto.setAddressDetails(ImportManifestMapper.mapToAddressDetails(updateDto.getNotifyParties()));
-        enrichLovData(dto);
+        enrichLovData(dto, caller, quotationFuture);
 
         log.info("Successfully retrieved Import Manifest BL with id: {}", transactionPoId);
         return dto;
     }
 
-    private void enrichLovData(ImportManifestBlDto dto) {
+    /**
+     * The seven detail tables are independent of one another, so they are fetched concurrently
+     * rather than one after the next. {@code getImportManifest} is deliberately not
+     * {@code @Transactional}: with no transaction bound to the request thread every repository
+     * call below opens and closes its own EntityManager, which is what makes it safe to run them
+     * off-thread (see {@link #supplyWithUserContext}).
+     */
+    private void loadDetailTablesInParallel(ImportManifestBlRequestDto dto, Long transactionPoid,
+            CustomAuthDetails caller) {
+        CompletableFuture<List<GeneralCargoRequestDto>> generalCargoFuture = supplyWithUserContext(caller,
+                () -> mapper.mapGeneralDtlListToDto(
+                        generalDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<CargoDescriptionRequestDto>> cargoFuture = supplyWithUserContext(caller,
+                () -> mapper.mapCargoDtlListToDto(
+                        cargoDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<ContainerRequestDto>> containerFuture = supplyWithUserContext(caller,
+                () -> mapper.mapContainerDtlListToDto(
+                        containerDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<ChargeRequestDto>> chargesFuture = supplyWithUserContext(caller,
+                () -> mapper.mapChargesDtlListToDto(
+                        chargesDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<PartBlRequestDto>> partBlFuture = supplyWithUserContext(caller,
+                () -> mapper.mapContainerPrtListToDto(
+                        containerPrtRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<NotifyPartyRequestDto>> notifyPartyFuture = supplyWithUserContext(caller,
+                () -> mapper.mapEmailFaxDtlListToDto(
+                        emailFaxDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+        CompletableFuture<List<MafiRequestDto>> mafiFuture = supplyWithUserContext(caller,
+                () -> mapper.mapMafiDtlListToDto(
+                        mafiDtlRepository.findByIdTransactionPoidOrderByIdDetRowId(transactionPoid)));
+
+        joinAllFutures(generalCargoFuture, cargoFuture, containerFuture, chargesFuture, partBlFuture,
+                notifyPartyFuture, mafiFuture);
+
+        dto.setGeneralCargoDetails(generalCargoFuture.join());
+        dto.setCargoDescriptions(cargoFuture.join());
+        dto.setContainers(containerFuture.join());
+        dto.setChargeDetails(chargesFuture.join());
+        dto.setPartBls(partBlFuture.join());
+        dto.setNotifyParties(notifyPartyFuture.join());
+        dto.setMafiDetails(mafiFuture.join());
+    }
+
+    private void enrichLovData(ImportManifestBlDto dto, CustomAuthDetails caller,
+            CompletableFuture<Map<Long, LovItem>> quotationFuture) {
         if (dto == null) return;
 
-        CustomAuthDetails caller = UserContext.getCurrentUser();
-
         // --- Batch collect all poids/codes per LOV name ---
-        // Header
-        List<Long> quotationPoids = dto.getQuotationPoid() != null ? List.of(dto.getQuotationPoid()) : List.of();
-
         // General cargo
         List<GeneralCargoDto> generalCargos = dto.getGeneralCargoDetails() != null ? dto.getGeneralCargoDetails() : List.of();
         List<Long> commodityPoidsGC = generalCargos.stream().map(GeneralCargoDto::getCommodityPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
@@ -191,6 +239,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         List<String> basisCodes = charges.stream().map(ChargeDto::getBasisPoid).filter(s -> s != null && !s.isBlank()).distinct().collect(Collectors.toList());
         List<Long> paidAtPortPoids = charges.stream().map(ChargeDto::getPaidAtPortPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
         List<Long> taxPoids = charges.stream().map(ChargeDto::getTaxPoid).filter(p -> p != null).distinct().collect(Collectors.toList());
+        List<Long> receiptInvoicePoids = charges.stream().map(ChargeDto::getReceiptInvoicePoid).filter(p -> p != null).distinct().collect(Collectors.toList());
 
         // Other charges
         List<ChargeOtherDto> otherCharges = dto.getOtherCharges() != null ? dto.getOtherCharges() : List.of();
@@ -243,20 +292,24 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         List<String> distinctCurrencyCodes = allCurrencyCodes.stream().distinct().collect(Collectors.toList());
         List<String> distinctBasisCodes = allBasisCodes.stream().distinct().collect(Collectors.toList());
 
-        CompletableFuture<Map<Long, LovItem>> quotationFuture = supplyLovAsync(caller, () -> getQuotationByPoidMap(quotationPoids));
-        CompletableFuture<Map<Long, LovItem>> commodityFuture = supplyLovAsync(caller, () -> getCommodityByPoidMap(distinctCommodityPoids));
-        CompletableFuture<Map<Long, LovItem>> portFuture = supplyLovAsync(caller, () -> getPortByPoidMap(distinctPortPoids));
-        CompletableFuture<Map<String, LovItem>> isoTypeFuture = supplyLovAsync(caller, () -> getContainerTypeByCodeMap(isoTypes));
-        CompletableFuture<Map<String, LovItem>> imcoTypeFuture = supplyLovAsync(caller, () -> getImcoClassByCodeMap(imcoTypes));
-        CompletableFuture<Map<String, LovItem>> oogTypeFuture = supplyLovAsync(caller, () -> getOogTypeByCodeMap(oogTypes));
-        CompletableFuture<Map<Long, LovItem>> chargeMasterFuture = supplyLovAsync(caller, () -> getChargeMasterByPoidMap(allChargePoids));
-        CompletableFuture<Map<String, LovItem>> currencyFuture = supplyLovAsync(caller, () -> getCurrencyByCodeMap(distinctCurrencyCodes));
-        CompletableFuture<Map<String, LovItem>> basisFuture = supplyLovAsync(caller, () -> getBasisByCodeMap(distinctBasisCodes));
-        CompletableFuture<Map<Long, LovItem>> taxFuture = supplyLovAsync(caller, () -> getTaxByPoidMap(taxPoids));
-        CompletableFuture<Map<Long, LovItem>> containerPartFuture = supplyLovAsync(caller, () -> getContainerPartByPoidMap(distinctPartBlContainerPoids));
+        CompletableFuture<Map<Long, LovItem>> commodityFuture = supplyWithUserContext(caller, () -> getCommodityByPoidMap(distinctCommodityPoids));
+        CompletableFuture<Map<Long, LovItem>> portFuture = supplyWithUserContext(caller, () -> getPortByPoidMap(distinctPortPoids));
+        CompletableFuture<Map<String, LovItem>> isoTypeFuture = supplyWithUserContext(caller, () -> getContainerTypeByCodeMap(isoTypes));
+        CompletableFuture<Map<String, LovItem>> imcoTypeFuture = supplyWithUserContext(caller, () -> getImcoClassByCodeMap(imcoTypes));
+        CompletableFuture<Map<String, LovItem>> oogTypeFuture = supplyWithUserContext(caller, () -> getOogTypeByCodeMap(oogTypes));
+        CompletableFuture<Map<Long, LovItem>> chargeMasterFuture = supplyWithUserContext(caller, () -> getChargeMasterByPoidMap(allChargePoids));
+        CompletableFuture<Map<String, LovItem>> currencyFuture = supplyWithUserContext(caller, () -> getCurrencyByCodeMap(distinctCurrencyCodes));
+        CompletableFuture<Map<String, LovItem>> basisFuture = supplyWithUserContext(caller, () -> getBasisByCodeMap(distinctBasisCodes));
+        CompletableFuture<Map<Long, LovItem>> taxFuture = supplyWithUserContext(caller, () -> getTaxByPoidMap(taxPoids));
+        CompletableFuture<Map<Long, LovItem>> containerPartFuture = supplyWithUserContext(caller, () -> getContainerPartByPoidMap(distinctPartBlContainerPoids));
+        CompletableFuture<Map<Long, LovItem>> receiptInvoiceFuture = receiptInvoicePoids.isEmpty()
+                ? CompletableFuture.completedFuture(Collections.<Long, LovItem>emptyMap())
+                : supplyWithUserContext(caller, () -> lovService.getLovItemsByPoids(receiptInvoicePoids,
+                        "MANIFEST_RECEIPT_INVOICE", caller.getGroupPoid(), caller.getCompanyPoid(),
+                        caller.getUserPoid()));
 
-        joinAllLovFutures(quotationFuture, commodityFuture, portFuture, isoTypeFuture, imcoTypeFuture, oogTypeFuture,
-                chargeMasterFuture, currencyFuture, basisFuture, taxFuture, containerPartFuture);
+        joinAllFutures(quotationFuture, commodityFuture, portFuture, isoTypeFuture, imcoTypeFuture, oogTypeFuture,
+                chargeMasterFuture, currencyFuture, basisFuture, taxFuture, containerPartFuture, receiptInvoiceFuture);
 
         Map<Long, LovItem> quotationMap = quotationFuture.join();
         Map<Long, LovItem> commodityMap = commodityFuture.join();
@@ -271,6 +324,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         Map<String, LovItem> basisMap = basisFuture.join();
         Map<Long, LovItem> taxMap = taxFuture.join();
         Map<Long, LovItem> containerPartByPoidMap = containerPartFuture.join();
+        Map<Long, LovItem> receiptInvoiceMap = receiptInvoiceFuture.join();
 
         // --- Apply from maps ---
         if (dto.getQuotationPoid() != null)
@@ -296,9 +350,11 @@ public class ImportManifestServiceImpl implements ImportManifestService {
             if (ch.getBasisPoid() != null) ch.setBasisDet(basisMap.get(ch.getBasisPoid().toUpperCase()));
             if (ch.getPaidAtPortPoid() != null) ch.setPaidAtPortDet(portMap.get(ch.getPaidAtPortPoid()));
             if (ch.getReceiptInvoicePoid() != null) {
-                ch.setReceiptInvoiceDet(
-                        lovService.getLovItemByPoid(ch.getReceiptInvoicePoid(), "MANIFEST_RECEIPT_INVOICE",
-                                caller.getGroupPoid(), caller.getCompanyPoid(), caller.getUserPoid()));
+                // getLovItemByPoid used to hand back a poid-only stub when the LOV had no row for
+                // it; the batch lookup just omits the key, so keep the stub for an unchanged shape.
+                LovItem receiptInvoiceDet = receiptInvoiceMap.get(ch.getReceiptInvoicePoid());
+                ch.setReceiptInvoiceDet(receiptInvoiceDet != null ? receiptInvoiceDet
+                        : new LovItem(ch.getReceiptInvoicePoid(), null, null, null, null, null));
             }
             if (ch.getTaxPoid() != null) ch.setTaxDet(taxMap.get(ch.getTaxPoid()));
         }
@@ -333,16 +389,16 @@ public class ImportManifestServiceImpl implements ImportManifestService {
     }
 
     /**
-     * Each get*Map lookup below either goes through a Spring Data repository (self-transactional
-     * per call, safe from any thread) or, for the raw-SQL ones, through {@code jdbcTemplate}
-     * (pulls its own pooled Connection per call). Neither relies on the request-bound
-     * EntityManager/Session, so it's safe to fan these out across worker threads.
+     * Every task handed to this helper either goes through a Spring Data repository
+     * (self-transactional per call, safe from any thread) or, for the raw-SQL ones, through
+     * {@code jdbcTemplate} (pulls its own pooled Connection per call). Neither relies on the
+     * request-bound EntityManager/Session, so it's safe to fan them out across worker threads.
      *
      * UserContext is a plain ThreadLocal a pooled thread can't see, so the caller's auth details
-     * are carried onto the worker and cleared again once the lookup is done — same convention as
+     * are carried onto the worker and cleared again once the task is done — same convention as
      * LinePayableTransferReportingServiceImpl#supplyWithUserContext.
      */
-    private <T> CompletableFuture<T> supplyLovAsync(CustomAuthDetails caller, Supplier<T> supplier) {
+    private <T> CompletableFuture<T> supplyWithUserContext(CustomAuthDetails caller, Supplier<T> supplier) {
         return CompletableFuture.supplyAsync(() -> {
             UserContext.setCurrentUser(caller);
             try {
@@ -353,7 +409,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
         }, lovLookupExecutor);
     }
 
-    private void joinAllLovFutures(CompletableFuture<?>... futures) {
+    private void joinAllFutures(CompletableFuture<?>... futures) {
         try {
             CompletableFuture.allOf(futures).join();
         } catch (CompletionException e) {

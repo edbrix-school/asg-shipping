@@ -81,6 +81,7 @@ class ImportManifestServiceImplTest {
     @Mock private AddressDetailsRepository addressDetailsRepository;
     @Mock private EntityManager entityManager;
     @Mock private com.asg.shipping.common.service.LovService lovService;
+    @Mock private com.asg.shipping.importmanifestupdate.util.ImportManifestBlMapper mapper;
     @Mock private Executor lovLookupExecutor;
 
     @InjectMocks
@@ -397,7 +398,8 @@ class ImportManifestServiceImplTest {
     void getImportManifest_Success() {
         ShipBlManifestHdr header = createHeader();
         when(headerRepository.findById(1L)).thenReturn(Optional.of(header));
-        when(updateService.getImportManifestBl(1L)).thenReturn(new ImportManifestBlRequestDto());
+        // The header is mapped straight across now — no second read through updateService.
+        when(mapper.mapToDto(header)).thenReturn(new ImportManifestBlRequestDto());
         lenient().when(lovService.getLovItemsByPoids(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
         lenient().when(lovService.getLovItemsByCodes(any(), any(), any(), any(), any())).thenReturn(Collections.emptyMap());
         lenient().doAnswer(inv -> { inv.getArgument(0, Runnable.class).run(); return null; })
