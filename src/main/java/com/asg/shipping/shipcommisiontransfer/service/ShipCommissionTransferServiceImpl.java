@@ -285,8 +285,9 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
         Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
         Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
+        ShipBlCommissionHdr entity = new ShipBlCommissionHdr();
 
-        ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, groupPoid, companyPoid)
+        /*ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, groupPoid, companyPoid)
                 .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString()));
 
         if ("Y".equals(entity.getDeleted())) {
@@ -300,10 +301,11 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
         if (entity.getVoyageTransactionPoid() == null) {
             throw new ValidationException("Voyage Transaction POID is required to load data from voyage");
-        }
+        }*/
 
         // Call PROC_MATE_RCPT_EMPTY_MANIFEST to load data from voyage
-        String result = callProcMateRcptEmptyManifest(transactionPoid, getCurrentUser());
+        // NOTE: Param 1 must be VoyageTransactionPoid (P_TRANSACTION_POID_VOYAGE), not commission transactionPoid
+        String result = callProcMateRcptEmptyManifest(entity.getVoyageTransactionPoid(), getCurrentUser());
 
         // Reload detail records
         List<ShipBlCommissionDtl> detailRecords = detailRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
@@ -630,6 +632,10 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
                 cs.execute();
                 return cs.getString(3);
             });
+            // Check P_STATUS for ERROR before treating as success (mirrors legacy bean check)
+            if (result == null || result.toUpperCase().contains("ERROR")) {
+                throw new ValidationException("Error loading empty manifest: " + result);
+            }
             return "Records imported..." + result;
         } catch (Exception e) {
             log.error("Error calling PROC_MATE_RCPT_EMPTY_MANIFEST for transaction: {}", transactionPoid, e);
