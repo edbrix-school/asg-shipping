@@ -16,6 +16,7 @@ import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.salesinvoice.dto.*;
 import com.asg.shipping.salesinvoice.entity.*;
+import com.asg.shipping.salesinvoice.event.SalesInvoiceCreatedEvent;
 import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceChargDtlRepository;
 import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceContnrDtlRepository;
 import com.asg.shipping.salesinvoice.repository.ArShSalesInvoiceHdrRepository;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.sf.jasperreports.engine.JasperReport;
 import oracle.jdbc.OracleTypes;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -78,6 +80,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private final PrintService printService;
     private final DocumentDeleteService documentDeleteService;
     private final LoggingService loggingService;
+    private final ApplicationEventPublisher eventPublisher;
     
     // Container quantity tracking variables for demurrage calculations
     private BigDecimal totalQtyValidate20 = BigDecimal.ZERO;
@@ -194,7 +197,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         // Re-fetch the entity to get the actual database values after trigger execution
         saved = hdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
 
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "ARSHRCPTPRINTUPDATE");
+        eventPublisher.publishEvent(
+                new SalesInvoiceCreatedEvent(
+                        groupPoid,
+                        companyPoid,
+                        saved.getTransactionPoid()
+                )
+        );
 
         SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
         loadDetailTables(result, saved.getTransactionPoid());
@@ -242,7 +251,13 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         // Re-fetch the entity to get the actual database values after trigger execution
         saved = hdrRepository.findById(saved.getTransactionPoid()).orElse(saved);
 
-        callProcShipBlPageSaveAfter(groupPoid, companyPoid, saved.getTransactionPoid(), "ARSHRCPTPRINTUPDATE");
+        eventPublisher.publishEvent(
+                new SalesInvoiceCreatedEvent(
+                        groupPoid,
+                        companyPoid,
+                        saved.getTransactionPoid()
+                )
+        );
 
         SalesInvoiceShippingDto result = SalesInvoiceMapper.mapToDto(saved);
 
@@ -1023,28 +1038,6 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     }
 
     // ==================== Stored Procedure Calls ====================
-
-    /**
-     * Call PROC_SHIP_BL_PAGE_SAVE_AFTER
-     */
-    private void callProcShipBlPageSaveAfter(Long groupPoid, Long companyPoid, Long transactionPoid, String flag) {
-        try {
-            String sql = "{call PROC_SHIP_BL_PAGE_SAVE_AFTER(?, ?, ?, ?, ?, ?)}";
-            jdbcTemplate.execute(sql, (CallableStatement cs) -> {
-                cs.setLong(1, groupPoid);
-                cs.setLong(2, companyPoid);
-                cs.setLong(3, transactionPoid);
-                cs.setString(4, null);
-                cs.setString(5, flag);
-                cs.setLong(6, getUserPoid());
-                cs.execute();
-                return null;
-            });
-        } catch (Exception e) {
-            log.error("Error calling PROC_SHIP_BL_PAGE_SAVE_AFTER", e);
-            throw new ValidationException("Error in post-save processing: " + e.getMessage());
-        }
-    }
 
     /**
      * Call PROC_SHIP_INVOICE_DELETED
