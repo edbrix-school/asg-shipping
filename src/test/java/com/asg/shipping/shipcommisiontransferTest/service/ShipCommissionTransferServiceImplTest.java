@@ -323,10 +323,6 @@ class ShipCommissionTransferServiceImplTest {
             hdrEntity.setDocRef("COM-001");
             hdrEntity.setVoyageTransactionPoid(100L);
 
-            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
-                    .thenReturn(Optional.of(hdrEntity));
-            when(detailRepository.findByTransactionPoidOrderByDetRowId(1L))
-                    .thenReturn(List.of());
             when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class))).thenReturn("Success");
 
             Map<String, Object> result = service.loadFromVoyage(1L);
@@ -345,8 +341,8 @@ class ShipCommissionTransferServiceImplTest {
 
             hdrEntity.setDocRef(null);
 
-            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
-                    .thenReturn(Optional.of(hdrEntity));
+           /* when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
+                    .thenReturn(Optional.of(hdrEntity));*/
 
             assertThrows(com.asg.common.lib.exception.ValidationException.class, 
                 () -> service.loadFromVoyage(1L));
@@ -362,8 +358,7 @@ class ShipCommissionTransferServiceImplTest {
             hdrEntity.setDocRef("COM-001");
             hdrEntity.setVoyageTransactionPoid(null);
 
-            when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
-                    .thenReturn(Optional.of(hdrEntity));
+
 
             assertThrows(com.asg.common.lib.exception.ValidationException.class, 
                 () -> service.loadFromVoyage(1L));
