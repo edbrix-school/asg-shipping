@@ -13,6 +13,7 @@ import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.exception.ResourceNotFoundException;
 import com.asg.common.lib.exception.ValidationException;
 import com.asg.common.lib.security.util.UserContext;
+import com.asg.shipping.annotation.PerformGlPosting;
 import com.asg.shipping.collectionhandover.dto.*;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseDtl;
 import com.asg.shipping.collectionhandover.entity.ArShDayEndCloseHdr;
@@ -141,6 +142,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
 
     @Override
     @Transactional
+    @PerformGlPosting
     public CollectionHandoverDto createCollectionHandover(CollectionHandoverCreateDTO dto, Long groupPoid, Long userPoid) {
         log.info("Creating collection handover");
 
@@ -185,6 +187,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
 
     @Override
     @Transactional
+    @PerformGlPosting
     public CollectionHandoverDto updateCollectionHandover(Long id, CollectionHandoverUpdateDTO dto,
             Long groupPoid, Long userPoid) {
         log.info("Updating collection handover with id: {}", id);
