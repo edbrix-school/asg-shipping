@@ -21,6 +21,7 @@ import com.asg.shipping.collectionhandover.repository.CollectionHandoverDtlRepos
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverHdrRepository;
 import com.asg.shipping.collectionhandover.util.CollectionHandoverMapper;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
+import com.asg.shipping.common.service.DocumentRightsService;
 import com.asg.shipping.daycloseshiping.repository.ArShReceiptHdrRepository;
 import jakarta.persistence.EntityManager;
 import net.sf.jasperreports.engine.JasperReport;
@@ -83,6 +84,9 @@ class CollectionHandoverServiceImplTest {
 
     @Mock
     private EntityManager entityManager;
+
+    @Mock
+    private DocumentRightsService documentRightsService;
 
     @InjectMocks
     private CollectionHandoverServiceImpl service;
