@@ -1,5 +1,6 @@
 package com.asg.shipping.collectionhandover.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -41,5 +42,13 @@ public class CollectionHandoverDto {
 
     // Detail records
     private List<CollectionHandoverDetailDto> details;
+
+    /**
+     * Non-blocking notice raised while saving, the equivalent of the legacy
+     * {@code common.showMessage(...)} that was shown to the user without stopping the save.
+     * Absent from the payload when there is nothing to report.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String infoMessage;
 }
 
