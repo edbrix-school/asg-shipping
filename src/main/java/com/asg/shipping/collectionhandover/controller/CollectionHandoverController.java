@@ -132,6 +132,12 @@ public class CollectionHandoverController {
     public ResponseEntity<?> updateCollectionHandover(@PathVariable Long id, @Valid @RequestBody CollectionHandoverUpdateDTO dto) {
         log.info("Updating collection handover with id: {}", id);
         CollectionHandoverDto updated = collectionHandoverService.updateCollectionHandover(id, dto, getGroupPoid(), getUserPoid());
+        if (updated.getInfoMessage() != null) {
+            // Legacy showed this via common.showMessage(...) and still saved the record, so it
+            // rides along with a successful response instead of failing the request.
+            return com.asg.common.lib.dto.response.ApiResponse.successWithWarnings(
+                    "Collection handover updated successfully", updated, null, List.of(updated.getInfoMessage()));
+        }
         return ApiResponse.success("Collection handover updated successfully", updated);
     }
 

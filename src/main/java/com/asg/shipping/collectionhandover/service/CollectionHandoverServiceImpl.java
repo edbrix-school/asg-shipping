@@ -21,6 +21,8 @@ import com.asg.shipping.collectionhandover.repository.CollectionHandoverHdrRepos
 import com.asg.shipping.collectionhandover.repository.CollectionHandoverDtlRepository;
 import com.asg.shipping.collectionhandover.util.CollectionHandoverMapper;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
+import com.asg.shipping.common.service.DocumentRightsService;
+import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.shipping.daycloseshiping.dto.DayCloseSummaryProjection;
 import com.asg.shipping.daycloseshiping.repository.ArShReceiptHdrRepository;
 import jakarta.persistence.EntityManager;
@@ -60,6 +62,15 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
     private static final String TRANSACTION_POID_FIELD = "transactionPoid";
     private static final String DOC_ID = "300-106";
 
+    /**
+     * Document whose "Edit" right identifies a main-office user allowed to verify/receive a
+     * handover — legacy {@code IsGrantedRights("000-208", "Edit")} (ArShDayEndBean:445, 468).
+     */
+    private static final String MAIN_OFFICE_RIGHTS_DOC_ID = "000-208";
+
+    /** Legacy showMessage text (ArShDayEndBean:453) — informational, it never blocked the save. */
+    private static final String MAIN_OFFICE_CHECK_MESSAGE = "Verified yes & Main office remarks check.";
+
     private final CollectionHandoverHdrRepository headerRepository;
     private final CollectionHandoverDtlRepository detailRepository;
     private final DocumentSearchService documentService;
@@ -71,6 +82,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
     private final GlobalCurrencyDenominationRepository denomRepo;
     private final ArShReceiptHdrRepository receiptHdrRepository;
     private final EntityManager entityManager;
+    private final DocumentRightsService documentRightsService;
 
     // -------------------------------------------------------------------------
     // Search
@@ -153,6 +165,10 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
         validateForCreate(dto, groupPoid, companyPoid);
         validateAmounts(dto.getTotalAmount(), dto.getCashAmount(), dto.getChequeAmount(), dto.getDetails());
 
+        // No main-office check here: legacy gates it on document mode "Edit" (ArShDayEndBean:446),
+        // so it never runs on a new record. A new record starts at VerifiedRcvd='N' /
+        // MainOfcRemarks='.' (ArShDayEndBean:236-237).
+
         ArShDayEndCloseHdr handover = new ArShDayEndCloseHdr();
         mapper.mapCreateDTOToEntity(dto, handover, groupPoid);
         handover.setCompanyPoid(companyPoid);
@@ -203,12 +219,18 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
         validateForUpdate(dto, id);
         validateAmounts(dto.getTotalAmount(), dto.getCashAmount(), dto.getChequeAmount(), dto.getDetails());
 
-        // DocumentBeforeSave: when the main office marks the handover as verified/received
-        // (VerifiedRcvd='Y'), main-office remarks are mandatory. A save that leaves VerifiedRcvd='N'
-        // (or omits it) must NOT be blocked — legacy only warned and let the save proceed.
-        if ("Y".equalsIgnoreCase(dto.getVerifiedRcvd())
-                && (dto.getMainOfcRemarks() == null || dto.getMainOfcRemarks().length() <= 1)) {
-            throw new ValidationException("Verified yes & Main office remarks check.");
+        // DocumentBeforeSave main-office check (ArShDayEndBean:445). The update is a patch merge
+        // (mapper only applies non-null fields), so validate the EFFECTIVE values the row will end
+        // up with, exactly as legacy read them back off the edited row.
+        String effectiveVerified = dto.getVerifiedRcvd() != null ? dto.getVerifiedRcvd() : handover.getVerifiedRcvd();
+        String effectiveRemarks = dto.getMainOfcRemarks() != null ? dto.getMainOfcRemarks() : handover.getMainOfcRemarks();
+
+        // The right only decides whether the check applies, exactly as legacy — a user without it
+        // is not rejected, the check simply does not run for them. The outcome is a notice, not an
+        // error: the save proceeds either way (legacy returned true after showMessage).
+        String mainOfficeNotice = null;
+        if (documentRightsService.isGrantedRight(MAIN_OFFICE_RIGHTS_DOC_ID, UserRolesRightsEnum.EDIT)) {
+            mainOfficeNotice = mainOfficeHandoverNotice(effectiveVerified, effectiveRemarks);
         }
 
         ArShDayEndCloseHdr oldHandover = new ArShDayEndCloseHdr();
@@ -223,7 +245,9 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
                 UserContext.getDocumentId(), id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         List<ArShDayEndCloseDtl> detailList = detailRepository.findByTransactionPoidOrderByDetRowId(id);
-        return mapper.mapToDto(saved, detailList);
+        CollectionHandoverDto result = mapper.mapToDto(saved, detailList);
+        result.setInfoMessage(mainOfficeNotice);
+        return result;
     }
 
     // -------------------------------------------------------------------------
@@ -260,9 +284,14 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
             throw new ValidationException("Verified received must be Y or N");
         }
 
-        // Marking as verified/received requires main-office remarks (legacy DocumentBeforeSave check).
-        if ("Y".equalsIgnoreCase(verifiedRcvd) && (mainOfcRemarks == null || mainOfcRemarks.length() <= 1)) {
-            throw new ValidationException("Verified yes & Main office remarks check.");
+        // Unlike the save path this endpoint DOES block: it has no legacy counterpart and exists
+        // only to complete the verification, so marking a handover received with no real remarks
+        // is rejected rather than merely reported. mainOfcRemarks is optional here, so fall back
+        // to what is already stored.
+        String effectiveRemarks = mainOfcRemarks != null ? mainOfcRemarks : handover
+                .getMainOfcRemarks();
+        if ("Y".equalsIgnoreCase(verifiedRcvd) && mainOfficeHandoverNotice(verifiedRcvd, effectiveRemarks) != null) {
+            throw new ValidationException(MAIN_OFFICE_CHECK_MESSAGE);
         }
 
         handover.setVerifiedRcvd(verifiedRcvd);
@@ -295,6 +324,29 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
     // =========================================================================
     // Private helpers
     // =========================================================================
+
+    /**
+     * DocumentBeforeSave main-office handover check (ArShDayEndBean:445-455).
+     *
+     * <p>Legacy: for a user holding the 000-208 "Edit" right, saving the document in Edit mode
+     * reports that the handover is not complete unless the main office has both marked it
+     * verified/received ({@code VerifiedRcvd='Y'}) and entered real remarks. {@code length() <= 1}
+     * catches the {@code "."} placeholder the record is created with (ArShDayEndBean:237).
+     *
+     * <p>This is <strong>not</strong> a blocking validation: legacy raised it with
+     * {@code common.showMessage(...)} and then {@code return true}, so the save always went
+     * through. Hence a message is returned rather than an exception being thrown.
+     *
+     * <p>Callers apply the {@code IsGrantedRights("000-208", "Edit")} gate through
+     * {@link DocumentRightsService} before calling this.
+     *
+     * @return the notice to pass back to the caller, or {@code null} when the handover is complete
+     */
+    private String mainOfficeHandoverNotice(String verifiedRcvd, String mainOfcRemarks) {
+        boolean verified = verifiedRcvd != null && "Y".equalsIgnoreCase(verifiedRcvd.trim());
+        boolean hasRemarks = mainOfcRemarks != null && mainOfcRemarks.trim().length() > 1;
+        return (verified && hasRemarks) ? null : MAIN_OFFICE_CHECK_MESSAGE;
+    }
 
     /**
      * DocumentBeforeSave amount validations:
