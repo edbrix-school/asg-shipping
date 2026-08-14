@@ -69,7 +69,7 @@ public class CollectionHandoverServiceImpl implements CollectionHandoverService 
     private static final String MAIN_OFFICE_RIGHTS_DOC_ID = "000-208";
 
     /** Legacy showMessage text (ArShDayEndBean:453) — informational, it never blocked the save. */
-    private static final String MAIN_OFFICE_CHECK_MESSAGE = "Verified yes & Main office remarks check.";
+    private static final String MAIN_OFFICE_CHECK_MESSAGE = "Verified yes & Main office remarks check.....";
 
     private final CollectionHandoverHdrRepository headerRepository;
     private final CollectionHandoverDtlRepository detailRepository;
