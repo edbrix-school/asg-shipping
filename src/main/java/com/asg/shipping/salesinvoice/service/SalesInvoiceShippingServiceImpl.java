@@ -1607,7 +1607,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private List<SalesInvoiceChargesDtlDto> loadDemurrageCharges(BigDecimal demurrageAmount, String blTypeInvoice, Long companyPoid) {
         List<SalesInvoiceChargesDtlDto> result = new ArrayList<>();
         
-        if (demurrageAmount == null || demurrageAmount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (demurrageAmount == null || demurrageAmount.compareTo(BigDecimal.ZERO) == 0) {
             return result;
         }
         
