@@ -37,12 +37,17 @@ import com.asg.shipping.annotation.PerformGlPosting;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -70,6 +75,75 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
     private static final String LOG_ROW_DELETED_CONTAINER = "Row Deleted on Sales Invoice Container Detail with DetRowId: %s";
     private static final String LOG_ROW_DELETED_CHARGE = "Row Deleted on Sales Invoice Charge Detail with DetRowId: %s";
     private static final String LOG_KEY_ID = "KeyId = TRANSACTION_POID: %s DET_ROW_ID: %s";
+
+    /**
+     * Late collection / revalidation port charges for a BL.
+     * Bind order: companyPoid, blType, blPoid, blPoid, companyPoid, blType, blPoid
+     */
+    private static final String LATE_COLLECTION_CHARGES_SQL =
+                "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
+                        "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
+                        "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
+                        "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
+                        "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
+                        "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
+                        "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
+                        "       FROM SHIP_VOYAGE_HDR VHDR " +
+                        "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                        "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
+                        "       AND BLHDR.TRANSACTION_POID=?) " +
+                        "BETWEEN PERIOD_FROM AND PERIOD_TO " +
+                        "AND NVL(CHARGE_LINE_POID,'0')='0' " +
+                        "AND CHARGE_TYPE_APPLICABLE IN ('LATECOLLECTIONIMP','LATECOLLECTIONBOTH') " +
+                        "AND NVL(DELETED,'N')='N' " +
+                        "AND (SELECT (TO_DATE(SYSDATE)-TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)))+1 " +
+                        "     FROM SHIP_VOYAGE_HDR VHDR " +
+                        "     INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                        "     INNER JOIN SHIP_BL_MANIFEST_CHARGES_DTL CNTDTL ON CNTDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
+                        "     WHERE NVL(BLHDR.TRANSACTION_POID,0) NOT IN " +
+                        "       (SELECT NVL(BL_POID,0) FROM AR_SH_RECEIPT_HDR " +
+                        "        UNION ALL SELECT NVL(BL_POID,0) FROM AR_SH_SALES_INVOICE_HDR " +
+                        "        WHERE NVL(INVOICE_TYPE,'xx')<>'AUTOCAN') " +
+                        "     AND BLHDR.TRANSACTION_POID=? " +
+                        "     GROUP BY TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)),BLHDR.TRANSACTION_POID) " +
+                        ">= (SELECT TO_NUMBER(PARAMETER_VALUE) FROM GLOBAL_PARAMETERS " +
+                        "    WHERE PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%' AND ROWNUM=1) " +
+                        "UNION ALL " +
+                        "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
+                        "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
+                        "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
+                        "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
+                        "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
+                        "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
+                        "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
+                        "       FROM SHIP_VOYAGE_HDR VHDR " +
+                        "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                        "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
+                        "       AND BLHDR.TRANSACTION_POID IN " +
+                        "         (SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_CHARGES_DTL " +
+                        "          WHERE RECEIPT_INVOICE_POID IS NOT NULL) " +
+                        "       AND BLHDR.TRANSACTION_POID=?) " +
+                        "BETWEEN PERIOD_FROM AND PERIOD_TO " +
+                        "AND NVL(CHARGE_LINE_POID,'0')='0' " +
+                        "AND CHARGE_TYPE_APPLICABLE IN ('REVALIDATEIMP','REVALIDATEBOTH') " +
+                        "AND NVL(DELETED,'N')='N' " +
+                        "ORDER BY CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE";
 
     private final ArShSalesInvoiceHdrRepository hdrRepository;
     private final ArShSalesInvoiceContnrDtlRepository contnrDtlRepository;
@@ -369,6 +443,85 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                 .demurrageAmount(demurrageAmount)
                 .lateCharges(lateCharges)
                 .containers(containerDemurrageData)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LoadChargeDataResponseDTO refreshChargeData(Long id, RefreshChargeDataRequestDTO request) {
+        Long blPoid = request.getBlPoid();
+        log.info("Refreshing charge data for invoice id: {}, BL POID: {}, UI containers: {}, UI charges: {}",
+                id, blPoid,
+                request.getContainerDetails() != null ? request.getContainerDetails().size() : 0,
+                request.getChargesDetails() != null ? request.getChargesDetails().size() : 0);
+
+        ArShSalesInvoiceHdr invoice = new ArShSalesInvoiceHdr();
+        invoice.setTransactionPoid(-999L);
+        if (!id.equals(-999L)) {
+            invoice = hdrRepository.findActiveByTransactionPoid(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sales Invoice", "transactionPoid", id.toString()));
+        }
+        Long transactionPoid = invoice.getTransactionPoid();
+        // Prefer the invoice's own company over the login company, so tax applicability resolves
+        // against the company being billed.
+        Long companyPoid = invoice.getCompanyPoid() != null ? invoice.getCompanyPoid() : getCompanyPoid();
+        Long groupPoid = invoice.getGroupPoid() != null ? invoice.getGroupPoid() : getGroupPoid();
+
+        // BL type comes from the manifest, not from the request - SWITCH and CROSSTRADE are only
+        // distinguishable there and they map to a different freight type than EXPORT.
+        String blType = resolveBlType(blPoid, request.getBlTypeInvoice());
+
+        // Containers the user is actually looking at, including unsaved edits.
+        List<SalesInvoiceContainerDtlDto> containers = request.getContainerDetails();
+        if (containers == null || containers.isEmpty()) {
+            log.debug("No containers supplied by UI, reading from database for BL {}", blPoid);
+            containers = executeLoadContainerDemurrageQuery(blPoid, transactionPoid, blType);
+        }
+
+        List<SalesInvoiceChargesDtlDto> manifestCharges = executeManifestChargeQuery(blPoid, transactionPoid);
+
+        DemurrageCalculation demurrage = calculateDemurrage(containers, blPoid);
+
+        SalesInvoiceChargesDtlDto demurrageCharge =
+                buildDemurrageCharge(demurrage.total(), blType, blPoid, companyPoid, groupPoid);
+
+        List<SalesInvoiceChargesDtlDto> lateCharges = buildLateCollectionCharges(
+                blPoid, blType, companyPoid, demurrage.qty20(), demurrage.qty40());
+
+        // Charge codes this run produced by calculation rather than by the user. Any incoming UI row
+        // carrying one of these is stale and gets replaced; everything else the user added survives.
+        Set<Long> systemChargePoids = new HashSet<>();
+        if (demurrageCharge != null && demurrageCharge.getChargePoid() != null) {
+            systemChargePoids.add(demurrageCharge.getChargePoid());
+        }
+        lateCharges.stream()
+                .map(SalesInvoiceChargesDtlDto::getChargePoid)
+                .filter(Objects::nonNull)
+                .forEach(systemChargePoids::add);
+
+        List<SalesInvoiceChargesDtlDto> charges = mergeWithUserCharges(
+                manifestCharges, request.getChargesDetails(), systemChargePoids);
+        if (demurrageCharge != null) {
+            charges.add(demurrageCharge);
+        }
+
+        // Sequence DetRowId across both lists so the two can be persisted together without collision.
+        long detRowId = 1L;
+        for (SalesInvoiceChargesDtlDto charge : charges) {
+            charge.setDetRowId(detRowId++);
+        }
+        for (SalesInvoiceChargesDtlDto charge : lateCharges) {
+            charge.setDetRowId(detRowId++);
+        }
+
+        log.info("Refresh complete for BL {} ({}): {} charges, {} late charges, demurrage {}",
+                blPoid, blType, charges.size(), lateCharges.size(), demurrage.total());
+
+        return LoadChargeDataResponseDTO.builder()
+                .charges(charges)
+                .demurrageAmount(demurrage.total())
+                .lateCharges(lateCharges)
+                .containers(containers)
                 .build();
     }
 
@@ -1684,70 +1837,7 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
         }
 
         // Build UNION ALL query for late collection and revalidation charges
-        String sql =
-                "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
-                        "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
-                        "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
-                        "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
-                        "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
-                        "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
-                        "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
-                        "       FROM SHIP_VOYAGE_HDR VHDR " +
-                        "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-                        "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
-                        "       AND BLHDR.TRANSACTION_POID=?) " +
-                        "BETWEEN PERIOD_FROM AND PERIOD_TO " +
-                        "AND NVL(CHARGE_LINE_POID,'0')='0' " +
-                        "AND CHARGE_TYPE_APPLICABLE IN ('LATECOLLECTIONIMP','LATECOLLECTIONBOTH') " +
-                        "AND NVL(DELETED,'N')='N' " +
-                        "AND (SELECT (TO_DATE(SYSDATE)-TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)))+1 " +
-                        "     FROM SHIP_VOYAGE_HDR VHDR " +
-                        "     INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-                        "     INNER JOIN SHIP_BL_MANIFEST_CHARGES_DTL CNTDTL ON CNTDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
-                        "     WHERE NVL(BLHDR.TRANSACTION_POID,0) NOT IN " +
-                        "       (SELECT NVL(BL_POID,0) FROM AR_SH_RECEIPT_HDR " +
-                        "        UNION ALL SELECT NVL(BL_POID,0) FROM AR_SH_SALES_INVOICE_HDR " +
-                        "        WHERE NVL(INVOICE_TYPE,'xx')<>'AUTOCAN') " +
-                        "     AND BLHDR.TRANSACTION_POID=? " +
-                        "     GROUP BY TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)),BLHDR.TRANSACTION_POID) " +
-                        ">= (SELECT TO_NUMBER(PARAMETER_VALUE) FROM GLOBAL_PARAMETERS " +
-                        "    WHERE PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%' AND ROWNUM=1) " +
-                        "UNION ALL " +
-                        "SELECT CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE, CHARGE_CODE_POID, AMOUNT_20, AMOUNT_40, AMOUNT_OTHER, " +
-                        "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_POID, " +
-                        "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
-                        "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
-                        "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
-                        "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
-                        "   AND CHARGE_POID=MCDTL.CHARGE_CODE_POID)) TAX_PERCENTAGE, " +
-                        "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
-                        "FROM SHIP_PORT_CHARGES_HDR MCHDR " +
-                        "INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL ON MCHDR.TRANSACTION_POID=MCDTL.TRANSACTION_POID " +
-                        "WHERE (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) " +
-                        "       FROM SHIP_VOYAGE_HDR VHDR " +
-                        "       INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
-                        "       WHERE SUBSTR(CHARGE_TYPE_APPLICABLE,-3) IN (SUBSTR(?,1,3),'OTH') " +
-                        "       AND BLHDR.TRANSACTION_POID IN " +
-                        "         (SELECT TRANSACTION_POID FROM SHIP_BL_MANIFEST_CHARGES_DTL " +
-                        "          WHERE RECEIPT_INVOICE_POID IS NOT NULL) " +
-                        "       AND BLHDR.TRANSACTION_POID=?) " +
-                        "BETWEEN PERIOD_FROM AND PERIOD_TO " +
-                        "AND NVL(CHARGE_LINE_POID,'0')='0' " +
-                        "AND CHARGE_TYPE_APPLICABLE IN ('REVALIDATEIMP','REVALIDATEBOTH') " +
-                        "AND NVL(DELETED,'N')='N' " +
-                        "ORDER BY CHARGE_TYPE_APPLICABLE, CHARGE_APPLICABLE";
+        String sql = LATE_COLLECTION_CHARGES_SQL;
 
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             String chargeApplicable = rs.getString("CHARGE_APPLICABLE");
@@ -1783,6 +1873,338 @@ public class SalesInvoiceShippingServiceImpl implements SalesInvoiceShippingServ
                     .taxAmount(taxAmount)
                     .build();
         }, companyPoid, blTypeInvoice, blPoid, blPoid, companyPoid, blTypeInvoice, blPoid);
+    }
+
+    // ==================== Refresh Charge Data Helpers ====================
+
+    /** Demurrage total plus the container counts the per-container late charges are priced from. */
+    private record DemurrageCalculation(BigDecimal total, BigDecimal qty20, BigDecimal qty40) {
+    }
+
+    /**
+     * Resolve the BL type from the manifest header. The request value is only a fallback: SWITCH and
+     * CROSSTRADE map to freight type 'E' and are indistinguishable from EXPORT in the invoice header.
+     */
+    private String resolveBlType(Long blPoid, String requestBlType) {
+        try {
+            String blType = jdbcTemplate.queryForObject(
+                    "SELECT BL_TYPE FROM SHIP_BL_MANIFEST_HDR WHERE TRANSACTION_POID = ?",
+                    String.class, blPoid);
+            if (blType != null && !blType.isBlank()) {
+                String resolved = blType.trim().toUpperCase();
+                if (requestBlType != null && !resolved.equalsIgnoreCase(requestBlType.trim())) {
+                    log.info("BL {} type resolved as {} from manifest, request said {}",
+                            blPoid, resolved, requestBlType);
+                }
+                return resolved;
+            }
+        } catch (Exception e) {
+            log.warn("Could not resolve BL type for BL POID {}, falling back to request value {}",
+                    blPoid, requestBlType, e);
+        }
+        return requestBlType != null ? requestBlType.trim().toUpperCase() : null;
+    }
+
+    /**
+     * Manifest charges not already consumed by another invoice or by a receipt.
+     *
+     * <p>Freight type is derived in SQL from the manifest's own BL_TYPE, so SWITCH and CROSSTRADE
+     * resolve to 'E' and an unrecognised type resolves to 'XX' (matching nothing) instead of
+     * silently falling through to EXPORT.</p>
+     */
+    private List<SalesInvoiceChargesDtlDto> executeManifestChargeQuery(Long blPoid, Long transactionPoid) {
+        String sql = "SELECT CHARGEDTL.TRANSACTION_POID BL_POID, CHARGEDTL.CHARGE_POID, DET_ROW_ID, " +
+                "round((NVL(CURRENCY_EXCHANGE,1)*NVL(QUANTITY,1)* NVL(PER_QUANTITY_AMOUNT,0)),3) AMOUNT, " +
+                "round((NVL(CURRENCY_EXCHANGE,1)*NVL(QUANTITY,1)* NVL(BUY_PERCHARGE,0)),3) BuyAmount, " +
+                "CHARGEDTL.CURRENCY_CODE, CURRENCY_EXCHANGE, QUANTITY, " +
+                "round(NVL(BUY_PERCHARGE,0),3) PerQtyBuy, round(NVL(PER_QUANTITY_AMOUNT,0),3) PerQtySell, " +
+                "CHARGEDTL.CHARGE_TYPE, decode(EDI_CHARGE_CODE,'ADDFROMRECEIPT','Y','ADDFROMINVOICE','Y','N') CHARGE_NEW_RECORD, " +
+                "TAX_PERCENTAGE, TAX_AMOUNT, TAX_POID " +
+                "FROM SHIP_VOYAGE_HDR VHDR " +
+                "INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID=BLHDR.VOYAGE_TRANSACTION_POID " +
+                "INNER JOIN SHIP_BL_MANIFEST_CHARGES_DTL CHARGEDTL ON CHARGEDTL.TRANSACTION_POID=BLHDR.TRANSACTION_POID " +
+                "WHERE FREIGHT_TYPE=DECODE(BL_TYPE,'IMPORT','C','SWITCH','E','CROSSTRADE','E','EXPORT','P','XX') " +
+                "AND (CHARGEDTL.TRANSACTION_POID,DET_ROW_ID, CHARGEDTL.CHARGE_POID) NOT IN( " +
+                "select NVL(ARSHINVCHD.BL_POID,0),NVL(CHARGES_DET_ROW_ID,0),NVL(CHARGE_POID,0) from " +
+                "AR_SH_SALES_INVOICE_HDR ARSHINV, AR_SH_SALES_INVOICE_CHARG_DTL ARSHINVCHD " +
+                "WHERE ARSHINV.TRANSACTION_POID=ARSHINVCHD.TRANSACTION_POID AND NVL(DELETED,'N')='N' and ARSHINV.transaction_poid <> ? " +
+                "union all select NVL(ARSHRCPCHD.BL_POID,0),NVL(CHARGES_DET_ROW_ID,0),NVL(CHARGE_POID,0) from " +
+                "AR_SH_RECEIPT_HDR ARSHRCP, AR_SH_RECEIPT_CHARGES_DTL ARSHRCPCHD " +
+                "WHERE ARSHRCP.TRANSACTION_POID=ARSHRCPCHD.TRANSACTION_POID AND NVL(DELETED,'N')='N' ) " +
+                "AND CHARGEDTL.AR_SH_RECEIPT_TRANSACTION_POID IS NULL AND BLHDR.TRANSACTION_POID=?";
+
+        return jdbcTemplate.query(sql, (rs, rowNum) -> SalesInvoiceChargesDtlDto.builder()
+                .blPoid(getLongOrNull(rs, "BL_POID"))
+                .chargePoid(getLongOrNull(rs, "CHARGE_POID"))
+                .chargesDetRowId(getLongOrNull(rs, "DET_ROW_ID"))
+                .amount(rs.getBigDecimal("AMOUNT"))
+                .buyAmount(rs.getBigDecimal("BuyAmount"))
+                .currencyCode(rs.getString("CURRENCY_CODE"))
+                .currencyExchange(rs.getBigDecimal("CURRENCY_EXCHANGE"))
+                .quantity(rs.getBigDecimal("QUANTITY"))
+                .perQtyBuyAmt(rs.getBigDecimal("PerQtyBuy"))
+                .perQtySellAmt(rs.getBigDecimal("PerQtySell"))
+                .chargeType(rs.getString("CHARGE_TYPE"))
+                .chargeNewRecord(rs.getString("CHARGE_NEW_RECORD"))
+                .taxPercentage(getBigDecimalOrNull(rs, "TAX_PERCENTAGE"))
+                .taxAmount(getBigDecimalOrNull(rs, "TAX_AMOUNT"))
+                .taxPoid(getLongOrNull(rs, "TAX_POID"))
+                .amountSelect("Y")
+                .build(), transactionPoid, blPoid);
+    }
+
+    /**
+     * Total demurrage/detention for the BL plus a 20ft/40ft container count, taken from the supplied
+     * container rows so unsaved UI edits are respected. Container sizes are resolved once per ISO
+     * type rather than once per container.
+     */
+    private DemurrageCalculation calculateDemurrage(List<SalesInvoiceContainerDtlDto> containers, Long blPoid) {
+        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal qty20 = BigDecimal.ZERO;
+        BigDecimal qty40 = BigDecimal.ZERO;
+
+        if (containers == null || containers.isEmpty()) {
+            return new DemurrageCalculation(total, qty20, qty40);
+        }
+
+        Map<String, String> sizeByIsoType = new HashMap<>();
+        for (SalesInvoiceContainerDtlDto container : containers) {
+            if (!blPoid.equals(container.getBlPoid()) || container.getDmChargeAmt() == null
+                    || container.getDmChargeAmt().compareTo(BigDecimal.ZERO) == 0) {
+                continue;
+            }
+            total = total.add(container.getDmChargeAmt());
+
+            String isoType = container.getEquipmentIsoType();
+            if (isoType == null || isoType.isBlank()) {
+                continue;
+            }
+            String size = sizeByIsoType.computeIfAbsent(isoType, this::resolveContainerSize);
+            if ("20".equals(size)) {
+                qty20 = qty20.add(BigDecimal.ONE);
+            } else if (size != null) {
+                qty40 = qty40.add(BigDecimal.ONE);
+            }
+        }
+
+        log.debug("Demurrage for BL {}: total {}, 20ft {}, 40ft {}", blPoid, total, qty20, qty40);
+        return new DemurrageCalculation(total, qty20, qty40);
+    }
+
+    private String resolveContainerSize(String equipmentIsoType) {
+        try {
+            String size = jdbcTemplate.queryForObject(
+                    "SELECT GET_CONTAINER_TYPE(?, 'SIZE') FROM DUAL", String.class, equipmentIsoType);
+            return size != null ? size.trim() : null;
+        } catch (Exception e) {
+            log.warn("Could not determine container size for equipment type: {}", equipmentIsoType, e);
+            return null;
+        }
+    }
+
+    /**
+     * The single demurrage (IMPORT) or detention (EXPORT) charge line. Returns null when there is
+     * nothing to charge or when the BL type has no configured charge code.
+     */
+    private SalesInvoiceChargesDtlDto buildDemurrageCharge(BigDecimal demurrageAmount, String blType,
+                                                          Long blPoid, Long companyPoid, Long groupPoid) {
+        if (demurrageAmount == null || demurrageAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+
+        String parameterType;
+        if ("IMPORT".equalsIgnoreCase(blType)) {
+            parameterType = "SHDEMURRAGE";
+        } else if ("EXPORT".equalsIgnoreCase(blType)) {
+            parameterType = "SHDETTENTION";
+        } else {
+            log.info("BL type {} has no demurrage/detention charge code, skipping demurrage line", blType);
+            return null;
+        }
+
+        // Scoped to the group and limited to one row, so this agrees with the demurrage code that
+        // validateDemurrageTotals resolves at save time.
+        String sql = "SELECT PARAMETER_VALUE, " +
+                "(SELECT TAX_POID FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                "   AND CHARGE_POID=PARAMETER_VALUE)) TAX_POID, " +
+                "(SELECT PERCENTAGE FROM GLOBAL_TAX_MASTER WHERE TAX_POID IN " +
+                "  (SELECT TAX_POID FROM GLOBAL_TAX_PERIOD_HDR GTH " +
+                "   INNER JOIN GLOBAL_TAX_PERIOD_CHARGE_DTL GTD ON GTH.TRANSACTION_POID=GTD.TRANSACTION_POID " +
+                "   WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO) " +
+                "   AND CHARGE_POID=PARAMETER_VALUE)) TAX_PERCENTAGE, " +
+                "RTN_GLOBAL_PARAMETER('1', 'GLOBAL_TAX_APPLICABLE', 'TAX', ?, 'N') TAX_APPLICABLE " +
+                "FROM GLOBAL_PARAMETERS WHERE PARAMETER_KEYID_TYPE = ? AND GROUP_POID = ? AND ROWNUM = 1";
+
+        List<SalesInvoiceChargesDtlDto> rows = jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Long taxPoid = getLongOrNull(rs, "TAX_POID");
+            BigDecimal taxPercentage = getBigDecimalOrNull(rs, "TAX_PERCENTAGE");
+
+            return SalesInvoiceChargesDtlDto.builder()
+                    .blPoid(blPoid)
+                    .chargePoid(getLongOrNull(rs, "PARAMETER_VALUE"))
+                    .chargesDetRowId(0L)
+                    .amount(demurrageAmount)
+                    .amountSelect("Y")
+                    .chargeType("LOCAL")
+                    .chargeNewRecord("Y")
+                    .demurrageCharge("Y")
+                    .taxPoid(taxPoid)
+                    .taxPercentage(taxPercentage)
+                    .taxAmount(calculateTax(demurrageAmount, taxPoid, taxPercentage, rs.getString("TAX_APPLICABLE")))
+                    .build();
+        }, companyPoid, parameterType, groupPoid);
+
+        if (rows.isEmpty()) {
+            log.warn("No {} charge code configured for group {}, demurrage of {} not charged",
+                    parameterType, groupPoid, demurrageAmount);
+            return null;
+        }
+        return rows.get(0);
+    }
+
+    /**
+     * Late collection and revalidation charges.
+     *
+     * <p>PERBL charges bill a flat amount; PERQUENTITY charges bill
+     * {@code (20ft count x AMOUNT_20) + (40ft count x AMOUNT_40)}. Rows that price to zero are
+     * dropped rather than added as empty lines.</p>
+     */
+    private List<SalesInvoiceChargesDtlDto> buildLateCollectionCharges(Long blPoid, String blType, Long companyPoid,
+                                                                      BigDecimal qty20, BigDecimal qty40) {
+        List<SalesInvoiceChargesDtlDto> rows = jdbcTemplate.query(LATE_COLLECTION_CHARGES_SQL, (rs, rowNum) -> {
+            String chargeApplicable = rs.getString("CHARGE_APPLICABLE");
+            BigDecimal amount;
+            if ("PERBL".equalsIgnoreCase(chargeApplicable)) {
+                amount = nullToZero(getBigDecimalOrNull(rs, "AMOUNT_OTHER"));
+            } else if ("PERQUENTITY".equalsIgnoreCase(chargeApplicable)) {
+                amount = qty20.multiply(nullToZero(getBigDecimalOrNull(rs, "AMOUNT_20")))
+                        .add(qty40.multiply(nullToZero(getBigDecimalOrNull(rs, "AMOUNT_40"))));
+            } else {
+                log.debug("Unhandled CHARGE_APPLICABLE {} on BL {}, skipping", chargeApplicable, blPoid);
+                return null;
+            }
+
+            Long taxPoid = getLongOrNull(rs, "TAX_POID");
+            BigDecimal taxPercentage = getBigDecimalOrNull(rs, "TAX_PERCENTAGE");
+
+            return SalesInvoiceChargesDtlDto.builder()
+                    .blPoid(blPoid)
+                    .chargePoid(getLongOrNull(rs, "CHARGE_CODE_POID"))
+                    .chargesDetRowId(0L)
+                    .amount(amount)
+                    .amountSelect("Y")
+                    .chargeType("LOCAL")
+                    .chargeNewRecord("Y")
+                    .taxPoid(taxPoid)
+                    .taxPercentage(taxPercentage)
+                    .taxAmount(calculateTax(amount, taxPoid, taxPercentage, rs.getString("TAX_APPLICABLE")))
+                    .build();
+        }, companyPoid, blType, blPoid, blPoid, companyPoid, blType, blPoid);
+
+        return rows.stream()
+                .filter(Objects::nonNull)
+                .filter(charge -> charge.getAmount().compareTo(BigDecimal.ZERO) != 0)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private BigDecimal calculateTax(BigDecimal amount, Long taxPoid, BigDecimal taxPercentage, String taxApplicable) {
+        if (amount == null || taxPoid == null || taxPercentage == null || !"Y".equalsIgnoreCase(taxApplicable)) {
+            return BigDecimal.ZERO;
+        }
+        return amount.multiply(taxPercentage).divide(new BigDecimal("100"), 3, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal nullToZero(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    /**
+     * Combine freshly read manifest charges with what the user currently has on screen.
+     *
+     * <ul>
+     *   <li>Manifest rows are re-read, but the user's editable fields on a matching row are carried over.</li>
+     *   <li>Rows the user added by hand are kept.</li>
+     *   <li>Rows carrying a system charge code (demurrage, late collection) are dropped - the caller
+     *       recalculates those.</li>
+     * </ul>
+     */
+    private List<SalesInvoiceChargesDtlDto> mergeWithUserCharges(List<SalesInvoiceChargesDtlDto> manifestCharges,
+                                                                 List<SalesInvoiceChargesDtlDto> uiCharges,
+                                                                 Set<Long> systemChargePoids) {
+        List<SalesInvoiceChargesDtlDto> merged = new ArrayList<>(manifestCharges);
+        if (uiCharges == null || uiCharges.isEmpty()) {
+            return merged;
+        }
+
+        Map<String, SalesInvoiceChargesDtlDto> uiByKey = new LinkedHashMap<>();
+        for (SalesInvoiceChargesDtlDto uiCharge : uiCharges) {
+            uiByKey.put(chargeKey(uiCharge), uiCharge);
+        }
+
+        Set<String> manifestKeys = new HashSet<>();
+        for (SalesInvoiceChargesDtlDto charge : merged) {
+            String key = chargeKey(charge);
+            manifestKeys.add(key);
+            SalesInvoiceChargesDtlDto uiCharge = uiByKey.get(key);
+            if (uiCharge != null) {
+                copyUserEdits(uiCharge, charge);
+            }
+        }
+
+        for (SalesInvoiceChargesDtlDto uiCharge : uiCharges) {
+            if (manifestKeys.contains(chargeKey(uiCharge))) {
+                continue;
+            }
+            if ("Y".equalsIgnoreCase(uiCharge.getDemurrageCharge())
+                    || (uiCharge.getChargePoid() != null && systemChargePoids.contains(uiCharge.getChargePoid()))) {
+                continue;
+            }
+            log.debug("Preserving user-added charge {} on refresh", uiCharge.getChargePoid());
+            merged.add(uiCharge);
+        }
+
+        return merged;
+    }
+
+    private String chargeKey(SalesInvoiceChargesDtlDto charge) {
+        return charge.getBlPoid() + "|" + charge.getChargesDetRowId() + "|" + charge.getChargePoid();
+    }
+
+    /** Carry the fields the charge grid lets the user edit onto a freshly read manifest row. */
+    private void copyUserEdits(SalesInvoiceChargesDtlDto from, SalesInvoiceChargesDtlDto to) {
+        if (from.getAmountSelect() != null) {
+            to.setAmountSelect(from.getAmountSelect());
+        }
+        if (from.getPrintRateAmt() != null) {
+            to.setPrintRateAmt(from.getPrintRateAmt());
+        }
+        if (from.getPrintCurrencyCode() != null) {
+            to.setPrintCurrencyCode(from.getPrintCurrencyCode());
+        }
+        if (from.getPrintCurrencyExchange() != null) {
+            to.setPrintCurrencyExchange(from.getPrintCurrencyExchange());
+        }
+        if (from.getPrintGroupTemp() != null) {
+            to.setPrintGroupTemp(from.getPrintGroupTemp());
+        }
+        if (from.getLpoSrnNo() != null) {
+            to.setLpoSrnNo(from.getLpoSrnNo());
+        }
+        if (from.getLpoSrnDate() != null) {
+            to.setLpoSrnDate(from.getLpoSrnDate());
+        }
+        if (from.getCnRefDocId() != null) {
+            to.setCnRefDocId(from.getCnRefDocId());
+        }
+        if (from.getCnRefDocPoid() != null) {
+            to.setCnRefDocPoid(from.getCnRefDocPoid());
+        }
+        if (from.getCnRefDetRowId() != null) {
+            to.setCnRefDetRowId(from.getCnRefDetRowId());
+        }
     }
 
     // ==================== Validation Helper Methods ====================

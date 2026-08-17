@@ -27,6 +27,16 @@ public interface SalesInvoiceShippingService {
 
     LoadChargeDataResponseDTO loadChargeData(Long id, LoadChargeDataRequestDTO request);
 
+    /**
+     * Refresh charge data using the grids as they currently stand in the UI.
+     *
+     * <p>Preferred over {@link #loadChargeData} for the "Refresh Charge Data" action: demurrage is
+     * calculated from the containers the user is looking at (including unsaved edits), manually
+     * added charges survive the refresh, and the BL type is resolved from the manifest rather than
+     * trusted from the request.</p>
+     */
+    LoadChargeDataResponseDTO refreshChargeData(Long id, RefreshChargeDataRequestDTO request);
+
     ValidateCustomerResponseDTO validateCustomer(ValidateCustomerRequestDTO request);
 
     void verifyInvoice(Long id);
