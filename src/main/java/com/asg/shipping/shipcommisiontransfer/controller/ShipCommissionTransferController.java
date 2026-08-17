@@ -143,14 +143,14 @@ public class ShipCommissionTransferController {
         return success("Commission calculated successfully", result);
     }
 
-    @PostMapping(value = "/{transactionPoid}/load-from-voyage", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/{voyageTransactionPoid}/load-from-voyage", produces = MediaType.APPLICATION_JSON_VALUE)
     @AllowedAction(UserRolesRightsEnum.EDIT)
     @Operation(summary = "Load commission data from voyage/manifest", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<?> loadFromVoyage(
-            @PathVariable @NotNull @Positive Long transactionPoid,
+            @PathVariable @NotNull @Positive Long voyageTransactionPoid,
             @RequestHeader(value = "X-Action-Requested", required = false) String actionRequested) {
-        log.info("Load from voyage request | transactionPoid={}, actionRequested={}", transactionPoid, actionRequested);
-        Map<String, Object> result = commissionTransferService.loadFromVoyage(transactionPoid);
+        log.info("Load from voyage request | voyageTransactionPoid={}, actionRequested={}", voyageTransactionPoid, actionRequested);
+        Map<String, Object> result = commissionTransferService.loadFromVoyage(voyageTransactionPoid);
         return success("Commission data loaded from voyage successfully", result);
     }
 

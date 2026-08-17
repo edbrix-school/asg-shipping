@@ -313,56 +313,26 @@ class ShipCommissionTransferServiceImplTest {
 
     @Test
     void testLoadFromVoyage_Success() {
-        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class);
-             var mockedHelperUtils = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
-            
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
-            mockedHelperUtils.when(com.asg.common.lib.utility.ASGHelperUtils::getCurrentUser).thenReturn("testuser");
+        try (var mockedHelperUtils = mockStatic(com.asg.common.lib.utility.ASGHelperUtils.class)) {
 
-            hdrEntity.setDocRef("COM-001");
-            hdrEntity.setVoyageTransactionPoid(100L);
+            mockedHelperUtils.when(com.asg.common.lib.utility.ASGHelperUtils::getCurrentUser).thenReturn("testuser");
 
             when(jdbcTemplate.execute(anyString(), any(org.springframework.jdbc.core.CallableStatementCallback.class))).thenReturn("Success");
 
-            Map<String, Object> result = service.loadFromVoyage(1L);
+            // Pass voyageTransactionPoid directly (100L)
+            Map<String, Object> result = service.loadFromVoyage(100L);
 
             assertNotNull(result);
-            assertEquals(1L, result.get("transactionPoid"));
-            assertEquals(0, result.get("loadedDetails"));
+            assertEquals(100L, result.get("voyageTransactionPoid"));
+            assertNotNull(result.get("message"));
         }
     }
 
     @Test
-    void testLoadFromVoyage_ValidationError_NoDocRef() {
-        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
-
-            hdrEntity.setDocRef(null);
-
-           /* when(headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(1L, 10L, 20L))
-                    .thenReturn(Optional.of(hdrEntity));*/
-
-            assertThrows(com.asg.common.lib.exception.ValidationException.class, 
-                () -> service.loadFromVoyage(1L));
-        }
-    }
-
-    @Test
-    void testLoadFromVoyage_ValidationError_NoVoyageTransactionPoid() {
-        try (var mockedUserContext = mockStatic(com.asg.common.lib.security.util.UserContext.class)) {
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getGroupPoid).thenReturn(10L);
-            mockedUserContext.when(com.asg.common.lib.security.util.UserContext::getCompanyPoid).thenReturn(20L);
-
-            hdrEntity.setDocRef("COM-001");
-            hdrEntity.setVoyageTransactionPoid(null);
-
-
-
-            assertThrows(com.asg.common.lib.exception.ValidationException.class, 
-                () -> service.loadFromVoyage(1L));
-        }
+    void testLoadFromVoyage_ValidationError_NullVoyageTransactionPoid() {
+        // Passing null voyageTransactionPoid must throw ValidationException
+        assertThrows(com.asg.common.lib.exception.ValidationException.class,
+            () -> service.loadFromVoyage(null));
     }
 
     @Test
