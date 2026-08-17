@@ -369,6 +369,83 @@ public class SalesInvoiceShippingController {
     }
 
     /**
+     * Refresh charge data using the grids as they currently stand in the UI
+     */
+    @Operation(
+            summary = "Refresh charge data from current UI state",
+            description = """
+                    Recalculates the charge grid for a BL using the container and charge rows the user
+                    currently has on screen, including unsaved edits.
+
+                    Differences from /load-container-charge-data:
+                    - Demurrage is calculated from the containers in the request, not re-read from the database
+                    - Manually added charges and user edits (selection, print rate) survive the refresh
+                    - BL type is resolved from the manifest, so SWITCH and CROSSTRADE load correctly
+                    - Per-container late charges are priced by 20ft/40ft container count
+
+                    Both containerDetails and chargesDetails are optional; omit them for a first load.
+                    """,
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Charge data refreshed successfully"),
+                    @ApiResponse(responseCode = "400", description = "Invalid request data"),
+                    @ApiResponse(responseCode = "404", description = "Sales Invoice not found"),
+                    @ApiResponse(responseCode = "500", description = "Internal server error")
+            }
+    )
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(
+            required = true,
+            description = "BL POID plus the current container and charge grids",
+            content = @Content(
+                    schema = @Schema(implementation = RefreshChargeDataRequestDTO.class),
+                    examples = @ExampleObject(
+                            name = "Refresh Charge Data Example",
+                            value = """
+                                    {
+                                      "blPoid": 456,
+                                      "blTypeInvoice": "IMPORT",
+                                      "containerDetails": [
+                                        {
+                                          "detRowId": 1,
+                                          "blPoid": 456,
+                                          "containerNo": "ABCU1234567",
+                                          "equipmentIsoType": "22G1",
+                                          "dmFrmDate": "2026-07-01",
+                                          "dmToDate": "2026-07-15",
+                                          "dmDays": 15,
+                                          "dmChargeAmt": 750.000
+                                        }
+                                      ],
+                                      "chargesDetails": [
+                                        {
+                                          "detRowId": 1,
+                                          "blPoid": 456,
+                                          "chargePoid": 9001,
+                                          "chargesDetRowId": 3,
+                                          "amount": 120.000,
+                                          "amountSelect": "N"
+                                        }
+                                      ]
+                                    }
+                                    """
+                    )
+            )
+    )
+    @PostMapping("/{id}/refresh-charge-data")
+    public ResponseEntity<?> refreshChargeData(
+            @Parameter(description = "Sales Invoice Transaction POID, or -999 for an unsaved invoice", required = true, example = "12345")
+            @PathVariable Long id,
+            @Valid @RequestBody RefreshChargeDataRequestDTO request) {
+        try {
+            log.info("Refresh charge data request for invoice id: {}", id);
+            LoadChargeDataResponseDTO result = service.refreshChargeData(id, request);
+            return success("Charge data refreshed successfully", result);
+        } catch (Exception e) {
+            log.error("Error refreshing charge data for invoice id: {}", id, e);
+            return internalServerError("Error refreshing charge data: " + e.getMessage());
+        }
+    }
+
+    /**
      * Validate customer
      * POST /v1/sales-invoice-shipping/validate-customer
      */
