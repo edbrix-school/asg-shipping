@@ -371,8 +371,9 @@ public class SalesInvoiceShippingController {
     /**
      * Refresh charge data using the grids as they currently stand in the UI
      */
+    @AllowedAction(UserRolesRightsEnum.VIEW)
     @Operation(
-            summary = "Refresh charge data from current UI state",
+            summary = "Refresh charge data from current UI state (DocId: 300-102)",
             description = """
                     Recalculates the charge grid for a BL using the container and charge rows the user
                     currently has on screen, including unsaved edits.
