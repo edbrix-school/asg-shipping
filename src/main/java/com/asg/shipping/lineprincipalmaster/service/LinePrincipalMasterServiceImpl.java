@@ -1408,6 +1408,9 @@ public class LinePrincipalMasterServiceImpl implements LinePrincipalMasterServic
         if (lineRepository.existsByLineNameAndGroupPoid(dto.getLineName(), groupPoid)) {
             throw new ValidationException("Line name already exists for this group");
         }
+        if (hasAnyAddressData(dto.getAddressTypeMap()) && dto.getAddressPoid() == null) {
+            throw new ValidationException("Address is required when address details are provided. Please select an Address.");
+        }
     }
 
     /**

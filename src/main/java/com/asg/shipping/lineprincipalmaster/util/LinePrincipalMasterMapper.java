@@ -123,7 +123,7 @@ public class LinePrincipalMasterMapper {
         entity.setBankGuaranteeNo(dto.getBankGuaranteeNo());
         entity.setBankGuaranteeBankPoid(dto.getBankGuaranteeBankPoid());
         entity.setBankGuaranteeCurrency(dto.getBankGuaranteeCurrency());
-        entity.setLineType(dto.getLineType());
+        entity.setLineType("OWN");
         entity.setChamberOfCommerce(dto.getChamberOfCommerce());
         entity.setChamberOfCommerceExpiry(dto.getChamberOfCommerceExpiry());
         entity.setLinePortRefno(resolveLinePortRefno(dto.getLinePortRefno(), dto.getLinePortRefnos()));
