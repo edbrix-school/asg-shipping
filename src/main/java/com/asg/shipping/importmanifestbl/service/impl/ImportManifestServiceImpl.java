@@ -652,6 +652,7 @@ public class ImportManifestServiceImpl implements ImportManifestService {
 
         ShipBlManifestHdr saved = headerRepository.saveAndFlush(entity);
         updateDetailTables(dto, saved.getTransactionPoid());
+        syncEmailFaxOnAddressChange(oldEntity, saved, dto, UserContext.getDocumentId(), id.toString());
 
         loggingService.logChanges(oldEntity, existingEntity, ShipBlManifestHdr.class, UserContext.getDocumentId(),
                 id.toString(), LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
@@ -1527,6 +1528,70 @@ public class ImportManifestServiceImpl implements ImportManifestService {
             emailFaxDtlRepository.deleteAllInBatch(entitiesToDelete);
             entitiesToDelete.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
         }
+    }
+
+    private static final String CN_ADDRESS_TYPE = "CN";
+    private static final String N1_ADDRESS_TYPE = "N1";
+    private static final String N2_ADDRESS_TYPE = "N2";
+    private static final String N3_ADDRESS_TYPE = "N3";
+    private static final String GLOBAL_ADDRESS_CONTACT_TYPE = "CAN";
+
+    /**
+     * Mirrors the ADF bean's emailFaxIdsSeleted(): whenever a Consignee/Notify address actually
+     * changes (including being cleared), the stale email/fax rows for that role must be dropped and
+     * replaced with the new address's GLOBAL_ADDRESS_DETAILS contacts — independent of whatever the
+     * caller did or didn't include in dto.getAddressDetails().
+     */
+    private void syncEmailFaxOnAddressChange(ShipBlManifestHdr oldEntity, ShipBlManifestHdr saved,
+            ImportManifestBlDto dto, String docId, String docKeyPoid) {
+        Long transactionPoid = saved.getTransactionPoid();
+        syncPartyEmailFax(transactionPoid, CN_ADDRESS_TYPE, oldEntity.getConsigneePoid(), saved.getConsigneePoid(),
+                "N", dto, docId, docKeyPoid);
+        syncPartyEmailFax(transactionPoid, N1_ADDRESS_TYPE, oldEntity.getNotifyPoid1(), saved.getNotifyPoid1(),
+                "Y", dto, docId, docKeyPoid);
+        syncPartyEmailFax(transactionPoid, N2_ADDRESS_TYPE, oldEntity.getNotifyPoid2(), saved.getNotifyPoid2(),
+                "Y", dto, docId, docKeyPoid);
+        syncPartyEmailFax(transactionPoid, N3_ADDRESS_TYPE, oldEntity.getNotifyPoid3(), saved.getNotifyPoid3(),
+                "Y", dto, docId, docKeyPoid);
+    }
+
+    private void syncPartyEmailFax(Long transactionPoid, String addressType, Long oldPoid, Long newPoid,
+            String sendYesNo, ImportManifestBlDto headerDto, String docId, String docKeyPoid) {
+        if (Objects.equals(oldPoid, newPoid)) {
+            return;
+        }
+
+        List<ShipBlManifestEmailFaxDtl> existing =
+                emailFaxDtlRepository.findByIdTransactionPoidAndIdAddressType(transactionPoid, addressType);
+        if (!existing.isEmpty()) {
+            emailFaxDtlRepository.deleteAllInBatch(existing);
+            existing.forEach(e -> loggingService.logDelete(e, docId, docKeyPoid));
+        }
+
+        if (newPoid == null) {
+            return;
+        }
+
+        List<AddressDetails> contacts =
+                addressDetailsRepository.findByAddressMasterPoidAndAddressType(newPoid, GLOBAL_ADDRESS_CONTACT_TYPE);
+        if (contacts.isEmpty()) {
+            return;
+        }
+
+        List<AddressDetailsDto> toCreate = contacts.stream()
+                .map(ad -> AddressDetailsDto.builder()
+                        .addressType(addressType)
+                        .addressPoid(ad.getAddressPoid() != null ? new BigDecimal(ad.getAddressPoid()) : null)
+                        .email1(ad.getEmail())
+                        .email2(ad.getEmail2())
+                        .sendEmailFax("BOTH")
+                        .sendYesNo(sendYesNo)
+                        .build())
+                .toList();
+
+        List<String> logEntries = new ArrayList<>();
+        saveNotifyParties(toCreate, transactionPoid, logEntries, headerDto);
+        logSummaryEntries(logEntries, docId, docKeyPoid);
     }
 
     private void updateMafiDetails(List<MafiDetailsDto> details, Long transactionPoid, String docId, String docKeyPoid) {
