@@ -150,10 +150,10 @@ class ShipCommissionTransferControllerTest {
         Map<String, Object> result = new HashMap<>();
         result.put("loadedDetails", List.of());
 
-        when(commissionTransferService.loadFromVoyage(eq(1L)))
+        when(commissionTransferService.loadFromVoyage(eq(100L)))
                 .thenReturn(result);
 
-        mockMvc.perform(post("/v1/ship-commission-transfer/1/load-from-voyage"))
+        mockMvc.perform(post("/v1/ship-commission-transfer/100/load-from-voyage"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Commission data loaded from voyage successfully"));
