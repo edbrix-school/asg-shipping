@@ -280,39 +280,20 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
 
     @Override
     @Transactional
-    public Map<String, Object> loadFromVoyage(Long transactionPoid) {
-        log.info("Loading commission data from voyage for transaction: {}", transactionPoid);
+    public Map<String, Object> loadFromVoyage(Long voyageTransactionPoid) {
+        log.info("Loading commission data from voyage for voyageTransactionPoid: {}", voyageTransactionPoid);
 
-        Long groupPoid = com.asg.common.lib.security.util.UserContext.getGroupPoid();
-        Long companyPoid = com.asg.common.lib.security.util.UserContext.getCompanyPoid();
-        ShipBlCommissionHdr entity = new ShipBlCommissionHdr();
-
-        /*ShipBlCommissionHdr entity = headerRepository.findByTransactionPoidAndGroupPoidAndCompanyPoid(transactionPoid, groupPoid, companyPoid)
-                .orElseThrow(() -> new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString()));
-
-        if ("Y".equals(entity.getDeleted())) {
-            throw new ResourceNotFoundException(SHIP_COMMISSION_TRANSFER, TRANSACTION_POID, transactionPoid.toString());
-        }
-
-        // Validate document is saved first
-        if (entity.getDocRef() == null || entity.getDocRef().trim().isEmpty()) {
-            throw new ValidationException("Document must be saved before loading data from voyage");
-        }
-
-        if (entity.getVoyageTransactionPoid() == null) {
+        if (voyageTransactionPoid == null) {
             throw new ValidationException("Voyage Transaction POID is required to load data from voyage");
-        }*/
+        }
 
-        // Call PROC_MATE_RCPT_EMPTY_MANIFEST to load data from voyage
-        // NOTE: Param 1 must be VoyageTransactionPoid (P_TRANSACTION_POID_VOYAGE), not commission transactionPoid
-        String result = callProcMateRcptEmptyManifest(entity.getVoyageTransactionPoid(), getCurrentUser());
-
-        // Reload detail records
-        List<ShipBlCommissionDtl> detailRecords = detailRepository.findByTransactionPoidOrderByDetRowId(transactionPoid);
+        // Call PROC_MATE_RCPT_EMPTY_MANIFEST with the voyage POID directly
+        // Param 1 = P_TRANSACTION_POID_VOYAGE — the voyage POID, NOT the commission doc POID
+        log.info("Calling PROC_MATE_RCPT_EMPTY_MANIFEST with voyageTransactionPoid={}", voyageTransactionPoid);
+        String result = callProcMateRcptEmptyManifest(voyageTransactionPoid, getCurrentUser());
 
         Map<String, Object> response = new HashMap<>();
-        response.put(TRANSACTION_POID, transactionPoid);
-        response.put("loadedDetails", detailRecords.size());
+        response.put("voyageTransactionPoid", voyageTransactionPoid);
         response.put("message", result);
 
         return response;
@@ -622,23 +603,26 @@ public class ShipCommissionTransferServiceImpl implements ShipCommissionTransfer
     /**
      * Call PROC_MATE_RCPT_EMPTY_MANIFEST stored procedure
      */
-    private String callProcMateRcptEmptyManifest(Long transactionPoid, String user) {
+    private String callProcMateRcptEmptyManifest(Long voyagePoid, String user) {
         try {
             String sql = "{call PROC_MATE_RCPT_EMPTY_MANIFEST(?, ?, ?)}";
             String result = jdbcTemplate.execute(sql, (CallableStatement cs) -> {
-                cs.setLong(1, transactionPoid);
-                cs.setString(2, user);
-                cs.registerOutParameter(3, Types.VARCHAR);
+                cs.setLong(1, voyagePoid);   // P_TRANSACTION_POID_VOYAGE
+                cs.setString(2, user);        // P_USER_CODE
+                cs.registerOutParameter(3, Types.VARCHAR); // P_STATUS OUT
                 cs.execute();
                 return cs.getString(3);
             });
-            // Check P_STATUS for ERROR before treating as success (mirrors legacy bean check)
+            log.info("PROC_MATE_RCPT_EMPTY_MANIFEST result for voyagePoid={}: {}", voyagePoid, result);
+            // Mirror legacy bean: check for ERROR in P_STATUS before treating as success
             if (result == null || result.toUpperCase().contains("ERROR")) {
                 throw new ValidationException("Error loading empty manifest: " + result);
             }
             return "Records imported..." + result;
+        } catch (ValidationException ve) {
+            throw ve;
         } catch (Exception e) {
-            log.error("Error calling PROC_MATE_RCPT_EMPTY_MANIFEST for transaction: {}", transactionPoid, e);
+            log.error("Error calling PROC_MATE_RCPT_EMPTY_MANIFEST for voyagePoid: {}", voyagePoid, e);
             throw new ValidationException("Error loading data from voyage: " + e.getMessage());
         }
     }

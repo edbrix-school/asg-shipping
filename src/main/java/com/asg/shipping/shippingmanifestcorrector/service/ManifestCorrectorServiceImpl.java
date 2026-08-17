@@ -166,6 +166,9 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         ShipBlReprintHdr entity = hdrRepository.findActiveByTransactionPoid(transactionPoid)
                 .orElseThrow(() -> new ResourceNotFoundException("Shipping Manifest Corrector", "transactionPoid", transactionPoid.toString()));
 
+        ShipBlReprintHdr oldEntity = new ShipBlReprintHdr();
+        BeanUtils.copyProperties(entity, oldEntity);
+
         validateUpdateDTO(updateDTO);
 
         mapper.mapUpdateDTOToEntity(updateDTO, entity);
@@ -182,7 +185,9 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
         loadDetailTables(result, saved.getTransactionPoid());
         enrichLovData(result);
 
-        loggingService.createLogSummaryEntry(LogDetailsEnum.MODIFIED, com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString());
+        loggingService.logChanges(oldEntity, saved, ShipBlReprintHdr.class,
+                com.asg.common.lib.security.util.UserContext.getDocumentId(), transactionPoid.toString(),
+                LogDetailsEnum.MODIFIED, "TRANSACTION_POID");
 
         log.info("Successfully updated Shipping Manifest Corrector with id: {}", transactionPoid);
         return result;

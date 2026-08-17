@@ -45,9 +45,12 @@ public interface ShipCommissionTransferService {
     Map<String, Object> calculateCommission(Long transactionPoid, CalculateCommissionRequestDTO request);
 
     /**
-     * Load commission data from voyage/manifest
+     * Load commission data from voyage/manifest.
+     *
+     * @param voyageTransactionPoid the POID of the voyage (passed as P_TRANSACTION_POID_VOYAGE
+     *                              to PROC_MATE_RCPT_EMPTY_MANIFEST)
      */
-    Map<String, Object> loadFromVoyage(Long transactionPoid);
+    Map<String, Object> loadFromVoyage(Long voyageTransactionPoid);
 
     /**
      * Insert commission data into PDA system
