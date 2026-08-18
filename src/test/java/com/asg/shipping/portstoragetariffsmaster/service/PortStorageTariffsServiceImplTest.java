@@ -166,28 +166,33 @@ class PortStorageTariffsServiceImplTest {
     }
 
     @Test
-    void searchTariffs_AppliesPeriodOverlapFilters() {
+    void searchTariffs_AppliesPeriodToWindowFilters() {
         try (MockedStatic<UserContext> mockedUserContext = mockStatic(UserContext.class)) {
             mockedUserContext.when(UserContext::getGroupPoid).thenReturn(1L);
 
-            FilterRequestDto filterRequest = new FilterRequestDto("AND", "N", Collections.emptyList());
+            FilterRequestDto filterRequest = new FilterRequestDto("OR", "N", Collections.emptyList());
             Pageable pageable = PageRequest.of(0, 20);
-            LocalDate periodFrom = LocalDate.of(2026, 1, 1);
-            LocalDate periodTo = LocalDate.of(2026, 1, 30);
+            LocalDate periodFrom = LocalDate.of(2026, 1, 16);
+            LocalDate periodTo = LocalDate.of(2026, 8, 17);
+            List<FilterDto> dateFilters = List.of(
+                    new FilterDto("PERIOD_TO", ">=2026-01-16"),
+                    new FilterDto("PERIOD_TO", "<=2026-08-17")
+            );
 
-            when(documentService.resolveOperator(any())).thenReturn("AND");
+            when(documentService.resolveOperator(any())).thenReturn("OR");
             when(documentService.resolveIsDeleted(any())).thenReturn("N");
-            when(documentService.resolveFilters(any())).thenReturn(new ArrayList<>());
+            when(documentService.resolveDateFilters(eq(filterRequest), eq("PERIOD_TO"), eq(periodFrom), eq(periodTo)))
+                    .thenReturn(dateFilters);
             when(documentService.search(anyString(), anyList(), anyString(), any(), anyString(), anyString(), anyString()))
                     .thenReturn(new RawSearchResult(Collections.emptyList(), new HashMap<>(), 0L));
 
             service.searchTariffs("DOC_ID", filterRequest, periodFrom, periodTo, pageable);
 
+            verify(documentService).resolveDateFilters(eq(filterRequest), eq("PERIOD_TO"), eq(periodFrom), eq(periodTo));
+            verify(documentService, never()).resolveFilters(any());
             verify(documentService).search(
                     eq("DOC_ID"),
-                    argThat(filters -> filters.size() == 2
-                            && filters.stream().anyMatch(f -> "PERIOD_FROM".equals(f.searchField()) && "<=2026-01-30".equals(f.searchValue()))
-                            && filters.stream().anyMatch(f -> "PERIOD_TO".equals(f.searchField()) && ">=2026-01-01".equals(f.searchValue()))),
+                    eq(dateFilters),
                     eq("AND"),
                     eq(pageable),
                     eq("N"),

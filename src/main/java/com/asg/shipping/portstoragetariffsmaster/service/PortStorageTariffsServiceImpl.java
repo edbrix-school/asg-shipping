@@ -85,11 +85,12 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         log.info("Searching tariffs with docId: {}, page: {}, size: {}, periodFrom: {}, periodTo: {}",
                 docId, pageable.getPageNumber(), pageable.getPageSize(), periodFrom, periodTo);
 
-        // Resolve filter components from FilterRequestDto
         String operator = documentService.resolveOperator(request);
         String isDeleted = documentService.resolveIsDeleted(request);
-        List<FilterDto> filters = new ArrayList<>(documentService.resolveFilters(request));
-        applyPeriodRangeFilters(filters, periodFrom, periodTo);
+        List<FilterDto> filters = resolveSearchFilters(request, periodFrom, periodTo);
+        if (periodFrom != null && periodTo != null) {
+            operator = "AND";
+        }
 
         // Call documentService.search with docId, filters, operator, pageable, isDeleted
         // Label field: "DESCRIPTION" (display field)
@@ -115,16 +116,13 @@ public class PortStorageTariffsServiceImpl implements PortStorageTariffsService 
         return PaginationUtil.wrapPage(page, raw.displayFields());
     }
 
-    /**
-     * Returns tariffs whose period overlaps the selected range (All Records view).
-     * Overlap: PERIOD_FROM &lt;= searchTo AND PERIOD_TO &gt;= searchFrom
-     */
-    private void applyPeriodRangeFilters(List<FilterDto> filters, LocalDate periodFrom, LocalDate periodTo) {
-        if (periodFrom == null || periodTo == null) {
-            return;
+   
+    private List<FilterDto> resolveSearchFilters(FilterRequestDto request,
+                                                 LocalDate periodFrom, LocalDate periodTo) {
+        if (periodFrom != null && periodTo != null) {
+            return new ArrayList<>(documentService.resolveDateFilters(request, "PERIOD_TO", periodFrom, periodTo));
         }
-        filters.add(new FilterDto("PERIOD_FROM", "<=" + periodTo));
-        filters.add(new FilterDto("PERIOD_TO", ">=" + periodFrom));
+        return new ArrayList<>(documentService.resolveFilters(request));
     }
 
     @Override
