@@ -53,7 +53,8 @@ public class PortStorageTariffsController {
     @PostMapping("/search")
     @Operation(
             summary = "Search port storage tariffs",
-            description = "Retrieve paginated list of port storage tariffs with optional filtering and sorting using DocumentSearchService",
+            description = "Retrieve paginated list of port storage tariffs with optional filtering and sorting. "
+                    + "When periodFrom and periodTo are provided, returns tariffs whose PERIOD_TO falls within that window.",
             security = @SecurityRequirement(name = "bearerAuth")
     )
     @ApiResponses(value = {
@@ -81,9 +82,9 @@ public class PortStorageTariffsController {
             @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "Sort field and direction (e.g., 'PERIOD_FROM,desc')", example = "PERIOD_FROM,desc")
             @RequestParam(required = false) String sort,
-            @Parameter(description = "Period range start (inclusive) for All Records filter")
+            @Parameter(description = "Period window start (inclusive). Returns tariffs whose PERIOD_TO falls in this range.")
             @RequestParam(required = false) LocalDate periodFrom,
-            @Parameter(description = "Period range end (inclusive) for All Records filter")
+            @Parameter(description = "Period window end (inclusive). Returns tariffs whose PERIOD_TO falls in this range.")
             @RequestParam(required = false) LocalDate periodTo) {
 
         log.info("Searching port storage tariffs with page: {}, size: {}, sort: {}, periodFrom: {}, periodTo: {}",
