@@ -3,6 +3,7 @@ package com.asg.shipping.demurrageenquiryblwise.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,4 +34,12 @@ public class DemurrageEnquiryRequestDto {
 	@DecimalMax(value = "100", message = "Discount(%) cannot be greater than 100")
 	@Schema(description = "Discount percentage applied on the calculated demurrage amount", example = "10")
 	private BigDecimal discountPercentage;
+
+	@Min(value = 0, message = "Free days cannot be negative")
+	@Schema(description = """
+			Free days to apply instead of the free days of the container / line tariff. \
+			It replaces them, it is not added on top of them. Leave it empty or 0 to keep \
+			the free days the tariff resolves for every container.""",
+			example = "7")
+	private Integer freeDays;
 }

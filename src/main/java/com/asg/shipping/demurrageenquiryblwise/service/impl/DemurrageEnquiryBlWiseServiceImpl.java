@@ -91,6 +91,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 			container.setDmDays(null);
 			container.setDmChargeAmt(null);
 			container.setDmChargeAmtBeforeDiscount(null);
+			container.setRemarks(null);
 		});
 
 		DemurrageEnquiryResponseDto response = DemurrageEnquiryResponseDto.builder()
@@ -117,6 +118,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 		LocalDate toDate = request.getToDate() != null ? request.getToDate() : DateUtil.getCurrentDateInUserTimeZone();
 		BigDecimal discount = request.getDiscountPercentage() != null ? request.getDiscountPercentage() : BigDecimal.ZERO;
+		// Only a positive value overrides the tariff, so 0 and null are the same request.
+		Integer freeDays = request.getFreeDays() != null && request.getFreeDays() > 0 ? request.getFreeDays() : null;
 		Long companyPoid = UserContext.getCompanyPoid();
 		if (companyPoid == null) {
 			// RTN_GLOBAL_PARAMETER fails with ORA-01400 on a null company, which would take the
@@ -124,10 +127,12 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 			throw new ValidationException("Company context is missing, the charges cannot be resolved");
 		}
 
-		log.info("Demurrage enquiry for BL: {}, toDate: {}, discount: {}%", blPoid, toDate, discount);
+		log.info("Demurrage enquiry for BL: {}, toDate: {}, discount: {}%, freeDays: {}",
+				blPoid, toDate, discount, freeDays);
 
 		List<DemurrageEnquiryContainerDto> containers = enquiryRepository.loadContainers(blPoid);
-		BigDecimal totalDemurrage = calculateContainers(blPoid, containers, toDate, discount);
+		BigDecimal totalDemurrage = calculateContainers(blPoid, containers, toDate, discount, freeDays);
+		fillDemurrageBreakdown(blPoid, containers, toDate, freeDays);
 
 		List<DemurrageEnquiryChargeDto> charges = buildCharges(blPoid, companyPoid, containers, totalDemurrage);
 
@@ -145,6 +150,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.doStatus(enquiryRepository.findDoStatus(blPoid))
 				.toDate(toDate)
 				.discountPercentage(discount)
+				.freeDays(freeDays)
 				.containers(containers)
 				.charges(charges)
 				.totalDemurrageAmount(money(totalDemurrage))
@@ -158,18 +164,21 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 	}
 
 	@Override
-	public byte[] printDemurrageCalculation(Long blPoid, LocalDate toDate, BigDecimal discountPercentage)
-			throws Exception {
+	public byte[] printDemurrageCalculation(Long blPoid, LocalDate toDate, BigDecimal discountPercentage,
+											Integer freeDays) throws Exception {
 		validateBl(blPoid);
 
 		LocalDate tillDate = toDate != null ? toDate : DateUtil.getCurrentDateInUserTimeZone();
 		BigDecimal discount = discountPercentage != null ? discountPercentage : BigDecimal.ZERO;
+		// The report reads 0 the way the procedure does: keep the free days of the line tariff.
+		int appliedFreeDays = freeDays != null && freeDays > 0 ? freeDays : 0;
 
 		// The enquiry has no document of its own - the BL is the key of the report.
 		Map<String, Object> params = printService.buildBaseParams(blPoid, DOC_ID);
 		params.put("DOC_KEY_POID", String.valueOf(blPoid));
 		params.put("P_TILL_DATE", tillDate.format(REPORT_DATE_FORMAT));
 		params.put("P_DISCOUNT", discount.toPlainString());
+		params.put("P_FREE_DAYS", String.valueOf(appliedFreeDays));
 		params.put("SUBREPORT_DEMURRAGE_MASTER", printService.load(DEMURRAGE_MASTER_SUBREPORT));
 		params.put("SUBREPORT_DEMURRAGE_DTL", printService.load(DEMURRAGE_DTL_SUBREPORT));
 
@@ -200,17 +209,22 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 	/**
 	 * Recalculates every container up to the applied To Date and returns the total demurrage. A
 	 * container that has already been returned empty is only charged up to its Empty In date.
+	 * {@code freeDays}, when given, replaces the free days of every container.
 	 */
 	private BigDecimal calculateContainers(Long blPoid, List<DemurrageEnquiryContainerDto> containers,
-										   LocalDate toDate, BigDecimal discount) {
+										   LocalDate toDate, BigDecimal discount, Integer freeDays) {
 		BigDecimal totalDemurrage = BigDecimal.ZERO;
 
 		for (DemurrageEnquiryContainerDto container : containers) {
 			LocalDate effectiveToDate = container.getEmptyIn() != null ? container.getEmptyIn() : toDate;
 			container.setDmToDate(effectiveToDate);
+			if (freeDays != null) {
+				// The column has to show the free days the amount was calculated with.
+				container.setFreeDays(freeDays.longValue());
+			}
 
-			ContainerDemurrageCalcDto calc =
-					enquiryRepository.calculateContainerDemurrage(blPoid, container.getContainerNo(), effectiveToDate);
+			ContainerDemurrageCalcDto calc = enquiryRepository.calculateContainerDemurrage(
+					blPoid, container.getContainerNo(), effectiveToDate, freeDays);
 
 			if (calc == null || calc.getDays() == null || calc.getDays() <= 0) {
 				// Still inside the free days or the container was returned before the period started.
@@ -270,7 +284,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 					.build());
 		}
 
-		DemurrageEnquiryChargeDto demurrageCharge = buildDemurrageCharge(blPoid, companyPoid, totalDemurrage);
+		DemurrageEnquiryChargeDto demurrageCharge =
+				buildDemurrageCharge(blPoid, companyPoid, totalDemurrage, containers);
 		if (demurrageCharge != null) {
 			demurrageCharge.setDetRowId(++serialNumber);
 			charges.add(demurrageCharge);
@@ -287,7 +302,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		return charges;
 	}
 
-	private DemurrageEnquiryChargeDto buildDemurrageCharge(Long blPoid, Long companyPoid, BigDecimal totalDemurrage) {
+	private DemurrageEnquiryChargeDto buildDemurrageCharge(Long blPoid, Long companyPoid, BigDecimal totalDemurrage,
+														   List<DemurrageEnquiryContainerDto> containers) {
 		if (totalDemurrage == null || totalDemurrage.compareTo(BigDecimal.ZERO) == 0) {
 			return null;
 		}
@@ -307,6 +323,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.chargePoid(config.getChargePoid())
 				.chargesDetRowId(0L)
 				.chargeType(CHARGE_TYPE_DEMURRAGE)
+				.remarks(demurrageRemarks(containers))
 				.amount(money(totalDemurrage))
 				.taxPoid(taxed ? config.getTaxPoid() : null)
 				.taxPercentage(taxed ? config.getTaxPercentage() : null)
@@ -346,6 +363,37 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.taxAmount(money(taxAmount))
 				.totalAmount(money(amount.add(taxAmount)))
 				.build();
+	}
+
+	/**
+	 * Reads the slab breakdown of every container in one go and hangs it on the rows that carry
+	 * demurrage. A container still inside its free days keeps an empty Remarks - there is no slab to
+	 * explain - and a breakdown that cannot be read leaves the amounts untouched.
+	 */
+	private void fillDemurrageBreakdown(Long blPoid, List<DemurrageEnquiryContainerDto> containers,
+										LocalDate toDate, Integer freeDays) {
+		boolean anythingCharged = containers.stream()
+				.anyMatch(container -> container.getDmDays() != null && container.getDmDays() > 0);
+		if (!anythingCharged) {
+			return;
+		}
+
+		Map<String, String> remarks = enquiryRepository.findContainerDemurrageRemarks(blPoid, toDate, freeDays);
+		containers.stream()
+				.filter(container -> container.getDmDays() != null && container.getDmDays() > 0)
+				.forEach(container -> container.setRemarks(remarks.get(container.getContainerNo())));
+	}
+
+	/**
+	 * Remarks of the calculated demurrage row: the breakdown of every container it bills, prefixed
+	 * with the container it belongs to, since the charge is one row for the whole BL.
+	 */
+	private static String demurrageRemarks(List<DemurrageEnquiryContainerDto> containers) {
+		String remarks = containers.stream()
+				.filter(container -> container.getRemarks() != null && !container.getRemarks().isBlank())
+				.map(container -> container.getContainerNo() + ": " + container.getRemarks())
+				.collect(Collectors.joining("; "));
+		return remarks.isEmpty() ? null : remarks;
 	}
 
 	/**

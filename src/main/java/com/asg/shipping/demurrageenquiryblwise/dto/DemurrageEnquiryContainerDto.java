@@ -42,4 +42,10 @@ public class DemurrageEnquiryContainerDto {
 	private BigDecimal dmChargeAmtBeforeDiscount;
 	/** Date on which the container was returned empty (MTIN move). */
 	private LocalDate emptyIn;
+	/**
+	 * Slab breakdown of the demurrage amount, as {@code FUNC_RTN_DEM_DETTN_FULL_TEXT} writes it - the
+	 * same text the Remarks column of the View Demurrage Calculation print shows. Empty while the
+	 * container is inside its free days, there being no slab to explain.
+	 */
+	private String remarks;
 }

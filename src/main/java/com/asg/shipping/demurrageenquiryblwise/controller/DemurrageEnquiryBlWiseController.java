@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
@@ -24,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,6 +48,7 @@ import static com.asg.common.lib.dto.response.ApiResponse.success;
  * nothing is stored, every figure is derived from the BL, the line tariff and the charge masters.
  */
 @RestController
+@Validated
 @RequestMapping("v1/demurrage-enquiry-bl-wise")
 @RequiredArgsConstructor
 @Slf4j
@@ -93,6 +96,8 @@ public class DemurrageEnquiryBlWiseController {
 					- A container that was returned empty is charged only up to its **Empty In** date
 					- Containers still inside their free days return zero days and zero amount
 					- **Discount (%)** is applied on the calculated demurrage amount of every container
+					- **Free Days**, when supplied, replaces the free days of the line tariff for every
+					  container - it is not added on top of them
 					- The Charges tab holds the BL manifest charges that are neither received nor invoiced,
 					  the calculated demurrage (charge mapped on the SHDEMURRAGE parameter) and the
 					  late collection / revalidation charges of the port charges tariff
@@ -112,7 +117,8 @@ public class DemurrageEnquiryBlWiseController {
 									{
 									  "blPoid": 1001,
 									  "toDate": "2025-07-28",
-									  "discountPercentage": 10
+									  "discountPercentage": 10,
+									  "freeDays": 7
 									}
 									"""
 					)
@@ -136,7 +142,13 @@ public class DemurrageEnquiryBlWiseController {
 			produces = {MediaType.APPLICATION_PDF_VALUE, MediaType.APPLICATION_JSON_VALUE})
 	@Operation(
 			summary = "View Demurrage Calculation",
-			description = "Demurrage charges tariff calculation of the BL as a PDF (SH/LINE_DEMURRAGE_CALC)."
+			description = """
+					Demurrage charges tariff calculation of the BL as a PDF (SH/LINE_DEMURRAGE_CALC).
+
+					The tariff section prints the line tariff as it is configured. **Free Days**, when
+					supplied, replaces those free days in the container section - so the Free Days
+					column of the detail rows shows the value the amounts were calculated with.
+					"""
 	)
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "PDF generated successfully"),
@@ -149,10 +161,15 @@ public class DemurrageEnquiryBlWiseController {
 			@Parameter(description = "To Date of the calculation, defaults to the current date", example = "2025-07-28")
 			@RequestParam(required = false) LocalDate toDate,
 			@Parameter(description = "Discount percentage", example = "10")
-			@RequestParam(required = false) BigDecimal discountPercentage
+			@RequestParam(required = false) BigDecimal discountPercentage,
+			@Parameter(description = "Free days to apply instead of the free days of the line tariff",
+					example = "7")
+			@RequestParam(required = false) @Min(value = 0, message = "Free days cannot be negative")
+			Integer freeDays
 	) {
 		try {
-			byte[] pdf = demurrageEnquiryBlWiseService.printDemurrageCalculation(blPoid, toDate, discountPercentage);
+			byte[] pdf = demurrageEnquiryBlWiseService.printDemurrageCalculation(
+					blPoid, toDate, discountPercentage, freeDays);
 			return ResponseEntity.ok()
 					.header(HttpHeaders.CONTENT_DISPOSITION,
 							"attachment; filename=demurrage-calculation-" + blPoid + ".pdf")

@@ -29,6 +29,9 @@
 	</parameter>
 	<parameter name="P_TILL_DATE" class="java.lang.String"/>
 	<parameter name="P_DISCOUNT" class="java.lang.String"/>
+	<parameter name="P_FREE_DAYS" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA["0"]]></defaultValueExpression>
+	</parameter>
 	<parameter name="SUB_HEADER" class="net.sf.jasperreports.engine.JasperReport"/>
 	<parameter name="SUBREPORT_DEMURRAGE_MASTER" class="net.sf.jasperreports.engine.JasperReport"/>
 	<parameter name="SUBREPORT_DEMURRAGE_DTL" class="net.sf.jasperreports.engine.JasperReport"/>
@@ -127,6 +130,9 @@ where hdr.TRANSACTION_POID = $P{DOC_KEY_POID}]]>
 				</subreportParameter>
 				<subreportParameter name="P_TILL_DATE">
 					<subreportParameterExpression><![CDATA[$P{P_TILL_DATE}]]></subreportParameterExpression>
+				</subreportParameter>
+				<subreportParameter name="P_FREE_DAYS">
+					<subreportParameterExpression><![CDATA[$P{P_FREE_DAYS}]]></subreportParameterExpression>
 				</subreportParameter>
 				<connectionExpression><![CDATA[$P{REPORT_CONNECTION}]]></connectionExpression>
 				<subreportExpression><![CDATA[$P{SUBREPORT_DEMURRAGE_DTL}]]></subreportExpression>
