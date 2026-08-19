@@ -43,10 +43,11 @@ public class DemurrageEnquiryChargeDto {
 	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal totalAmount;
 	/**
-	 * Remarks column of the Charges tab. The legacy grid binds it to
-	 * {@code AR_SH_RECEIPT_CHARGES_DTL.REMARKS}, which this enquiry never populates - the BL manifest
-	 * charges have no remarks column at all - so it always comes back empty and is kept only so the
-	 * screen can render the column.
+	 * Remarks column of the Charges tab. Filled on the calculated demurrage row with the slab
+	 * breakdown of the containers it bills ({@code FUNC_RTN_DEM_DETTN_FULL_TEXT}, the text the print
+	 * shows). Empty on every other row: the legacy grid binds those to
+	 * {@code AR_SH_RECEIPT_CHARGES_DTL.REMARKS}, which only exists once a receipt has been saved, and
+	 * the BL manifest charges have no remarks column at all.
 	 */
 	private String remarks;
 }

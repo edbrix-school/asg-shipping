@@ -30,7 +30,8 @@ public interface DemurrageEnquiryBlWiseService {
 	/**
 	 * "View Demurrage Calculation" link: the demurrage tariff calculation PDF of the BL.
 	 */
-	byte[] printDemurrageCalculation(Long blPoid, LocalDate toDate, BigDecimal discountPercentage) throws Exception;
+	byte[] printDemurrageCalculation(Long blPoid, LocalDate toDate, BigDecimal discountPercentage, Integer freeDays)
+			throws Exception;
 
 	Map<String, Object> list(FilterRequestDto filters, Pageable pageable, LocalDate startDate, LocalDate endDate);
 }
