@@ -60,6 +60,9 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 	 * the format the legacy screen produced from the ADF date binding.
 	 */
 	private static final DateTimeFormatter REPORT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	/** The screen prints the late collection date the way Oracle's DD-MON-YY does: 13-MAY-26. */
+	private static final DateTimeFormatter REMARKS_DATE_FORMAT =
+			DateTimeFormatter.ofPattern("dd-MMM-yy", java.util.Locale.ENGLISH);
 
 	private static final String BL_LOV = "ALLBLNUMBER";
 	private static final String CHARGE_LOV = "CHARGE_MASTER";
@@ -357,6 +360,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.chargePoid(portCharge.getChargeCodePoid())
 				.chargesDetRowId(0L)
 				.chargeType(portCharge.getChargeTypeApplicable())
+				.remarks(applicableFromRemark(portCharge.getApplicableFrom()))
 				.amount(money(amount))
 				.taxPoid(taxed ? portCharge.getTaxPoid() : null)
 				.taxPercentage(taxed ? portCharge.getTaxPercentage() : null)
@@ -394,6 +398,18 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.map(container -> container.getContainerNo() + ": " + container.getRemarks())
 				.collect(Collectors.joining("; "));
 		return remarks.isEmpty() ? null : remarks;
+	}
+
+	/**
+	 * Remarks of a late collection charge: the day the charge starts to apply, as the screen words it.
+	 * The revalidation rows are not date driven and carry no date, so they keep an empty Remarks.
+	 */
+	private static String applicableFromRemark(LocalDate applicableFrom) {
+		if (applicableFrom == null) {
+			return null;
+		}
+		return "Applicable from " + REMARKS_DATE_FORMAT.format(applicableFrom).toUpperCase(java.util.Locale.ENGLISH)
+				+ " onwards";
 	}
 
 	/**

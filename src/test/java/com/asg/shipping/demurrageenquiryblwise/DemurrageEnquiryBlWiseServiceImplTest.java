@@ -468,6 +468,56 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 		assertEquals(0, new BigDecimal("1000").compareTo(response.getTotalDemurrageAmount()));
 	}
 
+	/**
+	 * The late collection fee only starts to bite on arrival + SHIPLATEDOCOLLECTION - 1, the day the
+	 * query's own filter starts to hold, and the screen says so on the row.
+	 */
+	@Test
+	void applyDate_lateCollectionChargeCarriesTheDateItStartsToApply() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 0L, BigDecimal.ZERO));
+		when(enquiryRepository.findPortCharges(BL_POID, 100L)).thenReturn(List.of(PortChargeRowDto.builder()
+				.chargeTypeApplicable("LATECOLLECTIONIMP")
+				.chargeApplicable("PERBL")
+				.chargeCodePoid(1124L)
+				.amountOther(new BigDecimal("30"))
+				.taxApplicable("N")
+				.applicableFrom(LocalDate.of(2026, 5, 13))
+				.build()));
+
+		DemurrageEnquiryResponseDto response = service.applyDate(request(TO_DATE, BigDecimal.ZERO));
+
+		DemurrageEnquiryChargeDto charge = response.getCharges().get(0);
+		assertEquals("Applicable from 13-MAY-26 onwards", charge.getRemarks());
+		assertEquals(0, new BigDecimal("30").compareTo(charge.getAmount()));
+	}
+
+	/** Revalidation is not date driven, so there is nothing to say about when it starts. */
+	@Test
+	void applyDate_revalidationChargeCarriesNoDateRemark() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 5L, new BigDecimal("100")));
+		when(enquiryRepository.findPortCharges(BL_POID, 100L)).thenReturn(List.of(PortChargeRowDto.builder()
+				.chargeTypeApplicable("REVALIDATEIMP")
+				.chargeApplicable("PERQUENTITY")
+				.chargeCodePoid(1126L)
+				.amount20(new BigDecimal("4"))
+				.amount40(new BigDecimal("4"))
+				.taxApplicable("N")
+				.build()));
+		when(enquiryRepository.getContainerSize("22G1")).thenReturn("20");
+
+		DemurrageEnquiryResponseDto response = service.applyDate(request(TO_DATE, BigDecimal.ZERO));
+
+		DemurrageEnquiryChargeDto charge = response.getCharges().stream()
+				.filter(row -> "REVALIDATEIMP".equals(row.getChargeType()))
+				.findFirst()
+				.orElseThrow();
+		assertNull(charge.getRemarks());
+	}
+
 	private DemurrageEnquiryRequestDto request(LocalDate toDate, BigDecimal discount, Integer freeDays) {
 		return DemurrageEnquiryRequestDto.builder()
 				.blPoid(BL_POID)
