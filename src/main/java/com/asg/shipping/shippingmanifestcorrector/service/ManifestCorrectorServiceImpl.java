@@ -1163,14 +1163,17 @@ public class ManifestCorrectorServiceImpl implements ManifestCorrectorService {
     }
 
     /**
-     * Validate mutually exclusive reprint flags
+     * Validate mutually exclusive reprint flags.
+     *
+     * doReprint/containerReprint/returnReprint form a single "reprint" group (mirrors
+     * ShipBlReprintBean, where the container/return checkboxes always set both flags together
+     * and DO reprint is selected alongside them), and that group is mutually exclusive with
+     * blReprint and demRefund individually.
      */
-    private void validateMutuallyExclusiveFlags(String doReprint, String containerReprint, 
+    private void validateMutuallyExclusiveFlags(String doReprint, String containerReprint,
                                                 String returnReprint, String blReprint, String demRefund) {
         int count = 0;
-        if ("Y".equals(doReprint)) count++;
-        if ("Y".equals(containerReprint)) count++;
-        if ("Y".equals(returnReprint)) count++;
+        if ("Y".equals(doReprint) || "Y".equals(containerReprint) || "Y".equals(returnReprint)) count++;
         if ("Y".equals(blReprint)) count++;
         if ("Y".equals(demRefund)) count++;
 
