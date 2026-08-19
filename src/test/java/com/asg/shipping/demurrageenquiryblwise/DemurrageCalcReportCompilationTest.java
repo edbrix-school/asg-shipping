@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,9 +52,42 @@ class DemurrageCalcReportCompilationTest {
 
 		// Supplied by DemurrageEnquiryBlWiseServiceImpl.printDemurrageCalculation
 		assertTrue(parameters.containsAll(Set.of(
-				"DOC_ID", "DOC_KEY_POID", "P_TILL_DATE", "P_DISCOUNT",
+				"DOC_ID", "DOC_KEY_POID", "P_TILL_DATE", "P_DISCOUNT", "P_FREE_DAYS",
 				"SUB_HEADER", "SUBREPORT_DEMURRAGE_MASTER", "SUBREPORT_DEMURRAGE_DTL")),
 				"missing parameters, found: " + parameters);
+	}
+
+	/**
+	 * The free days override is calculated in LINE_DEMURRAGE_DTL, so the main report has to hand it
+	 * to that subreport - a template that only declares it prints the tariff free days instead.
+	 */
+	@Test
+	void calcForwardsTheFreeDaysToTheDetailSubreport() throws Exception {
+		String xml = read(CALC);
+
+		int dtl = xml.indexOf("SUBREPORT_DEMURRAGE_DTL}");
+		int freeDays = xml.lastIndexOf("<subreportParameter name=\"P_FREE_DAYS\">", dtl);
+		int previousSubreport = xml.lastIndexOf("<subreport>", dtl);
+
+		assertTrue(freeDays > previousSubreport,
+				"LINE_DEMURRAGE_CALC does not pass P_FREE_DAYS to LINE_DEMURRAGE_DTL");
+	}
+
+	/**
+	 * The detail query reads the override once through the FD sub-select; every free days expression
+	 * has to go through it, or the printed amount and the printed Free Days column disagree.
+	 */
+	@Test
+	void dtlAppliesTheFreeDaysOverrideEverywhereItUsesFreeDays() throws Exception {
+		String query = read(DTL);
+		query = query.substring(query.indexOf("<queryString>"), query.indexOf("</queryString>"));
+
+		assertTrue(query.contains("NVL(TO_NUMBER($P{P_FREE_DAYS}),0) OVERRIDE_FREE_DAYS"),
+				"the detail query does not read P_FREE_DAYS");
+		// FROMDATE, the projected EXTRA_FREE_DAYS the pricing function is called with, and the
+		// printed FREE_DAYS column
+		assertEquals(3, query.split("DECODE\\(FD\\.OVERRIDE_FREE_DAYS", -1).length - 1,
+				"not every free days expression goes through the override: " + query);
 	}
 
 	/**
@@ -112,8 +146,16 @@ class DemurrageCalcReportCompilationTest {
 	private JasperPrint fillDtl() throws Exception {
 		return JasperFillManager.fillReport(
 				compile(DTL),
-				new HashMap<>(Map.of("P_TILL_DATE", "2025-07-28", "P_DISCOUNT", "0", "DOC_KEY_POID", "1")),
+				new HashMap<>(Map.of("P_TILL_DATE", "2025-07-28", "P_DISCOUNT", "0", "P_FREE_DAYS", "0",
+						"DOC_KEY_POID", "1")),
 				new JREmptyDataSource(1));
+	}
+
+	private String read(String path) throws Exception {
+		try (InputStream in = getClass().getClassLoader().getResourceAsStream(path)) {
+			assertNotNull(in, "report template not found on the classpath: " + path);
+			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+		}
 	}
 
 	private JasperReport compile(String path) throws Exception {

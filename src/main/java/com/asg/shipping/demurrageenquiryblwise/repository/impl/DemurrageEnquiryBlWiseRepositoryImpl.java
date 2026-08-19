@@ -6,17 +6,24 @@ import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryContainerDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.ManifestChargeRowDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.PortChargeRowDto;
 import com.asg.shipping.demurrageenquiryblwise.repository.DemurrageEnquiryBlWiseRepository;
+import com.asg.common.lib.security.util.UserContext;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import oracle.jdbc.OracleTypes;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.sql.CallableStatement;
 import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Repository
@@ -29,7 +36,16 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 	 */
 	private static final long NO_TRANSACTION = 0L;
 
+	/**
+	 * {@code PROC_SH_DEM_DTTN_CONTAINER} covers both halves of the calculation: import demurrage
+	 * ({@code DEMM}, from the arrival date) and export detention ({@code DETN}, from the stuffing
+	 * move). Calling it keeps this screen and the sales invoice on one copy of the rule.
+	 */
+	private static final String CALCULATE_DEMURRAGE_CALL =
+			"{call PROC_SH_DEM_DTTN_CONTAINER(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}";
+
 	private final EntityManager entityManager;
+	private final JdbcTemplate jdbcTemplate;
 
 	@Override
 	public boolean blExists(Long blPoid) {
@@ -173,13 +189,83 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 	}
 
 	@Override
-	public ContainerDemurrageCalcDto calculateContainerDemurrage(Long blPoid, String containerNo, LocalDate toDate) {
+	public ContainerDemurrageCalcDto calculateContainerDemurrage(Long blPoid, String containerNo, LocalDate toDate,
+																 Integer freeDays) {
+		try {
+			return jdbcTemplate.execute(CALCULATE_DEMURRAGE_CALL, (CallableStatement cs) -> {
+				cs.setLong(1, orZero(UserContext.getGroupPoid()));
+				cs.setLong(2, orZero(UserContext.getCompanyPoid()));
+				cs.setLong(3, orZero(UserContext.getUserPoid()));
+				// The enquiry has no document of its own, the BL is the key of the screen.
+				cs.setNull(4, Types.VARCHAR);
+				// 0, never null: the procedure excludes the already billed periods with
+				// TRANSACTION_POID <> ?, and <> NULL matches nothing - the enquiry would then bill
+				// every container from its arrival date again.
+				cs.setLong(5, NO_TRANSACTION);
+				cs.setString(6, String.valueOf(blPoid));
+				cs.setString(7, containerNo);
+				if (toDate != null) {
+					cs.setDate(8, Date.valueOf(toDate));
+				} else {
+					cs.setNull(8, Types.DATE);
+				}
+				cs.registerOutParameter(9, OracleTypes.CURSOR);
+				cs.setString(10, "N");
+				cs.setInt(11, overrideFreeDays(freeDays));
+
+				cs.execute();
+
+				try (ResultSet rs = (ResultSet) cs.getObject(9)) {
+					if (rs == null || !rs.next()) {
+						return null;
+					}
+
+					ContainerDemurrageCalcDto calc = ContainerDemurrageCalcDto.builder()
+							.fromDate(toLocalDate(rs.getDate("FMDATE")))
+							.toDate(toLocalDate(rs.getDate("TODATE")))
+							.days(toLong(rs.getBigDecimal("DAYS")))
+							.amount(rs.getBigDecimal("DM_AMT"))
+							.build();
+
+					// A line tariff that holds one row per slab makes the procedure return the
+					// container once per slab; every row carries the same period and amount.
+					if (rs.next()) {
+						log.warn("PROC_SH_DEM_DTTN_CONTAINER returned more than one row for BL {}, "
+								+ "container {} - the first row is used", blPoid, containerNo);
+					}
+
+					return calc;
+				}
+			});
+		} catch (Exception e) {
+			log.error("Failed to calculate demurrage for BL POID: {}, container: {}", blPoid, containerNo, e);
+			throw new DataAccessResourceFailureException(
+					"Failed to calculate demurrage for container " + containerNo, e);
+		}
+	}
+
+	/**
+	 * The procedure reads 0 as "use the free days of the container / line tariff"; only a positive
+	 * value replaces them.
+	 */
+	private static int overrideFreeDays(Integer freeDays) {
+		return freeDays != null && freeDays > 0 ? freeDays : 0;
+	}
+
+	/**
+	 * The procedure accepts the login POIDs but never reads them - it takes the group and the company
+	 * from the BL itself - so a missing user context must not fail the calculation.
+	 */
+	private static long orZero(Long poid) {
+		return poid != null ? poid : 0L;
+	}
+
+	@Override
+	public Map<String, String> findContainerDemurrageRemarks(Long blPoid, LocalDate toDate, Integer freeDays) {
 		try {
 			String sql = """
-					SELECT NVL(DM_TILL_DATE,FROMDATE) FMDATE,
-					       TODATE,
-					       (TO_DATE(TODATE) - NVL(DM_TILL_DATE,FROMDATE)) + 1 DAYS,
-					       FUNC_RTN_DEM_DETTN_FULL(
+					SELECT CONTAINER_NO,
+					       FUNC_RTN_DEM_DETTN_FULL_TEXT(
 					           GROUP_POID,
 					           COMPANY_POID,
 					           :currentTransactionPoid,
@@ -188,29 +274,27 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 					           GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE),
 					           LINE_POID,
 					           TO_DATE(ARRIVAL_DATE),
-					           TO_DATE(TODATE),
+					           TO_DATE(NVL(EMPTY_IN,TODATE)),
 					           'DEMM',
 					           NVL(EXTRA_FREE_DAYS,0)
-					       ) DM_AMT
+					       ) REMARKS
 					FROM (
 					    SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) ARRIVAL_DATE,
 					           BLHDR.GROUP_POID,
 					           BLHDR.COMPANY_POID,
 					           EQUIPMENT_ISO_TYPE,
 					           VHDR.LINE_POID,
-					           EXTRA_FREE_DAYS,
+					           DECODE(NVL(:freeDays,0),0,NVL(EXTRA_FREE_DAYS,0),:freeDays) EXTRA_FREE_DAYS,
 					           CONTAINERDTL.TRANSACTION_POID BL_POID,
 					           CONTAINER_NO,
-					           TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))
-					             + DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FROMDATE,
 					           :toDate TODATE,
 					           (
-					               SELECT MAX(DM_TO_DATE) + 1
-					               FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL
-					               WHERE ARCONTAINERDTL.BL_POID = CONTAINERDTL.TRANSACTION_POID
-					                 AND ARCONTAINERDTL.CONTAINER_NO = CONTAINERDTL.CONTAINER_NO
-					                 AND ARCONTAINERDTL.TRANSACTION_POID <> :currentTransactionPoid
-					           ) DM_TILL_DATE
+					               SELECT TO_DATE(TRUNC(MOVES_DATE_TIME))
+					               FROM SHIP_CONTAINER_INVENTORY
+					               WHERE MOVES_TYPE = 'MTIN'
+					                 AND LINK_TRANSACTION_POID = BLHDR.TRANSACTION_POID
+					                 AND CONTAINER_NO = CONTAINERDTL.CONTAINER_NO
+					           ) EMPTY_IN
 					    FROM SHIP_VOYAGE_HDR VHDR
 					    INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR
 					        ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID
@@ -225,33 +309,33 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 					       AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID =
 					           GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE)
 					    WHERE BLHDR.TRANSACTION_POID = :blPoid
-					      AND CONTAINERDTL.CONTAINER_NO = :containerNo
 					)
 					""";
 
 			@SuppressWarnings("unchecked")
 			List<Object[]> rows = entityManager.createNativeQuery(sql)
 					.setParameter("blPoid", blPoid)
-					.setParameter("containerNo", containerNo)
 					.setParameter("toDate", toDate != null ? Date.valueOf(toDate) : null)
+					.setParameter("freeDays", freeDays != null && freeDays > 0 ? freeDays : 0)
 					.setParameter("currentTransactionPoid", NO_TRANSACTION)
 					.getResultList();
 
-			if (rows.isEmpty()) {
-				return null;
+			Map<String, String> remarks = new java.util.HashMap<>();
+			for (Object[] row : rows) {
+				String containerNo = toString(row[0]);
+				String text = toString(row[1]);
+				if (containerNo != null && text != null && !text.isBlank()) {
+					// The tariff can hold one row per slab, so the same container arrives repeatedly
+					// with the same text.
+					remarks.putIfAbsent(containerNo, text.trim());
+				}
 			}
-
-			Object[] row = rows.get(0);
-			return ContainerDemurrageCalcDto.builder()
-					.fromDate(toLocalDate(row[0]))
-					.toDate(toLocalDate(row[1]))
-					.days(toLong(row[2]))
-					.amount(toBigDecimal(row[3]))
-					.build();
+			return remarks;
 		} catch (Exception e) {
-			log.error("Failed to calculate demurrage for BL POID: {}, container: {}", blPoid, containerNo, e);
-			throw new DataAccessResourceFailureException(
-					"Failed to calculate demurrage for container " + containerNo, e);
+			// The breakdown is an explanation of the amount, not the amount - the enquiry is still
+			// usable without it.
+			log.error("Failed to read the demurrage breakdown for BL POID: {}", blPoid, e);
+			return Map.of();
 		}
 	}
 

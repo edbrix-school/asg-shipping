@@ -29,6 +29,8 @@ public class DemurrageEnquiryResponseDto {
 	private LocalDate toDate;
 	/** Discount percentage used for the calculation. */
 	private BigDecimal discountPercentage;
+	/** Free days applied instead of the tariff free days, null when the tariff free days were used. */
+	private Integer freeDays;
 
 	private List<DemurrageEnquiryContainerDto> containers;
 	private List<DemurrageEnquiryChargeDto> charges;
