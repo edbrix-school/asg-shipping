@@ -37,7 +37,6 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 				SELECT COUNT(1)
 				FROM SHIP_BL_MANIFEST_HDR
 				WHERE TRANSACTION_POID = :blPoid
-				  AND NVL(DELETED,'N') = 'N'
 				""")
 				.setParameter("blPoid", blPoid)
 				.getSingleResult();
