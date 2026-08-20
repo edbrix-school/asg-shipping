@@ -125,7 +125,7 @@ class CimuServiceImplTest {
 
         when(queryRepository.containerExistsInBl(any(), any())).thenReturn(true);
         when(updateRepository.callProcShipCntInvtUpdate(
-                any(), any(), any(), any(), any(), any(), any(), any()))
+                any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("TRUE");
 
         UpdateCimuResponse response = service.updateContainerData(request);
@@ -140,7 +140,7 @@ class CimuServiceImplTest {
         request.setApplyToAllContainers(true);
 
         when(updateRepository.callProcShipCntInvtUpdate(
-                any(), any(), any(), any(), any(), any(), any(), any()))
+                any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(" ");
 
         UpdateCimuResponse response = service.updateContainerData(request);
@@ -160,12 +160,31 @@ class CimuServiceImplTest {
 
         when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
         when(updateRepository.callProcShipCntInvtUpdate(
-                any(), any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn("TRUE");
+                any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                // Procedure returns "TRUE" prefixed with audit detail messages — must be treated as SUCCESS
+                .thenReturn("TRUE, Free days not updated, bl issue type not updated, Return form hold");
 
         UpdateCimuResponse response = service.updateContainerData(request);
 
-        assertEquals("TRUE", response.getStatus());
+        // Status starts with TRUE → success, full message returned as-is
+        assertTrue(response.getStatus().toUpperCase().startsWith("TRUE"));
+        assertTrue(response.getStatus().contains("Return form hold"));
+    }
+
+    @Test
+    void updateContainerData_statusWithAuditMessages_treatedAsSuccess() {
+        // Regression: procedure appends audit detail after "TRUE," — must NOT throw 400
+        UpdateCimuRequest request = new UpdateCimuRequest();
+        request.setTransactionPoid(100L);
+        request.setContainerNo("CONT001");
+        when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
+        when(updateRepository.callProcShipCntInvtUpdate(
+                any(), any(), any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn("TRUE, Free days updated, bl issue type updated");
+
+        UpdateCimuResponse response = service.updateContainerData(request);
+
+        assertTrue(response.getStatus().toUpperCase().startsWith("TRUE"));
     }
 
     @Test
@@ -224,7 +243,7 @@ class CimuServiceImplTest {
         request.setHoldReturnForm(true);
         when(queryRepository.containerExistsInBl(100L, "CONT001")).thenReturn(true);
         when(updateRepository.callProcShipCntInvtUpdate(
-                any(), any(), any(), any(), any(), any(), any(), any()))
+                any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn("Free days not updated, bl issue type not updated, User have no right to hold Return Form");
 
         ValidationException ex = assertThrows(ValidationException.class,
