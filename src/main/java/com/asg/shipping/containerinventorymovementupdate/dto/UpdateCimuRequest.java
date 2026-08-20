@@ -36,6 +36,9 @@ public class UpdateCimuRequest {
 
     // Optional safety: if frontend passes BL number, backend validates it matches transactionPoid
     private String blNumber;
+
+    // Maps to procedure parameter p_Amount_PerDay_After_Free (VARCHAR2 DEFAULT '0')
+    private String amountPerDayAfterFree;
 }
 
 
