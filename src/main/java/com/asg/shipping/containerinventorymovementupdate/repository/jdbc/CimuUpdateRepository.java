@@ -25,9 +25,10 @@ public class CimuUpdateRepository {
             String blIssueType,
             String containerNoOrAll,
             Long loginUserPoid,
-            String cntRtnHold
+            String cntRtnHold,
+            String amountPerDayAfterFree
     ) {
-        final String sql = "BEGIN PROC_SHIP_CNT_INVT_UPDATE(?,?,?,?,?,?,?,?,?); END;";
+        final String sql = "BEGIN PROC_SHIP_CNT_INVT_UPDATE(?,?,?,?,?,?,?,?,?,?); END;";
         log.info("Calling PROC_SHIP_CNT_INVT_UPDATE | transactionPoid={} containerNoOrAll={} userPoid={}",
                 transactionPoid, containerNoOrAll, loginUserPoid);
 
@@ -42,6 +43,7 @@ public class CimuUpdateRepository {
                 cs.registerOutParameter(7, OracleTypes.VARCHAR);
                 cs.setString(8, toStringOrNull(loginUserPoid));
                 cs.setString(9, cntRtnHold != null ? cntRtnHold : "N");
+                cs.setString(10, amountPerDayAfterFree != null ? amountPerDayAfterFree : "0");
                 cs.execute();
                 return cs.getString(7);
             } catch (SQLException e) {

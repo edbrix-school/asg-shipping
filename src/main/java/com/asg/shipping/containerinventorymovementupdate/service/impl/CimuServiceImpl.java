@@ -163,13 +163,17 @@ public class CimuServiceImpl implements CimuService {
                 normalize(request.getBlIssueType()),
                 containerNoOrAll,
                 userPoid,
-                cntRtnHold
+                cntRtnHold,
+                request.getAmountPerDayAfterFree()
         );
 
         if (status == null || status.isBlank()) {
             status = "TRUE";
         }
-        if (!status.equalsIgnoreCase("TRUE")) {
+        // The procedure prefixes all successful responses with "TRUE" and then appends
+        // comma-separated audit detail messages (e.g. "TRUE, Free days not updated, Return form hold").
+        // Only treat as failure when the status does NOT start with "TRUE".
+        if (!status.toUpperCase().startsWith("TRUE")) {
             throw new ValidationException(status);
         }
         return UpdateCimuResponse.builder().status(status).build();
