@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * Late collection / revalidation charge read from the Container Type Port Charges Tariff
@@ -29,4 +30,10 @@ public class PortChargeRowDto {
 	private BigDecimal taxPercentage;
 	/** Y when GLOBAL_TAX_APPLICABLE is enabled for the company. */
 	private String taxApplicable;
+	/**
+	 * First day the late collection charge applies: arrival + SHIPLATEDOCOLLECTION - 1, the day the
+	 * {@code (SYSDATE - arrival) + 1 >= SHIPLATEDOCOLLECTION} filter of the query starts to hold.
+	 * Null on the revalidation rows, which are not date driven.
+	 */
+	private LocalDate applicableFrom;
 }

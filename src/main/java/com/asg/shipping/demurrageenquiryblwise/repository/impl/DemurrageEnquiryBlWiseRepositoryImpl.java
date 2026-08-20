@@ -496,7 +496,14 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 					                ON GTH.TRANSACTION_POID = GTD.TRANSACTION_POID
 					            WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
 					              AND CHARGE_POID = CHARGE_CODE_POID)) TAX_PERCENTAGE,
-					       RTN_GLOBAL_PARAMETER('1','GLOBAL_TAX_APPLICABLE','TAX',:companyPoid,'N') TAX_APPLICABLE
+					       RTN_GLOBAL_PARAMETER('1','GLOBAL_TAX_APPLICABLE','TAX',:companyPoid,'N') TAX_APPLICABLE,
+					       (SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))
+					               + (SELECT MAX(TO_NUMBER(PARAMETER_VALUE)) FROM GLOBAL_PARAMETERS
+					                  WHERE PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%') - 1
+					        FROM SHIP_VOYAGE_HDR VHDR
+					        INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR
+					            ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID
+					        WHERE BLHDR.TRANSACTION_POID = :blPoid) APPLICABLE_FROM
 					FROM SHIP_PORT_CHARGES_HDR MCHDR
 					INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL
 					    ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID
@@ -540,7 +547,8 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 					                ON GTH.TRANSACTION_POID = GTD.TRANSACTION_POID
 					            WHERE TO_DATE(SYSDATE) BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
 					              AND CHARGE_POID = CHARGE_CODE_POID)) TAX_PERCENTAGE,
-					       RTN_GLOBAL_PARAMETER('1','GLOBAL_TAX_APPLICABLE','TAX',:companyPoid,'N') TAX_APPLICABLE
+					       RTN_GLOBAL_PARAMETER('1','GLOBAL_TAX_APPLICABLE','TAX',:companyPoid,'N') TAX_APPLICABLE,
+					       CAST(NULL AS DATE) APPLICABLE_FROM
 					FROM SHIP_PORT_CHARGES_HDR MCHDR
 					INNER JOIN SHIP_PORT_CHARGES_DTL MCDTL
 					    ON MCHDR.TRANSACTION_POID = MCDTL.TRANSACTION_POID
@@ -577,6 +585,7 @@ public class DemurrageEnquiryBlWiseRepositoryImpl implements DemurrageEnquiryBlW
 							.taxPoid(toLong(row[6]))
 							.taxPercentage(toBigDecimal(row[7]))
 							.taxApplicable(toString(row[8]))
+							.applicableFrom(toLocalDate(row[9]))
 							.build())
 					.toList();
 		} catch (Exception e) {
