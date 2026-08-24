@@ -43,15 +43,11 @@ public class DemurrageEnquiryChargeDto {
 	@JsonSerialize(using = AmountSerializer.class)
 	private BigDecimal totalAmount;
 	/**
-	 * Remarks column of the Charges tab, derived - nothing stores it:
-	 * <ul>
-	 *   <li>late collection rows: {@code Applicable from DD-MON-YY onwards}, the day the charge starts
-	 *       to apply</li>
-	 *   <li>the calculated demurrage row: the slab breakdown of the containers it bills
-	 *       ({@code FUNC_RTN_DEM_DETTN_FULL_TEXT}, the text the print shows)</li>
-	 *   <li>revalidation and BL manifest charges: empty - the first is not date driven, the second has
-	 *       no remarks column at all</li>
-	 * </ul>
+	 * Remarks column of the Charges tab, derived - nothing stores it. Only the late collection rows
+	 * carry one: {@code Applicable from DD-MON-YY onwards}, the day the charge starts to apply. Every
+	 * other row is empty - revalidation is not date driven, the BL manifest charges have no remarks
+	 * column at all, and the calculated demurrage row explains its slabs on the Containers tab instead
+	 * ({@link DemurrageEnquiryContainerDto#getRemarks()}).
 	 */
 	private String remarks;
 }

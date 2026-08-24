@@ -287,8 +287,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 					.build());
 		}
 
-		DemurrageEnquiryChargeDto demurrageCharge =
-				buildDemurrageCharge(blPoid, companyPoid, totalDemurrage, containers);
+		DemurrageEnquiryChargeDto demurrageCharge = buildDemurrageCharge(blPoid, companyPoid, totalDemurrage);
 		if (demurrageCharge != null) {
 			demurrageCharge.setDetRowId(++serialNumber);
 			charges.add(demurrageCharge);
@@ -305,8 +304,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		return charges;
 	}
 
-	private DemurrageEnquiryChargeDto buildDemurrageCharge(Long blPoid, Long companyPoid, BigDecimal totalDemurrage,
-														   List<DemurrageEnquiryContainerDto> containers) {
+	private DemurrageEnquiryChargeDto buildDemurrageCharge(Long blPoid, Long companyPoid,
+														   BigDecimal totalDemurrage) {
 		if (totalDemurrage == null || totalDemurrage.compareTo(BigDecimal.ZERO) == 0) {
 			return null;
 		}
@@ -326,7 +325,6 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 				.chargePoid(config.getChargePoid())
 				.chargesDetRowId(0L)
 				.chargeType(CHARGE_TYPE_DEMURRAGE)
-				.remarks(demurrageRemarks(containers))
 				.amount(money(totalDemurrage))
 				.taxPoid(taxed ? config.getTaxPoid() : null)
 				.taxPercentage(taxed ? config.getTaxPercentage() : null)
@@ -386,18 +384,6 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		containers.stream()
 				.filter(container -> container.getDmDays() != null && container.getDmDays() > 0)
 				.forEach(container -> container.setRemarks(remarks.get(container.getContainerNo())));
-	}
-
-	/**
-	 * Remarks of the calculated demurrage row: the breakdown of every container it bills, prefixed
-	 * with the container it belongs to, since the charge is one row for the whole BL.
-	 */
-	private static String demurrageRemarks(List<DemurrageEnquiryContainerDto> containers) {
-		String remarks = containers.stream()
-				.filter(container -> container.getRemarks() != null && !container.getRemarks().isBlank())
-				.map(container -> container.getContainerNo() + ": " + container.getRemarks())
-				.collect(Collectors.joining("; "));
-		return remarks.isEmpty() ? null : remarks;
 	}
 
 	/**

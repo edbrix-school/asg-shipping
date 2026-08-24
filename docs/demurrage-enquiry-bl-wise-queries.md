@@ -13,7 +13,9 @@ safe keeping alongside the legacy source they were ported from.
 | Persistence | None — the document is display only, every figure is derived at read time |
 
 All queries are Hibernate native queries with **named bind parameters**; the legacy built the same
-statements by string concatenation.
+statements by string concatenation. The one exception is query 4, which calls
+`PROC_SH_DEM_DTTN_CONTAINER` so that this screen and the sales invoice share one copy of the
+demurrage / detention rule.
 
 ## Query index
 
@@ -22,11 +24,12 @@ statements by string concatenation.
 | 1 | `blExists` | new (guard) | 404 when the BL does not exist |
 | 2 | `loadContainers` | `loadContainerDataDemurrage()` / SRS query 2 | Containers tab |
 | 3 | `findDoStatus` | `DO_STATUS` column of `loadContainerDataDemurrage()` | DO status field |
-| 4 | `calculateContainerDemurrage` | `ArrayTableDemSubmit()` / SRS query 3 | Apply Date recalculation |
+| 4 | `calculateContainerDemurrage` | `ArrayTableDemSubmit()` / SRS query 3 | Apply Date recalculation (calls `PROC_SH_DEM_DTTN_CONTAINER`) |
 | 5 | `findManifestCharges` | `ChargeLoadManifestData()` / SRS query 1.1 | Charges tab |
 | 6 | `findDemurrageChargeConfig` | `ChargeLoadManifestData()` / SRS query 1.2 | Demurrage charge row |
 | 7 | `findPortCharges` | `ChargeLoadManifestData()` / SRS query 1.3 | Late collection / revalidation rows |
 | 8 | `getContainerSize` | `createDemurrageDettention()` | PERQUENTITY charge split |
+| 9 | `findContainerDemurrageRemarks` | `REMARKS` column of `LINE_DEMURRAGE_DTL` | Remarks of the Containers tab |
 
 ### Shared constant
 
@@ -179,65 +182,57 @@ more than one printed DO row.
 
 ---
 
-## 4. `calculateContainerDemurrage(blPoid, containerNo, toDate)` — Apply Date
+## 4. `calculateContainerDemurrage(blPoid, containerNo, toDate, freeDays)` — Apply Date
 
 Legacy: `ArrayTableDemSubmit(current_row, discPer)`. One call per container row.
 
+**No longer a query** — this calls `PRODUCTION.PROC_SH_DEM_DTTN_CONTAINER`, the same procedure the
+sales invoice bills from (`SalesInvoiceShippingServiceImpl.callProcShDemDttnContainer`). The inline
+SQL it replaced was an import-only copy of the procedure's first arm, so an export BL was priced with
+import demurrage rates off the arrival date instead of detention off the stuffing move.
+
 ```sql
-SELECT NVL(DM_TILL_DATE,FROMDATE) FMDATE,
-       TODATE,
-       (TO_DATE(TODATE) - NVL(DM_TILL_DATE,FROMDATE)) + 1 DAYS,
-       FUNC_RTN_DEM_DETTN_FULL(
-           GROUP_POID,
-           COMPANY_POID,
-           :currentTransactionPoid,
-           BL_POID,
-           CONTAINER_NO,
-           GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE),
-           LINE_POID,
-           TO_DATE(ARRIVAL_DATE),
-           TO_DATE(TODATE),
-           'DEMM',
-           NVL(EXTRA_FREE_DAYS,0)
-       ) DM_AMT
-FROM (
-    SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)) ARRIVAL_DATE,
-           BLHDR.GROUP_POID,
-           BLHDR.COMPANY_POID,
-           EQUIPMENT_ISO_TYPE,
-           VHDR.LINE_POID,
-           EXTRA_FREE_DAYS,
-           CONTAINERDTL.TRANSACTION_POID BL_POID,
-           CONTAINER_NO,
-           TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))
-             + DECODE(NVL(EXTRA_FREE_DAYS,0),0,FREE_DAYS,NVL(EXTRA_FREE_DAYS,0)) FROMDATE,
-           :toDate TODATE,
-           (
-               SELECT MAX(DM_TO_DATE) + 1
-               FROM VW_AR_SH_CONTAINER_DEMG_DTTN ARCONTAINERDTL
-               WHERE ARCONTAINERDTL.BL_POID = CONTAINERDTL.TRANSACTION_POID
-                 AND ARCONTAINERDTL.CONTAINER_NO = CONTAINERDTL.CONTAINER_NO
-                 AND ARCONTAINERDTL.TRANSACTION_POID <> :currentTransactionPoid
-           ) DM_TILL_DATE
-    FROM SHIP_VOYAGE_HDR VHDR
-    INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR
-        ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID
-    INNER JOIN SHIP_BL_MANIFEST_CONTAINER_DTL CONTAINERDTL
-        ON CONTAINERDTL.TRANSACTION_POID = BLHDR.TRANSACTION_POID
-    INNER JOIN SHIP_LINE_TARIFF_HDR SHLNTFHDR
-        ON SHLNTFHDR.LINE_POID = VHDR.LINE_POID
-       AND TO_DATE(TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE)))
-           BETWEEN TO_DATE(PERIOD_FROM) AND TO_DATE(PERIOD_TO)
-    INNER JOIN SHIP_LINE_TARIFF_IMP_DTL CONTAINERTRIFIMP
-        ON SHLNTFHDR.TRANSACTION_POID = CONTAINERTRIFIMP.TRANSACTION_POID
-       AND CONTAINERTRIFIMP.CONTAINER_TYPE_POID =
-           GET_CONTAINER_CODE_POID(CONTAINERDTL.EQUIPMENT_ISO_TYPE)
-    WHERE BLHDR.TRANSACTION_POID = :blPoid
-      AND CONTAINERDTL.CONTAINER_NO = :containerNo
-)
+{call PROC_SH_DEM_DTTN_CONTAINER(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}
 ```
 
-Binds: `:blPoid`, `:containerNo`, `:toDate` (`java.sql.Date`), `:currentTransactionPoid`
+| # | Parameter | Bound to |
+|---|---|---|
+| 1-3 | `P_LOGIN_GROUP_POID`, `P_LOGIN_COMPANY_POID`, `P_LOGIN_USER_POID` | `UserContext`, `0` when absent — the procedure accepts them but never reads them |
+| 4 | `P_DOC_ID` | `NULL` — the enquiry has no document of its own |
+| 5 | `P_TRANSACTION_POID` | `0` (`NO_TRANSACTION`) |
+| 6 | `p_blpoid` | `:blPoid` |
+| 7 | `p_container_no` | `:containerNo` |
+| 8 | `p_dm_todate` | `:toDate` |
+| 9 | `OUTDATA` | `OracleTypes.CURSOR` |
+| 10 | `P_SEND_ALERT` | `'N'` |
+| 11 | `P_FREE_DAYS` | `:freeDays`, `0` when not requested |
+
+Cursor columns: `BL_POID`, `EQUIPMENT_SHIPPER_OWN`, `CONTAINER_NO`, `FMDATE`, `TODATE`, `DAYS`,
+`DM_AMT` → `ContainerDemurrageCalcDto` (`FMDATE`, `TODATE`, `DAYS`, `DM_AMT`).
+
+What the procedure does, per BL type:
+
+| BL type | Clock starts | Tariff | Mode |
+|---|---|---|---|
+| `IMPORT` | `NVL(ARRIVAL_DATE, EXPECTED_DATE)` + free days | `SHIP_LINE_TARIFF_IMP_DTL` | `DEMM` |
+| `EXPORT` | `SHIP_CONTAINER_INVENTORY` `VAN` move + free days | `SHIP_LINE_TARIFF_EXP_DTL` | `DETN` |
+
+`FMDATE` is `NVL(DM_TILL_DATE, FROMDATE)`, where `DM_TILL_DATE` is the day after the last period
+already billed on another transaction — the same continuation rule as query 2.
+
+Notes:
+
+- **`P_TRANSACTION_POID` is bound to `0`, never `NULL`.** The procedure excludes the already billed
+  periods with `TRANSACTION_POID <> P_TRANSACTION_POID`, and `<> NULL` matches nothing: a null would
+  make `DM_TILL_DATE` null and bill every container from its arrival date again.
+- **`P_FREE_DAYS` replaces the free days of the container / line tariff, it is not added to them.**
+  The procedure reads `0` as "keep the tariff free days", so the service maps a `0` or absent
+  `freeDays` on the request to no override, and echoes the applied value on the response and on every
+  container row.
+- The procedure can return the container **once per tariff slab**; every row carries the same period
+  and amount, so the first row is used and the rest logged.
+- `DAYS` is unguarded in the procedure and can be zero or negative while the container is still
+  inside its free days — `DemurrageEnquiryBlWiseServiceImpl.calculateContainers` clamps it to 0.
 
 Post processing in `DemurrageEnquiryBlWiseServiceImpl.calculateContainers`, ported from the legacy:
 
@@ -246,8 +241,6 @@ Post processing in `DemurrageEnquiryBlWiseServiceImpl.calculateContainers`, port
 - `DAYS <= 0` (or no row) → `dmDays = 0`, `dmChargeAmt = 0`. The legacy tested
   `days = 0 || days contains '-'`.
 - Discount: `dmChargeAmt = DM_AMT - (DM_AMT * discount / 100)`, `HALF_UP` at 3 decimals.
-- `:toDate` is bound as a real `DATE`; the legacy inlined the row value through
-  `to_date(SUBSTR('<value>',1,10),'RRRR-MM-DD')`.
 
 ---
 
@@ -483,6 +476,34 @@ against the 40' rate, as in the legacy `else` branch.
 
 Tax: `amount * TAX_PERCENTAGE / 100`, only when `TAX_POID` is present and `TAX_APPLICABLE = 'Y'`.
 
+### `APPLICABLE_FROM` — the Remarks of the late collection row
+
+Added on the late collection arm only:
+
+```sql
+(SELECT TO_DATE(NVL(ARRIVAL_DATE,EXPECTED_DATE))
+        + (SELECT MAX(TO_NUMBER(PARAMETER_VALUE)) FROM GLOBAL_PARAMETERS
+           WHERE PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%') - 1
+ FROM SHIP_VOYAGE_HDR VHDR
+ INNER JOIN SHIP_BL_MANIFEST_HDR BLHDR ON VHDR.TRANSACTION_POID = BLHDR.VOYAGE_TRANSACTION_POID
+ WHERE BLHDR.TRANSACTION_POID = :blPoid) APPLICABLE_FROM
+```
+
+The arm qualifies a BL when `(SYSDATE - arrival) + 1 >= SHIPLATEDOCOLLECTION`, so the first day that
+holds is `arrival + SHIPLATEDOCOLLECTION - 1` - which is the date the screen shows. The service
+formats it as `Applicable from DD-MON-YY onwards` (`dd-MMM-yy`, English, upper case, matching
+Oracle's `DD-MON-YY`).
+
+Verified against QA on BL `605422` (`BL098979696`): arrival `22-APR-26`, `SHIPLATEDOCOLLECTION = 22`,
+`APPLICABLE_FROM = 13-MAY-26`, charge `1124` (DOLS, D/O Late Collection Fee) at `30.000` - the row and
+the text the legacy screen prints.
+
+The revalidation arm is not date driven and selects `CAST(NULL AS DATE) APPLICABLE_FROM` so the two
+arms of the `UNION ALL` line up.
+
+`MAX(...)` guards the parameter sub-select: `PARAMETER_NAME LIKE '%SHIPLATEDOCOLLECTION%'` is a
+pattern, and a second matching parameter row would otherwise raise ORA-01427.
+
 ---
 
 ## 8. `getContainerSize(equipmentIsoType)`
@@ -498,6 +519,56 @@ Binds: `:equipmentIsoType`
 
 ---
 
+## 9. `findContainerDemurrageRemarks(blPoid, toDate, freeDays)` — Remarks
+
+The slab breakdown of the demurrage of every container, keyed by container number. Not in the legacy
+screen: the legacy only ever showed this text on the print, through the `REMARKS` column of
+`LINE_DEMURRAGE_DTL`. The query is that column, lifted out and read for the whole BL in one round
+trip.
+
+```sql
+SELECT CONTAINER_NO,
+       FUNC_RTN_DEM_DETTN_FULL_TEXT(
+           GROUP_POID, COMPANY_POID, :currentTransactionPoid, BL_POID, CONTAINER_NO,
+           GET_CONTAINER_CODE_POID(EQUIPMENT_ISO_TYPE), LINE_POID,
+           TO_DATE(ARRIVAL_DATE), TO_DATE(NVL(EMPTY_IN,TODATE)), 'DEMM',
+           NVL(EXTRA_FREE_DAYS,0)
+       ) REMARKS
+FROM ( ... the derived table of query 2, with :toDate as TODATE ... )
+```
+
+Binds: `:blPoid`, `:toDate`, `:freeDays`, `:currentTransactionPoid`
+
+- `FUNC_RTN_DEM_DETTN_FULL_TEXT` takes exactly the arguments `FUNC_RTN_DEM_DETTN_FULL` takes, so the
+  text and the amount always describe the same calculation - including the free days override, which
+  goes through the same `DECODE` as everywhere else.
+- `TO_DATE(NVL(EMPTY_IN,TODATE))` repeats the rule the service applies to the amount: a container
+  already returned is explained up to its Empty In date.
+- The tariff can hold one row per slab, so a container arrives repeatedly with the same text - the
+  first one wins.
+
+Where it lands:
+
+| Row | Remarks |
+|---|---|
+| Container (`dmDays > 0`) | its own breakdown |
+| Container inside its free days | empty - there is no slab to explain |
+| Charge rows `LATECOLLECTIONIMP` / `LATECOLLECTIONBOTH` | `Applicable from DD-MON-YY onwards`, see query 7 |
+| Charge rows `SHDEMURRAGE`, `REVALIDATEIMP` / `REVALIDATEBOTH`, `BLCHARGE` | empty |
+
+The breakdown stays on the Containers tab, where it names the container it explains. The calculated
+demurrage charge is one row for the whole BL, so repeating every container's text on it said nothing
+the tab does not already say - the Charges tab only carries the late collection date.
+
+Nothing stores any of this. `AR_SH_RECEIPT_CHARGES_DTL.REMARKS` holds no such text in QA (checked),
+`SHIP_PORT_CHARGES_DTL` has no remarks column, and no database source generates it - the legacy
+screen composes both texts in the UI, and so does this service.
+
+The breakdown is an explanation of the amount, not the amount: a failure is logged and returns an
+empty map, leaving the enquiry intact. It is also not read at all when no container is charged.
+
+---
+
 ## Report — View Demurrage Calculation
 
 Legacy: `PrintDemurrageCalc()`.
@@ -509,6 +580,7 @@ Legacy: `PrintDemurrageCalc()`.
 | `DOC_KEY_POID` | BL POID as a String (**not** a document POID — the enquiry stores nothing) |
 | `P_TILL_DATE` | To Date as **`yyyy-MM-dd`** (declared `java.lang.String`) |
 | `P_DISCOUNT` | Discount %, plain number as a string, `0` when not entered |
+| `P_FREE_DAYS` | Free days to apply instead of the tariff free days, plain number as a string, `0` when not entered |
 | `SUBREPORT_DEMURRAGE_MASTER` | compiled `Shipping/SH/LINE_DEMURRAGE_MASTER.jrxml` |
 | `SUBREPORT_DEMURRAGE_DTL` | compiled `Shipping/SH/LINE_DEMURRAGE_DTL.jrxml` |
 | `SUB_HEADER`, `LOGIN_COMP_POID`, `LOGIN_USER_POID`, `LOGIN_GROUP_POID` | supplied by `PrintService.buildBaseParams` |
@@ -569,6 +641,36 @@ DM_AMT1 - ((TO_NUMBER($P{P_DISCOUNT})/100) * DM_AMT1) DM_AMT
 - `P_DISCOUNT` must be a plain number as a string - it goes through `TO_NUMBER`.
 - The discount is applied a second time *inside* the report; the service does not pre-discount the
   amounts it sends, it only forwards the percentage.
+- `P_FREE_DAYS` behaves the same way and for the same reason - see below.
+
+### Free days on the print
+
+`GET /demurrage-calculation` takes the same `freeDays` the enquiry takes, and forwards it as
+`P_FREE_DAYS`. The main report only declares it and hands it to `LINE_DEMURRAGE_DTL`; the master band
+is left alone on purpose, so the tariff section keeps printing the line tariff **as it is
+configured** while the container section prints what was actually applied. A reader comparing the two
+sections sees the deviation rather than a silently rewritten tariff.
+
+`LINE_DEMURRAGE_DTL` reads the override once, next to the existing `P_TILL_DATE` sub-select:
+
+```sql
+LEFT JOIN (SELECT NVL(TO_NUMBER($P{P_FREE_DAYS}),0) OVERRIDE_FREE_DAYS FROM DUAL) FD ON 1=1
+```
+
+and every free days expression then goes through `DECODE(FD.OVERRIDE_FREE_DAYS, 0, <original>, FD.OVERRIDE_FREE_DAYS)`:
+
+| Expression | What it feeds |
+|---|---|
+| `EXTRA_FREE_DAYS` (projected) | the last argument of `FUNC_RTN_DEM_DETTN_FULL` and `..._TEXT`, so the amount and the Remarks slab text |
+| `FROMDATE` | the start of the charged period, and through it `DAYS` |
+| `FREE_DAYS` | the printed Free Days column |
+
+All three have to move together - overriding the amount but printing the tariff free days is how a
+report starts contradicting itself. `DemurrageCalcReportCompilationTest` asserts the main report
+forwards the parameter and that all three expressions go through `FD.OVERRIDE_FREE_DAYS`.
+
+Same rule as everywhere else in this document: **0 means "keep the free days of the container / line
+tariff"**, and a positive value **replaces** them rather than adding to them.
 
 ---
 
@@ -597,10 +699,10 @@ listed only the amount columns (`Amount,TaxAmount` on the charges grid, `DmCharg
 containers grid) and left the percentages out. Amounts stay JSON numbers; thousands separators are
 left to the screen.
 
-A charge row also carries a `remarks` field. The legacy Charges grid binds that column to
-`AR_SH_RECEIPT_CHARGES_DTL.REMARKS` - scratch storage this enquiry never writes to, and
-`SHIP_BL_MANIFEST_CHARGES_DTL` has no remarks column at all - so it is always null and exists only so
-the screen can render the column.
+A charge row also carries a `remarks` field. Nothing stores it: the legacy Charges grid binds that
+column to `AR_SH_RECEIPT_CHARGES_DTL.REMARKS` - scratch storage this enquiry never writes to - and
+`SHIP_BL_MANIFEST_CHARGES_DTL` has no remarks column at all. Only the late collection rows fill it,
+with the `Applicable from DD-MON-YY onwards` text of query 7; every other row leaves it null.
 
 > The legacy added *amount + tax* of the BL manifest charges into `FTotalRcpAmount` and then added
 > the VAT again for "Total (Rcpt+Vat)", double counting the tax of those rows. The definition above
