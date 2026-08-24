@@ -266,7 +266,7 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 		assertEquals("192080.000", response.getContainers().get(0).getDmChargeAmt().toPlainString());
 		// a zero rate charge still carries its tax master, as the legacy grid shows it
 		assertEquals(3L, charge.getTaxPoid());
-		// no breakdown was stubbed, so the row keeps an empty Remarks
+		// the demurrage row never carries Remarks - the breakdown lives on the Containers tab
 		assertNull(charge.getRemarks());
 	}
 
@@ -413,8 +413,12 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 		assertEquals(10L, response.getContainers().get(0).getDmDays());
 	}
 
+	/**
+	 * The breakdown explains the containers, not the charge: it fills the Remarks of the Containers
+	 * tab and leaves the calculated demurrage row empty.
+	 */
 	@Test
-	void applyDate_fillsTheSlabBreakdownOnTheContainerAndOnTheDemurrageChargeRow() {
+	void applyDate_fillsTheSlabBreakdownOnTheContainersOnly() {
 		when(enquiryRepository.loadContainers(BL_POID))
 				.thenReturn(List.of(container("CONT001", null), container("CONT002", null)));
 		when(enquiryRepository.calculateContainerDemurrage(eq(BL_POID), anyString(), eq(TO_DATE), any()))
@@ -428,12 +432,11 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 
 		assertEquals("5 Days x 10.000", response.getContainers().get(0).getRemarks());
 		assertEquals("5 Days x 20.000", response.getContainers().get(1).getRemarks());
-		// one charge row for the whole BL, so the breakdown names the container it belongs to
 		DemurrageEnquiryChargeDto charge = response.getCharges().stream()
 				.filter(row -> "SHDEMURRAGE".equals(row.getChargeType()))
 				.findFirst()
 				.orElseThrow();
-		assertEquals("CONT001: 5 Days x 10.000; CONT002: 5 Days x 20.000", charge.getRemarks());
+		assertNull(charge.getRemarks());
 	}
 
 	/**
