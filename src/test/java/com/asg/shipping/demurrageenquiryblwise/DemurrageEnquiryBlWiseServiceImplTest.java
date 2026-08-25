@@ -8,6 +8,9 @@ import com.asg.common.lib.service.LovDataService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.shipping.demurrageenquiryblwise.dto.ContainerDemurrageCalcDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageChargeConfigDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcRequestDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcResponseDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcRowDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryChargeDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryContainerDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryRequestDto;
@@ -519,6 +522,220 @@ class DemurrageEnquiryBlWiseServiceImplTest {
 				.findFirst()
 				.orElseThrow();
 		assertNull(charge.getRemarks());
+	}
+
+	@Test
+	void calculateSelectedContainers_calculatesTheRequestedRowsOnly() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(
+				List.of(container("CONT001", null), container("CONT002", null), container("CONT003", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 10L, new BigDecimal("1000")));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT003", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 4L, new BigDecimal("400")));
+
+		DemurrageContainerCalcResponseDto response = service.calculateSelectedContainers(
+				rowRequest(new BigDecimal("10"), null, row("CONT001", null), row("CONT003", null)));
+
+		assertEquals(List.of("CONT001", "CONT003"), response.getContainers().stream()
+				.map(DemurrageEnquiryContainerDto::getContainerNo).toList());
+		assertEquals(0, new BigDecimal("900").compareTo(response.getContainers().get(0).getDmChargeAmt()));
+		assertEquals(0, new BigDecimal("1000")
+				.compareTo(response.getContainers().get(0).getDmChargeAmtBeforeDiscount()));
+		assertEquals(0, new BigDecimal("360").compareTo(response.getContainers().get(1).getDmChargeAmt()));
+		// the rows of the request only, CONT002 is not in the total
+		assertEquals(0, new BigDecimal("1260").compareTo(response.getTotalDemurrageAmount()));
+		verify(enquiryRepository, never()).calculateContainerDemurrage(BL_POID, "CONT002", TO_DATE, null);
+	}
+
+	@Test
+	void calculateSelectedContainers_unknownBl_throwsNotFound() {
+		when(enquiryRepository.blExists(9999L)).thenReturn(false);
+
+		DemurrageContainerCalcRequestDto request = DemurrageContainerCalcRequestDto.builder()
+				.blPoid(9999L)
+				.containers(List.of(row("CONT001", null)))
+				.build();
+
+		assertThrows(ResourceNotFoundException.class, () -> service.calculateSelectedContainers(request));
+	}
+
+	/** A row that is not on the BL cannot be calculated - the procedure would return nothing for it. */
+	@Test
+	void calculateSelectedContainers_containerOfAnotherBl_isRejected() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+
+		DemurrageContainerCalcRequestDto request =
+				rowRequest(BigDecimal.ZERO, null, row("CONT001", null), row("CONT999", null));
+
+		ValidationException failure =
+				assertThrows(ValidationException.class, () -> service.calculateSelectedContainers(request));
+		assertTrue(failure.getMessage().contains("CONT999"));
+		verify(enquiryRepository, never()).calculateContainerDemurrage(any(), anyString(), any(), any());
+	}
+
+	/** The Empty In date of the BL wins over the To Date of the request, as it does on Apply Date. */
+	@Test
+	void calculateSelectedContainers_containerReturnedEmpty_isChargedUpToEmptyInDate() {
+		LocalDate emptyIn = LocalDate.of(2025, 7, 20);
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", emptyIn)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", emptyIn, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), emptyIn, 2L, new BigDecimal("200")));
+
+		DemurrageContainerCalcResponseDto response =
+				service.calculateSelectedContainers(rowRequest(BigDecimal.ZERO, null, row("CONT001", null)));
+
+		DemurrageEnquiryContainerDto calculated = response.getContainers().get(0);
+		assertEquals(emptyIn, calculated.getDmToDate());
+		assertEquals(2L, calculated.getDmDays());
+	}
+
+	/** The free days of a row replace the ones of the request, which replace the ones of the tariff. */
+	@Test
+	void calculateSelectedContainers_rowFreeDaysWinOverTheRequestFreeDays() {
+		when(enquiryRepository.loadContainers(BL_POID))
+				.thenReturn(List.of(container("CONT001", null), container("CONT002", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, 14))
+				.thenReturn(calc(LocalDate.of(2025, 7, 26), TO_DATE, 3L, new BigDecimal("300")));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT002", TO_DATE, 7))
+				.thenReturn(calc(LocalDate.of(2025, 7, 21), TO_DATE, 8L, new BigDecimal("800")));
+
+		DemurrageContainerCalcResponseDto response = service.calculateSelectedContainers(
+				rowRequest(BigDecimal.ZERO, 7, row("CONT001", 14), row("CONT002", null)));
+
+		assertEquals(Integer.valueOf(7), response.getFreeDays());
+		assertEquals(14L, response.getContainers().get(0).getFreeDays());
+		assertEquals(7L, response.getContainers().get(1).getFreeDays());
+	}
+
+	/** Zero is not an override, on the row no more than on the request: the tariff free days stay. */
+	@Test
+	void calculateSelectedContainers_zeroFreeDaysKeepsTheTariffFreeDays() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 10L, new BigDecimal("1000")));
+
+		DemurrageContainerCalcResponseDto response =
+				service.calculateSelectedContainers(rowRequest(BigDecimal.ZERO, 0, row("CONT001", 0)));
+
+		assertNull(response.getFreeDays());
+		assertEquals(5L, response.getContainers().get(0).getFreeDays());
+	}
+
+	/** Rows calculated with other free days, or up to another date, cannot share one breakdown. */
+	@Test
+	void calculateSelectedContainers_readsTheBreakdownPerToDateAndFreeDays() {
+		LocalDate rowToDate = LocalDate.of(2025, 8, 4);
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(
+				List.of(container("CONT001", null), container("CONT002", null), container("CONT003", null)));
+		when(enquiryRepository.calculateContainerDemurrage(eq(BL_POID), anyString(), any(), any()))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 10L, new BigDecimal("500")));
+		when(enquiryRepository.findContainerDemurrageRemarks(BL_POID, TO_DATE, 14))
+				.thenReturn(Map.of("CONT001", "3 Days x 10.000"));
+		when(enquiryRepository.findContainerDemurrageRemarks(BL_POID, TO_DATE, null))
+				.thenReturn(Map.of("CONT002", "10 Days x 20.000"));
+		when(enquiryRepository.findContainerDemurrageRemarks(BL_POID, rowToDate, null))
+				.thenReturn(Map.of("CONT003", "17 Days x 20.000"));
+
+		DemurrageContainerCalcResponseDto response = service.calculateSelectedContainers(
+				rowRequest(BigDecimal.ZERO, null,
+						row("CONT001", 14), row("CONT002", null), row("CONT003", rowToDate, null)));
+
+		assertEquals("3 Days x 10.000", response.getContainers().get(0).getRemarks());
+		assertEquals("10 Days x 20.000", response.getContainers().get(1).getRemarks());
+		assertEquals("17 Days x 20.000", response.getContainers().get(2).getRemarks());
+	}
+
+	/** The same container twice is one row, not two calls of the procedure. */
+	@Test
+	void calculateSelectedContainers_ignoresADuplicatedContainer() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 10L, new BigDecimal("1000")));
+
+		DemurrageContainerCalcResponseDto response = service.calculateSelectedContainers(
+				rowRequest(BigDecimal.ZERO, null, row("CONT001", null), row("CONT001", null)));
+
+		assertEquals(1, response.getContainers().size());
+		assertEquals(0, new BigDecimal("1000").compareTo(response.getTotalDemurrageAmount()));
+		verify(enquiryRepository, Mockito.times(1))
+				.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, null);
+	}
+
+	@Test
+	void calculateSelectedContainers_withinFreeDays_returnsZeroDaysAndAmount() {
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 8, 1), TO_DATE, -4L, new BigDecimal("500")));
+
+		DemurrageContainerCalcResponseDto response =
+				service.calculateSelectedContainers(rowRequest(BigDecimal.ZERO, null, row("CONT001", null)));
+
+		DemurrageEnquiryContainerDto calculated = response.getContainers().get(0);
+		assertEquals(0L, calculated.getDmDays());
+		assertEquals(0, BigDecimal.ZERO.compareTo(calculated.getDmChargeAmt()));
+		assertNull(calculated.getRemarks());
+		assertEquals(0, BigDecimal.ZERO.compareTo(response.getTotalDemurrageAmount()));
+		verify(enquiryRepository, never()).findContainerDemurrageRemarks(any(), any(), any());
+	}
+
+	/** The To Date of a row replaces the one of the request, which replaces the current date. */
+	@Test
+	void calculateSelectedContainers_rowToDateWinsOverTheRequestToDate() {
+		LocalDate rowToDate = LocalDate.of(2025, 8, 4);
+		when(enquiryRepository.loadContainers(BL_POID))
+				.thenReturn(List.of(container("CONT001", null), container("CONT002", null)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", rowToDate, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), rowToDate, 17L, new BigDecimal("1700")));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT002", TO_DATE, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), TO_DATE, 10L, new BigDecimal("1000")));
+
+		DemurrageContainerCalcResponseDto response = service.calculateSelectedContainers(
+				rowRequest(BigDecimal.ZERO, null, row("CONT001", rowToDate, null), row("CONT002", null)));
+
+		// the header keeps the To Date of the request, the rows show the one they were calculated up to
+		assertEquals(TO_DATE, response.getToDate());
+		assertEquals(rowToDate, response.getContainers().get(0).getDmToDate());
+		assertEquals(17L, response.getContainers().get(0).getDmDays());
+		assertEquals(TO_DATE, response.getContainers().get(1).getDmToDate());
+		assertEquals(0, new BigDecimal("2700").compareTo(response.getTotalDemurrageAmount()));
+	}
+
+	/** The Empty In date of the BL wins over the To Date of the row too. */
+	@Test
+	void calculateSelectedContainers_rowToDateDoesNotOverrideTheEmptyInDate() {
+		LocalDate emptyIn = LocalDate.of(2025, 7, 20);
+		when(enquiryRepository.loadContainers(BL_POID)).thenReturn(List.of(container("CONT001", emptyIn)));
+		when(enquiryRepository.calculateContainerDemurrage(BL_POID, "CONT001", emptyIn, null))
+				.thenReturn(calc(LocalDate.of(2025, 7, 19), emptyIn, 2L, new BigDecimal("200")));
+
+		DemurrageContainerCalcResponseDto response = service.calculateSelectedContainers(
+				rowRequest(BigDecimal.ZERO, null, row("CONT001", LocalDate.of(2025, 8, 4), null)));
+
+		assertEquals(emptyIn, response.getContainers().get(0).getDmToDate());
+		assertEquals(2L, response.getContainers().get(0).getDmDays());
+	}
+
+	private DemurrageContainerCalcRequestDto rowRequest(BigDecimal discount, Integer freeDays,
+														DemurrageContainerCalcRowDto... rows) {
+		return DemurrageContainerCalcRequestDto.builder()
+				.blPoid(BL_POID)
+				.toDate(TO_DATE)
+				.discountPercentage(discount)
+				.freeDays(freeDays)
+				.containers(List.of(rows))
+				.build();
+	}
+
+	private DemurrageContainerCalcRowDto row(String containerNo, Integer freeDays) {
+		return row(containerNo, null, freeDays);
+	}
+
+	private DemurrageContainerCalcRowDto row(String containerNo, LocalDate toDate, Integer freeDays) {
+		return DemurrageContainerCalcRowDto.builder()
+				.containerNo(containerNo)
+				.toDate(toDate)
+				.freeDays(freeDays)
+				.build();
 	}
 
 	private DemurrageEnquiryRequestDto request(LocalDate toDate, BigDecimal discount, Integer freeDays) {
