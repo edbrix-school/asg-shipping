@@ -13,6 +13,9 @@ import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.DateUtil;
 import com.asg.common.lib.utility.PaginationUtil;
 import com.asg.shipping.demurrageenquiryblwise.dto.ContainerDemurrageCalcDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcRequestDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcResponseDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcRowDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageChargeConfigDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryChargeDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryContainerDto;
@@ -38,6 +41,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -167,6 +171,76 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 	}
 
 	@Override
+	public DemurrageContainerCalcResponseDto calculateSelectedContainers(DemurrageContainerCalcRequestDto request) {
+		Long blPoid = request.getBlPoid();
+		validateBl(blPoid);
+
+		LocalDate toDate = request.getToDate() != null ? request.getToDate() : DateUtil.getCurrentDateInUserTimeZone();
+		BigDecimal discount = request.getDiscountPercentage() != null ? request.getDiscountPercentage() : BigDecimal.ZERO;
+
+		// The rows are always recalculated against the BL: the caller says which containers to
+		// calculate, up to which date and with how many free days, every other figure - the Empty In
+		// date, the ISO type, the tariff free days - stays the one the BL holds.
+		Map<String, DemurrageEnquiryContainerDto> blContainers = enquiryRepository.loadContainers(blPoid).stream()
+				.collect(Collectors.toMap(DemurrageEnquiryContainerDto::getContainerNo,
+						container -> container, (first, duplicate) -> first, LinkedHashMap::new));
+
+		List<DemurrageEnquiryContainerDto> containers = new ArrayList<>();
+		Map<String, RowParameters> parametersByContainer = new LinkedHashMap<>();
+		List<String> unknownContainers = new ArrayList<>();
+
+		for (DemurrageContainerCalcRowDto row : request.getContainers()) {
+			String containerNo = row.getContainerNo().trim();
+			DemurrageEnquiryContainerDto container = blContainers.get(containerNo);
+			if (container == null) {
+				unknownContainers.add(containerNo);
+				continue;
+			}
+			RowParameters parameters = new RowParameters(
+					row.getToDate() != null ? row.getToDate() : toDate,
+					overrideFreeDays(row.getFreeDays(), request.getFreeDays()));
+			// The same container twice would call the procedure twice for one and the same row.
+			if (parametersByContainer.putIfAbsent(containerNo, parameters) == null) {
+				containers.add(container);
+			}
+		}
+
+		if (!unknownContainers.isEmpty()) {
+			throw new ValidationException("Container(s) " + String.join(", ", unknownContainers)
+					+ " do not belong to BL " + blPoid);
+		}
+
+		log.info("Demurrage enquiry of {} container(s) of BL: {}, toDate: {}, discount: {}%, freeDays: {}",
+				containers.size(), blPoid, toDate, discount, request.getFreeDays());
+
+		BigDecimal totalDemurrage = BigDecimal.ZERO;
+		for (DemurrageEnquiryContainerDto container : containers) {
+			RowParameters parameters = parametersByContainer.get(container.getContainerNo());
+			totalDemurrage = totalDemurrage.add(calculateContainer(blPoid, container, parameters.toDate(),
+					discount, freeDaysOrNull(parameters.freeDays())));
+		}
+
+		// The breakdown is read per To Date and free days: rows calculated with other parameters would
+		// otherwise be explained by the slabs of somebody else's period.
+		containers.stream()
+				.collect(Collectors.groupingBy(container -> parametersByContainer.get(container.getContainerNo())))
+				.forEach((parameters, rows) -> fillDemurrageBreakdown(blPoid, rows, parameters.toDate(),
+						freeDaysOrNull(parameters.freeDays())));
+
+		DemurrageContainerCalcResponseDto response = DemurrageContainerCalcResponseDto.builder()
+				.blPoid(blPoid)
+				.toDate(toDate)
+				.discountPercentage(discount)
+				.freeDays(request.getFreeDays() != null && request.getFreeDays() > 0 ? request.getFreeDays() : null)
+				.containers(containers)
+				.totalDemurrageAmount(money(totalDemurrage))
+				.build();
+
+		response.setBlDet(enrichBlDetails(blPoid, containers));
+		return response;
+	}
+
+	@Override
 	public byte[] printDemurrageCalculation(Long blPoid, LocalDate toDate, BigDecimal discountPercentage,
 											Integer freeDays) throws Exception {
 		validateBl(blPoid);
@@ -219,36 +293,69 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		BigDecimal totalDemurrage = BigDecimal.ZERO;
 
 		for (DemurrageEnquiryContainerDto container : containers) {
-			LocalDate effectiveToDate = container.getEmptyIn() != null ? container.getEmptyIn() : toDate;
-			container.setDmToDate(effectiveToDate);
-			if (freeDays != null) {
-				// The column has to show the free days the amount was calculated with.
-				container.setFreeDays(freeDays.longValue());
-			}
-
-			ContainerDemurrageCalcDto calc = enquiryRepository.calculateContainerDemurrage(
-					blPoid, container.getContainerNo(), effectiveToDate, freeDays);
-
-			if (calc == null || calc.getDays() == null || calc.getDays() <= 0) {
-				// Still inside the free days or the container was returned before the period started.
-				container.setDmDays(0L);
-				container.setDmChargeAmt(money(BigDecimal.ZERO));
-				container.setDmChargeAmtBeforeDiscount(money(BigDecimal.ZERO));
-				continue;
-			}
-
-			BigDecimal grossAmount = calc.getAmount() != null ? calc.getAmount() : BigDecimal.ZERO;
-			BigDecimal netAmount = applyDiscount(grossAmount, discount);
-
-			container.setDmFrmDate(calc.getFromDate() != null ? calc.getFromDate() : container.getDmFrmDate());
-			container.setDmDays(calc.getDays());
-			container.setDmChargeAmtBeforeDiscount(money(grossAmount));
-			container.setDmChargeAmt(money(netAmount));
-
-			totalDemurrage = totalDemurrage.add(netAmount);
+			totalDemurrage = totalDemurrage.add(calculateContainer(blPoid, container, toDate, discount, freeDays));
 		}
 
 		return totalDemurrage;
+	}
+
+	/**
+	 * Recalculates one container row and fills its demurrage columns, returning the amount it carries
+	 * after the discount. {@code freeDays}, when positive, replaces the free days of the container;
+	 * {@code null} and {@code 0} keep the ones the tariff resolves.
+	 */
+	private BigDecimal calculateContainer(Long blPoid, DemurrageEnquiryContainerDto container,
+										  LocalDate toDate, BigDecimal discount, Integer freeDays) {
+		LocalDate effectiveToDate = container.getEmptyIn() != null ? container.getEmptyIn() : toDate;
+		container.setDmToDate(effectiveToDate);
+		if (freeDays != null && freeDays > 0) {
+			// The column has to show the free days the amount was calculated with.
+			container.setFreeDays(freeDays.longValue());
+		}
+
+		ContainerDemurrageCalcDto calc = enquiryRepository.calculateContainerDemurrage(
+				blPoid, container.getContainerNo(), effectiveToDate, freeDays);
+
+		if (calc == null || calc.getDays() == null || calc.getDays() <= 0) {
+			// Still inside the free days or the container was returned before the period started.
+			container.setDmDays(0L);
+			container.setDmChargeAmt(money(BigDecimal.ZERO));
+			container.setDmChargeAmtBeforeDiscount(money(BigDecimal.ZERO));
+			return BigDecimal.ZERO;
+		}
+
+		BigDecimal grossAmount = calc.getAmount() != null ? calc.getAmount() : BigDecimal.ZERO;
+		BigDecimal netAmount = applyDiscount(grossAmount, discount);
+
+		container.setDmFrmDate(calc.getFromDate() != null ? calc.getFromDate() : container.getDmFrmDate());
+		container.setDmDays(calc.getDays());
+		container.setDmChargeAmtBeforeDiscount(money(grossAmount));
+		container.setDmChargeAmt(money(netAmount));
+
+		return netAmount;
+	}
+
+	/**
+	 * Free days a row is calculated with: the ones of the row, else the ones of the request, else 0 -
+	 * the value both the procedure and the breakdown read as "keep the free days of the tariff".
+	 */
+	private static int overrideFreeDays(Integer rowFreeDays, Integer requestFreeDays) {
+		if (rowFreeDays != null && rowFreeDays > 0) {
+			return rowFreeDays;
+		}
+		return requestFreeDays != null && requestFreeDays > 0 ? requestFreeDays : 0;
+	}
+
+	/**
+	 * The To Date and the free days one row is calculated with, once the row, the request and the
+	 * tariff have had their say. Rows that share them share their slab breakdown as well.
+	 */
+	private record RowParameters(LocalDate toDate, int freeDays) {
+	}
+
+	/** The calculation reads "keep the free days of the tariff" as a null, the grouping as a 0. */
+	private static Integer freeDaysOrNull(int freeDays) {
+		return freeDays > 0 ? freeDays : null;
 	}
 
 	private BigDecimal applyDiscount(BigDecimal amount, BigDecimal discount) {
@@ -472,6 +579,21 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 			charge.setChargeDet(lovOf(chargeMap, charge.getChargePoid()));
 			charge.setTaxDet(lovOf(taxMap, charge.getTaxPoid()));
 		});
+	}
+
+	/**
+	 * Fills the BL details of every container row from the ALLBLNUMBER LOV and returns the ones of the
+	 * BL itself, for the header of the response.
+	 */
+	private LovGetListDto enrichBlDetails(Long blPoid, List<DemurrageEnquiryContainerDto> containers) {
+		List<Long> blPoids = Stream.concat(
+						Stream.of(blPoid),
+						containers.stream().map(DemurrageEnquiryContainerDto::getBlPoid))
+				.filter(Objects::nonNull).distinct().collect(Collectors.toList());
+
+		Map<Long, LovGetListDto> blMap = lovService.getDetailsByPoidsAndLovName(blPoids, BL_LOV);
+		containers.forEach(container -> container.setBlDet(lovOf(blMap, container.getBlPoid())));
+		return lovOf(blMap, blPoid);
 	}
 
 	private static LovGetListDto lovOf(Map<Long, LovGetListDto> lovMap, Long poid) {
