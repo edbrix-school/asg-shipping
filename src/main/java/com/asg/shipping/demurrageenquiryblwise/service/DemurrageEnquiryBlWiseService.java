@@ -1,6 +1,8 @@
 package com.asg.shipping.demurrageenquiryblwise.service;
 
 import com.asg.common.lib.dto.FilterRequestDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcRequestDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcResponseDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryRequestDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryResponseDto;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +28,13 @@ public interface DemurrageEnquiryBlWiseService {
 	 * applies the discount and reloads the charges of the BL with the totals.
 	 */
 	DemurrageEnquiryResponseDto applyDate(DemurrageEnquiryRequestDto request);
+
+	/**
+	 * Row wise calculation: recalculates the demurrage of the given container rows of the BL only -
+	 * one row, or as many as the caller sends - with the discount and the free days of the request.
+	 * The charges of the BL are not rebuilt, that stays with {@link #applyDate}.
+	 */
+	DemurrageContainerCalcResponseDto calculateSelectedContainers(DemurrageContainerCalcRequestDto request);
 
 	/**
 	 * "View Demurrage Calculation" link: the demurrage tariff calculation PDF of the BL.

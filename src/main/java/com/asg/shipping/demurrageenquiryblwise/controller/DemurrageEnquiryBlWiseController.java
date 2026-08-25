@@ -4,6 +4,8 @@ import com.asg.common.lib.annotation.AllowedAction;
 import com.asg.common.lib.dto.FilterRequestDto;
 import com.asg.common.lib.enums.UserRolesRightsEnum;
 import com.asg.common.lib.exception.ResourceNotFoundException;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcRequestDto;
+import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageContainerCalcResponseDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryRequestDto;
 import com.asg.shipping.demurrageenquiryblwise.dto.DemurrageEnquiryResponseDto;
 import com.asg.shipping.demurrageenquiryblwise.service.DemurrageEnquiryBlWiseService;
@@ -135,6 +137,72 @@ public class DemurrageEnquiryBlWiseController {
 	) {
 		DemurrageEnquiryResponseDto response = demurrageEnquiryBlWiseService.applyDate(request);
 		return success("Demurrage enquiry calculated successfully", response);
+	}
+
+	@AllowedAction(UserRolesRightsEnum.VIEW)
+	@PostMapping("/calculate-containers")
+	@Operation(
+			summary = "Calculate the demurrage of one or more container rows",
+			description = """
+					Recalculates the demurrage of the given container rows of the BL only, and returns
+					them with the To Date, Days, Amount and Remarks columns filled - the rows can be
+					dropped straight back into the Containers grid.
+
+					Use it when a single row is edited; **/apply-date** stays the action that
+					recalculates the whole BL together with its Charges tab.
+
+					### Business rules
+					- A row is identified by its **container number**, and it has to belong to the BL -
+					  a container number that does not is rejected. The same container sent twice is
+					  calculated once
+					- Every other figure of the row is taken from the BL, not from the request: the
+					  **Empty In** date, the ISO type and the free days of the line tariff
+					- **To Date** of a row is the date that row is calculated up to; the To Date of the
+					  request applies to the rows that carry none of their own, and defaults to the
+					  current date. A container that was returned empty is charged only up to its
+					  **Empty In** date, whatever To Date the row carries
+					- **Free Days** of a row replaces the free days of the container / line tariff for
+					  that row; the free days of the request apply to the rows that carry none of their
+					  own. They replace the tariff free days, they are not added on top of them
+					- **Discount (%)** is applied on the calculated demurrage amount of every row
+					- **totalDemurrageAmount** totals the rows of the request only, not the BL
+					"""
+	)
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "Container rows to calculate",
+			required = true,
+			content = @Content(
+					mediaType = "application/json",
+					schema = @Schema(implementation = DemurrageContainerCalcRequestDto.class),
+					examples = @ExampleObject(
+							name = "Two container rows",
+							value = """
+									{
+									  "blPoid": 1001,
+									  "toDate": "2025-07-28",
+									  "discountPercentage": 10,
+									  "freeDays": 7,
+									  "containers": [
+									    { "containerNo": "MSCU1234567" },
+									    { "containerNo": "TGHU7654321", "toDate": "2025-08-04", "freeDays": 14 }
+									  ]
+									}
+									"""
+					)
+			)
+	)
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "Container demurrage calculated successfully"),
+			@ApiResponse(responseCode = "400", description = "Validation error, or a container that does not belong to the BL"),
+			@ApiResponse(responseCode = "404", description = "BL not found"),
+			@ApiResponse(responseCode = "500", description = "Internal server error")
+	})
+	public ResponseEntity<?> calculateContainers(
+			@Valid @RequestBody DemurrageContainerCalcRequestDto request
+	) {
+		DemurrageContainerCalcResponseDto response =
+				demurrageEnquiryBlWiseService.calculateSelectedContainers(request);
+		return success("Container demurrage calculated successfully", response);
 	}
 
 	@AllowedAction(UserRolesRightsEnum.PRINT)
