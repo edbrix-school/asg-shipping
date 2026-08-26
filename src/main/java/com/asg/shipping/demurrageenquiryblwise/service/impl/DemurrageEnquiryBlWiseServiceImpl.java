@@ -301,7 +301,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 	/**
 	 * Recalculates one container row and fills its demurrage columns, returning the amount it carries
-	 * after the discount. {@code freeDays}, when positive, replaces the free days of the container;
+	 * after the discount. A period the tariff prices below zero is reported as nothing to charge, never
+	 * as a negative amount. {@code freeDays}, when positive, replaces the free days of the container;
 	 * {@code null} and {@code 0} keep the ones the tariff resolves.
 	 */
 	private BigDecimal calculateContainer(Long blPoid, DemurrageEnquiryContainerDto container,
@@ -318,14 +319,20 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 		if (calc == null || calc.getDays() == null || calc.getDays() <= 0) {
 			// Still inside the free days or the container was returned before the period started.
-			container.setDmDays(0L);
-			container.setDmChargeAmt(money(BigDecimal.ZERO));
-			container.setDmChargeAmtBeforeDiscount(money(BigDecimal.ZERO));
-			return BigDecimal.ZERO;
+			return nothingToCharge(container);
 		}
 
 		BigDecimal grossAmount = calc.getAmount() != null ? calc.getAmount() : BigDecimal.ZERO;
 		BigDecimal netAmount = applyDiscount(grossAmount, discount);
+
+		if (grossAmount.signum() < 0 || netAmount.signum() < 0) {
+			// The tariff priced the period below zero - a refund, not demurrage. The row carries no
+			// amount rather than a negative one, the same way a container inside its free days does.
+			log.warn("Demurrage of BL {}, container {} came back negative ({}) for {} day(s) up to {} - "
+					+ "the row is reported as nothing to charge", blPoid, container.getContainerNo(),
+					grossAmount, calc.getDays(), effectiveToDate);
+			return nothingToCharge(container);
+		}
 
 		container.setDmFrmDate(calc.getFromDate() != null ? calc.getFromDate() : container.getDmFrmDate());
 		container.setDmDays(calc.getDays());
@@ -333,6 +340,18 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		container.setDmChargeAmt(money(netAmount));
 
 		return netAmount;
+	}
+
+	/**
+	 * Empties the demurrage columns of a row that has nothing to charge and reports the zero it adds
+	 * to the total. Zeroing the days as well keeps the row consistent: the Remarks are the slab
+	 * breakdown of an amount, and there is no amount to explain.
+	 */
+	private BigDecimal nothingToCharge(DemurrageEnquiryContainerDto container) {
+		container.setDmDays(0L);
+		container.setDmChargeAmt(money(BigDecimal.ZERO));
+		container.setDmChargeAmtBeforeDiscount(money(BigDecimal.ZERO));
+		return BigDecimal.ZERO;
 	}
 
 	/**
@@ -516,8 +535,9 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 	/**
 	 * Per quantity charges are billed per container: the 20' rate for every 20' container and the
-	 * 40' rate for every other container. Like the legacy screen, only the containers that actually
-	 * carry demurrage are counted - a container still inside its free days is not charged.
+	 * 40' rate for every other container. Only the containers that actually carry demurrage are
+	 * counted - a container still inside its free days is not charged, and neither is one whose
+	 * demurrage came back negative: a refund is not a container to bill a revalidation fee for.
 	 */
 	private BigDecimal perQuantityAmount(PortChargeRowDto portCharge, List<DemurrageEnquiryContainerDto> containers) {
 		Map<String, String> sizeByIsoType = new HashMap<>();
@@ -526,7 +546,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 		for (DemurrageEnquiryContainerDto container : containers) {
 			BigDecimal demurrage = container.getDmChargeAmt();
-			if (demurrage == null || demurrage.compareTo(BigDecimal.ZERO) == 0) {
+			if (demurrage == null || demurrage.signum() <= 0) {
 				continue;
 			}
 			String isoType = container.getEquipmentIsoType();
