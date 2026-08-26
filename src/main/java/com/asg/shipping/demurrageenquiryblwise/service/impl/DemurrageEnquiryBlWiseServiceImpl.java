@@ -368,7 +368,9 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 	/**
 	 * Builds the Charges tab: the charges of the BL manifest that are not received or invoiced yet,
-	 * the calculated demurrage and the late collection / revalidation port charges.
+	 * the calculated demurrage and the late collection / revalidation port charges. A row that carries
+	 * a negative amount is left out - the tab shows what is still receivable, not what was credited
+	 * back.
 	 */
 	private List<DemurrageEnquiryChargeDto> buildCharges(Long blPoid, Long companyPoid,
 														 List<DemurrageEnquiryContainerDto> containers,
@@ -379,6 +381,12 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 		for (ManifestChargeRowDto manifestCharge : enquiryRepository.findManifestCharges(blPoid)) {
 			BigDecimal amount = nullSafe(manifestCharge.getAmount());
 			BigDecimal taxAmount = nullSafe(manifestCharge.getTaxAmount());
+			if (amount.signum() < 0) {
+				// A reversed or credited manifest line comes back with a negative amount. The enquiry
+				// only collects what is still receivable, so the row has nothing to show and it would
+				// pull the receipt amount down as well.
+				continue;
+			}
 			charges.add(DemurrageEnquiryChargeDto.builder()
 					.detRowId(++serialNumber)
 					.blPoid(manifestCharge.getBlPoid())
@@ -413,7 +421,8 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 
 	private DemurrageEnquiryChargeDto buildDemurrageCharge(Long blPoid, Long companyPoid,
 														   BigDecimal totalDemurrage) {
-		if (totalDemurrage == null || totalDemurrage.compareTo(BigDecimal.ZERO) == 0) {
+		if (totalDemurrage == null || totalDemurrage.signum() <= 0) {
+			// Nothing is due: a zero total carries no row, and a negative one is not a charge either.
 			return null;
 		}
 
@@ -452,7 +461,7 @@ public class DemurrageEnquiryBlWiseServiceImpl implements DemurrageEnquiryBlWise
 			return null;
 		}
 
-		if (amount.compareTo(BigDecimal.ZERO) == 0) {
+		if (amount.signum() <= 0) {
 			return null;
 		}
 
