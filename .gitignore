@@ -30,7 +30,6 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
 
 ### graphify ###
 # Local lifecycle state — must never be committed (per project graphify rules).
@@ -40,3 +39,5 @@ build/
 .graphify/.graphify_detect.json
 # Scratch AST cache written next to sources by hook-rebuild.
 **/.graphify/cache/
+config.bat
+node_modules

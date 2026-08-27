@@ -14,6 +14,7 @@ import com.asg.common.lib.service.DocumentSearchService;
 import com.asg.common.lib.service.LoggingService;
 import com.asg.common.lib.service.PrintService;
 import com.asg.common.lib.utility.PaginationUtil;
+import com.asg.shipping.annotation.PerformGlPosting;
 import com.asg.shipping.common.repository.GlobalCurrencyDenominationRepository;
 import com.asg.shipping.daycloseshiping.dto.DayCloseDenominationDto;
 import com.asg.shipping.daycloseshiping.dto.DayCloseDto;
@@ -94,6 +95,7 @@ public class DayCloseServiceImpl implements DayCloseService {
     }
 
     @Override
+    @PerformGlPosting
     public DayCloseDto createDayClose(DayCloseDto dto, Long groupPoid, Long companyPoid, Long userPoid) {
 
         DayCloseHdrDto header = dto.getHeader();
@@ -135,6 +137,7 @@ public class DayCloseServiceImpl implements DayCloseService {
     }
 
     @Override
+    @PerformGlPosting
     public DayCloseDto updateDayClose(DayCloseDto request, Long transactionPoid, Long groupPoid, Long companyPoid,
                                       Long userPoid) {
 
